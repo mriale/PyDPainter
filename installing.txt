@@ -1,0 +1,7 @@
+#for Ubuntu 19.10 and below
+sudo apt install python3-pip python3-tk
+sudo pip3 install pygame
+sudo pip3 install numpy
+
+#for Ubuntu 20.04 and above
+sudo apt install python3-pygame python3-tk
