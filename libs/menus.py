@@ -22,6 +22,10 @@ class MenuAction(Action):
            config.toolbar.tool_id(config.tool_selected).action != None:
             config.toolbar.tool_id(config.tool_selected).action.hide()
 
+class DoNew(MenuAction):
+    def selected(self, attrs):
+        screen_format_req(config.pixel_req_canvas)
+
 def askOpenFilename():
     pygame.mouse.set_visible(True)
     config.filename = filedialog.asksaveasfilename(initialdir = config.filepath,title = "Save Picture",filetypes = (("IFF file","*.iff"), ("BMP file","*.bmp"),("all files","*.*")))
@@ -98,6 +102,10 @@ class DoSpareCopy(MenuAction):
         config.clear_undo()
         config.save_undo()
 
+class DoScreenFormat(MenuAction):
+    def selected(self, attrs):
+        screen_format_req(config.pixel_req_canvas)
+
 class DoBrushFlipX(MenuAction):
     def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
@@ -151,7 +159,7 @@ def init_menubar(config_in):
     menubar.title_extra = " Color"
     menubar.add_menu(
         ["Picture", [
-            ["New...", "ctrl-n"],
+            ["New...", "ctrl-n", DoNew],
             ["Open...", "ctrl-o", DoOpen],
             ["Save", "ctrl-s", DoSave],
             ["Save as...", "ctrl-S", DoSaveAs],
@@ -180,7 +188,7 @@ def init_menubar(config_in):
                 ]],
             ["Page Size..."],
             ["Show Page", "S"],
-            ["Screen Format..."],
+            ["Screen Format...", " ", DoScreenFormat],
             ["About..."],
             ["Quit", "Q"],
         ]])
