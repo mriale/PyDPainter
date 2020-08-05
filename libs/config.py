@@ -5,7 +5,7 @@ config.py
 Implement the global area of PyDPainter
 """
 
-import sys, math, os.path, random, colorsys
+import sys, math, os.path, random, colorsys, platform
 
 from colorrange import *
 from cursor import *
@@ -195,13 +195,20 @@ class pydpainter:
         if 'SDL_VIDEO_WINDOW_POS' in os.environ:
             del os.environ['SDL_VIDEO_WINDOW_POS']
 
+        #Disable resizing on Mac
+        if platform.system() == "Darwin":
+            display_flags = HWSURFACE|DOUBLEBUF
+        else:
+            display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
+
         #Resizing the window in only one axis is doesn't work reliably on some
         # versions of Linux so do 2 resizes to force a resize in both X and Y.
         if "screen_size" in dir(config) and \
+           platform.system() == "Linux" and \
            (new_screen_size[0] == config.screen_size[0] or \
             new_screen_size[1] == config.screen_size[1]):
-                config.screen = pygame.display.set_mode((new_screen_size[0]+1,new_screen_size[1]+1), HWSURFACE|DOUBLEBUF|RESIZABLE)
-        config.screen = pygame.display.set_mode(new_screen_size, HWSURFACE|DOUBLEBUF|RESIZABLE)
+                config.screen = pygame.display.set_mode((new_screen_size[0]+1,new_screen_size[1]+1), display_flags)
+        config.screen = pygame.display.set_mode(new_screen_size, display_flags)
         config.screen_size = new_screen_size
 
     def initialize_surfaces(self):
@@ -711,7 +718,7 @@ class pydpainter:
             if e.type == pygame.QUIT:
                 return
 
-            if e.type == VIDEORESIZE:
+            if e.type == VIDEORESIZE and platform.system() != "Darwin":
                 config.scale = config.closest_scale((e.w, e.h))
                 config.resize_display()
                 self.recompose()
