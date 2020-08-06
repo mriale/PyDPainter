@@ -27,18 +27,33 @@ def screen_format_req(screen):
 [Med-Res    640x200] [  4][ 64]
 [Interlace  320x200] [  8][128]
 [Hi-Res     640x400] [ 16][256]
-
-[NTSC~PAL]
+                      Out of:
+[NTSC~PAL]           [4096~16M]
 
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
     aspect = 1
+    cdepth = 12
+    depth = 5
 
     for g in req.gadgets:
         print (g.id + " " + g.label)
+
+    gDepth = []
+    for g in req.gadgets:
+        if g.label.lstrip() in ['2','4','8','16','32','64','128','256']:
+            gDepth.append(g)
+    gDepth.sort(key=lambda g: g.label)
+
+    for g in gDepth:
+        print (g.label)
+
     gNTSC = req.gadget_id("0_7")
     gPAL = req.gadget_id("5_7")
+
+    g12bit = req.gadget_id("21_7")
+    g24bit = req.gadget_id("26_7")
 
     res = 0
     gres = []
@@ -48,10 +63,17 @@ def screen_format_req(screen):
             print(g.label)
     gres[res].state = 1
 
+    gDepth[depth-1].state = 1
+
     if aspect == 1:
         gNTSC.state = 1
     else:
         gPAL.state = 1
+
+    if cdepth == 12:
+        g12bit.state = 1
+    else:
+        g24bit.state = 1
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -79,11 +101,17 @@ def screen_format_req(screen):
                     g.label = g.label.replace("200", "256")
                     g.label = g.label.replace("400", "512")
                     g.need_redraw = True
+            elif ge.gadget == g12bit:
+                cdepth = 12
+            elif ge.gadget == g24bit:
+                cdepth = 24
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
+
+        gDepth[depth-1].state = 1
 
         if aspect == 1:
             gNTSC.state = 1
@@ -91,6 +119,11 @@ def screen_format_req(screen):
             gPAL.state = 1
 
         gres[res].state = 1
+
+        if cdepth == 12:
+            g12bit.state = 1
+        else:
+            g24bit.state = 1
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
