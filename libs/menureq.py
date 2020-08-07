@@ -25,7 +25,7 @@ def screen_format_req(screen):
       Format:         Colors:
 [Lo-Res     320x200] [  2][ 32]
 [Med-Res    640x200] [  4][ 64]
-[Interlace  320x200] [  8][128]
+[Interlace  320x400] [  8][128]
 [Hi-Res     640x400] [ 16][256]
                       Out of:
 [NTSC~PAL]           [4096~16M]
@@ -33,9 +33,12 @@ def screen_format_req(screen):
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
-    aspect = 1
-    cdepth = 12
-    depth = 5
+    if config.display_mode & config.PAL_MONITOR_ID == config.PAL_MONITOR_ID:
+        aspect = 2
+    else:
+        aspect = 1
+    cdepth = config.color_depth
+    depth = int(math.log(config.NUM_COLORS,2))
 
     for g in req.gadgets:
         print (g.id + " " + g.label)
@@ -70,7 +73,7 @@ def screen_format_req(screen):
     else:
         gPAL.state = 1
 
-    if cdepth == 12:
+    if cdepth == 16:
         g12bit.state = 1
     else:
         g24bit.state = 1
@@ -101,10 +104,18 @@ def screen_format_req(screen):
                     g.label = g.label.replace("200", "256")
                     g.label = g.label.replace("400", "512")
                     g.need_redraw = True
+            elif ge.gadget in gres:
+                for i in range(len(gres)):
+                    if ge.gadget == gres[i]:
+                        res = i
+            elif ge.gadget in gDepth:
+                for i in range(len(gDepth)):
+                    if ge.gadget == gDepth[i]:
+                        depth = i+1
             elif ge.gadget == g12bit:
-                cdepth = 12
+                cdepth = 16
             elif ge.gadget == g24bit:
-                cdepth = 24
+                cdepth = 256
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     running = 0
@@ -120,7 +131,7 @@ def screen_format_req(screen):
 
         gres[res].state = 1
 
-        if cdepth == 12:
+        if cdepth == 16:
             g12bit.state = 1
         else:
             g24bit.state = 1
