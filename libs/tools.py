@@ -984,9 +984,12 @@ class PalGadget(ToolGadget):
                 color_height = int(round(h*1.0 / color_rows))
 
                 self.value = config.color
+                if config.color < config.palette_page or config.color > config.palette_page + 31:
+                    config.palette_page = config.color & 0xE0
+                    print("config.palette_page = " + str(config.palette_page))
 
                 screen.set_clip(self.screenrect)
-                curcolor = 0
+                curcolor = config.palette_page
                 self.palette_bounds = []
                 curr_rect = (0,0,0,0)
                 for j in range(0,color_cols):

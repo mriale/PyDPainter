@@ -17,6 +17,8 @@ def palreq_set_config(config_in):
     global config
     config = config_in
 
+palette_page = 0
+
 class PPGadget(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "^":
@@ -81,7 +83,7 @@ class PPGadget(Gadget):
                     self.value = 1
 
                 screen.set_clip(self.screenrect)
-                curcolor = 0
+                curcolor = palette_page
                 self.palette_bounds = []
                 for j in range(0,color_cols):
                     for i in range(0,color_rows):
@@ -145,6 +147,7 @@ class PPGadget(Gadget):
             super(PPGadget, self).draw(screen, font, offset)
 
     def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
         ge = []
         x,y = mouse_pixel_mapper()
         g = self
@@ -170,8 +173,17 @@ class PPGadget(Gadget):
                         g.need_redraw = True
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
-                    if g.pointin((x,y), g.screenrect) and g.state == 1 and abs(g.value) == 1:
-                        g.value = -g.value
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if abs(g.value) == 1:
+                            g.value = -g.value
+                        elif g.value == -2:
+                            palette_page -= 32
+                            if palette_page < 0:
+                                palette_page = 0
+                        elif g.value == 2:
+                            palette_page += 32
+                            if palette_page >= config.NUM_COLORS:
+                                palette_page = config.NUM_COLORS - 32
                     g.state = 0
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
@@ -236,6 +248,7 @@ def hex_to_rgb(hexstr):
         return None
 
 def palette_req(screen):
+    global palette_page
     config.stop_cycling()
 
     backuppal = list(config.truepal)
@@ -266,6 +279,7 @@ Speed---------___^^
     #req.center(screen)
 
     #palette page
+    palette_page = 0
     palpageg = req.gadget_id("16_8")
     ppx,ppy,ppw,pph = palpageg.rect
     palpageg.rect = (ppx-(config.fontx//2),ppy,ppw,pph)
@@ -464,6 +478,8 @@ Speed---------___^^
                 elif ge.gadget.label == "^":
                     config.cranges[current_range].set_dir(speed_dirg.value)
                     speed_dirg.need_redraw = True
+                    palpageg.label = chr(65+(palette_page//32))
+                    palpageg.need_redraw = True
             elif ge.gadget.type == Gadget.TYPE_PROP_VERT:
                 if ge.gadget.id == rg.id or ge.gadget.id == gg.id or ge.gadget.id == bg.id:
                     set_hsv_sliders(get_rgb_sliders(rg, gg, bg), hg, sg, vg)
