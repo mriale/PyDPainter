@@ -33,9 +33,6 @@ def screen_format_req(screen):
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
-    for g in req.gadgets:
-        print (g.id + " " + g.label)
-
     #Get PAL/NTSC from current display mode
     if config.display_mode & config.PAL_MONITOR_ID == config.PAL_MONITOR_ID:
         aspect = 2
@@ -81,7 +78,6 @@ def screen_format_req(screen):
     for g in req.gadgets:
         if re.search(r'\dx\d\d\d$', g.label):
             gres.append(g)
-            print(g.label)
 
     gDepth[bdepth-1].state = 1
 

@@ -942,6 +942,11 @@ class PalGadget(ToolGadget):
         if label == "^":
             self.crng_arrows = pygame.image.load(os.path.join('data', 'crng_arrows.png'))
             value = 0
+        if label == "#":
+            scaleX = config.pixel_width // 320
+            scaleY = config.pixel_height // 200
+            scaledown = 4 // min(scaleX,scaleY)
+            self.palettearrows_image = imgload('palettearrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
         super(PalGadget, self).__init__(type, label, rect, value, maxvalue, id, tool_type=ToolGadget.TT_CUSTOM, toolbar=toolbar, action=action)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -981,12 +986,14 @@ class PalGadget(ToolGadget):
 
                 color_rows = colors_shown // color_cols
                 color_width = w // color_cols
-                color_height = int(round(h*1.0 / color_rows))
+                if numcolors <= 32:
+                    color_height = int(round(h*1.0 / color_rows))
+                else:
+                    color_height = int(round((h-self.palettearrows_image.get_height())*1.0 / color_rows))
 
                 self.value = config.color
                 if config.color < config.palette_page or config.color > config.palette_page + 31:
                     config.palette_page = config.color & 0xE0
-                    print("config.palette_page = " + str(config.palette_page))
 
                 screen.set_clip(self.screenrect)
                 curcolor = config.palette_page
@@ -1001,6 +1008,20 @@ class PalGadget(ToolGadget):
                         curcolor += 1
                 #highlight current color
                 pygame.draw.rect(screen, (255,255,255), curr_rect, 1)
+
+                #draw color pager if > 32 colors
+                if numcolors > 32:
+                    #draw palette arrows
+                    ah = self.palettearrows_image.get_height()
+                    aw = self.palettearrows_image.get_width() // 10
+                    ax = x+xo+1
+                    ay = y+yo+1+color_rows*color_height
+                    self.palette_bounds.append((ax,ay,aw,ah,-1))
+                    screen.blit(self.palettearrows_image, (ax,ay), (aw*8,0,aw,ah))
+                    screen.blit(self.palettearrows_image, (ax+aw,ay), (aw*config.palette_page//32,0,aw,ah))
+                    self.palette_bounds.append((ax+aw+aw,ay,aw,ah,-2))
+                    screen.blit(self.palettearrows_image, (ax+aw+aw,ay), (aw*9,0,aw,ah))
+
                 screen.set_clip(None)
 
             elif self.label == "%": # color swatch
@@ -1097,11 +1118,20 @@ class PalGadget(ToolGadget):
                             x1,y1,x2,y2,colorindex = self.palette_bounds[i]
                             if x >= x1 and x <= x1+x2-1 and y >= y1 and y <= y1+y2-1:
                                 g.need_redraw = True
-                                g.value = colorindex
-                                if event.button == 1:
-                                    config.color = colorindex
-                                else:
-                                    config.bgcolor = colorindex
+                                if colorindex >= 0:
+                                    g.value = colorindex
+                                    if event.button == 1:
+                                        config.color = colorindex
+                                    else:
+                                        config.bgcolor = colorindex
+                                elif colorindex == -1: #palette page left
+                                    if config.palette_page > 0:
+                                        config.palette_page -= 32
+                                        config.color -= 32
+                                elif colorindex == -2: #palette page right
+                                    if config.palette_page < config.NUM_COLORS-32:
+                                        config.palette_page += 32
+                                        config.color += 32
                                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                     elif g.label == "%": #Current color swatch
                         if event.button == 1:
