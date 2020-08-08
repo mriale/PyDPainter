@@ -328,80 +328,74 @@ class Gadget(object):
             return
 
         self.need_redraw = False
+        screen.set_clip(self.screenrect)
+
+        px = self.fontx//8
+        py = self.fonth//8
 
         if self.type == Gadget.TYPE_BOOL:
             strw = font.calcwidth(self.label)
             strxo = (w - strw) // 2
+            srx,sry,srw,srh = self.screenrect
             if self.state == 1:
-                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
-                pygame.draw.rect(screen, hcolor, self.screenrect, 1)
-                font.blitstring(screen, (x+xo+(strxo)+1,y+yo+2), self.label, fgcolor, bgcolor)
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo+w-2,y+yo))
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo,y+yo+h-1))
+                pygame.draw.rect(screen, hcolor, self.screenrect, 0)
+                pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
+                font.blitstring(screen, (x+xo+(strxo)+px,y+yo+py+py), self.label, fgcolor, bgcolor)
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, w-px, py), 0)
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, px, h), 0)
             else:
-                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
-                pygame.draw.rect(screen, fgcolor, self.screenrect, 1)
-                font.blitstring(screen, (x+xo+(strxo),y+yo+1), self.label, fgcolor, bgcolor)
-                pygame.draw.line(screen, hcolor, (x+xo,y+yo), (x+xo+w-2,y+yo))
-                pygame.draw.line(screen, hcolor, (x+xo,y+yo), (x+xo,y+yo+h-1))
+                pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
+                pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
+                font.blitstring(screen, (x+xo+(strxo),y+yo+py), self.label, fgcolor, bgcolor)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo, w-px, py), 0)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo, px, h), 0)
         elif self.type == Gadget.TYPE_PROP:
-            propo = (w-self.fontx) * self.value // (self.maxvalue-1)
+            propo = (w-self.fontx-px) * self.value // (self.maxvalue-1) + px
             self.screenrect2 = (x+xo+propo, y+yo, self.fontx, h)
-            px = self.fontx//8
-            py = self.fonth//8
-            diamond = ((x+xo+(self.fontx//2)-px+propo,y+yo+3*py),
-                       (x+xo+self.fontx-3*px+propo, y+yo+1+(self.fonth//2)),
-                       (x+xo+(self.fontx//2)-1+propo,y+yo-1+self.fonth),
-                       (x+xo+px+propo, y+yo+py+(self.fonth//2)))
+            diamond = ((propo+x+xo+(self.fontx//2)-px, y+yo+py+py+py),
+                       (propo+x+xo+(self.fontx)-(3*px), y+yo+(self.fonth//2)+py),
+                       (propo+x+xo+(self.fontx//2)-px, y+yo+self.fonth-py),
+                       (propo+x+xo+px, y+yo+(self.fonth//2)+py))
             rectx,recty,rectw,recth = self.screenrect
 
             if self.state == 1:
-                pygame.draw.rect(screen, fgcolor, (rectx,recty+2,rectw-1,recth-4), 0)
+                pygame.draw.rect(screen, fgcolor, (rectx+px,recty+py+py,rectw-px-px,recth-4*py), 0)
                 pygame.draw.polygon(screen, hcolor, diamond, 0)
             else:
-                pygame.draw.rect(screen, fgcolor, (rectx,recty+2,rectw-1,recth-4), 0)
+                pygame.draw.rect(screen, fgcolor, (rectx+px,recty+py+py,rectw-px-px,recth-4*py), 0)
                 pygame.draw.polygon(screen, bgcolor, diamond, 0)
                 pygame.draw.line(screen, hcolor, diamond[3], diamond[0])
-            pygame.draw.line(screen, hcolor, (rectx,recty+recth-2), (rectx+rectw-1,recty+recth-2))
-            pygame.draw.line(screen, hcolor, (rectx+rectw-1,recty+recth-3), (rectx+rectw-1,recty+2))
         elif self.type == Gadget.TYPE_PROP_VERT:
             propo = (h-self.fonth) * (self.maxvalue-1-self.value) // (self.maxvalue-1)
-            px = self.fontx//8
-            py = self.fonth//8
             diamond = ((x+xo+(self.fontx//2)-px,y+yo+py+py+propo),
                        (x+xo+w-(3*px), y+yo+(self.fonth//2)+propo),
                        (x+xo+(self.fontx//2)-px,y+yo+self.fonth-py-py+propo),
                        (x+xo+px, y+yo+(self.fonth//2)+propo))
-            self.screenrect2 = (x+xo+1, y+yo+1+propo, self.fontx, self.fonth)
+            self.screenrect2 = (x+xo+px, y+yo+py+propo, self.fontx, self.fonth)
             if self.state == 1:
-                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w-px,h), 0)
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo+py,w-px,h-py), 0)
                 pygame.draw.polygon(screen, hcolor, diamond, 0)
             else:
-                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w-px,h), 0)
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo+py,w-px,h-py), 0)
                 pygame.draw.polygon(screen, bgcolor, diamond, 0)
             pygame.draw.line(screen, hcolor, diamond[3], diamond[0])
         elif self.type == Gadget.TYPE_STRING:
+            srx,sry,srw,srh = self.screenrect
             strxo = 0
-            if self.state == 0:
-                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
-                font.blitstring(screen, (x+xo,y+yo+2), self.value, fgcolor, bgcolor)
-                pygame.draw.rect(screen, hcolor, self.screenrect, 1)
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo+w-2,y+yo))
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo,y+yo+h-1))
-            else:
-                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
-                font.blitstring(screen, (x+xo,y+yo+2), self.value, fgcolor, bgcolor)
-                pygame.draw.rect(screen, hcolor, self.screenrect, 1)
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo+w-2,y+yo))
-                pygame.draw.line(screen, fgcolor, (x+xo,y+yo), (x+xo,y+yo+h-1))
+            pygame.draw.rect(screen, hcolor, self.screenrect, 0)
+            pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
+            font.blitstring(screen, (x+xo+px,y+yo+py+py), self.value, fgcolor, bgcolor)
+            pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, w-px, py), 0)
+            pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, px, h), 0)
+            if self.state != 0:
                 if self.pos < len(self.value):
                     c = self.value[self.pos]
                 else:
                     c = " "
-                font.blitstring(screen, (x+xo+(self.pos*self.fontx),y+yo+2), c, hcolor, (255,0,0))
+                font.blitstring(screen, (x+xo+px+(self.pos*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
             if self.numonly and not re.fullmatch('^-?\d*\.?\d+$', self.value):
                 #numeric error
-                font.blitstring(screen, (x+xo+w-self.fontx,y+yo+2), "!", hcolor, (255,0,0))
+                font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
                 self.error = True
             else:
                 self.error = False
@@ -417,6 +411,8 @@ class Gadget(object):
             fadesurf = pygame.Surface((w,h), SRCALPHA)
             fadesurf.fill((bgcolor[0],bgcolor[1],bgcolor[2],128))
             screen.blit(fadesurf, self.screenrect)
+
+        screen.set_clip(None)
 
     def process_event(self, screen, event, mouse_pixel_mapper):
         ge = []

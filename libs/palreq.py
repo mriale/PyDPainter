@@ -22,7 +22,10 @@ palette_page = 0
 class PPGadget(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "^":
-            self.crng_arrows = pygame.image.load(os.path.join('data', 'crng_arrows.png'))
+            scaleX = config.pixel_width // 320
+            scaleY = config.pixel_height // 200
+            scaledown = 4 // min(scaleX,scaleY)
+            self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
         super(PPGadget, self).__init__(type, label, rect, value, maxvalue, id)
 
@@ -125,14 +128,18 @@ class PPGadget(Gadget):
                     pygame.draw.rect(screen, hcolor, (x+xo+1,y+yo,w-1,h), 1)
                     pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
                     pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+
+                ah = self.crng_arrows.get_height()
+                aw = self.crng_arrows.get_width() // 4
+
                 if self.value == 1:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (0,0,9,9))
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
                 elif self.value == -1:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (9,0,9,9))
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
                 elif self.value == -2:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (18,0,9,9))
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*2,0,aw,ah))
                 elif self.value == 2:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (27,0,9,9))
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
             if not self.enabled:
                 for i in range(x+xo, x+xo+w+1, 2):
                     for j in range(y+yo, y+yo+h+1, 4):
