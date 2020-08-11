@@ -119,13 +119,19 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                     trans1   = np.matrix([[    1,     0, 0],
                                           [    0,     1, 0],
                                           [-c[0], -c[1], 1]])
+                    scale1   = np.matrix([[1/config.aspectX, 0, 0],
+                                          [0, 1/config.aspectY, 0],
+                                          [0, 0, 1]])
                     rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
                                           [-math.sin(q), math.cos(q), 0],
                                           [           0,           0, 1]])
-                    trans2   = np.matrix([[    1,     0, 0],
-                                          [    0,     1, 0],
+                    scale2   = np.matrix([[config.aspectX, 0, 0],
+                                          [0, config.aspectY, 0],
+                                          [0, 0, 1]])
+                    trans2   = np.matrix([[ 1, 0, 0],
+                                          [ 0, 1, 0],
                                           [ c[0],  c[1], 1]])
-                    symm_mat = trans1 @ rot @ trans2
+                    symm_mat = trans1 @ scale1 @ rot @ scale2 @ trans2
                 xf,yf = x,y
                 for i in range(config.symm_num-1):
                     if interrupt and config.has_event(8):
@@ -246,18 +252,22 @@ class Brush:
             size = 100
         self.__size = size
         self.cache = BrushCache()
+
+        ax = config.aspectX
+        ay = config.aspectY
+
         if self.type == Brush.SQUARE:
-            self.handle = [(size+1)//2, (size+1)//2]
+            self.handle = [(size+1)//2*ax, (size+1)//2*ay]
             self.rect = [-self.handle[0], -self.handle[1],
-                         size, size]
+                         size*ax, size*ax]
         elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
             if size == 1:
                 self.handle = [0,0]
                 self.rect = [0,0,1,1]
             else:
-                self.handle = [size, size]
+                self.handle = [size*ax, size*ay]
                 self.rect = [-self.handle[0], -self.handle[1],
-                             size*2, size*2]
+                             size*ax*2, size*ay*2]
 
     @property
     def type(self):
@@ -270,6 +280,9 @@ class Brush:
             self.size = self.__size  #recalc handle and wipe cache
 
     def render_image(self, color):
+        ax = config.aspectX
+        ay = config.aspectY
+
         if self.type == Brush.CUSTOM:
             #convert brush image to single color
             image = self.image_orig.copy()
@@ -293,7 +306,7 @@ class Brush:
                 image.set_palette(config.pal)
                 image.fill(color)
             else:
-                image = pygame.Surface((self.size*2+1, self.size*2+1),0, config.pixel_canvas)
+                image = pygame.Surface((self.size*ax*2+1, self.size*ay*2+1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
                 if color == 0:
                     image.fill(1)
@@ -301,10 +314,13 @@ class Brush:
                 else:
                     image.set_colorkey(0)
                 primprops = PrimProps()
-                fillcircle(image, color, (self.size, self.size), self.size-1, primprops=primprops)
+                if ax == ay == 1:
+                    fillcircle(image, color, (self.size, self.size), self.size-1, primprops=primprops)
+                else:
+                    pygame.draw.ellipse(image, color, (1,1,self.size*ax*2-1, self.size*ay*2-1))
             return image
         elif self.type == Brush.SQUARE:
-            image = pygame.Surface((self.size+1, self.size+1),0, config.pixel_canvas)
+            image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)
             image.set_palette(config.pal)
             if color == 0:
                 image.set_colorkey(1)

@@ -211,9 +211,21 @@ class pydpainter:
         else:
             self.set_aspect(1)
 
+        self.aspectX = 1
+        self.aspectY = 1
+        if config.display_mode & config.MODE_HIRES and \
+           config.display_mode & config.MODE_LACE:
+            pass
+        elif config.display_mode & config.MODE_HIRES:
+            self.aspectX = 2
+        elif config.display_mode & config.MODE_LACE:
+            self.aspectY = 2
+
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
         self.pixel_req_canvas = pygame.Surface((self.pixel_width, self.pixel_height))
         self.pixel_req_rect = None
+
+        self.symm_center = (self.pixel_width//2, self.pixel_height//2)
 
         #adjust fonts
         self.fontx = self.closest_scale4(32, self.pixel_width // 40)
@@ -698,8 +710,8 @@ class pydpainter:
             size = self.airbrush_size
         angle = random.random() * 2.0 * 3.14159
         dist = random.random() * float(size)
-        x = int(dist * math.cos(angle))
-        y = int(dist * math.sin(angle))
+        x = int(dist*config.aspectX * math.cos(angle))
+        y = int(dist*config.aspectY * math.sin(angle))
         return ((xc+x, yc+y))
 
     def clear_pixel_draw_canvas(self):

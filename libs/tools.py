@@ -393,20 +393,40 @@ class DoCircle(ToolDragAction):
     def drawrubber(self, coords, buttons):
         mouseX, mouseY = coords
         startX, startY = self.p1
-        radius = int(math.sqrt(abs(mouseX-startX)*abs(mouseX-startX) + abs(mouseY-startY)*abs(mouseY-startY)))
+        ax = config.aspectX
+        ay = config.aspectY
+        dx = (mouseX-startX)//ax
+        dy = (mouseY-startY)//ay
+        radius = int(math.sqrt(dx*dx + dy*dy))
         if buttons[0]:
-            drawcircle(config.pixel_canvas, config.color, self.p1, radius, filled=config.subtool_selected, interrupt=True)
+            if ax == ay:
+                drawcircle(config.pixel_canvas, config.color, self.p1, radius, filled=config.subtool_selected, interrupt=True)
+            else:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True)
         elif buttons[2]:
-            drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, interrupt=True)
+            if ax == ay:
+                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, interrupt=True)
+            else:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True)
 
     def drawfinal(self, coords, button):
         mouseX, mouseY = coords
         startX, startY = self.p1
-        radius = int(math.sqrt(abs(mouseX-startX)*abs(mouseX-startX) + abs(mouseY-startY)*abs(mouseY-startY)))
+        ax = config.aspectX
+        ay = config.aspectY
+        dx = (mouseX-startX)//ax
+        dy = (mouseY-startY)//ay
+        radius = int(math.sqrt(dx*dx + dy*dy))
         if button == 1:
-            drawcircle(config.pixel_canvas, config.color, self.p1, radius, filled=config.subtool_selected)
+            if ax == ay:
+                drawcircle(config.pixel_canvas, config.color, self.p1, radius, filled=config.subtool_selected)
+            else:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radius*ax, radius*ay, filled=config.subtool_selected)
         elif button == 3:
-            drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected)
+            if ax == ay:
+                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected)
+            else:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected)
         config.save_undo()
 
 class DoEllipse(ToolDragAction):
@@ -882,8 +902,8 @@ class DoMagnify(ToolAction):
 
     def move(self, coords):
         x,y = coords
-        w = 100 // config.zoom.factor
-        h = 100 // config.zoom.factor
+        w = 100*config.aspectX // config.zoom.factor
+        h = 100*config.aspectY // config.zoom.factor
         config.clear_pixel_draw_canvas()
         drawrect(config.pixel_canvas, config.color, (x-w,y-h), (x+w,y+h), xormode=True, handlesymm=False)
 
