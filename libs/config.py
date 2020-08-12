@@ -204,7 +204,7 @@ class pydpainter:
         config.screen = pygame.display.set_mode(new_screen_size, HWSURFACE|DOUBLEBUF|RESIZABLE)
         config.screen_size = new_screen_size
 
-    def initialize_surfaces(self):
+    def initialize_surfaces(self, reinit=False):
         print("Display mode = %x" % (self.display_mode))
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
             self.set_aspect(2)
@@ -220,6 +220,11 @@ class pydpainter:
             self.aspectX = 2
         elif config.display_mode & config.MODE_LACE:
             self.aspectY = 2
+
+        if reinit:
+            config.truepal = config.get_default_palette(config.NUM_COLORS)
+            config.pal = list(config.truepal)
+            config.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
         self.pixel_req_canvas = pygame.Surface((self.pixel_width, self.pixel_height))
@@ -320,6 +325,48 @@ class pydpainter:
 
         return newpal[0:numcols]
 
+    def saveConfig(self):
+        home = ""
+        if 'HOME' in os.environ:
+            home = os.environ['HOME']
+        try:
+            f = open(os.path.join(home,".pydpainter"),"w")
+            f.write("display_mode=%08x\n" % (self.display_mode))
+            f.write("pixel_width=%d\n" % (self.pixel_width))
+            f.write("pixel_height=%d\n" % (self.pixel_height))
+            f.write("color_depth=%d\n" % (self.color_depth))
+            f.write("NUM_COLORS=%d\n" % (self.NUM_COLORS))
+            f.close()
+        except:
+            pass
+
+    def readConfig(self):
+        home = ""
+        if 'HOME' in os.environ:
+            home = os.environ['HOME']
+        try:
+            f = open(os.path.join(home,".pydpainter"),"r")
+            for line in f:
+                if line.lstrip()[0] == '#':
+                    continue
+                vars = line.split("=")
+                if len(vars) == 2:
+                    if vars[0] == "display_mode":
+                        self.display_mode = int(vars[1], 16)
+                    elif vars[0] == "pixel_width":
+                        self.pixel_width = int(vars[1])
+                    elif vars[0] == "pixel_height":
+                        self.pixel_height = int(vars[1])
+                    elif vars[0] == "color_depth":
+                        self.color_depth = int(vars[1])
+                    elif vars[0] == "NUM_COLORS":
+                        self.NUM_COLORS = int(vars[1])
+            f.close()
+            return True
+        except:
+            pass
+        return False
+
     def initialize(self):
         self.clock = pygame.time.Clock()
 
@@ -407,7 +454,9 @@ class pydpainter:
 
         self.wait_for_mouseup = [False, False]
 
-        self.initialize_surfaces()
+        reinit = self.readConfig()
+
+        self.initialize_surfaces(reinit=reinit)
         pygame.mouse.set_visible(False)
 
     def doKeyAction(self, curr_action=None):

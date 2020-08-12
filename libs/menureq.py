@@ -184,7 +184,7 @@ def screen_format_req(screen):
                 apply_cdepth()
                 apply_mode()
             if ge.gadget.type == Gadget.TYPE_BOOL:
-                if ge.gadget.label == "OK" and not req.has_error():
+                if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
                     dmode = 0
                     px = 320
                     py = 200
@@ -200,12 +200,13 @@ def screen_format_req(screen):
                         dmode |= config.PAL_MONITOR_ID
                         py = py * 128 // 100
                     config.display_mode = dmode
+                    config.pixel_width = px
+                    config.pixel_height = py
                     config.color_depth = cdepth
                     config.NUM_COLORS = 2**bdepth
-                    config.truepal = config.get_default_palette(config.NUM_COLORS)
-                    config.pal = list(config.truepal)
-                    config.pixel_canvas = pygame.Surface((px, py),0,8)
                     reinit = True
+                    if ge.gadget.label == "Make Default":
+                        config.saveConfig()
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -230,7 +231,7 @@ def screen_format_req(screen):
 
     config.pixel_req_rect = None
     if reinit:
-        config.initialize_surfaces()
+        config.initialize_surfaces(reinit=True)
     else:
         config.recompose()
 
