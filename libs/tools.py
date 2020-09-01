@@ -1332,9 +1332,6 @@ def main():
         #gevents = layer.process_event(screen, event)
         gevents = mytoolbar.process_event(screen, event, tool_mouse_map)
 
-        for ge in gevents:
-            print(ge)
-
         mytoolbar.draw()
         #cursor_layer.offset = pygame.mouse.get_pos()
         layer.draw(scaled_screen)

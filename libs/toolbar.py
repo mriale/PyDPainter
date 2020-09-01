@@ -301,7 +301,7 @@ class Toolbar:
                 toolg.action.selected(attrs)
 
         toolg.need_redraw = True
-        print((toolg.id, toolg.tool_type, len(toolg.group_list), subtool, rightclick))
+        #print((toolg.id, toolg.tool_type, len(toolg.group_list), subtool, rightclick))
 
         if toolg.tool_type == ToolGadget.TT_GROUP and not rightclick:
             for g in toolg.group_list:

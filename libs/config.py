@@ -205,7 +205,6 @@ class pydpainter:
         config.screen_size = new_screen_size
 
     def initialize_surfaces(self, reinit=False):
-        print("Display mode = %x" % (self.display_mode))
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
             self.set_aspect(2)
         else:
@@ -894,7 +893,7 @@ class pydpainter:
             #Do move action for toolbar events
             if curr_action != None and not hide_draw_tool:
                 for te in te_list:
-                    print(te)
+                    #print(te)
                     if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
                        te.gadget.tool_type == ToolGadget.TT_GROUP:
                         if e.type == KEYDOWN:
