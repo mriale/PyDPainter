@@ -145,6 +145,26 @@ def screen_format_req(screen):
         gres[res].state = 1
     apply_mode()
 
+    def get_top_colors(num_colors):
+        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        #find unique color indexes and counts of color indexes in pic
+        unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
+        surf_array = None
+        #put counts and color indexes into matrix together into histogram
+        hist_array = np.asarray((unique_colors, counts_colors)).transpose()
+        #print(hist_array)
+        #sort histogram descending by frequency
+        sorted_hist_array = hist_array[np.argsort(-hist_array[:, 1])]
+        #print(sorted_hist_array)
+        #take first num_colors indexes
+        colorlist = np.sort(sorted_hist_array[0:num_colors, 0])
+        #make sure to preserve color 0
+        if colorlist[0] != 0:
+            colorlist = np.sort(sorted_hist_array[0:num_colors-1, 0])
+            colorlist = np.insert(colorlist, 0, 0)
+        #print(colorlist)
+        return colorlist
+
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
     req.draw(screen)
@@ -152,6 +172,7 @@ def screen_format_req(screen):
 
     running = 1
     reinit = False
+    ok_clicked = False
     while running:
         event = pygame.event.wait()
         gevents = req.process_event(screen, event)
@@ -185,6 +206,39 @@ def screen_format_req(screen):
                 apply_mode()
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
+                    ok_clicked = True
+                    reinit = True
+                    num_colors = 2**bdepth
+                    #reduce palette to higest frequency color indexes
+                    if num_colors < config.NUM_COLORS:
+                        colorlist = get_top_colors(num_colors)
+
+                        #assign top colors to new palette
+                        newpal = []
+                        for i in range(0,num_colors):
+                            if i < len(colorlist):
+                                newpal.append(config.pal[colorlist[i]])
+                            else:
+                                newpal.append(config.pal[i])
+
+                        #fill in upper palette with background color
+                        for i in range(num_colors,256):
+                            newpal.append(newpal[0])
+
+                        #convert colors to reduced palette using blit
+                        new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
+                        new_pixel_canvas.set_palette(newpal)
+                        new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+
+                        #substitute new canvas for the higher color one
+                        config.pixel_canvas = new_pixel_canvas
+                        config.pal = newpal[0:num_colors]
+                        config.pal = config.quantize_palette(config.pal, config.color_depth)
+                        config.backuppal = list(config.pal)
+                        config.truepal = list(config.pal)
+                        config.pixel_canvas.set_palette(config.pal)
+                        reinit = False
+
                     dmode = 0
                     px = 320
                     py = 200
@@ -199,12 +253,17 @@ def screen_format_req(screen):
                     else:
                         dmode |= config.PAL_MONITOR_ID
                         py = py * 128 // 100
+                    if px != config.pixel_width or py != config.pixel_height:
+                        new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
+                        new_pixel_canvas.set_palette(config.pal)
+                        config.pixel_canvas = new_pixel_canvas
+                        reinit = False
+
                     config.display_mode = dmode
                     config.pixel_width = px
                     config.pixel_height = py
                     config.color_depth = cdepth
-                    config.NUM_COLORS = 2**bdepth
-                    reinit = True
+                    config.NUM_COLORS = num_colors
                     if ge.gadget.label == "Make Default":
                         config.saveConfig()
                     running = 0
@@ -230,8 +289,8 @@ def screen_format_req(screen):
             config.recompose()
 
     config.pixel_req_rect = None
-    if reinit:
-        config.initialize_surfaces(reinit=True)
+    if ok_clicked:
+        config.initialize_surfaces(reinit=reinit)
     else:
         config.recompose()
 
