@@ -135,8 +135,8 @@ def screen_format_req(screen):
             gDepth[5].enabled = False
             gDepth[5].need_redraw = True
         elif cdepth == 16 and res in [0,2]:
-            if bdepth > 5:
-                bdepth = 5
+            if bdepth > 6:
+                bdepth = 6
                 apply_bdepth()
             gDepth[4].enabled = True
             gDepth[4].need_redraw = True
