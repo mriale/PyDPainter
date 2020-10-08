@@ -24,7 +24,7 @@ class MenuAction(Action):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
-        screen_format_req(config.pixel_req_canvas)
+        screen_format_req(config.pixel_req_canvas,new_clicked=True)
 
 def askOpenFilename():
     pygame.mouse.set_visible(True)

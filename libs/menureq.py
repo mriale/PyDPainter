@@ -19,7 +19,7 @@ def menureq_set_config(config_in):
     global config
     config = config_in
 
-def screen_format_req(screen):
+def screen_format_req(screen, new_clicked=False):
     req = str2req("Choose Screen Format", """
                      Number of
       Format:         Colors:
@@ -207,10 +207,12 @@ def screen_format_req(screen):
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
                     ok_clicked = True
-                    reinit = True
                     num_colors = 2**bdepth
                     #reduce palette to higest frequency color indexes
-                    if num_colors < config.NUM_COLORS:
+                    if new_clicked:
+                        reinit = True
+                    elif num_colors < config.NUM_COLORS:
+                        reinit = False
                         colorlist = get_top_colors(num_colors)
 
                         #assign top colors to new palette
@@ -233,11 +235,20 @@ def screen_format_req(screen):
                         #substitute new canvas for the higher color one
                         config.pixel_canvas = new_pixel_canvas
                         config.pal = newpal[0:num_colors]
-                        config.pal = config.quantize_palette(config.pal, config.color_depth)
+                        config.pal = config.quantize_palette(config.pal, cdepth)
                         config.backuppal = list(config.pal)
                         config.truepal = list(config.pal)
                         config.pixel_canvas.set_palette(config.pal)
+                    elif num_colors == config.NUM_COLORS:
                         reinit = False
+                    elif num_colors > config.NUM_COLORS:
+                        reinit = False
+                        newpal = config.get_default_palette(num_colors)
+                        config.pal.extend(newpal[config.NUM_COLORS:num_colors])
+                        config.pal = config.quantize_palette(config.pal, cdepth)
+                        config.backuppal = list(config.pal)
+                        config.truepal = list(config.pal)
+                        config.pixel_canvas.set_palette(config.pal)
 
                     dmode = 0
                     px = 320
@@ -253,7 +264,7 @@ def screen_format_req(screen):
                     else:
                         dmode |= config.PAL_MONITOR_ID
                         py = py * 128 // 100
-                    if px != config.pixel_width or py != config.pixel_height:
+                    if not new_clicked and (px != config.pixel_width or py != config.pixel_height):
                         new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
                         new_pixel_canvas.set_palette(config.pal)
                         config.pixel_canvas = new_pixel_canvas
