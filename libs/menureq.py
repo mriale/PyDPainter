@@ -208,11 +208,20 @@ def screen_format_req(screen, new_clicked=False):
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
                     ok_clicked = True
                     num_colors = 2**bdepth
-                    #reduce palette to higest frequency color indexes
+                    if bdepth == 6 and cdepth == 16:
+                        halfbright = True
+                    else:
+                        halfbright = False
+
                     if new_clicked:
                         reinit = True
                     elif num_colors < config.NUM_COLORS:
+                        #reduce palette to higest frequency color indexes
                         reinit = False
+
+                        if halfbright:
+                            num_colors = 32
+
                         colorlist = get_top_colors(num_colors)
 
                         #assign top colors to new palette
@@ -222,6 +231,14 @@ def screen_format_req(screen, new_clicked=False):
                                 newpal.append(config.pal[colorlist[i]])
                             else:
                                 newpal.append(config.pal[i])
+
+                        #adjust halfbright colors
+                        if halfbright:
+                            num_colors = 64
+                            for i in range(0,32):
+                                newpal.append(((newpal[i][0] & 0xee) // 2,
+                                               (newpal[i][1] & 0xee) // 2,
+                                               (newpal[i][2] & 0xee) // 2))
 
                         #fill in upper palette with background color
                         for i in range(num_colors,256):
@@ -259,11 +276,16 @@ def screen_format_req(screen, new_clicked=False):
                     if res in [2,3]:
                         dmode |= config.MODE_LACE
                         py *= 2
+
                     if aspect == 1:
                         dmode |= config.NTSC_MONITOR_ID
                     else:
                         dmode |= config.PAL_MONITOR_ID
                         py = py * 128 // 100
+
+                    if halfbright:
+                        dmode |= config.MODE_EXTRA_HALFBRIGHT
+
                     if not new_clicked and (px != config.pixel_width or py != config.pixel_height):
                         new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
                         new_pixel_canvas.set_palette(config.pal)

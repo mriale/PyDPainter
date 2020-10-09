@@ -148,6 +148,10 @@ def load_iff(filename, config):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
+                if nPlanes <= 6:
+                    config.color_depth = 16
+                else:
+                    config.color_depth = 256
             elif chunk.getname() == b'CMAP':
                 #color map header
                 cmap_bytes = chunk.read()
