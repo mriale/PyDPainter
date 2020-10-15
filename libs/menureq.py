@@ -165,6 +165,33 @@ def screen_format_req(screen, new_clicked=False):
         #print(colorlist)
         return colorlist
 
+    def get_top_pal(pal, colorlist, num_colors, halfbright):
+        num_top_colors = num_colors
+        if halfbright:
+            num_top_colors = 32
+
+        #assign top colors to new palette
+        newpal = []
+        for i in range(0,num_top_colors):
+            if i < len(colorlist):
+                newpal.append(pal[colorlist[i]])
+            else:
+                newpal.append(pal[i])
+
+        #adjust halfbright colors
+        if halfbright:
+            for i in range(0,32):
+                newpal.append(((newpal[i][0] & 0xee) // 2,
+                               (newpal[i][1] & 0xee) // 2,
+                               (newpal[i][2] & 0xee) // 2))
+
+        #fill in upper palette with background color
+        for i in range(num_colors,256):
+            newpal.append(newpal[0])
+
+        return newpal
+
+
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
     req.draw(screen)
@@ -219,30 +246,13 @@ def screen_format_req(screen, new_clicked=False):
                         #reduce palette to higest frequency color indexes
                         reinit = False
 
+                        num_top_colors = num_colors
                         if halfbright:
-                            num_colors = 32
+                            num_top_colors = 32
 
-                        colorlist = get_top_colors(num_colors)
+                        colorlist = get_top_colors(num_top_colors)
 
-                        #assign top colors to new palette
-                        newpal = []
-                        for i in range(0,num_colors):
-                            if i < len(colorlist):
-                                newpal.append(config.pal[colorlist[i]])
-                            else:
-                                newpal.append(config.pal[i])
-
-                        #adjust halfbright colors
-                        if halfbright:
-                            num_colors = 64
-                            for i in range(0,32):
-                                newpal.append(((newpal[i][0] & 0xee) // 2,
-                                               (newpal[i][1] & 0xee) // 2,
-                                               (newpal[i][2] & 0xee) // 2))
-
-                        #fill in upper palette with background color
-                        for i in range(num_colors,256):
-                            newpal.append(newpal[0])
+                        newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
 
                         #convert colors to reduced palette using blit
                         new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
@@ -251,10 +261,11 @@ def screen_format_req(screen, new_clicked=False):
 
                         #substitute new canvas for the higher color one
                         config.pixel_canvas = new_pixel_canvas
-                        config.pal = newpal[0:num_colors]
-                        config.pal = config.quantize_palette(config.pal, cdepth)
+                        config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
+                        config.truepal = config.quantize_palette(config.truepal, cdepth)
+                        config.pal = list(config.truepal)
+                        config.pal = config.unique_palette(config.pal)
                         config.backuppal = list(config.pal)
-                        config.truepal = list(config.pal)
                         config.pixel_canvas.set_palette(config.pal)
                     elif num_colors == config.NUM_COLORS:
                         reinit = False
