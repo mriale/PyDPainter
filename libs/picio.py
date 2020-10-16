@@ -331,7 +331,8 @@ def save_iff(filename):
     surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)  # Create an array from the surface.
     planes_out = c2p(surf_array)
     #body = planes_out[:,:nPlanes,:].tobytes()
-    body = byterun_encode(planes_out[:,:nPlanes,:].flatten()).tobytes()
+    for y in range(0,len(planes_out)):
+        body += byterun_encode(planes_out[y,:nPlanes,:].flatten()).tobytes()
 
     write_chunk(newfile, b'BODY', body)
 
