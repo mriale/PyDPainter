@@ -205,6 +205,9 @@ def load_pic(filename):
 #write an IFF chunk to a file
 def write_chunk(f,name,data):
     f.write(name + pack(">I", len(data)) + data)
+    #pad odd bytes
+    if len(data) & 1 == 1:
+        f.write(b'\0')
 
 #close IFF file and update length
 def close_iff(f):
@@ -258,33 +261,26 @@ def byterun_encode(inarray):
     z = np.append(z,0)
     j = 0
     while j < len(z):
-        #repeated values
-        if z[j] > 1:
-            #restrict to lengths of 127
-            rlen = z[j]
-            #print("repeat " + str(rlen) + ": " + str(vals[j]))
-            while rlen > 128:
-                oa = np.append(oa,[129,vals[j]])
-                rlen -= 128
-            #final (or only) length
-            oa = np.append(oa,[256-rlen+1,vals[j]])
+        #repeated values of 128 or more
+        if z[j] >= 128:
+            oa = np.append(oa,[129,vals[j]])
+            z[j] -= 128
+        #repeated values > 2 and < 128
+        elif z[j] > 2:
+            oa = np.append(oa,[256-z[j]+1,vals[j]])
             j += 1
-        #copy values verbatim
-        elif z[j] == 1:
-            #add up lengths of non-repeated values
+        #copy values verbatim up to 127
+        elif z[j] in [1,2]:
             copy_count = 0
-            while j < len(z) and z[j] == 1:
-                copy_count += 1
+            copy_bytes = np.array([], dtype=np.uint8)
+            while j < len(z) and z[j] in [1,2] and copy_count+z[j] <= 127:
+                copy_count += z[j]
+                copy_bytes = np.append(copy_bytes,[vals[j]])
+                if z[j] == 2:
+                    copy_bytes = np.append(copy_bytes,[vals[j]])
                 j += 1
-            #restrict to lengths of 127
-            while copy_count > 128:
-                oa = np.append(oa,127)
-                oa = np.append(oa,vals[j-copy_count:j-copy_count+128])
-                copy_count -= 128
-            #final (or only) length
             oa = np.append(oa,[copy_count-1])
-            oa = np.append(oa,vals[j-copy_count:j])
-            #print("copy " + str(copy_count) + " (j="+str(j)+"): " + str(vals[j-copy_count:j]))
+            oa = np.append(oa,copy_bytes)
         else:
             j += 1
     oa = np.asarray(oa,dtype=np.uint8)
@@ -332,7 +328,8 @@ def save_iff(filename):
     planes_out = c2p(surf_array)
     #body = planes_out[:,:nPlanes,:].tobytes()
     for y in range(0,len(planes_out)):
-        body += byterun_encode(planes_out[y,:nPlanes,:].flatten()).tobytes()
+        for p in range(0,nPlanes):
+            body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
 
     write_chunk(newfile, b'BODY', body)
 
