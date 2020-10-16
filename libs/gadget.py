@@ -44,11 +44,29 @@ def imgload(filename, scaleX=0, scaleY=0, scaledown=1):
 
         #scale image down either by 2 or 4
         if scaledown == 2:
-            scaled_array = surf_array[0::2, 0::2, ::]
-            scaled_array_alpha = surf_array_alpha[0::2, 0::2]
+            #scale image up in X if needed
+            if scaleX != 0 and scaleX > scaleY:
+                scaled_array = surf_array[0::1, 0::2, ::]
+                scaled_array_alpha = surf_array_alpha[0::1, 0::2]
+            #scale image up in Y if needed
+            elif scaleY != 0 and scaleY > scaleX:
+                scaled_array = surf_array[0::2, 0::1, ::]
+                scaled_array_alpha = surf_array_alpha[0::2, 0::1]
+            else:
+                scaled_array = surf_array[0::2, 0::2, ::]
+                scaled_array_alpha = surf_array_alpha[0::2, 0::2]
         else:
-            scaled_array = surf_array[1::4, 1::4, ::]
-            scaled_array_alpha = surf_array_alpha[1::4, 1::4]
+            #scale image up in X if needed
+            if scaleX != 0 and scaleX > scaleY:
+                scaled_array = surf_array[1::2, 1::4, ::]
+                scaled_array_alpha = surf_array_alpha[1::2, 1::4]
+            #scale image up in Y if needed
+            elif scaleY != 0 and scaleY > scaleX:
+                scaled_array = surf_array[1::4, 1::2, ::]
+                scaled_array_alpha = surf_array_alpha[1::4, 1::2]
+            else:
+                scaled_array = surf_array[1::4, 1::4, ::]
+                scaled_array_alpha = surf_array_alpha[1::4, 1::4]
 
         #unlock original bitmap
         surf_array = None
@@ -64,15 +82,6 @@ def imgload(filename, scaleX=0, scaleY=0, scaledown=1):
         imagexx_array_alpha = pygame.surfarray.pixels_alpha(imagexx)
         imagexx_array_alpha[::,::] = scaled_array_alpha[::,::]
         imagexx_array_alpha = None
-
-        #scale image up in X or Y if needed
-        ixx_sizeX, ixx_sizeY = imagexx.get_size()
-        if scaleX != 0 and scaleX > scaleY:
-            #scale up in X
-            imagexx = pygame.transform.scale(imagexx, (ixx_sizeX*2, ixx_sizeY))
-        elif scaleY != 0 and scaleY > scaleX:
-            #scale up in Y
-            imagexx = pygame.transform.scale(imagexx, (ixx_sizeX, ixx_sizeY*2))
 
         return imagexx
     else:
