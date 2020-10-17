@@ -271,11 +271,19 @@ def screen_format_req(screen, new_clicked=False):
                         reinit = False
                     elif num_colors > config.NUM_COLORS:
                         reinit = False
+
+                        config.truepal = config.quantize_palette(config.truepal, cdepth)
                         newpal = config.get_default_palette(num_colors)
-                        config.pal.extend(newpal[config.NUM_COLORS:num_colors])
-                        config.pal = config.quantize_palette(config.pal, cdepth)
+                        config.truepal.extend(newpal[config.NUM_COLORS:num_colors])
+                        if halfbright:
+                            for i in range(0,32):
+                                config.truepal[i+32] = \
+                                          ((config.truepal[i][0] & 0xee) // 2,
+                                           (config.truepal[i][1] & 0xee) // 2,
+                                           (config.truepal[i][2] & 0xee) // 2)
+                        config.pal = list(config.truepal)
+                        config.pal = config.unique_palette(config.pal)
                         config.backuppal = list(config.pal)
-                        config.truepal = list(config.pal)
                         config.pixel_canvas.set_palette(config.pal)
 
                     dmode = 0

@@ -6,6 +6,12 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+config = None
+
+def colorrange_set_config(config_in):
+    global config
+    config = config_in
+
 class colorrange:
     def __init__(self, rate=0, flags=1, low=0, high=0):
         if rate < 16384:
@@ -31,11 +37,19 @@ class colorrange:
                     lowcol = pal[self.low]
                     del pal[self.low]
                     pal.insert(self.high, lowcol)
+                    if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+                        lowcol = pal[self.low + 32]
+                        del pal[self.low + 32]
+                        pal.insert(self.high + 32, lowcol)
                 else:
                     #normal
                     highcol = pal[self.high]
                     del pal[self.high]
                     pal.insert(self.low, highcol)
+                    if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+                        highcol = pal[self.high + 32]
+                        del pal[self.high + 32]
+                        pal.insert(self.low + 32, highcol)
         self.last_timer = timer
 
     def rate_to_milli(self):

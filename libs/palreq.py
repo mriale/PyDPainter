@@ -295,7 +295,7 @@ Speed---------___^^
     palpage_rg = req.gadget_id("17_8")
     palpage_rg.value = 2
 
-    if len(config.pal) > 32:
+    if len(config.pal) > 32 and not config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
         palpageg.enabled = True
         palpage_lg.enabled = True
         palpage_rg.enabled = True
@@ -499,6 +499,7 @@ Speed---------___^^
                 colorg.need_redraw = True
                 palg.need_redraw = True
                 config.pal[color] = rgb
+                config.pal = config.quantize_palette(config.pal, config.color_depth)
                 config.set_all_palettes(config.pal)
             elif ge.gadget.type == Gadget.TYPE_PROP:
                 if ge.gadget.id == speedg.id:
@@ -525,6 +526,7 @@ Speed---------___^^
                     strg.value = rgb_to_hex(rgb)
                     strg.need_redraw = True
                     config.pal[color] = rgb
+                    config.pal = config.quantize_palette(config.pal, config.color_depth)
                     config.set_all_palettes(config.pal)
         range_numg[current_range].state = 1
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
