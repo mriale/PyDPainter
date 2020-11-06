@@ -106,6 +106,10 @@ class DoScreenFormat(MenuAction):
     def selected(self, attrs):
         screen_format_req(config.pixel_req_canvas)
 
+class DoAbout(MenuAction):
+    def selected(self, attrs):
+        about_req(config.pixel_req_canvas)
+
 class DoBrushFlipX(MenuAction):
     def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
@@ -189,7 +193,7 @@ def init_menubar(config_in):
             ["Page Size..."],
             ["Show Page", "S"],
             ["Screen Format...", " ", DoScreenFormat],
-            ["About..."],
+            ["About...", " ", DoAbout],
             ["Quit", "Q"],
         ]])
     menubar.add_menu(

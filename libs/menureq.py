@@ -348,3 +348,37 @@ def screen_format_req(screen, new_clicked=False):
 
     return
 
+
+def about_req(screen):
+    req = str2req("About", """
+PyDPainter version 0.8
+
+[OK]
+""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK":
+                    running = 0 
+
+        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return
