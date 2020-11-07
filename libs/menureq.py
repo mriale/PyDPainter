@@ -349,12 +349,43 @@ def screen_format_req(screen, new_clicked=False):
     return
 
 
+class PPpic(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.pic = imgload('logo.png')
+        super(PPpic, self).__init__(type, label, rect, value, maxvalue, id)
+        
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                screen.blit(pygame.transform.smoothscale(self.pic, (w, h)), (x+xo,y+yo))
+        else:
+            super(PPpic, self).draw(screen, font, offset)
+
 def about_req(screen):
     req = str2req("About", """
-PyDPainter version 0.8
-
-[OK]
-""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+PyDPainter       ############
+\xA92020 Mark Riale ############
+Version %-8s ############
+                 ############
+Licensed under   ############
+GPL 3 or later.  ############
+See LICENSE for  ############
+more details.    ############
+             [OK]
+""" % (config.version), "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPpic, font=config.font)
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()

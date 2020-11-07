@@ -17,6 +17,7 @@ from tools import *
 from minitools import *
 from menubar import *
 from menus import *
+from version import *
 from zoom import *
 
 import numpy as np
@@ -125,6 +126,7 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         colorrange_set_config(self)
+        version_set_config(self)
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
