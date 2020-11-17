@@ -20,6 +20,81 @@ def toolreq_set_config(config_in):
     config = config_in
 
 
+class FontGadget(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        super(FontGadget, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+        if self.maxvalue == None:
+            current_range = 1
+        else:
+            current_range = self.maxvalue
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+            if self.label == "#":
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 1)
+            elif self.label == "%":
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 0)
+        else:
+            super(FontGadget, self).draw(screen, font, offset)
+
+def font_req(screen):
+    req = str2req("Font", """
+################### Size:____
+################### Style:
+################### [Bold]
+################### [Italic]
+################### [Underline]
+###################
+###################
+Preview
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+[Cancel][OK]
+""", "%#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FontGadget, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK" and not req.has_error():
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0
+
+        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return
+
+
 def place_point(symm_center):
     point_coords = (0,0)
     pixel_req_rect_bak = config.pixel_req_rect

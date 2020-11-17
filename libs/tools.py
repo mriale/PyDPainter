@@ -728,6 +728,7 @@ class DoText(ToolSingleAction):
 
     def selected(self, attrs):
         if attrs["rightclick"]:
+            font_req(config.pixel_req_canvas)
             return
 
         config.tool_selected = self.id
