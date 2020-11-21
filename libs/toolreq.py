@@ -20,9 +20,15 @@ def toolreq_set_config(config_in):
     config = config_in
 
 
-class FontGadget(Gadget):
+class FontList(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        super(FontGadget, self).__init__(type, label, rect, value, maxvalue, id)
+        if label == "^":
+            scaleX = config.pixel_width // 320
+            scaleY = config.pixel_height // 200
+            scaledown = 4 // min(scaleX,scaleY)
+            self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
+            value = 0
+        super(FontList, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -31,41 +37,80 @@ class FontGadget(Gadget):
         self.offsetx = xo
         self.offsety = yo
         self.screenrect = (x+xo,y+yo,w,h)
-        if self.maxvalue == None:
-            current_range = 1
-        else:
-            current_range = self.maxvalue
+        px = font.xsize//8
+        py = font.ysize//8
 
         if self.type == Gadget.TYPE_CUSTOM:
             if not self.need_redraw:
                 return
 
             self.need_redraw = False
+            #List text
             if self.label == "#":
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 1)
+            #List up/down arrows
+            elif self.label == "^":
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
+                if self.state == 0:
+                    pygame.draw.rect(screen, fgcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+                else:
+                    pygame.draw.rect(screen, hcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+
+                ah = self.crng_arrows.get_height()
+                aw = self.crng_arrows.get_width() // 4
+
+                if self.value == 1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
+                elif self.value == -1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
+                elif self.value == -2:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*2,0,aw,ah))
+                elif self.value == 2:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
+            #List slider
+            elif self.label == "@":
+                pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
+                pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py,w-5*px,font.ysize*3), 0)
+            #Font preview
             elif self.label == "%":
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 0)
         else:
-            super(FontGadget, self).draw(screen, font, offset)
+            super(FontList, self).draw(screen, font, offset)
 
 def font_req(screen):
-    req = str2req("Font", """
-################### Size:____
-################### Style:
-################### [Bold]
-################### [Italic]
-################### [Underline]
-###################
-###################
+    req = str2req("Choose Font", """
+#################^^ [System]
+#################@@ [AmigaFont]
+#################@@ Size:____
+#################@@ Style:
+#################@@ [Bold]
+#################@@ [Italic]
+#################^^ [Underline]
 Preview
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Cancel][OK]
-""", "%#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FontGadget, font=config.font)
+""", "%#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FontList, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
+
+    #list up/down arrows
+    list_upg = req.gadget_id("17_0")
+    list_upg.value = -1
+    list_downg = req.gadget_id("17_6")
+    list_downg.value = 1
+
+    #font type
+    system_fontg = req.gadget_id("20_0")
+    system_fontg.state = 1
+    amiga_fontg = req.gadget_id("20_1")
+    amiga_fontg.enabled = False
 
     req.draw(screen)
     config.recompose()
@@ -85,6 +130,7 @@ Preview
                 elif ge.gadget.label == "Cancel":
                     running = 0
 
+        system_fontg.state = 1
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
