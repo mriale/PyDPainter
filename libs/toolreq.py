@@ -28,6 +28,10 @@ class FontList(Gadget):
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
+        elif label == "#":
+            self.items = pygame.font.get_fonts()
+            self.items.sort()
+            self.top_item = 0
         super(FontList, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -47,7 +51,16 @@ class FontList(Gadget):
             self.need_redraw = False
             #List text
             if self.label == "#":
+                screen.set_clip(self.screenrect)
+                for i in range(self.top_item, min(len(self.items), self.top_item+(h//font.ysize))):
+                    fg = fgcolor
+                    bg = bgcolor
+                    if i == self.value: #highlight current
+                        fg = bgcolor
+                        bg = fgcolor
+                    font.blitstring(screen, (x+xo+2*px,y+yo+2*py+(i-self.top_item)*font.ysize), self.items[i], fg, bg)
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 1)
+                screen.set_clip(None)
             #List up/down arrows
             elif self.label == "^":
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
@@ -73,8 +86,10 @@ class FontList(Gadget):
                     screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
             #List slider
             elif self.label == "@":
+                sh = max((h-2*py) // self.maxvalue, font.ysize//2)
+                so = (h-2*py) * self.value // self.maxvalue
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
-                pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py,w-5*px,font.ysize*3), 0)
+                pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py+so,w-5*px,sh), 0)
             #Font preview
             elif self.label == "%":
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 0)
@@ -100,11 +115,21 @@ Preview
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
+    #list items
+    list_itemsg = req.gadget_id("0_0")
+    list_itemsg.top_item = 30
+    list_itemsg.value = 35
+
     #list up/down arrows
     list_upg = req.gadget_id("17_0")
     list_upg.value = -1
     list_downg = req.gadget_id("17_6")
     list_downg.value = 1
+
+    #list slider
+    list_sliderg = req.gadget_id("17_1")
+    list_sliderg.value = 30
+    list_sliderg.maxvalue = len(list_itemsg.items)
 
     #font type
     system_fontg = req.gadget_id("20_0")
