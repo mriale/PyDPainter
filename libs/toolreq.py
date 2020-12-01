@@ -2,6 +2,7 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import os.path, colorsys
+import numpy as np
 
 import gadget
 from gadget import *
@@ -20,19 +21,20 @@ def toolreq_set_config(config_in):
     config = config_in
 
 
-class FontList(Gadget):
+class ListGadget(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "^":
             scaleX = config.pixel_width // 320
             scaleY = config.pixel_height // 200
-            scaledown = 4 // min(scaleX,scaleY)
-            self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
+            arrowcoords = np.array([[16,32], [32,16], [20,16], [20,0], [12,0], [12,16], [0,16]])
+            self.arrowdown = arrowcoords * np.array([scaleX/4,scaleY/4])
+            self.arrowup = (arrowcoords - np.array([0,32])) * np.array([scaleX/4,-scaleY/4])
+
             value = 0
         elif label == "#":
-            self.items = pygame.font.get_fonts()
-            self.items.sort()
+            self.items = []
             self.top_item = 0
-        super(FontList, self).__init__(type, label, rect, value, maxvalue, id)
+        super(ListGadget, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -52,13 +54,20 @@ class FontList(Gadget):
             #List text
             if self.label == "#":
                 screen.set_clip(self.screenrect)
-                for i in range(self.top_item, min(len(self.items), self.top_item+(h//font.ysize))):
+                numlines = h//font.ysize
+                topi = self.top_item
+                if topi < 0:
+                    topi = 0
+                elif topi > len(self.items)-numlines:
+                    topi = max(0, len(self.items)-numlines)
+                for i in range(topi, topi+numlines):
                     fg = fgcolor
                     bg = bgcolor
-                    if i == self.value: #highlight current
-                        fg = bgcolor
-                        bg = fgcolor
-                    font.blitstring(screen, (x+xo+2*px,y+yo+2*py+(i-self.top_item)*font.ysize), self.items[i], fg, bg)
+                    if i < len(self.items):
+                        if i == self.value: #highlight current
+                            fg = bgcolor
+                            bg = fgcolor
+                        font.blitstring(screen, (x+xo+2*px,y+yo+2*py+(i-topi)*font.ysize), self.items[i], fg, bg)
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 1)
                 screen.set_clip(None)
             #List up/down arrows
@@ -73,28 +82,22 @@ class FontList(Gadget):
                     pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
                     pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
 
-                ah = self.crng_arrows.get_height()
-                aw = self.crng_arrows.get_width() // 4
-
                 if self.value == 1:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
+                    pygame.draw.polygon(screen, fgcolor, self.arrowdown + np.array([x+xo+4*px,y+yo+py]))
                 elif self.value == -1:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
-                elif self.value == -2:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*2,0,aw,ah))
-                elif self.value == 2:
-                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
+                    pygame.draw.polygon(screen, fgcolor, self.arrowup + np.array([x+xo+4*px,y+yo+py]))
+
             #List slider
             elif self.label == "@":
                 sh = max((h-2*py) // self.maxvalue, font.ysize//2)
-                so = (h-2*py) * self.value // self.maxvalue
+                so = (h-2*py-sh) * self.value // self.maxvalue
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
                 pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py+so,w-5*px,sh), 0)
             #Font preview
             elif self.label == "%":
                 pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 0)
         else:
-            super(FontList, self).draw(screen, font, offset)
+            super(ListGadget, self).draw(screen, font, offset)
 
 def font_req(screen):
     req = str2req("Choose Font", """
@@ -111,13 +114,15 @@ Preview
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Cancel][OK]
-""", "%#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FontList, font=config.font)
+""", "%#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
     #list items
     list_itemsg = req.gadget_id("0_0")
-    list_itemsg.top_item = 30
+    list_itemsg.items = pygame.font.get_fonts()
+    list_itemsg.items.sort()
+    list_itemsg.top_item = 0
     list_itemsg.value = 35
 
     #list up/down arrows
@@ -128,7 +133,7 @@ Preview
 
     #list slider
     list_sliderg = req.gadget_id("17_1")
-    list_sliderg.value = 30
+    list_sliderg.value = 0
     list_sliderg.maxvalue = len(list_itemsg.items)
 
     #font type
