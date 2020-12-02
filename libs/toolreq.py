@@ -22,7 +22,10 @@ def toolreq_set_config(config_in):
 
 
 class ListGadget(Gadget):
+    L_ITEMS, L_UP, L_DOWN, L_SLIDER = range(4)
+
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.listgadets = None
         if label == "^":
             scaleX = config.pixel_width // 320
             scaleY = config.pixel_height // 200
@@ -93,9 +96,6 @@ class ListGadget(Gadget):
                 so = (h-2*py-sh) * self.value // self.maxvalue
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
                 pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py+so,w-5*px,sh), 0)
-            #Font preview
-            elif self.label == "%":
-                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 0)
         else:
             super(ListGadget, self).draw(screen, font, offset)
 
@@ -105,8 +105,8 @@ def font_req(screen):
 #################@@ [AmigaFont]
 #################@@ Size:____
 #################@@ Style:
-#################@@ [Bold]
-#################@@ [Italic]
+#################@@ [Bold][AA]
+#################@@ [Italic][O]
 #################^^ [Underline]
 Preview
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -122,8 +122,8 @@ Preview
     list_itemsg = req.gadget_id("0_0")
     list_itemsg.items = pygame.font.get_fonts()
     list_itemsg.items.sort()
-    list_itemsg.top_item = 0
-    list_itemsg.value = 35
+    list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font)
+    list_itemsg.value = list_itemsg.top_item
 
     #list up/down arrows
     list_upg = req.gadget_id("17_0")
@@ -133,14 +133,28 @@ Preview
 
     #list slider
     list_sliderg = req.gadget_id("17_1")
-    list_sliderg.value = 0
+    list_sliderg.value = list_itemsg.top_item
     list_sliderg.maxvalue = len(list_itemsg.items)
+
+    #all list item gadgets
+    listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
+    list_itemsg.listgadets = listg_list
+    list_upg.listgadets = listg_list
+    list_downg.listgadets = listg_list
+    list_sliderg.listgadets = listg_list
 
     #font type
     system_fontg = req.gadget_id("20_0")
     system_fontg.state = 1
     amiga_fontg = req.gadget_id("20_1")
     amiga_fontg.enabled = False
+
+    #font type
+    aa_fontg = req.gadget_id("26_4")
+    aa_fontg.state = 1
+
+    #font preview
+    previewg = req.gadget_id("0_8")
 
     req.draw(screen)
     config.recompose()
@@ -161,8 +175,17 @@ Preview
                     running = 0
 
         system_fontg.state = 1
+        aa_fontg.state = 1
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
+            #Font preview
+            screen.set_clip(previewg.screenrect)
+            pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
+            prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value]), 16)
+            surf = prefont.render("The quick brown fox jumps over the lazy dog", True, (255,255,255))
+            screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
+            screen.set_clip(None)
+ 
             config.recompose()
 
     config.pixel_req_rect = None

@@ -5,7 +5,7 @@ config.py
 Implement the global area of PyDPainter
 """
 
-import sys, math, os.path, random, colorsys, platform
+import sys, math, os.path, random, colorsys, platform, re
 
 from colorrange import *
 from cursor import *
@@ -415,6 +415,8 @@ class pydpainter:
         self.fontx = fontx
         self.fonty = fonty
         self.font = PixelFont("jewel32.png", 8)
+        self.text_tool_font = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
+        self.text_tool_font = re.sub(r'bold$', '', self.text_tool_font)
         self.last_recompose_timer = 0
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h
