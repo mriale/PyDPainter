@@ -111,7 +111,7 @@ def setBIBrush():
             g.state = 1
         else:
             g.state = 0
-        g.need_refresh = True
+        g.need_redraw = True
     return
 
 
@@ -417,6 +417,8 @@ class pydpainter:
         self.font = PixelFont("jewel32.png", 8)
         self.text_tool_font = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
         self.text_tool_font = re.sub(r'bold$', '', self.text_tool_font)
+        self.text_tool_font_type = 0
+        self.text_tool_font_antialias = True
         self.last_recompose_timer = 0
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h

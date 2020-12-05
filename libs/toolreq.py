@@ -25,7 +25,7 @@ class ListGadget(Gadget):
     L_ITEMS, L_UP, L_DOWN, L_SLIDER = range(4)
 
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.listgadets = None
+        self.listgadgets = None
         if label == "^":
             scaleX = config.pixel_width // 320
             scaleY = config.pixel_height // 200
@@ -57,7 +57,9 @@ class ListGadget(Gadget):
             #List text
             if self.label == "#":
                 screen.set_clip(self.screenrect)
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
                 numlines = h//font.ysize
+                self.numlines = numlines
                 topi = self.top_item
                 if topi < 0:
                     topi = 0
@@ -99,14 +101,64 @@ class ListGadget(Gadget):
         else:
             super(ListGadget, self).draw(screen, font, offset)
 
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    #List up/down arrows
+                    if g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+                    #List text
+                    elif g.label == "#":
+                        item = (self.numlines * (y-gy) // gh) + self.top_item
+                        if item >= len(g.items):
+                            item = len(g.items) - 1
+                        if item < 0:
+                            item = 0
+                        g.value = item
+                        g.need_redraw = True
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                #List up/down arrows
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if g.value == -1:
+                            if g.listgadgets[self.L_ITEMS].top_item > 0:
+                                g.listgadgets[self.L_ITEMS].top_item -= 1
+                                g.listgadgets[self.L_ITEMS].need_redraw = True
+                                g.listgadgets[self.L_SLIDER].value -= 1
+                                g.listgadgets[self.L_SLIDER].need_redraw = True
+                        elif g.value == 1:
+                            if g.listgadgets[self.L_ITEMS].top_item < len(g.listgadgets[self.L_ITEMS].items)-1:
+                                g.listgadgets[self.L_ITEMS].top_item += 1
+                                g.listgadgets[self.L_ITEMS].need_redraw = True
+                                g.listgadgets[self.L_SLIDER].value += 1
+                                g.listgadgets[self.L_SLIDER].need_redraw = True
+                    g.state = 0
+                    g.need_redraw = True
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+        else:
+            ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 def font_req(screen):
     req = str2req("Choose Font", """
 #################^^ [System]
 #################@@ [AmigaFont]
 #################@@ Size:____
 #################@@ Style:
-#################@@ [Bold][AA]
-#################@@ [Italic][O]
+#################@@ [Bold] [AA]
+#################@@ [Italic]
 #################^^ [Underline]
 Preview
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -138,20 +190,28 @@ Preview
 
     #all list item gadgets
     listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
-    list_itemsg.listgadets = listg_list
-    list_upg.listgadets = listg_list
-    list_downg.listgadets = listg_list
-    list_sliderg.listgadets = listg_list
+    list_itemsg.listgadgets = listg_list
+    list_upg.listgadgets = listg_list
+    list_downg.listgadgets = listg_list
+    list_sliderg.listgadgets = listg_list
 
     #font type
     system_fontg = req.gadget_id("20_0")
-    system_fontg.state = 1
     amiga_fontg = req.gadget_id("20_1")
     amiga_fontg.enabled = False
+    fonttype = config.text_tool_font_type
+    if fonttype == 0:
+        system_fontg.state = 1
+        amiga_fontg.state = 0
+    else:
+        system_fontg.state = 0
+        amiga_fontg.state = 1
 
-    #font type
-    aa_fontg = req.gadget_id("26_4")
-    aa_fontg.state = 1
+    #antialias
+    aa_fontg = req.gadget_id("27_4")
+    aa = config.text_tool_font_antialias
+    if aa:
+        aa_fontg.state = 1
 
     #font preview
     previewg = req.gadget_id("0_8")
@@ -170,19 +230,32 @@ Preview
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
+                    config.text_tool_font_antialias = aa
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget.label == "System":
+                    fonttype = 0
+                elif ge.gadget.label == "AmigaFont":
+                    fonttype = 1
+                elif ge.gadget.label == "AA":
+                    aa = not aa
 
-        system_fontg.state = 1
-        aa_fontg.state = 1
+        if fonttype == 0:
+            system_fontg.state = 1
+        else:
+            amiga_fontg.state = 1
+
+        if aa:
+            aa_fontg.state = 1
+
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             #Font preview
             screen.set_clip(previewg.screenrect)
             pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
             prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value]), 16)
-            surf = prefont.render("The quick brown fox jumps over the lazy dog", True, (255,255,255))
+            surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
             screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
             screen.set_clip(None)
  
