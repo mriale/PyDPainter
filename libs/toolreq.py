@@ -37,6 +37,9 @@ class ListGadget(Gadget):
         elif label == "#":
             self.items = []
             self.top_item = 0
+        elif label == "@":
+            self.sliderrect = (0,0,0,0)
+            self.clicky = None
         super(ListGadget, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -96,12 +99,18 @@ class ListGadget(Gadget):
 
             #List slider
             elif self.label == "@":
+                numlines = self.listgadgets[self.L_ITEMS].screenrect[3] // font.ysize
+                self.maxvalue = max(0, len(self.listgadgets[self.L_ITEMS].items) - numlines)
                 if self.value < 0:
                     self.value = 0
                 elif self.value > self.maxvalue:
                     self.value = self.maxvalue
-                sh = max((h-2*py) // self.maxvalue, font.ysize//2)
-                so = (h-2*py-sh) * self.value // self.maxvalue
+                if self.maxvalue > 0:
+                    sh = min(max(h * numlines // len(self.listgadgets[self.L_ITEMS].items), font.ysize//2), h-2*py)
+                    so = (h-2*py-sh) * self.value // self.maxvalue
+                else:
+                    sh = h-2*py
+                    so = 0
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
                 self.sliderrect = (x+xo+3*px,y+yo+py+so,w-5*px,sh)
                 pygame.draw.rect(screen, bgcolor, self.sliderrect, 0)
@@ -145,7 +154,8 @@ class ListGadget(Gadget):
                     #List slider
                     elif g.label == "@":
                         if g.pointin((x,y), g.sliderrect):
-                            print("on slider")
+                            self.clicky = y - g.sliderrect[1]
+                            self.state = 1
                         #page up
                         elif y < g.sliderrect[1]:
                             g.scroll_delta(-g.listgadgets[self.L_ITEMS].numlines)
@@ -177,6 +187,21 @@ class ListGadget(Gadget):
                         g.state = 0
                         g.need_redraw = True
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif g.label == "@":
+                    self.clicky = None
+                    self.state = 1
+            elif (event.type == MOUSEMOTION and event.buttons[0]):
+                if g.label == "@" and self.clicky is not None:
+                    deltay = y-self.clicky-self.screenrect[1]
+                    if self.maxvalue > 0:
+                        h = self.screenrect[3]
+                        sh = self.sliderrect[3]
+                        self.value = (deltay) * self.maxvalue // (h-sh)
+                        self.need_redraw = True
+                        self.listgadgets[self.L_ITEMS].top_item = self.value
+                        self.listgadgets[self.L_ITEMS].need_redraw = True
+                    else:
+                        self.value = 0
         else:
             ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
@@ -229,7 +254,6 @@ Preview
     #list slider
     list_sliderg = req.gadget_id("17_1")
     list_sliderg.value = list_itemsg.top_item
-    list_sliderg.maxvalue = len(list_itemsg.items)
 
     #all list item gadgets
     listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
@@ -697,10 +721,10 @@ def spacing_req(screen):
                     running = 0 
                 elif ge.gadget in button_list:
                     button_list[spacing].state = 0
-                    button_list[spacing].needs_redraw = True
+                    button_list[spacing].need_redraw = True
                     spacing = button_list.index(ge.gadget)
                     ge.gadget.state = 1
-                    ge.gadget.needs_redraw = True
+                    ge.gadget.need_redraw = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
