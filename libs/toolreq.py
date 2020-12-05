@@ -456,7 +456,10 @@ class FillGadget(Gadget):
                     ch = rh//2
                     cx = rx + cw
                     cy = ry + ch
-                    fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops)
+                    fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
+                    if config.has_event():
+                        #Got interrupted so still needs to redraw
+                        self.need_redraw = True
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
