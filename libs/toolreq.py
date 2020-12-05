@@ -65,6 +65,8 @@ class ListGadget(Gadget):
                     topi = 0
                 elif topi > len(self.items)-numlines:
                     topi = max(0, len(self.items)-numlines)
+                self.top_item = topi
+
                 for i in range(topi, topi+numlines):
                     fg = fgcolor
                     bg = bgcolor
@@ -94,12 +96,23 @@ class ListGadget(Gadget):
 
             #List slider
             elif self.label == "@":
+                if self.value < 0:
+                    self.value = 0
+                elif self.value > self.maxvalue:
+                    self.value = self.maxvalue
                 sh = max((h-2*py) // self.maxvalue, font.ysize//2)
                 so = (h-2*py-sh) * self.value // self.maxvalue
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
-                pygame.draw.rect(screen, bgcolor, (x+xo+3*px,y+yo+py+so,w-5*px,sh), 0)
+                self.sliderrect = (x+xo+3*px,y+yo+py+so,w-5*px,sh)
+                pygame.draw.rect(screen, bgcolor, self.sliderrect, 0)
         else:
             super(ListGadget, self).draw(screen, font, offset)
+
+    def scroll_delta(self, delta):
+        self.listgadgets[self.L_ITEMS].top_item += delta
+        self.listgadgets[self.L_ITEMS].need_redraw = True
+        self.listgadgets[self.L_SLIDER].value += delta
+        self.listgadgets[self.L_SLIDER].need_redraw = True
 
     def process_event(self, screen, event, mouse_pixel_mapper):
         ge = []
@@ -119,6 +132,7 @@ class ListGadget(Gadget):
                     if g.label == "^":
                         g.state = 1
                         g.need_redraw = True
+                        pygame.time.set_timer(pygame.USEREVENT, 500)
                     #List text
                     elif g.label == "#":
                         item = (self.numlines * (y-gy) // gh) + self.top_item
@@ -128,28 +142,56 @@ class ListGadget(Gadget):
                             item = 0
                         g.value = item
                         g.need_redraw = True
-            if event.type == MOUSEBUTTONUP and event.button == 1:
+                    #List slider
+                    elif g.label == "@":
+                        if g.pointin((x,y), g.sliderrect):
+                            print("on slider")
+                        #page up
+                        elif y < g.sliderrect[1]:
+                            g.scroll_delta(-g.listgadgets[self.L_ITEMS].numlines)
+                        elif y > g.sliderrect[1] + g.sliderrect[3]:
+                            g.scroll_delta(g.listgadgets[self.L_ITEMS].numlines)
+
+                #handle mouse wheel
+                elif event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
+                    #scroll up
+                    if event.button == 4:
+                        g.scroll_delta(-1)
+                    #scroll down
+                    elif event.button == 5:
+                        g.scroll_delta(1)
+
+            if (event.type == MOUSEBUTTONUP and event.button == 1) or \
+               event.type == USEREVENT:
                 #List up/down arrows
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
                         if g.value == -1:
-                            if g.listgadgets[self.L_ITEMS].top_item > 0:
-                                g.listgadgets[self.L_ITEMS].top_item -= 1
-                                g.listgadgets[self.L_ITEMS].need_redraw = True
-                                g.listgadgets[self.L_SLIDER].value -= 1
-                                g.listgadgets[self.L_SLIDER].need_redraw = True
+                            g.scroll_delta(-1)
                         elif g.value == 1:
-                            if g.listgadgets[self.L_ITEMS].top_item < len(g.listgadgets[self.L_ITEMS].items)-1:
-                                g.listgadgets[self.L_ITEMS].top_item += 1
-                                g.listgadgets[self.L_ITEMS].need_redraw = True
-                                g.listgadgets[self.L_SLIDER].value += 1
-                                g.listgadgets[self.L_SLIDER].need_redraw = True
-                    g.state = 0
-                    g.need_redraw = True
-                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                            g.scroll_delta(1)
+                    if event.type == USEREVENT:
+                        pygame.time.set_timer(pygame.USEREVENT, 100)
+                    else:
+                        pygame.time.set_timer(pygame.USEREVENT, 0)
+                        g.state = 0
+                        g.need_redraw = True
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
         else:
             ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
+
+#Simple filter to get rid of non-latin fonts from the font requester
+def is_latin_font(fname):
+    retval = True
+
+    if fname[0:7] in ["mathjax","notosan","notoser","notocol","notonas","notomon","notokuf","notomus"]:
+        retval = False
+    elif fname[0:6] == "samyak":
+        retval = False
+    elif fname[0:5] in ["kacst","lohit"]:
+        retval = False
+    return retval
 
 def font_req(screen):
     req = str2req("Choose Font", """
@@ -174,6 +216,7 @@ Preview
     list_itemsg = req.gadget_id("0_0")
     list_itemsg.items = pygame.font.get_fonts()
     list_itemsg.items.sort()
+    list_itemsg.items = list(filter(lambda fname: is_latin_font(fname), list_itemsg.items))
     list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font)
     list_itemsg.value = list_itemsg.top_item
 
