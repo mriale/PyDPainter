@@ -206,6 +206,119 @@ class ListGadget(Gadget):
             ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
 
+
+class FontGadget(ListGadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        if label == "&":
+            scaleX = config.pixel_width // 320
+            scaleY = config.pixel_height // 200
+            self.arrowup = np.array([[0,16], [16,0], [32,16]]) * np.array([scaleX/4,scaleY/4])
+            self.arrowdown = np.array([[0,24], [32,24], [16,40]]) * np.array([scaleX/4,scaleY/4])
+            self.font_sizeg = None
+        super(FontGadget, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+        px = font.xsize//8
+        py = font.ysize//8
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            #List text
+            if self.label == "&":
+                self.need_redraw = False
+                upcolor = fgcolor
+                downcolor = fgcolor
+                if self.state == 1:
+                    upcolor = hcolor
+                elif self.state == -1:
+                    downcolor = hcolor
+                pygame.draw.polygon(screen, upcolor, self.arrowup + np.array([x+xo,y+yo]))
+                pygame.draw.polygon(screen, downcolor, self.arrowdown + np.array([x+xo,y+yo]))
+            else:
+                super(FontGadget, self).draw(screen, font, offset)
+        else:
+            super(FontGadget, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+        handled = False
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            #Size up/down arrows
+            if event.type == MOUSEBUTTONUP and event.button == 1 and \
+               g.label == "&" and g.state != 0:
+                pygame.time.set_timer(pygame.USEREVENT, 0)
+                g.state = 0
+                g.need_redraw = True
+                handled = True
+
+            if g.pointin((x,y), g.screenrect) and g.label == "&":
+                handled = True
+
+                #get number from size gadget
+                if g.font_sizeg.value.isnumeric() and int(g.font_sizeg.value) > 0 and int(g.font_sizeg.value) <= 500:
+                    fontsize = int(g.font_sizeg.value)
+                else:
+                    fontsize = 0
+
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    pygame.time.set_timer(pygame.USEREVENT, 500)
+                    if y - gy < gh // 2:
+                        #up arrow
+                        g.state = 1
+                        fontsize += 1
+                    else:
+                        #down arrow
+                        g.state = -1
+                        fontsize -= 1
+
+                #handle mouse wheel
+                elif event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
+                    #scroll up
+                    if event.button == 4:
+                        fontsize += 1
+                    #scroll down
+                    elif event.button == 5:
+                        fontsize -= 1
+
+                elif event.type == USEREVENT:
+                    pygame.time.set_timer(pygame.USEREVENT, 100)
+                    if y - gy < gh // 2:
+                        #up arrow
+                        g.state = 1
+                        fontsize += 1
+                    else:
+                        #down arrow
+                        g.state = -1
+                        fontsize -= 1
+                    
+                #assign back to size gadget
+                if fontsize > 0 and fontsize <= 500:
+                    g.font_sizeg.value = str(fontsize)
+                    g.font_sizeg.need_redraw = True
+                    g.need_redraw = True
+
+        if not handled:
+            ge.extend(super(FontGadget, self).process_event(screen, event, mouse_pixel_mapper))
+
+        return ge
+
 #Simple filter to get rid of non-latin fonts from the font requester
 def is_latin_font(fname):
     retval = True
@@ -222,7 +335,7 @@ def font_req(screen):
     req = str2req("Choose Font", """
 #################^^ [System]
 #################@@ [AmigaFont]
-#################@@ Size:____
+#################@@ Size:____&
 #################@@ Style:
 #################@@ [Bold] [AA]
 #################@@ [Italic]
@@ -233,7 +346,7 @@ Preview
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 [Cancel][OK]
-""", "%#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+""", "%#^@&", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FontGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -273,6 +386,12 @@ Preview
     else:
         system_fontg.state = 0
         amiga_fontg.state = 1
+
+    #font size
+    font_sizeg = req.gadget_id("25_2")
+    font_sizeg.value = "16"
+    font_size_arrowsg = req.gadget_id("29_2")
+    font_size_arrowsg.font_sizeg = font_sizeg
 
     #antialias
     aa_fontg = req.gadget_id("27_4")
@@ -321,9 +440,10 @@ Preview
             #Font preview
             screen.set_clip(previewg.screenrect)
             pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
-            prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value]), 16)
-            surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
-            screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
+            if font_sizeg.value.isnumeric() and int(font_sizeg.value) > 0 and int(font_sizeg.value) <= 500:
+                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value]), int(font_sizeg.value))
+                surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
+                screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
             screen.set_clip(None)
  
             config.recompose()
