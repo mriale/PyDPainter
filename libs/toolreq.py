@@ -113,7 +113,10 @@ class ListGadget(Gadget):
                     so = 0
                 pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
                 self.sliderrect = (x+xo+3*px,y+yo+py+so,w-5*px,sh)
-                pygame.draw.rect(screen, bgcolor, self.sliderrect, 0)
+                if self.state == 0:
+                    pygame.draw.rect(screen, bgcolor, self.sliderrect, 0)
+                else:
+                    pygame.draw.rect(screen, hcolor, self.sliderrect, 0)
         else:
             super(ListGadget, self).draw(screen, font, offset)
 
@@ -153,9 +156,11 @@ class ListGadget(Gadget):
                         g.need_redraw = True
                     #List slider
                     elif g.label == "@":
+                        #drag slider
                         if g.pointin((x,y), g.sliderrect):
                             self.clicky = y - g.sliderrect[1]
                             self.state = 1
+                            self.need_redraw = True
                         #page up
                         elif y < g.sliderrect[1]:
                             g.scroll_delta(-g.listgadgets[self.L_ITEMS].numlines)
@@ -188,8 +193,9 @@ class ListGadget(Gadget):
                         g.need_redraw = True
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 elif g.label == "@":
-                    self.clicky = None
-                    self.state = 1
+                    g.clicky = None
+                    g.state = 0
+                    g.need_redraw = True
             elif (event.type == MOUSEMOTION and event.buttons[0]):
                 if g.label == "@" and self.clicky is not None:
                     deltay = y-self.clicky-self.screenrect[1]
