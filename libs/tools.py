@@ -713,10 +713,9 @@ class DoText(ToolSingleAction):
     Text tool
     """
     def __init__(self, id=None, gadget=None):
-        self.fontname = pygame.font.get_default_font()
-        self.font = pygame.font.Font(self.fontname, 12)
         self.pos = None
         self.text = ""
+        self.font = config.text_tool_font
         self.fontsize = self.font.size("M")
         self.baseline = self.font.get_ascent()
         self.lastblink = 0
@@ -741,6 +740,9 @@ class DoText(ToolSingleAction):
         pygame.time.set_timer(pygame.USEREVENT, 0)
 
     def drawbox(self, coords):
+        self.font = config.text_tool_font
+        self.fontsize = self.font.size("M")
+        self.baseline = self.font.get_ascent()
         mx, my = coords
         fw,fh = self.fontsize
         fb = self.baseline
@@ -752,10 +754,17 @@ class DoText(ToolSingleAction):
             (mx+1,my), (mx+fw-1,my), xormode=True, handlesymm=False)
 
     def drawtext(self, coords):
-        if coords != None:
+        if coords != None and self.text != "":
+            self.font = config.text_tool_font
+            self.fontsize = self.font.size("M")
+            self.baseline = self.font.get_ascent()
             mx, my = coords
-            surf = self.font.render(self.text, False, config.pixel_canvas.unmap_rgb(config.color))
-            config.pixel_canvas.blit(surf, (mx, my-self.baseline))
+            my -= self.baseline
+            surf = self.font.render(self.text, config.text_tool_font_antialias, config.pixel_canvas.unmap_rgb(config.color))
+            pixel_canvas_rgb = pygame.Surface(surf.get_size(),0)
+            pixel_canvas_rgb.blit(config.undo_image[config.undo_index], (0,0), (mx,my,surf.get_width(),surf.get_height()))
+            pixel_canvas_rgb.blit(surf, (0, 0))
+            config.pixel_canvas.blit(pixel_canvas_rgb, (mx,my))
 
     def stamptext(self):
         config.clear_pixel_draw_canvas()

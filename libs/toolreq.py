@@ -361,7 +361,7 @@ Preview
     list_itemsg.items = pygame.font.get_fonts()
     list_itemsg.items.sort()
     list_itemsg.items = list(filter(lambda fname: is_latin_font(fname), list_itemsg.items))
-    list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font)
+    list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font_name)
     list_itemsg.value = list_itemsg.top_item
 
     #list up/down arrows
@@ -395,9 +395,24 @@ Preview
 
     #font size
     font_sizeg = req.gadget_id("25_2")
-    font_sizeg.value = "16"
+    font_sizeg.value = str(config.text_tool_font_size)
+    font_sizeg.numonly = True
     font_size_arrowsg = req.gadget_id("29_2")
     font_size_arrowsg.font_sizeg = font_sizeg
+
+    #font attributes
+    font_boldg = req.gadget_id("20_4")
+    bold = config.text_tool_font_bold
+    font_italicg = req.gadget_id("20_5")
+    italic = config.text_tool_font_italic
+    font_underlineg = req.gadget_id("20_6")
+    underline = config.text_tool_font_underline
+    if bold:
+        font_boldg.state = 1
+    if italic:
+        font_italicg.state = 1
+    if underline:
+        font_underlineg.state = 1
 
     #antialias
     aa_fontg = req.gadget_id("27_4")
@@ -423,6 +438,15 @@ Preview
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.text_tool_font_antialias = aa
+                    config.text_tool_font_name = list_itemsg.items[list_itemsg.value]
+                    config.text_tool_font_type = fonttype
+                    config.text_tool_font_size = int(font_sizeg.value)
+                    config.text_tool_font_antialias = aa
+                    config.text_tool_font_bold = bold
+                    config.text_tool_font_italic = italic
+                    config.text_tool_font_underline = underline
+                    config.text_tool_font = pygame.font.Font(pygame.font.match_font(config.text_tool_font_name, bold=config.text_tool_font_bold, italic=config.text_tool_font_italic), config.text_tool_font_size)
+                    config.text_tool_font.set_underline(config.text_tool_font_underline)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
@@ -432,6 +456,12 @@ Preview
                     fonttype = 1
                 elif ge.gadget.label == "AA":
                     aa = not aa
+                elif ge.gadget.label == "Bold":
+                    bold = not bold
+                elif ge.gadget.label == "Italic":
+                    italic = not italic
+                elif ge.gadget.label == "Underline":
+                    underline = not underline
 
         if fonttype == 0:
             system_fontg.state = 1
@@ -441,15 +471,24 @@ Preview
         if aa:
             aa_fontg.state = 1
 
+        if bold:
+            font_boldg.state = 1
+        if italic:
+            font_italicg.state = 1
+        if underline:
+            font_underlineg.state = 1
+
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             #Font preview
             screen.set_clip(previewg.screenrect)
             pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
             if font_sizeg.value.isnumeric() and int(font_sizeg.value) > 0 and int(font_sizeg.value) <= 500:
-                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value]), int(font_sizeg.value))
+                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value))
+                prefont.set_underline(underline)
                 surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
                 screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
+
             screen.set_clip(None)
  
             config.recompose()

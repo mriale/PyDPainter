@@ -415,10 +415,15 @@ class pydpainter:
         self.fontx = fontx
         self.fonty = fonty
         self.font = PixelFont("jewel32.png", 8)
-        self.text_tool_font = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
-        self.text_tool_font = re.sub(r'bold$', '', self.text_tool_font)
+        self.text_tool_font_name = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
+        self.text_tool_font_name = re.sub(r'bold$', '', self.text_tool_font_name)
         self.text_tool_font_type = 0
+        self.text_tool_font_size = 16
         self.text_tool_font_antialias = True
+        self.text_tool_font_bold = False
+        self.text_tool_font_italic = False
+        self.text_tool_font_underline = False
+        self.text_tool_font = pygame.font.Font(pygame.font.match_font(self.text_tool_font_name), self.text_tool_font_size)
         self.last_recompose_timer = 0
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h
@@ -525,7 +530,13 @@ class pydpainter:
     def unique_palette(self, pal):
         return unique_palette(pal)
 
-    def set_all_palettes(config, pal):
+    def set_all_palettes(config, pal_in):
+        if len(pal_in) == 256:
+            pal = pal_in
+        else:
+            #Fill upper palette with BG color so smoothing gets valid colors
+            pal = list(pal_in)
+            pal.extend([pal_in[0]] * (256 - len(pal)))
         config.pixel_canvas.set_palette(pal)
         config.pixel_spare_canvas.set_palette(pal)
 
