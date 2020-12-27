@@ -1550,14 +1550,32 @@ def convert8(pixel_canvas_rgb, pal):
     pixbuff24 = pygame.surfarray.array2d(pixel_canvas_rgb)
     pixbuff24 &= 0x00FFFFFF
 
+    #create new 8-bit surface
     pixbuff8 = np.zeros_like(pixbuff24, dtype="uint32")
 
+    #loop through all pixels
     for ix,iy in np.ndindex(pixbuff24.shape):
+        #assign exact match
         if pixbuff24[ix,iy] in cdict:
             pixbuff8[ix,iy] = cdict[pixbuff24[ix,iy]]
-        #else
-            #find closest color
+        #find closest color
+        else:
+            min_cdiff = 255*255*3
+            min_i = 255
+            px = pixbuff24[ix,iy]
+            r,g,b = px>>16, (px>>8)&255, px&255
+            for i in range(len(pal)):
+                rdiff = r - pal[i][0]
+                gdiff = g - pal[i][1]
+                bdiff = b - pal[i][2]
+                cdiff = rdiff*rdiff + gdiff*gdiff + bdiff*bdiff
+                if cdiff < min_cdiff:
+                    min_cdiff = cdiff
+                    min_i = i
+            cdict[px] = min_i
+            pixbuff8[ix,iy] = min_i
 
+    #turn array back into surface
     surf8 = pygame.surfarray.make_surface(pixbuff8)
     surf8.set_palette(pal)
     return surf8
