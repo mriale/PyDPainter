@@ -764,7 +764,7 @@ class DoText(ToolSingleAction):
             pixel_canvas_rgb = pygame.Surface(surf.get_size(),0)
             pixel_canvas_rgb.blit(config.undo_image[config.undo_index], (0,0), (mx,my,surf.get_width(),surf.get_height()))
             pixel_canvas_rgb.blit(surf, (0, 0))
-            config.pixel_canvas.blit(pixel_canvas_rgb, (mx,my))
+            config.pixel_canvas.blit(convert8(pixel_canvas_rgb, config.pal), (mx,my))
 
     def stamptext(self):
         config.clear_pixel_draw_canvas()

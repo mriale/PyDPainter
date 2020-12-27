@@ -1534,4 +1534,30 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
                 lastcoord = coord
 
+cdict = {}
+lastpal = None
+def convert8(pixel_canvas_rgb, pal):
+    global cdict
+    global lastpal
+    if pal != lastpal:
+        #load palette into dictionary
+        lastpal = pal
+        cdict = {}
+        for p in pal:
+            cdict[(p[0]<<16) | (p[1]<<8) | p[2]] = len(cdict)
 
+    #convert surface into RGB ints
+    pixbuff24 = pygame.surfarray.array2d(pixel_canvas_rgb)
+    pixbuff24 &= 0x00FFFFFF
+
+    pixbuff8 = np.zeros_like(pixbuff24, dtype="uint32")
+
+    for ix,iy in np.ndindex(pixbuff24.shape):
+        if pixbuff24[ix,iy] in cdict:
+            pixbuff8[ix,iy] = cdict[pixbuff24[ix,iy]]
+        #else
+            #find closest color
+
+    surf8 = pygame.surfarray.make_surface(pixbuff8)
+    surf8.set_palette(pal)
+    return surf8
