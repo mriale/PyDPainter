@@ -722,8 +722,7 @@ class DoText(ToolSingleAction):
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def hide(self):
-        config.clear_pixel_draw_canvas()
-        self.drawtext(self.pos)
+        pass
 
     def selected(self, attrs):
         if attrs["rightclick"]:
@@ -780,7 +779,6 @@ class DoText(ToolSingleAction):
             config.clear_pixel_draw_canvas()
             self.drawbox(coords)
         else:
-            self.drawtext(self.pos)
             if pygame.time.get_ticks() - self.lastblink >= 500:
                 self.drawbox(self.pos)
                 self.lastblink = pygame.time.get_ticks()
