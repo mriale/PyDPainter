@@ -719,10 +719,13 @@ class DoText(ToolSingleAction):
         self.fontsize = self.font.size("M")
         self.baseline = self.font.get_ascent()
         self.lastblink = 0
+        self.box_on = False
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def hide(self):
-        pass
+        if self.box_on:
+            self.drawbox(self.pos)
+            self.box_on = False
 
     def selected(self, attrs):
         if attrs["rightclick"]:
@@ -778,23 +781,28 @@ class DoText(ToolSingleAction):
             pygame.time.set_timer(pygame.USEREVENT, 0)
             config.clear_pixel_draw_canvas()
             self.drawbox(coords)
+            self.box_on = True
         else:
             if pygame.time.get_ticks() - self.lastblink >= 500:
                 self.drawbox(self.pos)
+                self.box_on = not self.box_on
                 self.lastblink = pygame.time.get_ticks()
 
     def drag(self, coords, button):
         config.clear_pixel_draw_canvas()
         self.drawbox(coords)
+        self.box_on = True
         pygame.time.set_timer(pygame.USEREVENT, 0)
 
     def mousedown(self, coords, button):
         if button in [1,3]:
             if self.pos == None:
                 self.drawbox(coords)
+                self.box_on = True
             else:
                 self.stamptext()
                 self.drawbox(coords)
+                self.box_on = True
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -803,6 +811,7 @@ class DoText(ToolSingleAction):
             pygame.time.set_timer(pygame.USEREVENT, 100)
             self.pos = coords
             self.drawbox(coords)
+            self.box_on = True
             self.lastblink = pygame.time.get_ticks()
 
     def keydown(self, key, mod, unicode):
@@ -828,6 +837,7 @@ class DoText(ToolSingleAction):
         config.clear_pixel_draw_canvas()
         self.drawtext(self.pos)
         self.drawbox(self.pos)
+        self.box_on = True
         self.lastblink = pygame.time.get_ticks()
         return True
 
