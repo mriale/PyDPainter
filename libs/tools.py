@@ -742,6 +742,8 @@ class DoText(ToolSingleAction):
         pygame.time.set_timer(pygame.USEREVENT, 0)
 
     def drawbox(self, coords):
+        if coords == None:
+            return
         self.font = config.text_tool_font
         self.fontsize = self.font.size("M")
         self.baseline = self.font.get_ascent()
