@@ -734,8 +734,8 @@ class DoText(ToolSingleAction):
 
         config.tool_selected = self.id
         config.subtool_selected = 0
-        self.pos = None
-        self.text = ""
+        self.cleartext()
+        config.stop_cycling()
 
     def deselected(self, attrs):
         self.stamptext()
@@ -758,6 +758,7 @@ class DoText(ToolSingleAction):
             (mx+1,my), (mx+fw-1,my), xormode=True, handlesymm=False)
 
     def drawtext(self, coords):
+        config.stop_cycling()
         if coords != None and self.text != "":
             self.font = config.text_tool_font
             self.fontsize = self.font.size("M")
@@ -833,6 +834,10 @@ class DoText(ToolSingleAction):
             self.stamptext()
             config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
             return True
+        elif key == K_TAB:
+            pass
+        elif key == K_DELETE:
+            pass
         else:
             self.text += unicode
 
@@ -842,6 +847,11 @@ class DoText(ToolSingleAction):
         self.box_on = True
         self.lastblink = pygame.time.get_ticks()
         return True
+
+    def cleartext(self):
+        self.pos = None
+        self.text = ""
+        self.box_on = False
 
 class DoBrush(ToolDragAction):
     """
@@ -916,6 +926,9 @@ class DoMagnify(ToolAction):
         else:
             config.zoom.box_on = True
 
+        if config.tool_selected == "text":
+            config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
+
     def deselected(self, attrs):
         config.zoom.on = False
         config.zoom.box_on = False
@@ -957,6 +970,7 @@ class DoUndo(ToolAction):
     Undo/Redo button
     """
     def selected(self, attrs):
+        config.toolbar.tool_id("text").action.cleartext()
         if attrs["rightclick"]:
             config.redo()
         else:
@@ -969,6 +983,7 @@ class DoClear(ToolAction):
     def selected(self, attrs):
         config.pixel_canvas.fill(config.bgcolor);
         config.save_undo()
+        config.toolbar.tool_id("text").action.cleartext()
 
 class DoSwatch(ToolAction):
     pass
