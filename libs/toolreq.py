@@ -420,6 +420,11 @@ Preview
     if aa:
         aa_fontg.state = 1
 
+    #take care of non-square pixels
+    fontmult = 1
+    if config.aspectX != config.aspectY:
+        fontmult = 2
+
     #font preview
     previewg = req.gadget_id("0_8")
 
@@ -445,7 +450,7 @@ Preview
                     config.text_tool_font_bold = bold
                     config.text_tool_font_italic = italic
                     config.text_tool_font_underline = underline
-                    config.text_tool_font = pygame.font.Font(pygame.font.match_font(config.text_tool_font_name, bold=config.text_tool_font_bold, italic=config.text_tool_font_italic), config.text_tool_font_size)
+                    config.text_tool_font = pygame.font.Font(pygame.font.match_font(config.text_tool_font_name, bold=config.text_tool_font_bold, italic=config.text_tool_font_italic), config.text_tool_font_size*fontmult)
                     config.text_tool_font.set_underline(config.text_tool_font_underline)
                     running = 0
                 elif ge.gadget.label == "Cancel":
@@ -484,9 +489,19 @@ Preview
             screen.set_clip(previewg.screenrect)
             pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
             if font_sizeg.value.isnumeric() and int(font_sizeg.value) > 0 and int(font_sizeg.value) <= 500:
-                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value))
+                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value)*fontmult)
                 prefont.set_underline(underline)
                 surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
+                if config.aspectX != config.aspectY:
+                    sx,sy = surf.get_size()
+                    if config.aspectX == 2:
+                        sy //= 2
+                    else:
+                        sx //= 2
+                    if aa:
+                        surf = pygame.transform.smoothscale(surf, (sx,sy))
+                    else:
+                        surf = pygame.transform.scale(surf, (sx,sy))
                 screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
 
             screen.set_clip(None)

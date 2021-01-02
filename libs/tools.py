@@ -792,15 +792,14 @@ class DoText(ToolSingleAction):
             if config.aspectX != config.aspectY:
                 sx,sy = surf.get_size()
                 if config.aspectX == 2:
-                    if config.text_tool_font_antialias:
-                        surf = pygame.transform.smoothscale(surf, (sx,sy//2))
-                    else:
-                        surf = pygame.transform.scale(surf, (sx,sy//2))
+                    sy //= 2
                 else:
-                    if config.text_tool_font_antialias:
-                        surf = pygame.transform.smoothscale(surf, (sx//2,sy))
-                    else:
-                        surf = pygame.transform.scale(surf, (sx//2,sy))
+                    sx //= 2
+                if config.text_tool_font_antialias:
+                    surf = pygame.transform.smoothscale(surf, (sx,sy))
+                else:
+                    surf = pygame.transform.scale(surf, (sx,sy))
+
             pixel_canvas_rgb = pygame.Surface(surf.get_size(),0)
             pixel_canvas_rgb.blit(config.undo_image[config.undo_index], (0,0), (mx,my,surf.get_width(),surf.get_height()))
             pixel_canvas_rgb.blit(surf, (0, 0))
