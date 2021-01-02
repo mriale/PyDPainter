@@ -736,6 +736,10 @@ class DoText(ToolSingleAction):
         config.subtool_selected = 0
         self.cleartext()
         config.stop_cycling()
+        fontmult = 1
+        if config.aspectX != config.aspectY:
+            fontmult = 2
+        config.text_tool_font = pygame.font.Font(pygame.font.match_font(config.text_tool_font_name, bold=config.text_tool_font_bold, italic=config.text_tool_font_italic), config.text_tool_font_size * fontmult)
 
     def deselected(self, attrs):
         self.stamptext()
@@ -747,25 +751,56 @@ class DoText(ToolSingleAction):
         self.font = config.text_tool_font
         self.fontsize = self.font.size("M")
         self.baseline = self.font.get_ascent()
+        ax = 1
+        ay = 1
+        if config.aspectX != config.aspectY:
+            if config.aspectX == 2:
+                ay = 2
+            else:
+                ax = 2
         mx, my = coords
         fw,fh = self.fontsize
+        fw //= ax
+        fh //= ay
         fb = self.baseline
+        fb //= ay
         ssx,ssy = self.font.size(self.text)
+        ssx //= ax
+        ssy //= ay
         mx += ssx
         drawrect(config.pixel_canvas, config.color,
-            (mx, my-fw), (mx+fw, my-fb+fh), xormode=True, handlesymm=False)
+            (mx, my-fh), (mx+fw, my-fb+fh), xormode=True, handlesymm=False)
         drawline(config.pixel_canvas, config.color,
             (mx+1,my), (mx+fw-1,my), xormode=True, handlesymm=False)
 
     def drawtext(self, coords):
         config.stop_cycling()
         if coords != None and self.text != "":
+            ax = 1
+            ay = 1
+            if config.aspectX != config.aspectY:
+                if config.aspectX == 2:
+                    ay = 2
+                else:
+                    ax = 2
             self.font = config.text_tool_font
             self.fontsize = self.font.size("M")
             self.baseline = self.font.get_ascent()
             mx, my = coords
-            my -= self.baseline
+            my -= self.baseline // ay
             surf = self.font.render(self.text, config.text_tool_font_antialias, config.pixel_canvas.unmap_rgb(config.color))
+            if config.aspectX != config.aspectY:
+                sx,sy = surf.get_size()
+                if config.aspectX == 2:
+                    if config.text_tool_font_antialias:
+                        surf = pygame.transform.smoothscale(surf, (sx,sy//2))
+                    else:
+                        surf = pygame.transform.scale(surf, (sx,sy//2))
+                else:
+                    if config.text_tool_font_antialias:
+                        surf = pygame.transform.smoothscale(surf, (sx//2,sy))
+                    else:
+                        surf = pygame.transform.scale(surf, (sx//2,sy))
             pixel_canvas_rgb = pygame.Surface(surf.get_size(),0)
             pixel_canvas_rgb.blit(config.undo_image[config.undo_index], (0,0), (mx,my,surf.get_width(),surf.get_height()))
             pixel_canvas_rgb.blit(surf, (0, 0))
@@ -824,12 +859,20 @@ class DoText(ToolSingleAction):
         if mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
 
+        ax = 1
+        ay = 1
+        if config.aspectX != config.aspectY:
+            if config.aspectX == 2:
+                ay = 2
+            else:
+                ax = 2
+
         if key == K_BACKSPACE:
             self.text = self.text[:-1]
         elif key == K_RETURN:
             pos = self.pos
             self.stamptext()
-            self.pos = [pos[0], pos[1]+self.fontsize[1]]
+            self.pos = [pos[0], pos[1]+(self.fontsize[1]//ay)]
         elif key == K_ESCAPE:
             self.stamptext()
             config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
