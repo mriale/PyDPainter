@@ -110,6 +110,16 @@ class DoAbout(MenuAction):
     def selected(self, attrs):
         about_req(config.pixel_req_canvas)
 
+class DoBrushHalve(MenuAction):
+    def selected(self, attrs):
+        config.brush.size //= 2
+        config.doKeyAction()
+
+class DoBrushDouble(MenuAction):
+    def selected(self, attrs):
+        config.brush.size *= 2
+        config.doKeyAction()
+
 class DoBrushFlipX(MenuAction):
     def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
@@ -203,8 +213,8 @@ def init_menubar(config_in):
             ["Restore","B"],
             ["Size", [
                 ["Stretch", "Z"],
-                ["Halve", "h"],
-                ["Double", "H"],
+                ["Halve", "h", DoBrushHalve],
+                ["Double", "H", DoBrushDouble],
                 ["Double Horiz"],
                 ["Double Vert"],
                 ]],

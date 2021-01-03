@@ -199,6 +199,13 @@ class Brush:
     SQUARE = 2
     SPRAY = 3
 
+    CENTER = 0
+    CORNER_UL = 1
+    CORNER_UR = 2
+    CORNER_LR = 3
+    CORNER_LL = 4
+    PLACE = 5
+
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None):
         if type == Brush.CUSTOM:
             x1,y1 = coordfrom
@@ -237,6 +244,34 @@ class Brush:
                          size, size]
 
         self.cache = BrushCache()
+        self.handle_type = self.CENTER
+
+    def calc_handle(self, w, h):
+        if self.handle_type == self.CENTER:
+            self.handle = [w//2, h//2]
+            self.rect = [-self.handle[0], -self.handle[1], w, h]
+
+        """
+        CENTER = 0
+        CORNER_UL = 1
+        CORNER_UR = 2
+        CORNER_LR = 3
+        CORNER_LL = 4
+        PLACE = 5
+        """
+
+    def scale(self, image_in):
+        size = self.__size
+        image = image_in.copy()
+        image.set_palette(config.pal)
+        w,h = image.get_size()
+        if size != (w+h) // 2:
+            factor = size / ((w+h) // 2)
+            w = int(w*factor)
+            h = int(h*factor)
+            image = pygame.transform.scale(image, (w, h))
+        self.calc_handle(w,h)
+        return image
 
     @property
     def size(self):
@@ -244,30 +279,34 @@ class Brush:
 
     @size.setter
     def size(self, size):
-        if size < 1:
-            size = 1
-            if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
-                self.__type = Brush.CIRCLE
-        elif size > 100:
-            size = 100
-        self.__size = size
-        self.cache = BrushCache()
+        if self.type == Brush.CUSTOM:
+            if size < 1:
+                size = 1
+            elif size > 5000:
+                size = 5000
+            self.__size = size
+            self.cache = BrushCache()
+            self.image = self.scale(self.image_orig)
+        else:
+            if size < 1:
+                size = 1
+                if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
+                    self.__type = Brush.CIRCLE
+            elif size > 100:
+                size = 100
+            self.__size = size
+            self.cache = BrushCache()
 
-        ax = config.aspectX
-        ay = config.aspectY
+            ax = config.aspectX
+            ay = config.aspectY
 
-        if self.type == Brush.SQUARE:
-            self.handle = [(size+1)//2*ax, (size+1)//2*ay]
-            self.rect = [-self.handle[0], -self.handle[1],
-                         size*ax, size*ax]
-        elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
-            if size == 1:
-                self.handle = [0,0]
-                self.rect = [0,0,1,1]
-            else:
-                self.handle = [size*ax, size*ay]
-                self.rect = [-self.handle[0], -self.handle[1],
-                             size*ax*2, size*ay*2]
+            if self.type == Brush.SQUARE:
+                self.calc_handle((size+1)*ax, (size+1)*ay)
+            elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+                if size == 1:
+                    self.calc_handle(1, 1)
+                else:
+                    self.calc_handle(size*2*ax, size*2*ay)
 
     @property
     def type(self):
@@ -285,7 +324,7 @@ class Brush:
 
         if self.type == Brush.CUSTOM:
             #convert brush image to single color
-            image = self.image_orig.copy()
+            image = self.scale(self.image_orig)
             image.set_palette(config.pal)
             surf_array = pygame.surfarray.pixels2d(image)
             bgcolor = self.bgcolor_orig
@@ -330,7 +369,7 @@ class Brush:
             return image
         elif self.type == Brush.SPRAY:
             image = pygame.Surface((self.size*3+1, self.size*3+1),0, config.pixel_canvas)
-            self.handle = [image.get_width()//2, image.get_height()//2]
+            self.calc_handle(image.get_width(), image.get_height())
             image.set_palette(config.pal)
             
             if color == 0:
