@@ -110,6 +110,58 @@ class DoAbout(MenuAction):
     def selected(self, attrs):
         about_req(config.pixel_req_canvas)
 
+class DoBrushStretch(MenuAction):
+    def selected(self, attrs):
+        #config.brush.size *= 2
+        #config.cursor.shape = 4
+        #config.doKeyAction()
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+        sx, sy = (0,0)
+        config.brush.handle_type = config.brush.CORNER_LR
+        w,h = config.brush.image.get_size()
+        startsize = config.brush.size
+        config.brush.handle = (w,h)
+        config.cursor.shape = 4
+        config.clear_pixel_draw_canvas()
+        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
+        config.recompose()
+        first_time = True
+        wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
+        while wait_for_mouseup:
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                config.clear_pixel_draw_canvas()
+                if event.buttons[0] and wait_for_mouseup:
+                    if mouseY-sy > 0 and mouseX-sx > 0:
+                        config.brush.aspect = (w+mouseX-sx) / (h+mouseY-sy)
+                    config.brush.size = startsize + math.sqrt((mouseX-sx)*(mouseX-sx) + (mouseY-sy)*(mouseY-sy))
+                    config.brush.draw(config.pixel_canvas, config.color, (mouseX, mouseY))
+                else:
+                    config.brush.draw(config.pixel_canvas, config.color, (mouseX, mouseY))
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sx, sy = (mouseX, mouseY)
+            elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
+                wait_for_mouseup -= 1
+
+            config.recompose()
+            first_time = False
+
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
+
 class DoBrushHalve(MenuAction):
     def selected(self, attrs):
         config.brush.size //= 2
@@ -117,6 +169,18 @@ class DoBrushHalve(MenuAction):
 
 class DoBrushDouble(MenuAction):
     def selected(self, attrs):
+        config.brush.size *= 2
+        config.doKeyAction()
+
+class DoBrushDoubleHoriz(MenuAction):
+    def selected(self, attrs):
+        config.brush.aspect *= 2.0
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
+class DoBrushDoubleVert(MenuAction):
+    def selected(self, attrs):
+        config.brush.aspect /= 2.0
         config.brush.size *= 2
         config.doKeyAction()
 
@@ -144,6 +208,7 @@ class DoBrushRotate90(MenuAction):
             config.brush.image = pygame.transform.rotate(config.brush.image, -90)
             config.brush.image_orig = pygame.transform.rotate(config.brush.image_orig, -90)
             config.brush.handle = config.brush.handle[::-1]
+            config.brush.aspect = 1.0 / config.brush.aspect
             bx,by,bw,bh = config.brush.rect
             config.brush.rect = [by,bx,bh,bw]
             config.brush.cache = BrushCache()
@@ -212,11 +277,11 @@ def init_menubar(config_in):
             ["Save as..."],
             ["Restore","B"],
             ["Size", [
-                ["Stretch", "Z"],
+                ["Stretch", "Z", DoBrushStretch],
                 ["Halve", "h", DoBrushHalve],
                 ["Double", "H", DoBrushDouble],
-                ["Double Horiz"],
-                ["Double Vert"],
+                ["Double Horiz", " ", DoBrushDoubleHoriz],
+                ["Double Vert", " ", DoBrushDoubleVert],
                 ]],
             ["Flip", [
                 ["Horiz", "x", DoBrushFlipX],

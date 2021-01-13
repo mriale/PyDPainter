@@ -229,7 +229,9 @@ class Brush:
             self.image_orig = self.image.copy()
             self.bgcolor_orig = bgcolor
             self.handle = [w//2, h//2]
+            self.handle_frac = [0.5, 0.5]
             self.__size = (w + h) // 2
+            self.aspect = 1.0
             self.rect = [-self.handle[0], -self.handle[1], w, h]
         else:
             self.image = None
@@ -239,7 +241,9 @@ class Brush:
             self.image_orig = None
             self.bgcolor_orig = bgcolor
             self.__size = size
+            self.aspect = 1.0
             self.handle = [size//2, size//2]
+            self.handle_frac = [0.5, 0.5]
             self.rect = [-self.handle[0], -self.handle[1],
                          size, size]
 
@@ -249,6 +253,11 @@ class Brush:
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
             self.handle = [w//2, h//2]
+            self.handle_frac = [0.5, 0.5]
+            self.rect = [-self.handle[0], -self.handle[1], w, h]
+        elif self.handle_type == self.CORNER_LR:
+            self.handle = [w, h]
+            self.handle_frac = [1.0, 1.0]
             self.rect = [-self.handle[0], -self.handle[1], w, h]
 
         """
@@ -265,9 +274,9 @@ class Brush:
         image = image_in.copy()
         image.set_palette(config.pal)
         w,h = image.get_size()
-        if size != (w+h) // 2:
+        if self.aspect != 1.0 or size != (w+h) // 2:
             factor = size / ((w+h) // 2)
-            w = int(w*factor)
+            w = int(w*factor*self.aspect)
             h = int(h*factor)
             image = pygame.transform.scale(image, (w, h))
         self.calc_handle(w,h)
