@@ -230,7 +230,7 @@ class Brush:
             self.bgcolor_orig = bgcolor
             self.handle = [w//2, h//2]
             self.handle_frac = [0.5, 0.5]
-            self.__size = (w + h) // 2
+            self.__size = h
             self.aspect = 1.0
             self.rect = [-self.handle[0], -self.handle[1], w, h]
         else:
@@ -254,11 +254,19 @@ class Brush:
         if self.handle_type == self.CENTER:
             self.handle = [w//2, h//2]
             self.handle_frac = [0.5, 0.5]
-            self.rect = [-self.handle[0], -self.handle[1], w, h]
+        elif self.handle_type == self.CORNER_UL:
+            self.handle = [0, 0]
+            self.handle_frac = [0.0, 0.0]
+        elif self.handle_type == self.CORNER_UR:
+            self.handle = [w, 0]
+            self.handle_frac = [1.0, 0.0]
         elif self.handle_type == self.CORNER_LR:
             self.handle = [w, h]
             self.handle_frac = [1.0, 1.0]
-            self.rect = [-self.handle[0], -self.handle[1], w, h]
+        elif self.handle_type == self.CORNER_LL:
+            self.handle = [0, h]
+            self.handle_frac = [0.0, 1.0]
+        self.rect = [-self.handle[0], -self.handle[1], w, h]
 
         """
         CENTER = 0
@@ -274,8 +282,8 @@ class Brush:
         image = image_in.copy()
         image.set_palette(config.pal)
         w,h = image.get_size()
-        if self.aspect != 1.0 or size != (w+h) // 2:
-            factor = size / ((w+h) // 2)
+        if self.aspect != 1.0 or size != h:
+            factor = size / h
             w = int(w*factor*self.aspect)
             h = int(h*factor)
             image = pygame.transform.scale(image, (w, h))
@@ -291,8 +299,8 @@ class Brush:
         if self.type == Brush.CUSTOM:
             if size < 1:
                 size = 1
-            elif size > 5000:
-                size = 5000
+            elif size > 2000:
+                size = 2000
             self.__size = size
             self.cache = BrushCache()
             self.image = self.scale(self.image_orig)

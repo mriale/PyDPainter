@@ -120,11 +120,11 @@ class DoBrushStretch(MenuAction):
 
         sx, sy = (0,0)
         config.brush.handle_type = config.brush.CORNER_LR
+        ow,oh = config.brush.image_orig.get_size()
         w,h = config.brush.image.get_size()
-        startsize = config.brush.size
-        config.brush.handle = (w,h)
         config.cursor.shape = 4
         config.clear_pixel_draw_canvas()
+        config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
         first_time = True
@@ -142,15 +142,16 @@ class DoBrushStretch(MenuAction):
             if event.type == MOUSEMOTION:
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
-                    if mouseY-sy > 0 and mouseX-sx > 0:
-                        config.brush.aspect = (w+mouseX-sx) / (h+mouseY-sy)
-                    config.brush.size = startsize + math.sqrt((mouseX-sx)*(mouseX-sx) + (mouseY-sy)*(mouseY-sy))
-                    config.brush.draw(config.pixel_canvas, config.color, (mouseX, mouseY))
+                    if mouseX-sx > 0 and mouseY-sy > 0:
+                        config.brush.aspect = (mouseX-sx) / ow * oh / (mouseY-sy)
+                    config.brush.size = mouseY-sy
+                    config.brush.draw(config.pixel_canvas, config.color, (sx, sy))
                 else:
                     config.brush.draw(config.pixel_canvas, config.color, (mouseX, mouseY))
             elif event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    sx, sy = (mouseX, mouseY)
+                    sx, sy = (mouseX-w, mouseY-h)
+                    config.brush.handle_type = config.brush.CORNER_UL
             elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
                 wait_for_mouseup -= 1
 
@@ -211,6 +212,7 @@ class DoBrushRotate90(MenuAction):
             config.brush.aspect = 1.0 / config.brush.aspect
             bx,by,bw,bh = config.brush.rect
             config.brush.rect = [by,bx,bh,bw]
+            config.brush.size = bw
             config.brush.cache = BrushCache()
             config.doKeyAction()
 
