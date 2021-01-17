@@ -110,11 +110,15 @@ class DoAbout(MenuAction):
     def selected(self, attrs):
         about_req(config.pixel_req_canvas)
 
+class DoBrushRestore(MenuAction):
+    def selected(self, attrs):
+        ow,oh = config.brush.image_orig.get_size()
+        config.brush.aspect = 1.0
+        config.brush.size = oh
+        config.doKeyAction()
+
 class DoBrushStretch(MenuAction):
     def selected(self, attrs):
-        #config.brush.size *= 2
-        #config.cursor.shape = 4
-        #config.doKeyAction()
         if config.brush.type != Brush.CUSTOM:
             return
 
@@ -277,7 +281,7 @@ def init_menubar(config_in):
         ["Brush", [
             ["Open..."],
             ["Save as..."],
-            ["Restore","B"],
+            ["Restore","B", DoBrushRestore],
             ["Size", [
                 ["Stretch", "Z", DoBrushStretch],
                 ["Halve", "h", DoBrushHalve],
