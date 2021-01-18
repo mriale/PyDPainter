@@ -207,6 +207,26 @@ class DoBrushFlipY(MenuAction):
             config.brush.cache = BrushCache()
             config.doKeyAction()
 
+class DoBrushOutline(MenuAction):
+    def selected(self, attrs):
+        w,h = config.brush.image.get_size()
+        newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
+        newimage.set_palette(config.pal)
+        newimage.set_colorkey(config.brush.bgcolor)
+        primprops = PrimProps(drawmode=DrawMode.COLOR)
+        config.brush.draw(newimage, config.color, (0,1), handlesymm=False, primprops=primprops)
+        config.brush.draw(newimage, config.color, (2,1), handlesymm=False, primprops=primprops)
+        config.brush.draw(newimage, config.color, (1,0), handlesymm=False, primprops=primprops)
+        config.brush.draw(newimage, config.color, (1,2), handlesymm=False, primprops=primprops)
+        primprops = PrimProps(drawmode=DrawMode.MATTE)
+        config.brush.draw(newimage, config.color, (1,1), handlesymm=False, primprops=primprops)
+        config.brush.size += 2
+        config.brush.image = newimage
+
+class DoBrushTrim(MenuAction):
+    def selected(self, attrs):
+        print("trim")
+
 class DoBrushRotate90(MenuAction):
     def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
@@ -294,8 +314,8 @@ def init_menubar(config_in):
                 ["Vert", "y", DoBrushFlipY],
                 ]],
             ["Edge", [
-                ["Outline"],
-                ["Trim"],
+                ["Outline", "o", DoBrushOutline],
+                ["Trim", "O", DoBrushTrim],
                 ]],
             ["Rotate", [
                 ["90 Degrees", "z", DoBrushRotate90],
