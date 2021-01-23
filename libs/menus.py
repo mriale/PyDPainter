@@ -214,6 +214,8 @@ class DoBrushFlipY(MenuAction):
 
 class DoBrushOutline(MenuAction):
     def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
         if config.color == config.brush.bgcolor:
             return
         w,h = config.brush.image.get_size()
@@ -251,6 +253,8 @@ class DoBrushOutline(MenuAction):
 
 class DoBrushTrim(MenuAction):
     def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
         w,h = config.brush.image.get_size()
         if w <= 2 or h <= 2:
             return
