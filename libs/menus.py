@@ -217,27 +217,73 @@ class DoBrushOutline(MenuAction):
         if config.color == config.brush.bgcolor:
             return
         w,h = config.brush.image.get_size()
+
+        #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
         newimage.set_palette(config.pal)
         newimage.set_colorkey(config.brush.bgcolor)
-        primprops = PrimProps(drawmode=DrawMode.COLOR)
-        config.brush.handle_type = config.brush.CORNER_UL
-        config.brush.size = config.brush.size
-        config.brush.draw(newimage, config.color, (0,1), handlesymm=False, primprops=primprops)
-        config.brush.draw(newimage, config.color, (2,1), handlesymm=False, primprops=primprops)
-        config.brush.draw(newimage, config.color, (1,0), handlesymm=False, primprops=primprops)
-        config.brush.draw(newimage, config.color, (1,2), handlesymm=False, primprops=primprops)
-        primprops = PrimProps(drawmode=DrawMode.MATTE)
-        config.brush.draw(newimage, config.color, (1,1), handlesymm=False, primprops=primprops)
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = h+2
+
+        #create brush to add edges
+        addimage = config.brush.image.copy()
+        surf_array = pygame.surfarray.pixels2d(addimage)
+        bgcolor = config.brush.bgcolor
+        color = config.color
+        tfarray = np.not_equal(surf_array, bgcolor)
+        surf_array[tfarray] = color
+        surf_array[np.logical_not(tfarray)] = bgcolor
+        surf_array = None
+        addimage.set_colorkey(bgcolor)
+ 
+        #edge up,down,left,right
+        newimage.blit(addimage, (0,1))
+        newimage.blit(addimage, (2,1))
+        newimage.blit(addimage, (1,0))
+        newimage.blit(addimage, (1,2))
+        #blit original brush
+        newimage.blit(config.brush.image, (1,1))
+
+        #put new image in brush
         config.brush.image = newimage
         config.brush.image_orig = newimage
+        config.brush.aspect = 1
+        config.brush.size = h+2
         config.doKeyAction()
 
 class DoBrushTrim(MenuAction):
     def selected(self, attrs):
-        print("trim")
+        w,h = config.brush.image.get_size()
+        if w <= 2 or h <= 2:
+            return
+        #create surface to hold new brush
+        newimage = pygame.Surface((w-2, h-2),0, config.pixel_canvas)
+        newimage.set_palette(config.pal)
+        newimage.set_colorkey(config.brush.bgcolor)
+
+        #create brush to cut away edges
+        cutimage = config.brush.image.copy()
+        surf_array = pygame.surfarray.pixels2d(cutimage)
+        bgcolor = config.brush.bgcolor
+        color = (bgcolor+1) % config.NUM_COLORS
+        tfarray = np.not_equal(surf_array, bgcolor)
+        surf_array[tfarray] = color
+        surf_array[np.logical_not(tfarray)] = bgcolor
+        surf_array = None
+        cutimage.set_colorkey(color)
+ 
+        #blit original brush
+        newimage.blit(config.brush.image, (-1,-1))
+        #cut up,down,left,right
+        newimage.blit(cutimage, (-1,-2))
+        newimage.blit(cutimage, (-1,0))
+        newimage.blit(cutimage, (-2,-1))
+        newimage.blit(cutimage, (0,-1))
+
+        #put new image in brush
+        config.brush.image = newimage
+        config.brush.image_orig = newimage
+        config.brush.aspect = 1
+        config.brush.size = h-2
+        config.doKeyAction()
 
 class DoBrushRotate90(MenuAction):
     def selected(self, attrs):
