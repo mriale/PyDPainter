@@ -227,6 +227,7 @@ class Brush:
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
+            self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
             self.handle = [w//2, h//2]
             self.handle_frac = [0.5, 0.5]

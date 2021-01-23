@@ -112,9 +112,14 @@ class DoAbout(MenuAction):
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
-        ow,oh = config.brush.image_orig.get_size()
+        if config.brush.type != config.brush.CUSTOM:
+            return
+        ow,oh = config.brush.image_backup.get_size()
         config.brush.aspect = 1.0
+        config.brush.image = config.brush.image_backup
+        config.brush.image_orig = config.brush.image_backup
         config.brush.size = oh
+        config.setDrawMode(DrawMode.MATTE)
         config.doKeyAction()
 
 class DoBrushStretch(MenuAction):
@@ -209,19 +214,26 @@ class DoBrushFlipY(MenuAction):
 
 class DoBrushOutline(MenuAction):
     def selected(self, attrs):
+        if config.color == config.brush.bgcolor:
+            return
         w,h = config.brush.image.get_size()
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
         newimage.set_palette(config.pal)
         newimage.set_colorkey(config.brush.bgcolor)
         primprops = PrimProps(drawmode=DrawMode.COLOR)
+        config.brush.handle_type = config.brush.CORNER_UL
+        config.brush.size = config.brush.size
         config.brush.draw(newimage, config.color, (0,1), handlesymm=False, primprops=primprops)
         config.brush.draw(newimage, config.color, (2,1), handlesymm=False, primprops=primprops)
         config.brush.draw(newimage, config.color, (1,0), handlesymm=False, primprops=primprops)
         config.brush.draw(newimage, config.color, (1,2), handlesymm=False, primprops=primprops)
         primprops = PrimProps(drawmode=DrawMode.MATTE)
         config.brush.draw(newimage, config.color, (1,1), handlesymm=False, primprops=primprops)
-        config.brush.size += 2
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = h+2
         config.brush.image = newimage
+        config.brush.image_orig = newimage
+        config.doKeyAction()
 
 class DoBrushTrim(MenuAction):
     def selected(self, attrs):
