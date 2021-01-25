@@ -302,6 +302,58 @@ class DoBrushRotate90(MenuAction):
             config.brush.cache = BrushCache()
             config.doKeyAction()
 
+class DoBrushRotateAny(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+        sx, sy = (0,0)
+        ow,oh = config.brush.image_orig.get_size()
+        w,h = config.brush.image.get_size()
+        config.cursor.shape = 5
+        config.clear_pixel_draw_canvas()
+        config.brush.size = config.brush.size
+        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
+        config.recompose()
+        rotimage = config.brush.image
+        first_time = True
+        wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
+        while wait_for_mouseup:
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                config.clear_pixel_draw_canvas()
+                if event.buttons[0] and wait_for_mouseup:
+                    if mouseX-sx > 0 and mouseY-sy > 0:
+                        config.brush.aspect = (mouseX-sx) / ow * oh / (mouseY-sy)
+                    rotimage = pygame.transform.rotate(config.brush.image, mouseX-w//2-sx)
+                    rw,rh = rotimage.get_size()
+                    config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
+                else:
+                    config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sx, sy = (mouseX-w//2, mouseY-h//2)
+            elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
+                wait_for_mouseup -= 1
+
+            config.recompose()
+            first_time = False
+
+        config.brush.image = rotimage
+        config.brush.image_orig = rotimage
+        config.brush.aspect = 1.0
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = rotimage.get_height()
+        config.doKeyAction()
+
 class DoMode(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -381,7 +433,7 @@ def init_menubar(config_in):
                 ]],
             ["Rotate", [
                 ["90 Degrees", "z", DoBrushRotate90],
-                ["Any Angle"],
+                ["Any Angle", " ", DoBrushRotateAny],
                 ["Shear"],
                 ]],
             ["Change Color", [
