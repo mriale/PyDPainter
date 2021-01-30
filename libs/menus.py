@@ -162,7 +162,8 @@ class DoBrushStretch(MenuAction):
                     sx, sy = (mouseX-w, mouseY-h)
                     config.brush.handle_type = config.brush.CORNER_UL
             elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
-                wait_for_mouseup -= 1
+                if event.button == 1:
+                    wait_for_mouseup -= 1
 
             config.recompose()
             first_time = False
@@ -331,22 +332,25 @@ class DoBrushRotateAny(MenuAction):
             if event.type == MOUSEMOTION:
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
-                    if mouseX-sx > 0 and mouseY-sy > 0:
-                        config.brush.aspect = (mouseX-sx) / ow * oh / (mouseY-sy)
-                    rotimage = pygame.transform.rotate(config.brush.image, mouseX-w//2-sx)
+                    angle = int(mda - (math.atan2(mouseY-sy, mouseX-sx) * 180.0 / math.pi))
+                    rotimage = pygame.transform.rotate(config.brush.image, angle)
                     rw,rh = rotimage.get_size()
                     config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
+                    config.menubar.title_right = "%d\xB0"%(-angle)
                 else:
                     config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     sx, sy = (mouseX-w//2, mouseY-h//2)
+                    mda = math.atan2(mouseY-sy, mouseX-sx) * 180.0 / math.pi
             elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
-                wait_for_mouseup -= 1
+                if event.button == 1:
+                    wait_for_mouseup -= 1
 
             config.recompose()
             first_time = False
 
+        config.menubar.title_right = ""
         config.brush.image = rotimage
         config.brush.image_orig = rotimage
         config.brush.aspect = 1.0

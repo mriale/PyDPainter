@@ -23,6 +23,8 @@ symm_mat = None
 symm_mat_num = 0
 symm_center = [0,0]
 vlines = {}
+ell_mat = None
+ell_angle = 0
 
 def onscreen(coords):
     w = config.pixel_width
@@ -611,7 +613,10 @@ class PrimProps:
         self.continuous = False
 
 
-def calc_ellipse_curves(coords, width, height, handlesymm=True):
+def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
+    global ell_mat
+    global ell_angle
+
     ccoords = []
 
     #Calculate curve segment coords
@@ -623,16 +628,46 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True):
                (xc-width,yc),(xc,yc-height),(xc-controlw,yc-controlh),
                (xc,yc-height),(xc+width,yc),(xc+controlw,yc-controlh)]
 
+    #rotate ellipse if needed
+    if angle != 0:
+        #recalc matrix only if necessary
+        if angle != ell_angle:
+            ell_angle = angle
+            q = angle * math.pi / 180.0
+            trans1   = np.matrix([[  1,   0, 0],
+                                  [  0,   1, 0],
+                                  [-xc, -yc, 1]])
+            scale1   = np.matrix([[1/config.aspectX, 0, 0],
+                                  [0, 1/config.aspectY, 0],
+                                  [0, 0, 1]])
+            rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
+                                  [-math.sin(q), math.cos(q), 0],
+                                  [           0,           0, 1]])
+            scale2   = np.matrix([[config.aspectX, 0, 0],
+                                  [0, config.aspectY, 0],
+                                  [0, 0, 1]])
+            trans2   = np.matrix([[  1,   0, 0],
+                                  [  0,   1, 0],
+                                  [ xc,  yc, 1]])
+            ell_mat = trans1 @ scale1 @ rot @ scale2 @ trans2
+
+        newcoords = []
+        for i in range(len(ccoords)):
+            xyvect = np.matmul(np.matrix([[ccoords[i][0],ccoords[i][1],1]]),ell_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            ccoords[i] = (int(round(xf)),int(round(yf)))
+
     #run curve coords through symmetry calulations
     coords_out = symm_coords_list(ccoords, handlesymm=handlesymm)
     return coords_out
 
-def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False):
+def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0):
     if filled == 1:
-        fillellipse(screen, color, coords, width, height, interrupt=interrupt)
+        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle)
         return
 
-    ecurves = calc_ellipse_curves(coords, width, height)
+    ecurves = calc_ellipse_curves(coords, width, height, angle=angle)
     for i in range(len(ecurves)):
         cl = CoordList(12)
         for j in range (0,12,3):
@@ -647,7 +682,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
 
 
-def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None):
+def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0):
     if primprops == None:
         primprops = config.primprops
         handlesymm = True
@@ -660,7 +695,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
         fillrect(screen, color, (xc,yc), (xc,yc))
         return
 
-    ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm)
+    ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm, angle=angle)
     for i in range(len(ecurves)):
         cl = CoordList(12)
         for j in range (0,12,3):
