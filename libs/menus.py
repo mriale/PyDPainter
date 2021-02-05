@@ -366,7 +366,7 @@ class DoBrushShear(MenuAction):
         sx, sy = (0,0)
         ow,oh = config.brush.image_orig.get_size()
         w,h = config.brush.image.get_size()
-        config.cursor.shape = 5
+        config.cursor.shape = 6
         config.clear_pixel_draw_canvas()
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
@@ -388,13 +388,21 @@ class DoBrushShear(MenuAction):
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
                     xoffset = mouseX - mx
+                    shearimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
+                    shearimage.set_palette(config.pal)
+                    shearimage.set_colorkey(config.brush.bgcolor)
                     clist = drawline(config.pixel_canvas, 1, (0,0), (xoffset,h), coordsonly=True)
+                    if xoffset < 0:
+                        imgXoffset = -xoffset
+                    else:
+                        imgXoffset = 0
+                    prevy = -1
                     for coord in clist:
-                        config.pixel_canvas.blit(shearimage, (sx-w//2+coord[0],sy-h//2+coord[1]), area=(0,coord[1],w,1))
+                        if prevy != coord[1]:
+                            shearimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
+                            prevy = coord[1]
 
-                    #shearimage = pygame.transform.rotate(config.brush.image, xoffset)
-                    #rw,rh = shearimage.get_size()
-                    #config.pixel_canvas.blit(shearimage, (sx-rw//2,sy-rh//2))
+                    config.pixel_canvas.blit(shearimage, (sx-w//2-imgXoffset,sy-h//2))
                     config.menubar.title_right = "%d"%(xoffset)
                 else:
                     config.pixel_canvas.blit(shearimage, (mouseX-w,mouseY-h))

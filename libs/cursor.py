@@ -29,6 +29,8 @@ class cursor:
         self.center.append((0,15))
         self.center.append((7,7))
         self.center.append((9,9))
+        self.center.append((9,9))
+        self.center.append((9,9))
 
     def draw(self):
         #draw mouse cursor
