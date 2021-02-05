@@ -371,7 +371,7 @@ class DoBrushShear(MenuAction):
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
-        rotimage = config.brush.image
+        shearimage = config.brush.image
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
@@ -388,12 +388,16 @@ class DoBrushShear(MenuAction):
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
                     xoffset = mouseX - mx
-                    rotimage = pygame.transform.rotate(config.brush.image, xoffset)
-                    rw,rh = rotimage.get_size()
-                    config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
+                    clist = drawline(config.pixel_canvas, 1, (0,0), (xoffset,h), coordsonly=True)
+                    for coord in clist:
+                        config.pixel_canvas.blit(shearimage, (sx-w//2+coord[0],sy-h//2+coord[1]), area=(0,coord[1],w,1))
+
+                    #shearimage = pygame.transform.rotate(config.brush.image, xoffset)
+                    #rw,rh = shearimage.get_size()
+                    #config.pixel_canvas.blit(shearimage, (sx-rw//2,sy-rh//2))
                     config.menubar.title_right = "%d"%(xoffset)
                 else:
-                    config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
+                    config.pixel_canvas.blit(shearimage, (mouseX-w,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
                     sx, sy = (mouseX-w//2, mouseY-h//2)
@@ -406,11 +410,11 @@ class DoBrushShear(MenuAction):
             first_time = False
 
         config.menubar.title_right = ""
-        config.brush.image = rotimage
-        config.brush.image_orig = rotimage
+        config.brush.image = shearimage
+        config.brush.image_orig = shearimage
         config.brush.aspect = 1.0
         config.brush.handle_type = config.brush.CENTER
-        config.brush.size = rotimage.get_height()
+        config.brush.size = shearimage.get_height()
         config.doKeyAction()
 
 class DoMode(MenuAction):
