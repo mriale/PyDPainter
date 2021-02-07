@@ -425,6 +425,152 @@ class DoBrushShear(MenuAction):
         config.brush.size = shearimage.get_height()
         config.doKeyAction()
 
+class DoBrushBendX(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+        sx, sy = (0,0)
+        ow,oh = config.brush.image_orig.get_size()
+        w,h = config.brush.image.get_size()
+        config.cursor.shape = 6
+        config.clear_pixel_draw_canvas()
+        config.brush.size = config.brush.size
+        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
+        config.recompose()
+        bendimage = config.brush.image
+        first_time = True
+        wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
+        while wait_for_mouseup:
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                config.clear_pixel_draw_canvas()
+                if event.buttons[0] and wait_for_mouseup:
+                    xoffset = mouseX - mx
+                    bendimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
+                    bendimage.set_palette(config.pal)
+                    bendimage.set_colorkey(config.brush.bgcolor)
+                    if mouseY-my < -h//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, 0), (0,h), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
+                    elif mouseY-my > h//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, h), (0,0), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
+                    else:
+                        clist = drawcurve(config.pixel_canvas, 1, (0,0), (0,h), (mouseX-mx, mouseY-my+h//2), coordsonly=True, handlesymm=False)
+                    if xoffset < 0:
+                        imgXoffset = -xoffset
+                    else:
+                        imgXoffset = 0
+                    prevy = -1
+                    for seg in clist:
+                        for coord in seg:
+                            if prevy != coord[1]:
+                                bendimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
+                                prevy = coord[1]
+
+                    config.pixel_canvas.blit(bendimage, (sx-imgXoffset,sy))
+                    config.menubar.title_right = "%d"%(xoffset)
+                else:
+                    config.pixel_canvas.blit(bendimage, (mouseX-w,mouseY-h//2))
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sx, sy = (mouseX-w, mouseY-h//2)
+                    mx, my = (mouseX,mouseY)
+            elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
+                if event.button == 1:
+                    wait_for_mouseup -= 1
+
+            config.recompose()
+            first_time = False
+
+        config.menubar.title_right = ""
+        config.brush.image = bendimage
+        config.brush.image_orig = bendimage
+        config.brush.aspect = 1.0
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = bendimage.get_height()
+        config.doKeyAction()
+
+class DoBrushBendY(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+        sx, sy = (0,0)
+        ow,oh = config.brush.image_orig.get_size()
+        w,h = config.brush.image.get_size()
+        config.cursor.shape = 6
+        config.clear_pixel_draw_canvas()
+        config.brush.size = config.brush.size
+        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
+        config.recompose()
+        bendimage = config.brush.image
+        first_time = True
+        wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
+        while wait_for_mouseup:
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                config.clear_pixel_draw_canvas()
+                if event.buttons[0] and wait_for_mouseup:
+                    xoffset = mouseX - mx
+                    bendimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
+                    bendimage.set_palette(config.pal)
+                    bendimage.set_colorkey(config.brush.bgcolor)
+                    if mouseY-my < -h//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, 0), (0,h), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
+                    elif mouseY-my > h//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, h), (0,0), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
+                    else:
+                        clist = drawcurve(config.pixel_canvas, 1, (0,0), (0,h), (mouseX-mx, mouseY-my+h//2), coordsonly=True, handlesymm=False)
+                    if xoffset < 0:
+                        imgXoffset = -xoffset
+                    else:
+                        imgXoffset = 0
+                    prevy = -1
+                    for seg in clist:
+                        for coord in seg:
+                            if prevy != coord[1]:
+                                bendimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
+                                prevy = coord[1]
+
+                    config.pixel_canvas.blit(bendimage, (sx-imgXoffset,sy))
+                    config.menubar.title_right = "%d"%(xoffset)
+                else:
+                    config.pixel_canvas.blit(bendimage, (mouseX-w,mouseY-h//2))
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sx, sy = (mouseX-w, mouseY-h//2)
+                    mx, my = (mouseX,mouseY)
+            elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
+                if event.button == 1:
+                    wait_for_mouseup -= 1
+
+            config.recompose()
+            first_time = False
+
+        config.menubar.title_right = ""
+        config.brush.image = bendimage
+        config.brush.image_orig = bendimage
+        config.brush.aspect = 1.0
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = bendimage.get_height()
+        config.doKeyAction()
+
 class DoMode(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -514,8 +660,8 @@ def init_menubar(config_in):
                 ["Change Transp"],
                 ]],
             ["Bend", [
-                ["Horiz"],
-                ["Vert"],
+                ["Horiz", " ", DoBrushBendX],
+                ["Vert", " ", DoBrushBendY],
                 ]],
             ["Handle", [
                 ["Center","alt-s"],
