@@ -506,7 +506,7 @@ class DoBrushBendY(MenuAction):
         sx, sy = (0,0)
         ow,oh = config.brush.image_orig.get_size()
         w,h = config.brush.image.get_size()
-        config.cursor.shape = 6
+        config.cursor.shape = 7
         config.clear_pixel_draw_canvas()
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
@@ -527,34 +527,34 @@ class DoBrushBendY(MenuAction):
             if event.type == MOUSEMOTION:
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
-                    xoffset = mouseX - mx
-                    bendimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
+                    yoffset = mouseY - my
+                    bendimage = pygame.Surface((w, h+abs(yoffset)),0, config.pixel_canvas)
                     bendimage.set_palette(config.pal)
                     bendimage.set_colorkey(config.brush.bgcolor)
-                    if mouseY-my < -h//2:
-                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, 0), (0,h), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
-                    elif mouseY-my > h//2:
-                        clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, h), (0,0), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
+                    if mouseX-mx < -w//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (0, mouseY-my), (w,0), (w//2,(mouseY-my)//4), coordsonly=True, handlesymm=False)
+                    elif mouseX-mx > w//2:
+                        clist = drawcurve(config.pixel_canvas, 1, (w, mouseY-my), (0,0), (w//2,(mouseY-my)//4), coordsonly=True, handlesymm=False)
                     else:
-                        clist = drawcurve(config.pixel_canvas, 1, (0,0), (0,h), (mouseX-mx, mouseY-my+h//2), coordsonly=True, handlesymm=False)
-                    if xoffset < 0:
-                        imgXoffset = -xoffset
+                        clist = drawcurve(config.pixel_canvas, 1, (0,0), (w,0), (mouseX-mx+w//2, mouseY-my), coordsonly=True, handlesymm=False)
+                    if yoffset < 0:
+                        imgYoffset = -yoffset
                     else:
-                        imgXoffset = 0
-                    prevy = -1
+                        imgYoffset = 0
+                    prevx = -1
                     for seg in clist:
                         for coord in seg:
-                            if prevy != coord[1]:
-                                bendimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
-                                prevy = coord[1]
+                            if prevx != coord[0]:
+                                bendimage.blit(config.brush.image, (coord[0],imgYoffset+coord[1]), area=(coord[0],0,1,h))
+                                prevx = coord[0]
 
-                    config.pixel_canvas.blit(bendimage, (sx-imgXoffset,sy))
-                    config.menubar.title_right = "%d"%(xoffset)
+                    config.pixel_canvas.blit(bendimage, (sx,sy-imgYoffset))
+                    config.menubar.title_right = "%d"%(yoffset)
                 else:
-                    config.pixel_canvas.blit(bendimage, (mouseX-w,mouseY-h//2))
+                    config.pixel_canvas.blit(bendimage, (mouseX-w//2,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
                 if event.button == 1:
-                    sx, sy = (mouseX-w, mouseY-h//2)
+                    sx, sy = (mouseX-w//2, mouseY-h)
                     mx, my = (mouseX,mouseY)
             elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
                 if event.button == 1:
