@@ -425,6 +425,68 @@ class DoBrushShear(MenuAction):
         config.brush.size = shearimage.get_height()
         config.doKeyAction()
 
+class DoBrushBG2FG(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        if config.color == config.brush.bgcolor:
+            return
+        w,h = config.brush.image.get_size()
+
+        #replace FG color with BG color
+        surf_array = pygame.surfarray.pixels2d(config.brush.image)
+        bgcolor = config.bgcolor
+        color = config.color
+        tfarray = np.equal(surf_array, bgcolor)
+        surf_array[tfarray] = color
+        surf_array = None
+ 
+        #put new image in brush
+        config.brush.image_orig = config.brush.image
+        config.brush.aspect = 1
+        config.brush.size = h
+        config.doKeyAction()
+
+class DoBrushBGxFG(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        if config.color == config.brush.bgcolor:
+            return
+        w,h = config.brush.image.get_size()
+
+        #replace FG color with BG color
+        surf_array = pygame.surfarray.pixels2d(config.brush.image)
+        bgcolor = config.bgcolor
+        color = config.color
+        bgarray = np.equal(surf_array, bgcolor)
+        fgarray = np.equal(surf_array, color)
+        surf_array[bgarray] = color
+        surf_array[fgarray] = bgcolor
+        surf_array = None
+ 
+        #put new image in brush
+        config.brush.image_orig = config.brush.image
+        config.brush.aspect = 1
+        config.brush.size = h
+        config.doKeyAction()
+
+
+class DoBrushRemap(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+class DoBrushChangeTransp(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        config.brush.image.set_colorkey(config.bgcolor)
+        config.brush.bgcolor = config.bgcolor
+        config.brush.image_orig = config.brush.image
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
 class DoBrushBendX(MenuAction):
     def selected(self, attrs):
         if config.brush.type != Brush.CUSTOM:
@@ -654,10 +716,10 @@ def init_menubar(config_in):
                 ["Shear", " ", DoBrushShear],
                 ]],
             ["Change Color", [
-                ["BG -> FG"],
-                ["BG <-> FG"],
-                ["Remap"],
-                ["Change Transp"],
+                ["BG -> FG", " ", DoBrushBG2FG],
+                ["BG <-> FG", " ", DoBrushBGxFG],
+                ["Remap", " ", DoBrushRemap],
+                ["Change Transp", " ",DoBrushChangeTransp],
                 ]],
             ["Bend", [
                 ["Horiz", " ", DoBrushBendX],
