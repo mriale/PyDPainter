@@ -483,6 +483,7 @@ class DoBrushChangeTransp(MenuAction):
             return
         config.brush.image.set_colorkey(config.bgcolor)
         config.brush.bgcolor = config.bgcolor
+        config.brush.bgcolor_orig = config.bgcolor
         config.brush.image_orig = config.brush.image
         config.brush.size = config.brush.size
         config.doKeyAction()
