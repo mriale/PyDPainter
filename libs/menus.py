@@ -33,6 +33,8 @@ def askOpenFilename():
 
 class DoOpen(MenuAction):
     def selected(self, attrs):
+        file_req(config.pixel_req_canvas)
+        return
         self.toolHide()
         config.recompose()
         pygame.mouse.set_visible(True)
