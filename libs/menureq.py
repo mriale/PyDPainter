@@ -131,17 +131,20 @@ class FileGadget(ListGadget):
 
         return ge
 
-#Simple filter to get rid of non-latin fonts from the font requester
-def is_latin_font(fname):
-    retval = True
-
-    if fname[0:7] in ["mathjax","notosan","notoser","notocol","notonas","notomon","notokuf","notomus"]:
-        retval = False
-    elif fname[0:6] == "samyak":
-        retval = False
-    elif fname[0:5] in ["kacst","lohit"]:
-        retval = False
-    return retval
+#Read in directory and return sorted list
+def get_dir(path):
+    filelist = []
+    dirlist = [".. (parent dir)"]
+    with os.scandir(path) as it:
+        for entry in it:
+            if not entry.name.startswith('.'):
+                if entry.is_file():
+                    filelist.append(entry.name)
+                elif entry.is_dir():
+                    dirlist.append("\x92\x93" + entry.name)
+    filelist.sort(key=str.casefold)
+    dirlist.sort(key=str.casefold)
+    return dirlist + filelist
 
 def file_req(screen, save=False):
     action = "Load"
@@ -169,8 +172,7 @@ File:_________________________
 
     #list items
     list_itemsg = req.gadget_id("0_1")
-    list_itemsg.items = os.listdir() #pygame.font.get_fonts()
-    list_itemsg.items.sort()
+    list_itemsg.items = get_dir(config.filepath)
     list_itemsg.top_item = 0
     list_itemsg.value = list_itemsg.top_item
 
@@ -190,6 +192,10 @@ File:_________________________
     list_upg.listgadgets = listg_list
     list_downg.listgadgets = listg_list
     list_sliderg.listgadgets = listg_list
+
+    #File path
+    file_pathg = req.gadget_id("5_0")
+    file_pathg.value = config.filepath
 
     #take care of non-square pixels
     fontmult = 1
