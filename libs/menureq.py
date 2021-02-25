@@ -19,118 +19,6 @@ def menureq_set_config(config_in):
     global config
     config = config_in
 
-class FileGadget(ListGadget):
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        if label == "&":
-            scaleX = config.pixel_width // 320
-            scaleY = config.pixel_height // 200
-            self.arrowup = np.array([[0,16], [16,0], [32,16]]) * np.array([scaleX/4,scaleY/4])
-            self.arrowdown = np.array([[0,24], [32,24], [16,40]]) * np.array([scaleX/4,scaleY/4])
-            self.font_sizeg = None
-        super(FileGadget, self).__init__(type, label, rect, value, maxvalue, id)
-
-    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
-        self.visible = True
-        x,y,w,h = self.rect
-        xo, yo = offset
-        self.offsetx = xo
-        self.offsety = yo
-        self.screenrect = (x+xo,y+yo,w,h)
-        px = font.xsize//8
-        py = font.ysize//8
-
-        if self.type == Gadget.TYPE_CUSTOM:
-            if not self.need_redraw:
-                return
-
-            #List text
-            if self.label == "&":
-                self.need_redraw = False
-                upcolor = fgcolor
-                downcolor = fgcolor
-                if self.state == 1:
-                    upcolor = hcolor
-                elif self.state == -1:
-                    downcolor = hcolor
-                pygame.draw.polygon(screen, upcolor, self.arrowup + np.array([x+xo,y+yo]))
-                pygame.draw.polygon(screen, downcolor, self.arrowdown + np.array([x+xo,y+yo]))
-            else:
-                super(FileGadget, self).draw(screen, font, offset)
-        else:
-            super(FileGadget, self).draw(screen, font, offset)
-
-    def process_event(self, screen, event, mouse_pixel_mapper):
-        ge = []
-        x,y = mouse_pixel_mapper()
-        g = self
-        gx,gy,gw,gh = g.screenrect
-        handled = False
-
-        #disabled gadget
-        if not g.enabled:
-            return ge
-
-        if self.type == Gadget.TYPE_CUSTOM:
-            #Size up/down arrows
-            if event.type == MOUSEBUTTONUP and event.button == 1 and \
-               g.label == "&" and g.state != 0:
-                pygame.time.set_timer(pygame.USEREVENT, 0)
-                g.state = 0
-                g.need_redraw = True
-                handled = True
-
-            if g.pointin((x,y), g.screenrect) and g.label == "&":
-                handled = True
-
-                #get number from size gadget
-                if g.font_sizeg.value.isnumeric() and int(g.font_sizeg.value) > 0 and int(g.font_sizeg.value) <= 500:
-                    fontsize = int(g.font_sizeg.value)
-                else:
-                    fontsize = 0
-
-                #handle left button
-                if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                    pygame.time.set_timer(pygame.USEREVENT, 500)
-                    if y - gy < gh // 2:
-                        #up arrow
-                        g.state = 1
-                        fontsize += 1
-                    else:
-                        #down arrow
-                        g.state = -1
-                        fontsize -= 1
-
-                #handle mouse wheel
-                elif event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
-                    #scroll up
-                    if event.button == 4:
-                        fontsize += 1
-                    #scroll down
-                    elif event.button == 5:
-                        fontsize -= 1
-
-                elif event.type == USEREVENT:
-                    pygame.time.set_timer(pygame.USEREVENT, 100)
-                    if y - gy < gh // 2:
-                        #up arrow
-                        g.state = 1
-                        fontsize += 1
-                    else:
-                        #down arrow
-                        g.state = -1
-                        fontsize -= 1
-                    
-                #assign back to size gadget
-                if fontsize > 0 and fontsize <= 500:
-                    g.font_sizeg.value = str(fontsize)
-                    g.font_sizeg.need_redraw = True
-                    g.need_redraw = True
-
-        if not handled:
-            ge.extend(super(FileGadget, self).process_event(screen, event, mouse_pixel_mapper))
-
-        return ge
-
 #Read in directory and return sorted list
 def get_dir(path):
     filelist = []
@@ -166,13 +54,15 @@ Path:_________________________
 ############################^^
 File:_________________________
 [%s][Cancel]
-"""%(action), "%#^@&", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FileGadget, font=config.font)
+"""%(action), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
+    filepath = config.filepath
+
     #list items
     list_itemsg = req.gadget_id("0_1")
-    list_itemsg.items = get_dir(config.filepath)
+    list_itemsg.items = get_dir(filepath)
     list_itemsg.top_item = 0
     list_itemsg.value = list_itemsg.top_item
 
@@ -195,7 +85,11 @@ File:_________________________
 
     #File path
     file_pathg = req.gadget_id("5_0")
-    file_pathg.value = config.filepath
+    file_pathg.value = filepath
+
+    #File name
+    file_nameg = req.gadget_id("5_11")
+    file_nameg.value = ""
 
     #take care of non-square pixels
     fontmult = 1
@@ -234,29 +128,23 @@ File:_________________________
                     running = 0
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if event.type == MOUSEBUTTONUP and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
+                filename = list_itemsg.items[list_itemsg.value]
+                if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
+                    if filename[0:2] == "\x92\x93":
+                        filepath = os.path.join(filepath, filename[2:])
+                    elif filename[0:2] == "..":
+                        filepath = os.path.abspath(os.path.join(filepath, ".."))
+                    list_itemsg.items = get_dir(filepath)
+                    list_itemsg.top_item = 0
+                    list_itemsg.value = list_itemsg.top_item
+                    list_itemsg.need_redraw = True
+                    file_pathg.value = filepath
+                    file_pathg.need_redraw = True
+                else:
+                    file_nameg.value = filename
+                    file_nameg.need_redraw = True
             req.draw(screen)
-            #Font preview
-            """
-            screen.set_clip(previewg.screenrect)
-            pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
-            if font_sizeg.value.isnumeric() and int(font_sizeg.value) > 0 and int(font_sizeg.value) <= 500:
-                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value)*fontmult)
-                prefont.set_underline(underline)
-                surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
-                if config.aspectX != config.aspectY:
-                    sx,sy = surf.get_size()
-                    if config.aspectX == 2:
-                        sy //= 2
-                    else:
-                        sx //= 2
-                    if aa:
-                        surf = pygame.transform.smoothscale(surf, (sx,sy))
-                    else:
-                        surf = pygame.transform.scale(surf, (sx,sy))
-                screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
-
-            screen.set_clip(None)
-            """
  
             config.recompose()
 
