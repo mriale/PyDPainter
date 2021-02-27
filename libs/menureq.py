@@ -34,13 +34,8 @@ def get_dir(path):
     dirlist.sort(key=str.casefold)
     return dirlist + filelist
 
-def file_req(screen, save=False):
-    action = "Load"
-    load = not save
-    if save:
-        action = "Save"
-
-    req = str2req("%s File"%(action), """
+def file_req(screen, title, action_label, filepath, filename):
+    req = str2req(title, """
 Path:_________________________
 ############################^^
 ############################@@
@@ -54,11 +49,11 @@ Path:_________________________
 ############################^^
 File:_________________________
 [%s][Cancel]
-"""%(action), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+"""%(action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
-    filepath = config.filepath
+    retval = ""
 
     #list items
     list_itemsg = req.gadget_id("0_1")
@@ -88,19 +83,19 @@ File:_________________________
     file_pathg.value = filepath
 
     #File name
+    filename = os.path.basename(filename)
     file_nameg = req.gadget_id("5_11")
-    file_nameg.value = ""
+    file_nameg.value = filename
 
     #take care of non-square pixels
     fontmult = 1
     if config.aspectX != config.aspectY:
         fontmult = 2
 
-    #preview
-    #previewg = req.gadget_id("0_8")
-
     req.draw(screen)
     config.recompose()
+
+    last_click_ms = pygame.time.get_ticks()
 
     running = 1
     while running:
@@ -112,17 +107,9 @@ File:_________________________
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
-                if ge.gadget.label == "OK" and not req.has_error():
-                    config.text_tool_font_antialias = aa
-                    config.text_tool_font_name = list_itemsg.items[list_itemsg.value]
-                    config.text_tool_font_type = fonttype
-                    config.text_tool_font_size = int(font_sizeg.value)
-                    config.text_tool_font_antialias = aa
-                    config.text_tool_font_bold = bold
-                    config.text_tool_font_italic = italic
-                    config.text_tool_font_underline = underline
-                    config.text_tool_font = pygame.font.Font(pygame.font.match_font(config.text_tool_font_name, bold=config.text_tool_font_bold, italic=config.text_tool_font_italic), config.text_tool_font_size*fontmult)
-                    config.text_tool_font.set_underline(config.text_tool_font_underline)
+                if ge.gadget.label == action_label:
+                    if file_nameg.value != "":
+                        retval = os.path.join(filepath, file_nameg.value)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
@@ -144,6 +131,12 @@ File:_________________________
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
+                    if pygame.time.get_ticks() - last_click_ms < 500:
+                        if file_nameg.value != "":
+                            retval = os.path.join(filepath, file_nameg.value)
+                        running = 0
+                    else:
+                        last_click_ms = pygame.time.get_ticks()
             req.draw(screen)
  
             config.recompose()
@@ -151,7 +144,7 @@ File:_________________________
     config.pixel_req_rect = None
     config.recompose()
 
-    return
+    return retval
 
 
 def screen_format_req(screen, new_clicked=False):

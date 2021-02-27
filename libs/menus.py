@@ -33,24 +33,18 @@ def askOpenFilename():
 
 class DoOpen(MenuAction):
     def selected(self, attrs):
-        file_req(config.pixel_req_canvas)
-        return
-        self.toolHide()
-        config.recompose()
-        pygame.mouse.set_visible(True)
-        config.filename = filedialog.askopenfilename(initialdir = config.filepath,title = "Load Picture",filetypes = (("BMP file","*.bmp"),("IFF file","*.iff"),("all files","*.*")))
-        pygame.mouse.set_visible(False)
-        if config.filename != (()) and config.filename != "":
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Load Picture", "Load", config.filepath, config.filename)
+        if filename != (()) and filename != "":
             try:
-                config.pixel_canvas = load_pic(config.filename)
+                config.pixel_canvas = load_pic(filename)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
                 config.initialize_surfaces()
-                config.filepath = os.path.dirname(config.filename)
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
             except:
                 pass
-        else:
-            config.filename = ""
 
 def askSaveFilename():
     pygame.mouse.set_visible(True)
