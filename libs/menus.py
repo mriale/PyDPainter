@@ -11,9 +11,6 @@ from menureq import *
 from gadget import *
 from picio import *
 
-from tkinter import *
-from tkinter import filedialog
-
 config = None
 
 class MenuAction(Action):
@@ -26,15 +23,10 @@ class DoNew(MenuAction):
     def selected(self, attrs):
         screen_format_req(config.pixel_req_canvas,new_clicked=True)
 
-def askOpenFilename():
-    pygame.mouse.set_visible(True)
-    config.filename = filedialog.asksaveasfilename(initialdir = config.filepath,title = "Save Picture",filetypes = (("IFF file","*.iff"), ("BMP file","*.bmp"),("all files","*.*")))
-    pygame.mouse.set_visible(False)
-
 class DoOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Load Picture", "Load", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             try:
                 config.pixel_canvas = load_pic(filename)
@@ -46,31 +38,23 @@ class DoOpen(MenuAction):
             except:
                 pass
 
-def askSaveFilename():
-    pygame.mouse.set_visible(True)
-    config.filename = filedialog.asksaveasfilename(initialdir = config.filepath,title = "Save Picture",filetypes = (("IFF file","*.iff"), ("BMP file","*.bmp"),("all files","*.*")))
-    pygame.mouse.set_visible(False)
-
 class DoSave(MenuAction):
     def selected(self, attrs):
-        self.toolHide()
-        config.recompose()
-        if config.filename == "":
-            askSaveFilename()
-        if config.filename != "" and config.filename != (()):
-            save_iff(config.filename)
-        else:
-            config.filename = ""
+        config.stop_cycling()
+        filename = config.filename
+        if filename == "":
+            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            save_iff(filename)
+            config.filename = filename
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
-        self.toolHide()
-        config.recompose()
-        askSaveFilename()
-        if config.filename != "" and config.filename != (()):
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+        if filename != (()) and filename != "":
             save_iff(config.filename)
-        else:
-            config.filename = ""
+            config.filename = filename
 
 class DoPalette(MenuAction):
     def selected(self, attrs):

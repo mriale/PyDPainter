@@ -27,9 +27,6 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-from tkinter import *
-from tkinter import filedialog
-
 fonty = 12
 fontx = 8
 
