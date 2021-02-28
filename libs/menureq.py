@@ -115,7 +115,7 @@ File:_________________________
                     running = 0
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
-            if event.type == MOUSEBUTTONUP and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
+            if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
                 filename = list_itemsg.items[list_itemsg.value]
                 if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                     if filename[0:2] == "\x92\x93":
