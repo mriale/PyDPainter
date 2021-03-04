@@ -536,6 +536,19 @@ class Gadget(object):
                     elif event.key == K_RETURN or event.key == K_KP_ENTER or event.key == K_ESCAPE:
                         self.state = 0
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                        """
+                    elif event.key == K_c and event.mod & KMOD_CTRL:
+                        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+                        pygame.scrap.put(pygame.SCRAP_TEXT, self.value.encode("utf-8"))
+                    elif event.key == K_v and event.mod & KMOD_CTRL:
+                        text = None
+                        for t in pygame.scrap.get_types():
+                            if "text" in t and pygame.scrap.get(t) != None:
+                                text = pygame.scrap.get(t).decode("utf-8")
+                        if text != None:
+                            self.value = self.value[:self.pos] + text + self.value[self.pos:]
+                            self.pos += len(text)
+                        """
                     elif len(event.unicode) == 1 and ord(event.unicode) >= 32 and ord(event.unicode) < 128:
                         if len(g.value) < self.maxvalue:
                             self.value = self.value[:self.pos] + event.unicode + self.value[self.pos:]

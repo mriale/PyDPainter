@@ -23,15 +23,18 @@ def menureq_set_config(config_in):
 def get_dir(path):
     filelist = []
     dirlist = [".. (parent dir)"]
-    with os.scandir(path) as it:
-        for entry in it:
-            if not entry.name.startswith('.'):
-                if entry.is_file():
-                    filelist.append(entry.name)
-                elif entry.is_dir():
-                    dirlist.append("\x92\x93" + entry.name)
-    filelist.sort(key=str.casefold)
-    dirlist.sort(key=str.casefold)
+    try:
+        with os.scandir(path) as it:
+            for entry in it:
+                if not entry.name.startswith('.'):
+                    if entry.is_file():
+                        filelist.append(entry.name)
+                    elif entry.is_dir():
+                        dirlist.append("\x92\x93" + entry.name)
+        filelist.sort(key=str.casefold)
+        dirlist.sort(key=str.casefold)
+    except FileNotFoundError:
+        dirlist = ["<Not found>"]
     return dirlist + filelist
 
 def file_req(screen, title, action_label, filepath, filename):
@@ -115,6 +118,13 @@ File:_________________________
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+            if ge.gadget.type == Gadget.TYPE_STRING:
+                if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
+                    filepath = file_pathg.value
+                    list_itemsg.items = get_dir(filepath)
+                    list_itemsg.top_item = 0
+                    list_itemsg.value = list_itemsg.top_item
+                    list_itemsg.need_redraw = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
