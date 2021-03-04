@@ -260,6 +260,7 @@ class Gadget(object):
         self.visible = False
         self.state = 0
         self.pos = 0
+        self.scrollpos = 0
         self.value = value
         self.maxvalue = maxvalue
         self.id = id
@@ -306,7 +307,7 @@ class Gadget(object):
         x,y,w,h = self.screenrect
         mousex, mousey = coords
         if self.type == Gadget.TYPE_STRING:
-            value = (mousex-x) // fontx
+            value = ((mousex-x) // fontx) + self.scrollpos
             if value < 0:
                 return 0
             elif value >= len(self.value):
@@ -393,7 +394,7 @@ class Gadget(object):
             strxo = 0
             pygame.draw.rect(screen, hcolor, self.screenrect, 0)
             pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
-            font.blitstring(screen, (x+xo+px,y+yo+py+py), self.value, fgcolor, bgcolor)
+            font.blitstring(screen, (x+xo+px,y+yo+py+py), self.value[self.scrollpos:], fgcolor, bgcolor)
             pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, w-px, py), 0)
             pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, px, h), 0)
             if self.state != 0:
@@ -401,7 +402,7 @@ class Gadget(object):
                     c = self.value[self.pos]
                 else:
                     c = " "
-                font.blitstring(screen, (x+xo+px+(self.pos*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
+                font.blitstring(screen, (x+xo+px+((self.pos-self.scrollpos)*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
             if self.numonly and not re.fullmatch('^-?\d*\.?\d+$', self.value):
                 #numeric error
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
@@ -514,6 +515,7 @@ class Gadget(object):
                 elif event.type == KEYDOWN:
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_KEY, event, g))
+                    hi_pos = g.scrollpos + (g.screenrect[2] // fontx) - 1
                     if event.key == K_RIGHT:
                         if self.pos < len(self.value):
                             self.pos += 1
@@ -538,6 +540,11 @@ class Gadget(object):
                         if len(g.value) < self.maxvalue:
                             self.value = self.value[:self.pos] + event.unicode + self.value[self.pos:]
                             self.pos += 1
+
+                    if self.pos > hi_pos:
+                        self.scrollpos = self.pos - (g.screenrect[2] // fontx) + 1
+                    elif self.pos < self.scrollpos:
+                        self.scrollpos = self.pos
             elif g.type == Gadget.TYPE_LABEL:
                 g.state = 0
                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))

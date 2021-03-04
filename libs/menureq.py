@@ -81,11 +81,13 @@ File:_________________________
     #File path
     file_pathg = req.gadget_id("5_0")
     file_pathg.value = filepath
+    file_pathg.maxvalue = 255
 
     #File name
     filename = os.path.basename(filename)
     file_nameg = req.gadget_id("5_11")
     file_nameg.value = filename
+    file_nameg.maxvalue = 255
 
     #take care of non-square pixels
     fontmult = 1
