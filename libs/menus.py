@@ -56,6 +56,18 @@ class DoSaveAs(MenuAction):
             save_iff(config.filename)
             config.filename = filename
 
+class DoPictureFlipX(MenuAction):
+    def selected(self, attrs):
+        config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
+        config.save_undo()
+        config.doKeyAction()
+
+class DoPictureFlipY(MenuAction):
+    def selected(self, attrs):
+        config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
+        config.save_undo()
+        config.doKeyAction()
+
 class DoPalette(MenuAction):
     def selected(self, attrs):
         self.toolHide()
@@ -645,8 +657,8 @@ def init_menubar(config_in):
             ["Print...", "ctrl-p"],
             ["---"],
             ["Flip", [
-                ["Horiz"],
-                ["Vert"],
+                ["Horiz", " ", DoPictureFlipX],
+                ["Vert", " ", DoPictureFlipY],
                 ]],
             ["Change Color", [
                 ["Palette...", "p", DoPalette],
