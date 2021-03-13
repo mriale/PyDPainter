@@ -689,6 +689,8 @@ class ListGadget(Gadget):
         x,y = mouse_pixel_mapper()
         g = self
         gx,gy,gw,gh = g.screenrect
+        px = fontx//8
+        py = fonty//12
 
         #disabled gadget
         if not g.enabled:
@@ -705,7 +707,7 @@ class ListGadget(Gadget):
                         pygame.time.set_timer(pygame.USEREVENT, 500)
                     #List text
                     elif g.label == "#":
-                        item = (self.numlines * (y-gy) // gh) + self.top_item
+                        item = (self.numlines * (y-gy-py-py) // (self.numlines * int(fonty/1.5))) + self.top_item
                         if item >= len(g.items):
                             item = len(g.items) - 1
                         if item < 0:
