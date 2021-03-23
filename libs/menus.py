@@ -626,6 +626,33 @@ class DoBrushBendY(MenuAction):
         config.brush.size = bendimage.get_height()
         config.doKeyAction()
 
+class DoBrushHandleCenter(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
+class DoBrushHandleCorner(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        if config.brush.handle_type >= config.brush.CORNER_UL and config.brush.handle_type < config.brush.CORNER_LL:
+            config.brush.handle_type += 1
+        else:
+            config.brush.handle_type = config.brush.CORNER_UL
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
+class DoBrushHandlePlace(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.size = config.brush.size
+        config.doKeyAction()
+
 class DoMode(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -719,9 +746,9 @@ def init_menubar(config_in):
                 ["Vert", " ", DoBrushBendY],
                 ]],
             ["Handle", [
-                ["Center","alt-s"],
-                ["Corner","alt-x"],
-                ["Place","alt-z"],
+                ["Center","alt-s", DoBrushHandleCenter],
+                ["Corner","alt-x", DoBrushHandleCorner],
+                ["Place","alt-z", DoBrushHandlePlace],
                 ]],
         ]])
     menubar.add_menu(
