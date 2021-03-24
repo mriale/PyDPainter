@@ -649,7 +649,44 @@ class DoBrushHandlePlace(MenuAction):
     def selected(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
-        config.brush.handle_type = config.brush.CENTER
+
+        point_coords = config.get_mouse_pixel_pos(ignore_grid=True)
+        config.recompose()
+        point_placed = False
+        first_time = True
+        while not point_placed:
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                if not event.buttons[0]:
+                    point_coords = (mouseX, mouseY)
+            elif event.type == MOUSEBUTTONUP:
+                point_placed = True
+            config.clear_pixel_draw_canvas()
+            config.pixel_canvas.blit(config.brush.image, (point_coords[0]-config.brush.handle[0], point_coords[1]-config.brush.handle[1]))
+            #current center
+            drawline(config.pixel_canvas, 1,
+                (mouseX,0), (mouseX,config.pixel_canvas.get_height()),
+                xormode=True)
+            drawline(config.pixel_canvas, 1,
+                (0,mouseY), (config.pixel_canvas.get_width(),mouseY),
+                xormode=True)
+            config.recompose()
+            first_time = False
+
+        bxo = point_coords[0]-config.brush.handle[0]
+        byo = point_coords[1]-config.brush.handle[1]
+        bw,bh = config.brush.image.get_size()
+
+        config.brush.handle_type = config.brush.PLACE
+        config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
         config.brush.size = config.brush.size
         config.doKeyAction()
 

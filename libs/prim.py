@@ -255,30 +255,18 @@ class Brush:
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
-            self.handle = [w//2, h//2]
             self.handle_frac = [0.5, 0.5]
         elif self.handle_type == self.CORNER_UL:
-            self.handle = [0, 0]
             self.handle_frac = [0.0, 0.0]
         elif self.handle_type == self.CORNER_UR:
-            self.handle = [w, 0]
             self.handle_frac = [1.0, 0.0]
         elif self.handle_type == self.CORNER_LR:
-            self.handle = [w, h]
             self.handle_frac = [1.0, 1.0]
         elif self.handle_type == self.CORNER_LL:
-            self.handle = [0, h]
             self.handle_frac = [0.0, 1.0]
-        self.rect = [-self.handle[0], -self.handle[1], w, h]
 
-        """
-        CENTER = 0
-        CORNER_UL = 1
-        CORNER_UR = 2
-        CORNER_LR = 3
-        CORNER_LL = 4
-        PLACE = 5
-        """
+        self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
+        self.rect = [-self.handle[0], -self.handle[1], w, h]
 
     def scale(self, image_in):
         size = self.__size
