@@ -192,8 +192,8 @@ class DoBrushFlipX(MenuAction):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.flip(config.brush.image, True, False)
             config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, True, False)
-            config.brush.handle = [config.brush.rect[2] - config.brush.handle[0], config.brush.handle[1]]
-            config.brush.cache = BrushCache()
+            config.brush.handle_frac[0] = 1 - config.brush.handle_frac[0]
+            config.brush.size = config.brush.size
             config.doKeyAction()
 
 class DoBrushFlipY(MenuAction):
@@ -201,8 +201,8 @@ class DoBrushFlipY(MenuAction):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.flip(config.brush.image, False, True)
             config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, False, True)
-            config.brush.handle = [config.brush.handle[0], config.brush.rect[3] - config.brush.handle[1]]
-            config.brush.cache = BrushCache()
+            config.brush.handle_frac[1] = 1 - config.brush.handle_frac[1]
+            config.brush.size = config.brush.size
             config.doKeyAction()
 
 class DoBrushOutline(MenuAction):
@@ -287,12 +287,13 @@ class DoBrushRotate90(MenuAction):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.rotate(config.brush.image, -90)
             config.brush.image_orig = pygame.transform.rotate(config.brush.image_orig, -90)
-            config.brush.handle = config.brush.handle[::-1]
+            config.brush.handle_frac = [1-config.brush.handle_frac[1], config.brush.handle_frac[0]]
             config.brush.aspect = 1.0 / config.brush.aspect
             bx,by,bw,bh = config.brush.rect
             config.brush.rect = [by,bx,bh,bw]
             config.brush.size = bw
             config.brush.cache = BrushCache()
+            config.brush.size = config.brush.size
             config.doKeyAction()
 
 class DoBrushRotateAny(MenuAction):
