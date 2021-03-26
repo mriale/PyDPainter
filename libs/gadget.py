@@ -268,6 +268,9 @@ class Gadget(object):
         self.offsetx = 0
         self.offsety = 0
         self.numonly = False
+        self.fontx = fontx
+        self.fonty = fonty
+        self.fonth = int(fonty / 1.5)
         self.error = False
         self.need_redraw = True
         if value == None:
@@ -609,6 +612,9 @@ class ListGadget(Gadget):
         self.screenrect = (x+xo,y+yo,w,h)
         px = font.xsize//8
         py = font.ysize//8
+        self.fontx = font.xsize
+        self.fonty = int(font.ysize * 1.5)
+        self.fonth = font.ysize
 
         if self.type == Gadget.TYPE_CUSTOM:
             if not self.need_redraw:
@@ -689,8 +695,8 @@ class ListGadget(Gadget):
         x,y = mouse_pixel_mapper()
         g = self
         gx,gy,gw,gh = g.screenrect
-        px = fontx//8
-        py = fonty//12
+        px = self.fontx//8
+        py = self.fonty//12
 
         #disabled gadget
         if not g.enabled:
@@ -707,7 +713,7 @@ class ListGadget(Gadget):
                         pygame.time.set_timer(pygame.USEREVENT, 500)
                     #List text
                     elif g.label == "#":
-                        item = (self.numlines * (y-gy-py-py) // (self.numlines * int(fonty/1.5))) + self.top_item
+                        item = (self.numlines * (y-gy-py-py) // (self.numlines * self.fonth)) + self.top_item
                         if item >= len(g.items):
                             item = len(g.items) - 1
                         if item < 0:
