@@ -735,6 +735,7 @@ class pydpainter:
         #blit tooltip layer
         if not self.toolbar.wait_for_tip and \
            self.toolbar.tip_canvas != None and \
+           self.toolbar.visible and \
            config.help_on:
             tx = self.pixel_width-self.toolbar.rect[2]+self.toolbar.tip_x
             ty = (self.fonty-1 if self.menubar.visible else 0) + self.toolbar.tip_y
@@ -746,6 +747,7 @@ class pydpainter:
         #blit minitoolbar tooltip layer
         if not self.minitoolbar.wait_for_tip and \
            self.minitoolbar.tip_canvas != None and \
+           self.menubar.visible and \
            config.help_on:
             tx = mtbx + self.minitoolbar.tip_x
             ty = self.minitoolbar.tip_y
