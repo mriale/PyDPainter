@@ -107,11 +107,13 @@ class DoBrushOpen(MenuAction):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            try:
-                newimage = load_pic(filename)
+            #try:
+                brush_config = copy.copy(config)
+                newimage = load_iff(filename, brush_config)
+                newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size())
                 config.setDrawMode(DrawMode.MATTE)
-            except:
+            #except:
                 pass
 
 class DoBrushRestore(MenuAction):
