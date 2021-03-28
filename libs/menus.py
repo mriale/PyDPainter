@@ -102,6 +102,18 @@ class DoAbout(MenuAction):
     def selected(self, attrs):
         about_req(config.pixel_req_canvas)
 
+class DoBrushOpen(MenuAction):
+    def selected(self, attrs):
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            try:
+                newimage = load_pic(filename)
+                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size())
+                config.setDrawMode(DrawMode.MATTE)
+            except:
+                pass
+
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
@@ -750,7 +762,7 @@ def init_menubar(config_in):
         ]])
     menubar.add_menu(
         ["Brush", [
-            ["Open..."],
+            ["Open...", " ", DoBrushOpen],
             ["Save as..."],
             ["Restore","B", DoBrushRestore],
             ["Size", [
