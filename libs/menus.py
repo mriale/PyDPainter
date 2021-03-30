@@ -73,6 +73,23 @@ class DoPalette(MenuAction):
         self.toolHide()
         palette_req(config.pixel_req_canvas)
 
+class DoPictureBrushPalette(MenuAction):
+    def selected(self, attrs):
+        if config.brush.pal != None:
+            config.stop_cycling()
+            pal = config.quantize_palette(config.brush.pal, config.color_depth)
+            config.pal = list(pal)
+            config.set_all_palettes(pal)
+            config.truepal = list(config.brush.pal)
+
+class DoPictureDefaultPalette(MenuAction):
+    def selected(self, attrs):
+        config.stop_cycling()
+        pal = config.get_default_palette(config.NUM_COLORS)
+        config.pal = list(pal)
+        config.set_all_palettes(pal)
+        config.truepal = list(pal)
+
 class DoCycle(MenuAction):
     def selected(self, attrs):
         if config.cycling:
@@ -111,7 +128,7 @@ class DoBrushOpen(MenuAction):
                 brush_config = copy.copy(config)
                 newimage = load_iff(filename, brush_config)
                 newimage.set_palette(config.pal)
-                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size())
+                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size(), pal=brush_config.pal)
                 config.setDrawMode(DrawMode.MATTE)
             #except:
                 pass
@@ -741,9 +758,9 @@ def init_menubar(config_in):
                 ]],
             ["Change Color", [
                 ["Palette...", "p", DoPalette],
-                ["Use Brush Palette"],
+                ["Use Brush Palette", " ", DoPictureBrushPalette],
                 ["Restore Palette"],
-                ["Default Palette"],
+                ["Default Palette", " ", DoPictureDefaultPalette],
                 ["Cycle","Tab", DoCycle],
                 ["BG -> FG"],
                 ["BG <-> FG"],

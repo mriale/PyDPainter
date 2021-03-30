@@ -208,7 +208,7 @@ class Brush:
     CORNER_LL = 4
     PLACE = 5
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None):
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
         if type == Brush.CUSTOM:
             x1,y1 = coordfrom
             x2,y2 = coordto
@@ -252,6 +252,11 @@ class Brush:
 
         self.cache = BrushCache()
         self.handle_type = self.CENTER
+
+        if pal == None and "pal" in dir(config):
+            self.pal = config.pal
+        else:
+            self.pal = pal
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
