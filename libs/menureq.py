@@ -103,7 +103,9 @@ File:_________________________
     last_click_ms = pygame.time.get_ticks()
 
     running = 1
-    while running:
+    wait_for_mouseup = 0
+
+    while running or wait_for_mouseup:
         event = pygame.event.wait()
         gevents = req.process_event(screen, event)
 
@@ -147,10 +149,13 @@ File:_________________________
                         if file_nameg.value != "":
                             retval = os.path.join(filepath, file_nameg.value)
                         running = 0
+                        wait_for_mouseup = 1
                     else:
                         last_click_ms = pygame.time.get_ticks()
+            elif event.type == MOUSEBUTTONUP and event.button == 1:
+                wait_for_mouseup = 0
+
             req.draw(screen)
- 
             config.recompose()
 
     config.pixel_req_rect = None

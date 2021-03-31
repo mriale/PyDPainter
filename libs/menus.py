@@ -132,6 +132,7 @@ class DoBrushOpen(MenuAction):
                 config.setDrawMode(DrawMode.MATTE)
             #except:
                 pass
+        config.doKeyAction()
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
@@ -495,11 +496,14 @@ class DoBrushBGxFG(MenuAction):
         config.brush.size = h
         config.doKeyAction()
 
-
 class DoBrushRemap(MenuAction):
     def selected(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
+        config.brush.image.set_palette(config.brush.pal)
+        newimage = convert8(config.brush.image.convert(), config.pal)
+        config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size(), pal=config.pal)
+        config.doKeyAction()
 
 class DoBrushChangeTransp(MenuAction):
     def selected(self, attrs):
