@@ -82,6 +82,14 @@ class DoPictureBrushPalette(MenuAction):
             config.set_all_palettes(pal)
             config.truepal = list(config.brush.pal)
 
+class DoPictureRestorePalette(MenuAction):
+    def selected(self, attrs):
+        config.stop_cycling()
+        pal = config.loadpal
+        config.pal = list(pal)
+        config.set_all_palettes(pal)
+        config.truepal = list(pal)
+
 class DoPictureDefaultPalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
@@ -96,6 +104,42 @@ class DoCycle(MenuAction):
             config.stop_cycling()
         else:
             config.start_cycling()
+
+class DoPictureBG2FG(MenuAction):
+    def selected(self, attrs):
+        #replace FG color with BG color
+        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        bgcolor = config.bgcolor
+        color = config.color
+        tfarray = np.equal(surf_array, bgcolor)
+        surf_array[tfarray] = color
+        surf_array = None
+        config.save_undo()
+        config.doKeyAction()
+
+class DoPictureBGxFG(MenuAction):
+    def selected(self, attrs):
+        #swap FG color with BG color
+        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        bgcolor = config.bgcolor
+        color = config.color
+        bgarray = np.equal(surf_array, bgcolor)
+        fgarray = np.equal(surf_array, color)
+        surf_array[bgarray] = color
+        surf_array[fgarray] = bgcolor
+        surf_array = None
+        config.save_undo()
+        config.doKeyAction()
+
+class DoPictureRemap(MenuAction):
+    def selected(self, attrs):
+        config.stop_cycling()
+        config.pixel_canvas.set_palette(config.loadpal)
+        config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
+        config.set_all_palettes(config.pal)
+        config.clear_undo()
+        config.save_undo()
+        config.doKeyAction()
 
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
@@ -480,7 +524,7 @@ class DoBrushBGxFG(MenuAction):
             return
         w,h = config.brush.image.get_size()
 
-        #replace FG color with BG color
+        #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.brush.image)
         bgcolor = config.bgcolor
         color = config.color
@@ -763,12 +807,12 @@ def init_menubar(config_in):
             ["Change Color", [
                 ["Palette...", "p", DoPalette],
                 ["Use Brush Palette", " ", DoPictureBrushPalette],
-                ["Restore Palette"],
+                ["Restore Palette", " ", DoPictureRestorePalette],
                 ["Default Palette", " ", DoPictureDefaultPalette],
                 ["Cycle","Tab", DoCycle],
-                ["BG -> FG"],
-                ["BG <-> FG"],
-                ["Remap"],
+                ["BG -> FG", " ", DoPictureBG2FG],
+                ["BG <-> FG", " ", DoPictureBGxFG],
+                ["Remap", " ", DoPictureRemap],
                 ]],
             ["Spare", [
                 ["Swap", "j", DoSpareSwap],

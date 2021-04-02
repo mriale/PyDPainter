@@ -480,6 +480,7 @@ class pydpainter:
         self.pal = quantize_palette(self.pal, self.color_depth)
         self.backuppal = list(self.pal)
         self.truepal = list(self.pal)
+        self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
         self.cycling = False

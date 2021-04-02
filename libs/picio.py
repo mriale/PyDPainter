@@ -184,6 +184,7 @@ def load_iff(filename, config):
         cranges.append(colorrange(0,1,0,0))
 
     config.cranges = cranges
+    config.loadpal = list(config.pal)
     return pic
 
 def load_pic(filename):
