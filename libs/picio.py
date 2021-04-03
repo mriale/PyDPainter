@@ -296,7 +296,7 @@ def c2p(surf_array):
     return np.packbits(bits).reshape(h,8,w2b(w))[:,::-1,:]
 
 #save IFF file
-def save_iff(filename):
+def save_iff(filename, config):
     nPlanes = int(math.log(len(config.pal),2))
     crngfile = re.sub(r"\.[^.]+$", ".iff", filename)
     newfile = open(crngfile, 'wb')

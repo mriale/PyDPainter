@@ -45,7 +45,7 @@ class DoSave(MenuAction):
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            save_iff(filename)
+            save_iff(filename, config)
             config.filename = filename
 
 class DoSaveAs(MenuAction):
@@ -53,7 +53,7 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            save_iff(config.filename)
+            save_iff(config.filename, config)
             config.filename = filename
 
 class DoPictureFlipX(MenuAction):
