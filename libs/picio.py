@@ -325,7 +325,13 @@ def save_iff(filename, config):
         write_chunk(newfile, b'CRNG', pack(">HHHBB", 0, crange.rate, crange.get_flags(), crange.low, crange.high))
 
     body = b''
-    surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)  # Create an array from the surface.
+    out_canvas = config.pixel_canvas
+    w,h = out_canvas.get_size()
+    if w != w2b(w):
+        out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
+        out_canvas.set_palette(config.pal)
+        out_canvas.blit(config.pixel_canvas, (0,0))
+    surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
     planes_out = c2p(surf_array)
     #body = planes_out[:,:nPlanes,:].tobytes()
     for y in range(0,len(planes_out)):

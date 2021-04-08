@@ -53,7 +53,7 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            save_iff(config.filename, config)
+            save_iff(filename, config)
             config.filename = filename
 
 class DoPictureFlipX(MenuAction):
@@ -177,6 +177,16 @@ class DoBrushOpen(MenuAction):
             #except:
                 pass
         config.doKeyAction()
+
+class DoBrushSaveAs(MenuAction):
+    def selected(self, attrs):
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            brush_config = copy.copy(config)
+            brush_config.pixel_canvas = config.brush.image
+            brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
+            save_iff(filename, brush_config)
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
@@ -830,7 +840,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Brush", [
             ["Open...", " ", DoBrushOpen],
-            ["Save as..."],
+            ["Save as...", " ", DoBrushSaveAs],
             ["Restore","B", DoBrushRestore],
             ["Size", [
                 ["Stretch", "Z", DoBrushStretch],
