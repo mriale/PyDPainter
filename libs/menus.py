@@ -73,19 +73,32 @@ class DoPalette(MenuAction):
         self.toolHide()
         palette_req(config.pixel_req_canvas)
 
+def resizePalette(origpal, numcol):
+    if len(origpal) < numcol:
+        pal = list(origpal)
+        defpal = config.get_default_palette(numcol)
+        while len(pal) < numcol:
+            pal.append(defpal[len(pal)])
+    elif len(origpal) > numcol:
+        pal = origpal[0:numcol]
+    else:
+        pal = origpal
+    return pal
+
 class DoPictureBrushPalette(MenuAction):
     def selected(self, attrs):
         if config.brush.pal != None:
             config.stop_cycling()
-            pal = config.quantize_palette(config.brush.pal, config.color_depth)
+            truepal = resizePalette(config.brush.pal, config.NUM_COLORS)
+            pal = config.quantize_palette(truepal, config.color_depth)
             config.pal = list(pal)
             config.set_all_palettes(pal)
-            config.truepal = list(config.brush.pal)
+            config.truepal = list(truepal)
 
 class DoPictureRestorePalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        pal = config.loadpal
+        pal = resizePalette(config.loadpal, config.NUM_COLORS)
         config.pal = list(pal)
         config.set_all_palettes(pal)
         config.truepal = list(pal)
@@ -173,6 +186,12 @@ class DoBrushOpen(MenuAction):
                 newimage = load_iff(filename, brush_config)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size(), pal=brush_config.pal)
+                reduced = newimage.copy()
+                surf_array = pygame.surfarray.pixels2d(reduced)
+                surf_array &= config.NUM_COLORS-1
+                surf_array = None
+                config.brush.image = reduced
+                config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
             #except:
                 pass
@@ -192,10 +211,15 @@ class DoBrushRestore(MenuAction):
     def selected(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
             return
-        ow,oh = config.brush.image_backup.get_size()
+        backup = config.brush.image_backup.copy()
+        backup.set_palette(config.pal)
+        surf_array = pygame.surfarray.pixels2d(backup)
+        surf_array &= config.NUM_COLORS-1
+        surf_array = None
+        ow,oh = backup.get_size()
         config.brush.aspect = 1.0
-        config.brush.image = config.brush.image_backup
-        config.brush.image_orig = config.brush.image_backup
+        config.brush.image = backup
+        config.brush.image_orig = backup
         config.brush.size = oh
         config.setDrawMode(DrawMode.MATTE)
         config.doKeyAction()
