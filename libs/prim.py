@@ -210,6 +210,11 @@ class Brush:
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
         if type == Brush.CUSTOM:
+            if coordfrom == None:
+                coordfrom = (0,0)
+            if coordto == None:
+                coordto = (screen.get_width()-1, screen.get_height()-1)
+
             x1,y1 = coordfrom
             x2,y2 = coordto
 

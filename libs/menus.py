@@ -185,7 +185,7 @@ class DoBrushOpen(MenuAction):
                 brush_config = copy.copy(config)
                 newimage = load_iff(filename, brush_config)
                 newimage.set_palette(config.pal)
-                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size(), pal=brush_config.pal)
+                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
                 surf_array = pygame.surfarray.pixels2d(reduced)
                 surf_array &= config.NUM_COLORS-1
@@ -580,7 +580,7 @@ class DoBrushRemap(MenuAction):
             return
         config.brush.image.set_palette(config.brush.pal)
         newimage = convert8(config.brush.image.convert(), config.pal)
-        config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, coordfrom=(0,0), coordto=newimage.get_size(), pal=config.pal)
+        config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=config.pal)
         config.doKeyAction()
 
 class DoBrushChangeTransp(MenuAction):
