@@ -185,6 +185,14 @@ def load_iff(filename, config):
 
     config.cranges = cranges
     config.loadpal = list(config.pal)
+
+    #crop image to actual bitmap size
+    if w != w2b(w)*8:
+        newpic = pygame.Surface((w, h), 0, pic)
+        newpic.set_palette(config.pal)
+        newpic.blit(pic, (0,0))
+        return newpic
+
     return pic
 
 def load_pic(filename):
