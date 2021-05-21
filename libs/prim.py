@@ -229,7 +229,7 @@ class Brush:
 
             self.image = pygame.Surface((w, h),0, config.pixel_canvas)
             self.image.set_palette(config.pal)
-            self.image.blit(screen, (0,0), (x1,y1,x2,y2))
+            self.image.blit(screen, (0,0), (x1,y1,w,h))
             self.image.set_colorkey(bgcolor)
             self.__type = type
             self.bgcolor = bgcolor
