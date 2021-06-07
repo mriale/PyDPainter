@@ -169,26 +169,26 @@ class pydpainter:
             oh = dinfo.current_h
         pw = config.pixel_width
         ph = config.pixel_height
-        s = config.scale
         pa = config.pixel_aspect
-        while limit > 0 and s > 0.1:
-            limit -= 1
-            nwd = int(pw*(s-0.5)*pa)
-            nhd = int(ph*(s-0.5))
-            nw0 = int(pw*(s+0.0)*pa)
-            nh0 = int(ph*(s+0.0))
-            nwu = int(pw*(s+0.5)*pa)
-            nhu = int(ph*(s+0.5))
-            dd = abs(ow-nwd) + abs(oh-nhd)
-            d0 = abs(ow-nw0) + abs(oh-nh0)
-            du = abs(ow-nwu) + abs(oh-nhu)
-            if dd == min(dd, d0, du):
-                s -= 0.5
-            elif d0 == min(dd, d0, du):
-                return s
-            elif du == min(dd, d0, du):
-                s += 0.5
-        return config.scale
+
+        sx = ow / (pw*pa)
+        sy = oh / ph
+
+        if sx < sy:
+            if size != None:
+                s = int(2.0*sx)/2.0
+            else:
+                s = round(2.0*sx)/2.0
+        else:
+            if size != None:
+                s = int(2.0*sy)/2.0
+            else:
+                s = round(2.0*sy)/2.0
+
+        if s < 0.51 or s > limit:
+            s = config.scale
+
+        return s
 
     def resize_display(self):
         while True:
