@@ -199,6 +199,10 @@ class DoAbout(MenuAction):
     def selected(self, attrs):
         about_req(config.pixel_req_canvas)
 
+class DoQuit(MenuAction):
+    def selected(self, attrs):
+        config.running = False
+
 class DoBrushOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
@@ -881,7 +885,7 @@ def init_menubar(config_in):
             ["Show Page", "S"],
             ["Screen Format...", " ", DoScreenFormat],
             ["About...", " ", DoAbout],
-            ["Quit", "Q"],
+            ["Quit", "Q", DoQuit],
         ]])
     menubar.add_menu(
         ["Brush", [

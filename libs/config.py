@@ -492,6 +492,7 @@ class pydpainter:
         self.undo_index = -1
         self.suppress_undo = False
         self.suppress_redraw = False
+        self.running = True
 
         self.wait_for_mouseup = [False, False]
 
@@ -851,7 +852,7 @@ class pydpainter:
         self.recompose()
 
         #main loop
-        while 1:
+        while config.running:
             e = pygame.event.wait()
 
             if e.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
@@ -868,7 +869,7 @@ class pydpainter:
                     continue
 
             if e.type == pygame.QUIT:
-                return
+                config.running = False
 
             if e.type == VIDEORESIZE and platform.system() != "Darwin":
                 config.scale = config.closest_scale((e.w, e.h))
