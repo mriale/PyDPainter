@@ -168,6 +168,29 @@ class DoSpareCopy(MenuAction):
         config.clear_undo()
         config.save_undo()
 
+class DoMergeFront(MenuAction):
+    def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.pixel_spare_canvas.set_colorkey(config.bgcolor)
+        config.pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
+        config.pixel_spare_canvas.set_colorkey(None)
+        config.clear_undo()
+        config.save_undo()
+
+class DoMergeBack(MenuAction):
+    def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
+        newimage.set_palette(config.pal)
+        newimage.blit(config.pixel_spare_canvas, (0,0))
+        config.pixel_canvas.set_colorkey(config.bgcolor)
+        newimage.blit(config.pixel_canvas, (0,0))
+        config.pixel_canvas.set_colorkey(None)
+        config.pixel_canvas.blit(newimage, (0,0))
+        newimage = None
+        config.clear_undo()
+        config.save_undo()
+
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
         screen_format_req(config.pixel_req_canvas)
@@ -851,9 +874,8 @@ def init_menubar(config_in):
             ["Spare", [
                 ["Swap", "j", DoSpareSwap],
                 ["Copy To Spare", "J", DoSpareCopy],
-                ["Merge in front"],
-                ["Merge in back"],
-                ["Delete this page"],
+                ["Merge in front", " ", DoMergeFront],
+                ["Merge in back", " ", DoMergeBack],
                 ]],
             ["Page Size..."],
             ["Show Page", "S"],
