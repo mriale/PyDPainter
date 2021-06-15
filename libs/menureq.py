@@ -522,7 +522,7 @@ class PPpic(Gadget):
 def about_req(screen):
     req = str2req("About", """
 PyDPainter       ############
-\xA92020 Mark Riale ############
+\xA92021 Mark Riale ############
 Version %-8s ############
                  ############
 Licensed under   ############
