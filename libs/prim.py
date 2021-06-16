@@ -23,6 +23,8 @@ symm_mat = None
 symm_mat_num = 0
 symm_center = [0,0]
 vlines = {}
+ell_mat = None
+ell_angle = 0
 
 def onscreen(coords):
     w = config.pixel_width
@@ -199,8 +201,20 @@ class Brush:
     SQUARE = 2
     SPRAY = 3
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None):
+    CENTER = 0
+    CORNER_UL = 1
+    CORNER_UR = 2
+    CORNER_LR = 3
+    CORNER_LL = 4
+    PLACE = 5
+
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
         if type == Brush.CUSTOM:
+            if coordfrom == None:
+                coordfrom = (0,0)
+            if coordto == None:
+                coordto = (screen.get_width()-1, screen.get_height()-1)
+
             x1,y1 = coordfrom
             x2,y2 = coordto
 
@@ -215,14 +229,17 @@ class Brush:
 
             self.image = pygame.Surface((w, h),0, config.pixel_canvas)
             self.image.set_palette(config.pal)
-            self.image.blit(screen, (0,0), (x1,y1,x2,y2))
+            self.image.blit(screen, (0,0), (x1,y1,w,h))
             self.image.set_colorkey(bgcolor)
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
+            self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
             self.handle = [w//2, h//2]
-            self.__size = (w + h) // 2
+            self.handle_frac = [0.5, 0.5]
+            self.__size = h
+            self.aspect = 1.0
             self.rect = [-self.handle[0], -self.handle[1], w, h]
         else:
             self.image = None
@@ -232,11 +249,47 @@ class Brush:
             self.image_orig = None
             self.bgcolor_orig = bgcolor
             self.__size = size
+            self.aspect = 1.0
             self.handle = [size//2, size//2]
+            self.handle_frac = [0.5, 0.5]
             self.rect = [-self.handle[0], -self.handle[1],
                          size, size]
 
         self.cache = BrushCache()
+        self.handle_type = self.CENTER
+
+        if pal == None and "pal" in dir(config):
+            self.pal = config.pal
+        else:
+            self.pal = pal
+
+    def calc_handle(self, w, h):
+        if self.handle_type == self.CENTER:
+            self.handle_frac = [0.5, 0.5]
+        elif self.handle_type == self.CORNER_UL:
+            self.handle_frac = [0.0, 0.0]
+        elif self.handle_type == self.CORNER_UR:
+            self.handle_frac = [1.0, 0.0]
+        elif self.handle_type == self.CORNER_LR:
+            self.handle_frac = [1.0, 1.0]
+        elif self.handle_type == self.CORNER_LL:
+            self.handle_frac = [0.0, 1.0]
+
+        self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
+        self.rect = [-self.handle[0], -self.handle[1], w, h]
+
+    def scale(self, image_in):
+        size = self.__size
+        image = image_in.copy()
+        image.set_palette(config.pal)
+        w,h = image.get_size()
+        if self.aspect != 1.0 or size != h:
+            factor = size / h
+            w = int(w*factor*self.aspect)
+            h = int(h*factor)
+            image = pygame.transform.scale(image, (w, h))
+        self.calc_handle(w,h)
+        return image
 
     @property
     def size(self):
@@ -244,30 +297,34 @@ class Brush:
 
     @size.setter
     def size(self, size):
-        if size < 1:
-            size = 1
-            if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
-                self.__type = Brush.CIRCLE
-        elif size > 100:
-            size = 100
-        self.__size = size
-        self.cache = BrushCache()
+        if self.type == Brush.CUSTOM:
+            if size < 1:
+                size = 1
+            elif size > 2000:
+                size = 2000
+            self.__size = size
+            self.cache = BrushCache()
+            self.image = self.scale(self.image_orig)
+        else:
+            if size < 1:
+                size = 1
+                if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
+                    self.__type = Brush.CIRCLE
+            elif size > 100:
+                size = 100
+            self.__size = size
+            self.cache = BrushCache()
 
-        ax = config.aspectX
-        ay = config.aspectY
+            ax = config.aspectX
+            ay = config.aspectY
 
-        if self.type == Brush.SQUARE:
-            self.handle = [(size+1)//2*ax, (size+1)//2*ay]
-            self.rect = [-self.handle[0], -self.handle[1],
-                         size*ax, size*ax]
-        elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
-            if size == 1:
-                self.handle = [0,0]
-                self.rect = [0,0,1,1]
-            else:
-                self.handle = [size*ax, size*ay]
-                self.rect = [-self.handle[0], -self.handle[1],
-                             size*ax*2, size*ay*2]
+            if self.type == Brush.SQUARE:
+                self.calc_handle((size+1)*ax, (size+1)*ay)
+            elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+                if size == 1:
+                    self.calc_handle(1, 1)
+                else:
+                    self.calc_handle(size*2*ax, size*2*ay)
 
     @property
     def type(self):
@@ -285,7 +342,7 @@ class Brush:
 
         if self.type == Brush.CUSTOM:
             #convert brush image to single color
-            image = self.image_orig.copy()
+            image = self.scale(self.image_orig)
             image.set_palette(config.pal)
             surf_array = pygame.surfarray.pixels2d(image)
             bgcolor = self.bgcolor_orig
@@ -330,7 +387,7 @@ class Brush:
             return image
         elif self.type == Brush.SPRAY:
             image = pygame.Surface((self.size*3+1, self.size*3+1),0, config.pixel_canvas)
-            self.handle = [image.get_width()//2, image.get_height()//2]
+            self.calc_handle(image.get_width(), image.get_height())
             image.set_palette(config.pal)
             
             if color == 0:
@@ -554,7 +611,10 @@ class PrimProps:
         self.continuous = False
 
 
-def calc_ellipse_curves(coords, width, height, handlesymm=True):
+def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
+    global ell_mat
+    global ell_angle
+
     ccoords = []
 
     #Calculate curve segment coords
@@ -566,16 +626,46 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True):
                (xc-width,yc),(xc,yc-height),(xc-controlw,yc-controlh),
                (xc,yc-height),(xc+width,yc),(xc+controlw,yc-controlh)]
 
+    #rotate ellipse if needed
+    if angle != 0:
+        #recalc matrix only if necessary
+        if angle != ell_angle:
+            ell_angle = angle
+            q = angle * math.pi / 180.0
+            trans1   = np.matrix([[  1,   0, 0],
+                                  [  0,   1, 0],
+                                  [-xc, -yc, 1]])
+            scale1   = np.matrix([[1/config.aspectX, 0, 0],
+                                  [0, 1/config.aspectY, 0],
+                                  [0, 0, 1]])
+            rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
+                                  [-math.sin(q), math.cos(q), 0],
+                                  [           0,           0, 1]])
+            scale2   = np.matrix([[config.aspectX, 0, 0],
+                                  [0, config.aspectY, 0],
+                                  [0, 0, 1]])
+            trans2   = np.matrix([[  1,   0, 0],
+                                  [  0,   1, 0],
+                                  [ xc,  yc, 1]])
+            ell_mat = trans1 @ scale1 @ rot @ scale2 @ trans2
+
+        newcoords = []
+        for i in range(len(ccoords)):
+            xyvect = np.matmul(np.matrix([[ccoords[i][0],ccoords[i][1],1]]),ell_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            ccoords[i] = (int(round(xf)),int(round(yf)))
+
     #run curve coords through symmetry calulations
     coords_out = symm_coords_list(ccoords, handlesymm=handlesymm)
     return coords_out
 
-def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False):
+def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0):
     if filled == 1:
-        fillellipse(screen, color, coords, width, height, interrupt=interrupt)
+        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle)
         return
 
-    ecurves = calc_ellipse_curves(coords, width, height)
+    ecurves = calc_ellipse_curves(coords, width, height, angle=angle)
     for i in range(len(ecurves)):
         cl = CoordList(12)
         for j in range (0,12,3):
@@ -590,7 +680,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
 
 
-def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None):
+def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0):
     if primprops == None:
         primprops = config.primprops
         handlesymm = True
@@ -603,7 +693,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
         fillrect(screen, color, (xc,yc), (xc,yc))
         return
 
-    ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm)
+    ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm, angle=angle)
     for i in range(len(ecurves)):
         cl = CoordList(12)
         for j in range (0,12,3):

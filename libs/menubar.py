@@ -142,6 +142,7 @@ class Menubar:
         self.wait_for_mouseup = [False, False, False, False]
         self.title = ""
         self.title_extra = ""
+        self.title_right = ""
         self.menulevel = 0
         self.need_redraw = True
         self.fadesurf = None
@@ -282,6 +283,9 @@ class Menubar:
         else:
             titlestring = self.title + " " + self.title_extra
             self.font.blitstring(screen, (xo+(self.font.xsize//2), yo+((h-self.font.ysize)//2)), titlestring, fgcolor, bgcolor)
+            if len(self.title_right) > 0:
+                trw = self.font.xsize * (len(self.title_right) + 2)
+                self.font.blitstring(screen, (xo+w-(self.font.xsize//2)-trw, yo+((h-self.font.ysize)//2)), self.title_right, fgcolor, bgcolor)
 
 
     def menu_id(self, id):
@@ -357,10 +361,13 @@ class Menubar:
                                             attrs["menu3"] = menug3
                 if "menu1" in attrs and attrs["menu1"].action != None:
                     attrs["menu1"].action.selected(attrs)
+                    ge.extend("menu1")
                 if "menu2" in attrs and attrs["menu2"].action != None:
                     attrs["menu2"].action.selected(attrs)
+                    ge.extend("menu2")
                 if "menu3" in attrs and attrs["menu3"].action != None:
                     attrs["menu3"].action.selected(attrs)
+                    ge.extend("menu3")
         elif event.type == KEYDOWN:
             self.hotkey_map.press(event)
         elif event.type == MOUSEMOTION:

@@ -27,9 +27,6 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-from tkinter import *
-from tkinter import filedialog
-
 fonty = 12
 fontx = 8
 
@@ -172,26 +169,26 @@ class pydpainter:
             oh = dinfo.current_h
         pw = config.pixel_width
         ph = config.pixel_height
-        s = config.scale
         pa = config.pixel_aspect
-        while limit > 0 and s > 0.1:
-            limit -= 1
-            nwd = int(pw*(s-0.5)*pa)
-            nhd = int(ph*(s-0.5))
-            nw0 = int(pw*(s+0.0)*pa)
-            nh0 = int(ph*(s+0.0))
-            nwu = int(pw*(s+0.5)*pa)
-            nhu = int(ph*(s+0.5))
-            dd = abs(ow-nwd) + abs(oh-nhd)
-            d0 = abs(ow-nw0) + abs(oh-nh0)
-            du = abs(ow-nwu) + abs(oh-nhu)
-            if dd == min(dd, d0, du):
-                s -= 0.5
-            elif d0 == min(dd, d0, du):
-                return s
-            elif du == min(dd, d0, du):
-                s += 0.5
-        return config.scale
+
+        sx = ow / (pw*pa)
+        sy = oh / ph
+
+        if sx < sy:
+            if size != None:
+                s = int(2.0*sx)/2.0
+            else:
+                s = round(2.0*sx)/2.0
+        else:
+            if size != None:
+                s = int(2.0*sy)/2.0
+            else:
+                s = round(2.0*sy)/2.0
+
+        if s < 0.51 or s > limit:
+            s = config.scale
+
+        return s
 
     def resize_display(self):
         while True:
@@ -483,6 +480,7 @@ class pydpainter:
         self.pal = quantize_palette(self.pal, self.color_depth)
         self.backuppal = list(self.pal)
         self.truepal = list(self.pal)
+        self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
         self.cycling = False
@@ -494,6 +492,7 @@ class pydpainter:
         self.undo_index = -1
         self.suppress_undo = False
         self.suppress_redraw = False
+        self.running = True
 
         self.wait_for_mouseup = [False, False]
 
@@ -738,6 +737,7 @@ class pydpainter:
         #blit tooltip layer
         if not self.toolbar.wait_for_tip and \
            self.toolbar.tip_canvas != None and \
+           self.toolbar.visible and \
            config.help_on:
             tx = self.pixel_width-self.toolbar.rect[2]+self.toolbar.tip_x
             ty = (self.fonty-1 if self.menubar.visible else 0) + self.toolbar.tip_y
@@ -749,6 +749,7 @@ class pydpainter:
         #blit minitoolbar tooltip layer
         if not self.minitoolbar.wait_for_tip and \
            self.minitoolbar.tip_canvas != None and \
+           self.menubar.visible and \
            config.help_on:
             tx = mtbx + self.minitoolbar.tip_x
             ty = self.minitoolbar.tip_y
@@ -851,7 +852,7 @@ class pydpainter:
         self.recompose()
 
         #main loop
-        while 1:
+        while config.running:
             e = pygame.event.wait()
 
             if e.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
@@ -868,7 +869,7 @@ class pydpainter:
                     continue
 
             if e.type == pygame.QUIT:
-                return
+                config.running = False
 
             if e.type == VIDEORESIZE and platform.system() != "Darwin":
                 config.scale = config.closest_scale((e.w, e.h))

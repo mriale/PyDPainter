@@ -260,6 +260,7 @@ class Gadget(object):
         self.visible = False
         self.state = 0
         self.pos = 0
+        self.scrollpos = 0
         self.value = value
         self.maxvalue = maxvalue
         self.id = id
@@ -267,6 +268,9 @@ class Gadget(object):
         self.offsetx = 0
         self.offsety = 0
         self.numonly = False
+        self.fontx = fontx
+        self.fonty = fonty
+        self.fonth = int(fonty / 1.5)
         self.error = False
         self.need_redraw = True
         if value == None:
@@ -306,7 +310,7 @@ class Gadget(object):
         x,y,w,h = self.screenrect
         mousex, mousey = coords
         if self.type == Gadget.TYPE_STRING:
-            value = (mousex-x) // fontx
+            value = ((mousex-x) // fontx) + self.scrollpos
             if value < 0:
                 return 0
             elif value >= len(self.value):
@@ -393,7 +397,7 @@ class Gadget(object):
             strxo = 0
             pygame.draw.rect(screen, hcolor, self.screenrect, 0)
             pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
-            font.blitstring(screen, (x+xo+px,y+yo+py+py), self.value, fgcolor, bgcolor)
+            font.blitstring(screen, (x+xo+px,y+yo+py+py), self.value[self.scrollpos:], fgcolor, bgcolor)
             pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, w-px, py), 0)
             pygame.draw.rect(screen, fgcolor, (x+xo,y+yo, px, h), 0)
             if self.state != 0:
@@ -401,7 +405,7 @@ class Gadget(object):
                     c = self.value[self.pos]
                 else:
                     c = " "
-                font.blitstring(screen, (x+xo+px+(self.pos*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
+                font.blitstring(screen, (x+xo+px+((self.pos-self.scrollpos)*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
             if self.numonly and not re.fullmatch('^-?\d*\.?\d+$', self.value):
                 #numeric error
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
@@ -514,6 +518,7 @@ class Gadget(object):
                 elif event.type == KEYDOWN:
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_KEY, event, g))
+                    hi_pos = g.scrollpos + (g.screenrect[2] // fontx) - 1
                     if event.key == K_RIGHT:
                         if self.pos < len(self.value):
                             self.pos += 1
@@ -534,10 +539,28 @@ class Gadget(object):
                     elif event.key == K_RETURN or event.key == K_KP_ENTER or event.key == K_ESCAPE:
                         self.state = 0
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                        """
+                    elif event.key == K_c and event.mod & KMOD_CTRL:
+                        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+                        pygame.scrap.put(pygame.SCRAP_TEXT, self.value.encode("utf-8"))
+                    elif event.key == K_v and event.mod & KMOD_CTRL:
+                        text = None
+                        for t in pygame.scrap.get_types():
+                            if "text" in t and pygame.scrap.get(t) != None:
+                                text = pygame.scrap.get(t).decode("utf-8")
+                        if text != None:
+                            self.value = self.value[:self.pos] + text + self.value[self.pos:]
+                            self.pos += len(text)
+                        """
                     elif len(event.unicode) == 1 and ord(event.unicode) >= 32 and ord(event.unicode) < 128:
                         if len(g.value) < self.maxvalue:
                             self.value = self.value[:self.pos] + event.unicode + self.value[self.pos:]
                             self.pos += 1
+
+                    if self.pos > hi_pos:
+                        self.scrollpos = self.pos - (g.screenrect[2] // fontx) + 1
+                    elif self.pos < self.scrollpos:
+                        self.scrollpos = self.pos
             elif g.type == Gadget.TYPE_LABEL:
                 g.state = 0
                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
@@ -558,6 +581,203 @@ class Gadget(object):
                     g.state = 0
 
         return ge
+
+class ListGadget(Gadget):
+    L_ITEMS, L_UP, L_DOWN, L_SLIDER = range(4)
+
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.listgadgets = None
+        if label == "^":
+            scaleX = rect[2] // 16
+            scaleY = rect[3] // 8
+            arrowcoords = np.array([[16,32], [32,16], [20,16], [20,0], [12,0], [12,16], [0,16]])
+            self.arrowdown = arrowcoords * np.array([scaleX/4,scaleY/4])
+            self.arrowup = (arrowcoords - np.array([0,32])) * np.array([scaleX/4,-scaleY/4])
+
+            value = 0
+        elif label == "#":
+            self.items = []
+            self.top_item = 0
+        elif label == "@":
+            self.sliderrect = (0,0,0,0)
+            self.clicky = None
+        super(ListGadget, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+        px = font.xsize//8
+        py = font.ysize//8
+        self.fontx = font.xsize
+        self.fonty = int(font.ysize * 1.5)
+        self.fonth = font.ysize
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+            #List text
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
+                numlines = h//font.ysize
+                self.numlines = numlines
+                topi = self.top_item
+                if topi < 0:
+                    topi = 0
+                elif topi > len(self.items)-numlines:
+                    topi = max(0, len(self.items)-numlines)
+                self.top_item = topi
+
+                for i in range(topi, topi+numlines):
+                    fg = fgcolor
+                    bg = bgcolor
+                    if i < len(self.items):
+                        if i == self.value: #highlight current
+                            fg = bgcolor
+                            bg = fgcolor
+                        font.blitstring(screen, (x+xo+2*px,y+yo+2*py+(i-topi)*font.ysize), self.items[i], fg, bg)
+                pygame.draw.rect(screen, fgcolor, (x+xo,y+yo,w,h), 1)
+                screen.set_clip(None)
+            #List up/down arrows
+            elif self.label == "^":
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
+                if self.state == 0:
+                    pygame.draw.rect(screen, fgcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+                else:
+                    pygame.draw.rect(screen, hcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+
+                if self.value == 1:
+                    pygame.draw.polygon(screen, fgcolor, self.arrowdown + np.array([x+xo+4*px,y+yo+py]))
+                elif self.value == -1:
+                    pygame.draw.polygon(screen, fgcolor, self.arrowup + np.array([x+xo+4*px,y+yo+py]))
+
+            #List slider
+            elif self.label == "@":
+                numlines = self.listgadgets[self.L_ITEMS].screenrect[3] // font.ysize
+                self.maxvalue = max(0, len(self.listgadgets[self.L_ITEMS].items) - numlines)
+                if self.value < 0:
+                    self.value = 0
+                elif self.value > self.maxvalue:
+                    self.value = self.maxvalue
+                if self.maxvalue > 0:
+                    sh = min(max(h * numlines // len(self.listgadgets[self.L_ITEMS].items), font.ysize//2), h-2*py)
+                    so = (h-2*py-sh) * self.value // self.maxvalue
+                else:
+                    sh = h-2*py
+                    so = 0
+                pygame.draw.rect(screen, fgcolor, (x+xo+px,y+yo,w-px,h), 0)
+                self.sliderrect = (x+xo+3*px,y+yo+py+so,w-5*px,sh)
+                if self.state == 0:
+                    pygame.draw.rect(screen, bgcolor, self.sliderrect, 0)
+                else:
+                    pygame.draw.rect(screen, hcolor, self.sliderrect, 0)
+        else:
+            super(ListGadget, self).draw(screen, font, offset)
+
+    def scroll_delta(self, delta):
+        self.listgadgets[self.L_ITEMS].top_item += delta
+        self.listgadgets[self.L_ITEMS].need_redraw = True
+        self.listgadgets[self.L_SLIDER].value += delta
+        self.listgadgets[self.L_SLIDER].need_redraw = True
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+        px = self.fontx//8
+        py = self.fonty//12
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    #List up/down arrows
+                    if g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+                        pygame.time.set_timer(pygame.USEREVENT, 500)
+                    #List text
+                    elif g.label == "#":
+                        item = (self.numlines * (y-gy-py-py) // (self.numlines * self.fonth)) + self.top_item
+                        if item >= len(g.items):
+                            item = len(g.items) - 1
+                        if item < 0:
+                            item = 0
+                        g.value = item
+                        g.need_redraw = True
+                    #List slider
+                    elif g.label == "@":
+                        #drag slider
+                        if g.pointin((x,y), g.sliderrect):
+                            self.clicky = y - g.sliderrect[1]
+                            self.state = 1
+                            self.need_redraw = True
+                        #page up
+                        elif y < g.sliderrect[1]:
+                            g.scroll_delta(-g.listgadgets[self.L_ITEMS].numlines)
+                        elif y > g.sliderrect[1] + g.sliderrect[3]:
+                            g.scroll_delta(g.listgadgets[self.L_ITEMS].numlines)
+
+                #handle mouse wheel
+                elif event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
+                    #scroll up
+                    if event.button == 4:
+                        g.scroll_delta(-1)
+                    #scroll down
+                    elif event.button == 5:
+                        g.scroll_delta(1)
+
+            if (event.type == MOUSEBUTTONUP and event.button == 1) or \
+               event.type == USEREVENT:
+                #List up/down arrows
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if g.value == -1:
+                            g.scroll_delta(-1)
+                        elif g.value == 1:
+                            g.scroll_delta(1)
+                    if event.type == USEREVENT:
+                        pygame.time.set_timer(pygame.USEREVENT, 100)
+                    else:
+                        pygame.time.set_timer(pygame.USEREVENT, 0)
+                        g.state = 0
+                        g.need_redraw = True
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif g.label == "@":
+                    g.clicky = None
+                    g.state = 0
+                    g.need_redraw = True
+            elif (event.type == MOUSEMOTION and event.buttons[0]):
+                if g.label == "@" and self.clicky is not None:
+                    deltay = y-self.clicky-self.screenrect[1]
+                    if self.maxvalue > 0:
+                        h = self.screenrect[3]
+                        sh = self.sliderrect[3]
+                        self.value = (deltay) * self.maxvalue // (h-sh)
+                        self.need_redraw = True
+                        self.listgadgets[self.L_ITEMS].top_item = self.value
+                        self.listgadgets[self.L_ITEMS].need_redraw = True
+                    else:
+                        self.value = 0
+        else:
+            ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 
 class Requestor(object):
     def __init__(self, label, rect, mouse_pixel_mapper=pygame.mouse.get_pos, fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), font=None):

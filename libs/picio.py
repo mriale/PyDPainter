@@ -184,6 +184,15 @@ def load_iff(filename, config):
         cranges.append(colorrange(0,1,0,0))
 
     config.cranges = cranges
+    config.loadpal = list(config.pal)
+
+    #crop image to actual bitmap size
+    if w != w2b(w)*8:
+        newpic = pygame.Surface((w, h), 0, pic)
+        newpic.set_palette(config.pal)
+        newpic.blit(pic, (0,0))
+        return newpic
+
     return pic
 
 def load_pic(filename):
@@ -295,7 +304,7 @@ def c2p(surf_array):
     return np.packbits(bits).reshape(h,8,w2b(w))[:,::-1,:]
 
 #save IFF file
-def save_iff(filename):
+def save_iff(filename, config):
     nPlanes = int(math.log(len(config.pal),2))
     crngfile = re.sub(r"\.[^.]+$", ".iff", filename)
     newfile = open(crngfile, 'wb')
@@ -324,7 +333,13 @@ def save_iff(filename):
         write_chunk(newfile, b'CRNG', pack(">HHHBB", 0, crange.rate, crange.get_flags(), crange.low, crange.high))
 
     body = b''
-    surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)  # Create an array from the surface.
+    out_canvas = config.pixel_canvas
+    w,h = out_canvas.get_size()
+    if w != w2b(w):
+        out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
+        out_canvas.set_palette(config.pal)
+        out_canvas.blit(config.pixel_canvas, (0,0))
+    surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
     planes_out = c2p(surf_array)
     #body = planes_out[:,:nPlanes,:].tobytes()
     for y in range(0,len(planes_out)):

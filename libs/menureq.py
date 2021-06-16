@@ -19,6 +19,151 @@ def menureq_set_config(config_in):
     global config
     config = config_in
 
+#Read in directory and return sorted list
+def get_dir(path):
+    filelist = []
+    dirlist = [".. (parent dir)"]
+    try:
+        with os.scandir(path) as it:
+            for entry in it:
+                if not entry.name.startswith('.'):
+                    if entry.is_file():
+                        filelist.append(entry.name)
+                    elif entry.is_dir():
+                        dirlist.append("\x92\x93" + entry.name)
+        filelist.sort(key=str.casefold)
+        dirlist.sort(key=str.casefold)
+    except FileNotFoundError:
+        dirlist = ["<Not found>"]
+    return dirlist + filelist
+
+def file_req(screen, title, action_label, filepath, filename):
+    req = str2req(title, """
+Path:_________________________
+############################^^
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################^^
+File:_________________________
+[%s][Cancel]
+"""%(action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    retval = ""
+
+    #list items
+    list_itemsg = req.gadget_id("0_1")
+    list_itemsg.items = get_dir(filepath)
+    list_itemsg.top_item = 0
+    list_itemsg.value = list_itemsg.top_item
+
+    #list up/down arrows
+    list_upg = req.gadget_id("28_1")
+    list_upg.value = -1
+    list_downg = req.gadget_id("28_10")
+    list_downg.value = 1
+
+    #list slider
+    list_sliderg = req.gadget_id("28_2")
+    list_sliderg.value = list_itemsg.top_item
+
+    #all list item gadgets
+    listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
+    list_itemsg.listgadgets = listg_list
+    list_upg.listgadgets = listg_list
+    list_downg.listgadgets = listg_list
+    list_sliderg.listgadgets = listg_list
+
+    #File path
+    file_pathg = req.gadget_id("5_0")
+    file_pathg.value = filepath
+    file_pathg.maxvalue = 255
+
+    #File name
+    filename = os.path.basename(filename)
+    file_nameg = req.gadget_id("5_11")
+    file_nameg.value = filename
+    file_nameg.maxvalue = 255
+
+    #take care of non-square pixels
+    fontmult = 1
+    if config.aspectX != config.aspectY:
+        fontmult = 2
+
+    req.draw(screen)
+    config.recompose()
+
+    last_click_ms = pygame.time.get_ticks()
+
+    running = 1
+    wait_for_mouseup = 0
+
+    while running or wait_for_mouseup:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == action_label:
+                    if file_nameg.value != "":
+                        retval = os.path.join(filepath, file_nameg.value)
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0
+            if ge.gadget.type == Gadget.TYPE_STRING:
+                if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
+                    filepath = file_pathg.value
+                    list_itemsg.items = get_dir(filepath)
+                    list_itemsg.top_item = 0
+                    list_itemsg.value = list_itemsg.top_item
+                    list_itemsg.need_redraw = True
+
+        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
+                filename = list_itemsg.items[list_itemsg.value]
+                if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
+                    if filename[0:2] == "\x92\x93":
+                        filepath = os.path.join(filepath, filename[2:])
+                    elif filename[0:2] == "..":
+                        filepath = os.path.abspath(os.path.join(filepath, ".."))
+                    list_itemsg.items = get_dir(filepath)
+                    list_itemsg.top_item = 0
+                    list_itemsg.value = list_itemsg.top_item
+                    list_itemsg.need_redraw = True
+                    file_pathg.value = filepath
+                    file_pathg.need_redraw = True
+                else:
+                    file_nameg.value = filename
+                    file_nameg.need_redraw = True
+                    if pygame.time.get_ticks() - last_click_ms < 500:
+                        if file_nameg.value != "":
+                            retval = os.path.join(filepath, file_nameg.value)
+                        running = 0
+                        wait_for_mouseup = 1
+                    else:
+                        last_click_ms = pygame.time.get_ticks()
+            elif event.type == MOUSEBUTTONUP and event.button == 1:
+                wait_for_mouseup = 0
+
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return retval
+
+
 def screen_format_req(screen, new_clicked=False):
     req = str2req("Choose Screen Format", """
                      Number of
@@ -377,7 +522,7 @@ class PPpic(Gadget):
 def about_req(screen):
     req = str2req("About", """
 PyDPainter       ############
-\xA92020 Mark Riale ############
+\xA92021 Mark Riale ############
 Version %-8s ############
                  ############
 Licensed under   ############

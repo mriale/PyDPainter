@@ -23,6 +23,5 @@ from operator import itemgetter
 from config import *
 
 if __name__ == "__main__":
-    Tk().withdraw()
     config = pydpainter()
     config.run()
