@@ -454,7 +454,10 @@ class Brush:
 
         for coord in symm_coords(coords, handlesymm=handlesymm):
             x,y = coord
-            if not image is None:
+            if not image is None and rect_onscreen([x+self.rect[0],
+                                                    y+self.rect[1],
+                                                    self.rect[2],
+                                                    self.rect[3]]):
                 screen.blit(image, (x - self.handle[0], y - self.handle[1]))
 
 class CoordList:

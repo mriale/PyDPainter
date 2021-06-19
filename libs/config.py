@@ -259,6 +259,12 @@ class pydpainter:
         config.color = 1
         config.bgcolor = 0
 
+        #Turn off toggle tools
+        config.grid_on = False
+        config.symm_on = False
+        config.zoom.on = False
+        config.zoom.box_on = False
+
         #Keep spare if same size as new image
         if "pixel_spare_canvas" in dir(self):
             sw, sh = self.pixel_spare_canvas.get_size()
