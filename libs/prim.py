@@ -451,11 +451,22 @@ class Brush:
                     image.set_colorkey(None)
         elif drawmode == DrawMode.SMEAR:
             if self.cache.image[256] == None:
-                self.cache.image[256] = self.render_image(256)
+                self.cache.image[256] = self.render_image(config.color)
                 self.smear_image = None
                 self.prev_x = None
                 self.prev_y = None
-            self.smear_stencil = self.cache.image[256]
+
+                #create stencil for smear
+                self.smear_stencil = self.cache.image[256].copy()
+                surf_array = pygame.surfarray.pixels2d(self.smear_stencil)
+                bgcolor = config.brush.bgcolor
+                color = (bgcolor+1) % config.NUM_COLORS
+                tfarray = np.not_equal(surf_array, bgcolor)
+                surf_array[tfarray] = color
+                surf_array[np.logical_not(tfarray)] = bgcolor
+                surf_array = None
+                self.smear_stencil.set_colorkey(color)
+
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
         elif drawmode == DrawMode.COLOR or drawmode == DrawMode.CYCLE:
@@ -477,10 +488,12 @@ class Brush:
                     #Get canvas into smear image
                     if self.prev_x != None:
                         self.smear_image.blit(screen, (0,0), [self.prev_x - self.handle[0], self.prev_y - self.handle[1], self.rect[2], self.rect[3]])
+                        self.smear_image.blit(self.smear_stencil, (0,0))
                     #Blit last stored brush down
                     if self.smear_image == None:
                         self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
                         self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(config.brush.bgcolor)
                     elif self.smear_count == 0:
                         screen.blit(self.smear_image,
                                     (x - self.handle[0], y - self.handle[1]))
