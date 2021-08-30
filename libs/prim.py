@@ -189,7 +189,7 @@ class BrushCache:
         self.image = []
         self.type = []
         self.bgcolor = []
-        for i in range(256):
+        for i in range(257):
             self.image.append(None)
             self.type.append(-1)
             self.bgcolor.append(-1)
@@ -257,6 +257,11 @@ class Brush:
 
         self.cache = BrushCache()
         self.handle_type = self.CENTER
+        self.smear_stencil = None
+        self.smear_image = None
+        self.smear_count = 0
+        self.prev_x = None
+        self.prev_y = None
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -444,6 +449,15 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
+        elif drawmode == DrawMode.SMEAR:
+            if self.cache.image[256] == None:
+                self.cache.image[256] = self.render_image(256)
+                self.smear_image = None
+                self.prev_x = None
+                self.prev_y = None
+            self.smear_stencil = self.cache.image[256]
+            image = self.cache.image[256]
+            self.calc_handle(image.get_width(), image.get_height())
         elif drawmode == DrawMode.COLOR or drawmode == DrawMode.CYCLE:
             if self.cache.image[color] == None:
                 self.cache.image[color] = self.render_image(color)
@@ -458,7 +472,26 @@ class Brush:
                                                     y+self.rect[1],
                                                     self.rect[2],
                                                     self.rect[3]]):
-                screen.blit(image, (x - self.handle[0], y - self.handle[1]))
+                if drawmode == DrawMode.SMEAR:
+                    self.smear_count = (self.smear_count + 1) % 2
+                    #Get canvas into smear image
+                    if self.prev_x != None:
+                        self.smear_image.blit(screen, (0,0), [self.prev_x - self.handle[0], self.prev_y - self.handle[1], self.rect[2], self.rect[3]])
+                    #Blit last stored brush down
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                    elif self.smear_count == 0:
+                        screen.blit(self.smear_image,
+                                    (x - self.handle[0], y - self.handle[1]))
+
+                    self.prev_x = x
+                    self.prev_y = y
+                else:
+                    screen.blit(image, (x - self.handle[0], y - self.handle[1]))
+
+    def reset_stroke(self):
+        self.smear_count = 0
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -513,6 +546,7 @@ class CoordList:
 
         currpoint = -1
         for i in range(0,self.numlists):
+            config.brush.reset_stroke()
             for c in self.coordlist[i]:
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
