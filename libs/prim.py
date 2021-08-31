@@ -460,12 +460,12 @@ class Brush:
                 self.smear_stencil = self.cache.image[256].copy()
                 surf_array = pygame.surfarray.pixels2d(self.smear_stencil)
                 bgcolor = config.brush.bgcolor
-                color = (bgcolor+1) % config.NUM_COLORS
+                color = min(config.NUM_COLORS+1, 255)
                 tfarray = np.not_equal(surf_array, bgcolor)
-                surf_array[tfarray] = color
-                surf_array[np.logical_not(tfarray)] = bgcolor
+                surf_array[tfarray] = bgcolor
+                surf_array[np.logical_not(tfarray)] = color
                 surf_array = None
-                self.smear_stencil.set_colorkey(color)
+                self.smear_stencil.set_colorkey(bgcolor)
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -493,7 +493,7 @@ class Brush:
                     if self.smear_image == None:
                         self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
                         self.smear_image.set_palette(config.pal)
-                        self.smear_image.set_colorkey(config.brush.bgcolor)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
                     elif self.smear_count == 0:
                         screen.blit(self.smear_image,
                                     (x - self.handle[0], y - self.handle[1]))
