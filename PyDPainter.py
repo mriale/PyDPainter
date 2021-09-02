@@ -6,7 +6,6 @@ Build a usable pixel art paint program in pygame
 """
 
 import sys, math, os, random, colorsys
-os.environ['SDL_VIDEO_WINDOW_POS'] = "10,10"
 
 import contextlib
 with contextlib.redirect_stdout(None):
