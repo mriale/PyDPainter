@@ -262,6 +262,7 @@ class Brush:
         self.smear_count = 0
         self.prev_x = None
         self.prev_y = None
+        self.pen_down = False
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -431,6 +432,16 @@ class Brush:
         if primprops == None:
             primprops = config.primprops
         drawmode = primprops.drawmode.value
+
+        #handle pen state
+        if self.pen_down == False:
+            if drawmode == DrawMode.SMEAR:
+                self.cache.image[256] == None
+                self.prev_x = None
+                self.prev_y = None
+                self.smear_image = None
+            if drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
+                drawmode = DrawMode.COLOR
 
         #handle matte drawing with background
         if drawmode == DrawMode.MATTE and color == self.bgcolor:

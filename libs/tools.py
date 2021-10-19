@@ -47,6 +47,7 @@ class ToolDragAction(ToolAction):
         config.save_undo()
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             spacing_req(config.pixel_req_canvas)
         else:
@@ -64,6 +65,7 @@ class ToolDragAction(ToolAction):
     def mousedown(self, coords, button):
         if not button in [1,3]:
             return
+        config.brush.pen_down = True
         config.cycle_handled = True
         self.p1 = coords
         buttons = [button==1, button==2, button==3]
@@ -93,6 +95,7 @@ class DoBIBrush(ToolAction):
     brushnames["square"] = 2
     brushnames["spray"] = 3
     def selected(self, attrs):
+        config.brush.pen_down = False
         size = int(self.id[-1:])
         name = self.id[0:-1]
         config.brush.type = DoBIBrush.brushnames[name]
@@ -107,6 +110,7 @@ class DoDot(ToolSingleAction):
         super().hide()
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             return
         config.tool_selected = self.id
@@ -118,8 +122,12 @@ class DoDot(ToolSingleAction):
 
     def mousedown(self, coords, button):
         if button == 1:
+            config.brush.pen_down = True
+            config.clear_pixel_draw_canvas()
             config.brush.draw(config.pixel_canvas, config.color, coords)
         elif button == 3:
+            config.brush.pen_down = True
+            config.clear_pixel_draw_canvas()
             config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
 
     def drag(self, coords, buttons):
@@ -131,12 +139,15 @@ class DoDot(ToolSingleAction):
     def mouseup(self, coords, button):
         if button in [1,3]:
             config.save_undo()
+            config.brush.pen_down = False
+            self.move(coords)
 
 class DoDraw(ToolSingleAction):
     """
     Continuous freehand drawing/filled tool
     """
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             return
         config.tool_selected = self.id
@@ -161,10 +172,12 @@ class DoDraw(ToolSingleAction):
                 self.polylist = [coords]
         else:
             if button == 1:
+                config.brush.pen_down = True
                 config.clear_pixel_draw_canvas()
                 config.brush.draw(config.pixel_canvas, config.color, coords)
                 self.last_coords = coords
             elif button == 3:
+                config.brush.pen_down = True
                 config.clear_pixel_draw_canvas()
                 config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
                 self.last_coords = coords
@@ -196,6 +209,8 @@ class DoDraw(ToolSingleAction):
                 self.polylist = [coords]
 
             config.save_undo()
+            config.brush.pen_down = False
+            self.move(coords)
 
 class DoLine(ToolDragAction):
     """
@@ -216,12 +231,15 @@ class DoLine(ToolDragAction):
         elif button == 3:
             drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords)
         config.save_undo()
+        config.brush.pen_down = False
+        self.move(coords)
 
 class DoCurve(ToolSingleAction):
     """
     Curve tool
     """
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             spacing_req(config.pixel_req_canvas)
         else:
@@ -247,6 +265,7 @@ class DoCurve(ToolSingleAction):
         config.cycle_handled = True
 
         if self.line_end == None:
+            config.brush.pen_down = True
             self.line_start = coords
             config.clear_pixel_draw_canvas()
             if button == 1:
@@ -263,6 +282,8 @@ class DoCurve(ToolSingleAction):
             config.save_undo()
             self.line_start = None
             self.line_end = None
+            config.brush.pen_down = False
+            self.move(coords)
 
     def drag(self, coords, buttons):
         if not (buttons[0] or butons[2]):
@@ -297,6 +318,7 @@ class DoFill(ToolSingleAction):
         super().hide()
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             fill_req(config.pixel_req_canvas)
         else:
@@ -328,6 +350,7 @@ class DoAirbrush(ToolSingleAction):
         super().hide()
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             spacing_req(config.pixel_req_canvas)
         else:
@@ -379,6 +402,8 @@ class DoRect(ToolDragAction):
         elif button == 3:
             drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected)
         config.save_undo()
+        config.brush.pen_down = False
+        self.move(coords)
 
 class DoCircle(ToolDragAction):
     """
@@ -428,6 +453,8 @@ class DoCircle(ToolDragAction):
             else:
                 drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected)
         config.save_undo()
+        config.brush.pen_down = False
+        self.move(coords)
 
 class DoEllipse(ToolDragAction):
     """
@@ -459,6 +486,8 @@ class DoEllipse(ToolDragAction):
         elif button == 3:
             drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected)
         config.save_undo()
+        config.brush.pen_down = False
+        self.move(coords)
 
 class DoPoly(ToolSingleAction):
     """
@@ -488,6 +517,7 @@ class DoPoly(ToolSingleAction):
         return x >= p1x-w and x <= p1x+w and y >= p1y-h and y <= p1y+h
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             return
 
@@ -728,6 +758,7 @@ class DoText(ToolSingleAction):
             self.box_on = False
 
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["rightclick"]:
             font_req(config.pixel_req_canvas)
             return
@@ -1012,6 +1043,7 @@ class DoUndo(ToolAction):
     Undo/Redo button
     """
     def selected(self, attrs):
+        config.brush.pen_down = False
         config.toolbar.tool_id("text").action.cleartext()
         if attrs["rightclick"]:
             config.redo()
@@ -1023,6 +1055,7 @@ class DoClear(ToolAction):
     Clear screen to background color
     """
     def selected(self, attrs):
+        config.brush.pen_down = False
         config.pixel_canvas.fill(config.bgcolor);
         config.save_undo()
         config.toolbar.tool_id("text").action.cleartext()
