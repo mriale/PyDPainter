@@ -363,9 +363,13 @@ class DoAirbrush(ToolSingleAction):
 
     def mousedown(self, coords, button):
         if button == 1:
+            config.brush.pen_down = True
+            config.clear_pixel_draw_canvas()
             self.draw(config.color, coords)
             pygame.time.set_timer(pygame.USEREVENT, 15)
         elif button == 3:
+            config.brush.pen_down = True
+            config.clear_pixel_draw_canvas()
             self.draw(config.bgcolor, coords)
             pygame.time.set_timer(pygame.USEREVENT, 15)
 
@@ -379,6 +383,8 @@ class DoAirbrush(ToolSingleAction):
         if button in [1,3]:
             pygame.time.set_timer(pygame.USEREVENT, 0)
             config.save_undo()
+            config.brush.pen_down = False
+            self.move(coords)
 
 class DoRect(ToolDragAction):
     """
@@ -593,10 +599,12 @@ class DoPolyLine(DoPoly):
         if button in [1,3]:
             if len(self.polylist) == 0:
                 if button == 1:
+                    config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.color, coords)
                     self.polylist.append(coords)
                     self.last_coords = coords
                 elif button == 3:
+                    config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
                     self.polylist.append(coords)
                     self.last_coords = coords
@@ -635,6 +643,7 @@ class DoPolyLine(DoPoly):
                 self.polylist.append(coords)
                 self.last_coords = coords
                 if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                    config.brush.pen_down = False
                     self.polylist = []
             elif button == 3:
                 config.clear_pixel_draw_canvas()
@@ -646,7 +655,9 @@ class DoPolyLine(DoPoly):
                 self.polylist.append(coords)
                 self.last_coords = coords
                 if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                    config.brush.pen_down = False
                     self.polylist = []
+            self.move(coords)
         self.hidden = False
 
 class DoPolyFill(DoPoly):
