@@ -263,6 +263,8 @@ class Brush:
         self.prev_x = None
         self.prev_y = None
         self.pen_down = False
+        self.cycle_trans = np.arange(0,255, dtype=np.uint8)
+        self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -435,8 +437,8 @@ class Brush:
 
         #handle pen state
         if self.pen_down == False:
-            if drawmode == DrawMode.SMEAR:
-                self.cache.image[256] == None
+            if drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
+                self.cache.image[256] = None
                 self.prev_x = None
                 self.prev_y = None
                 self.smear_image = None
@@ -460,7 +462,7 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
-        elif drawmode == DrawMode.SMEAR:
+        elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
             if self.cache.image[256] == None:
                 self.cache.image[256] = self.render_image(config.color)
                 self.smear_image = None
@@ -477,6 +479,33 @@ class Brush:
                 surf_array[np.logical_not(tfarray)] = color
                 surf_array = None
                 self.smear_stencil.set_colorkey(bgcolor)
+
+                if drawmode == DrawMode.SHADE:
+                    #set up cycle translation array
+                    self.cycle_trans = np.arange(0,256, dtype=np.uint8)
+                    self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
+                    found_range = False
+                    for crange in config.cranges:
+                        if not found_range and crange.is_active() and \
+                           config.color >= crange.low and config.color <= crange.high:
+                            found_range = True
+                            arange = crange.get_range()
+                            for ci in arange[0:-1]:
+                                print(ci)
+                                self.cycle_trans[ci] = crange.next_color(self.cycle_trans[ci])
+                            crange.set_reverse(not crange.is_reverse())
+                            arange = crange.get_range()
+                            for ci in arange[0:-1]:
+                                print(ci)
+                                self.cycle_trans_back[ci] = crange.next_color(self.cycle_trans_back[ci])
+                            crange.set_reverse(not crange.is_reverse())
+                    if not found_range:
+                        # Didn't find current color in any range so cycle all colors
+                        np.roll(self.cycle_trans, 1)
+                        np.roll(self.cycle_trans_back, -1)
+
+                print(self.cycle_trans)
+                print(self.cycle_trans_back)
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -511,6 +540,31 @@ class Brush:
 
                     self.prev_x = x
                     self.prev_y = y
+                elif drawmode == DrawMode.SHADE:
+                    #Allocate smear image if needed
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+
+                    #Get canvas into smear image
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+                    self.smear_image.blit(self.smear_stencil, (0,0))
+
+                    #Color cycle range
+                    surf_array = pygame.surfarray.pixels2d(self.smear_image)
+                    if color == self.bgcolor:
+                        surf_array2 = self.cycle_trans_back[surf_array]
+                    else:
+                        surf_array2 = self.cycle_trans[surf_array]
+                    np.copyto(surf_array, surf_array2)
+                    surf_array = None
+                    surf_array2 = None
+                    #print(self.cycle_trans)
+
+                    #Blit shaded image
+                    screen.blit(self.smear_image,
+                                (x - self.handle[0], y - self.handle[1]))
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
 
