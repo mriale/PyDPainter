@@ -473,10 +473,10 @@ class Brush:
                 self.smear_stencil = self.cache.image[256].copy()
                 surf_array = pygame.surfarray.pixels2d(self.smear_stencil)
                 bgcolor = config.brush.bgcolor
-                color = min(config.NUM_COLORS+1, 255)
+                scolor = min(config.NUM_COLORS+1, 255)
                 tfarray = np.not_equal(surf_array, bgcolor)
                 surf_array[tfarray] = bgcolor
-                surf_array[np.logical_not(tfarray)] = color
+                surf_array[np.logical_not(tfarray)] = scolor
                 surf_array = None
                 self.smear_stencil.set_colorkey(bgcolor)
 
@@ -491,21 +491,16 @@ class Brush:
                             found_range = True
                             arange = crange.get_range()
                             for ci in arange[0:-1]:
-                                print(ci)
                                 self.cycle_trans[ci] = crange.next_color(self.cycle_trans[ci])
                             crange.set_reverse(not crange.is_reverse())
                             arange = crange.get_range()
                             for ci in arange[0:-1]:
-                                print(ci)
                                 self.cycle_trans_back[ci] = crange.next_color(self.cycle_trans_back[ci])
                             crange.set_reverse(not crange.is_reverse())
                     if not found_range:
                         # Didn't find current color in any range so cycle all colors
-                        np.roll(self.cycle_trans, 1)
-                        np.roll(self.cycle_trans_back, -1)
-
-                print(self.cycle_trans)
-                print(self.cycle_trans_back)
+                        self.cycle_trans[0:config.NUM_COLORS-1] = np.arange(1,config.NUM_COLORS, dtype=np.uint8)
+                        self.cycle_trans_back[1:config.NUM_COLORS] = np.arange(0,config.NUM_COLORS-1, dtype=np.uint8)
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -553,14 +548,13 @@ class Brush:
 
                     #Color cycle range
                     surf_array = pygame.surfarray.pixels2d(self.smear_image)
-                    if color == self.bgcolor:
+                    if color == config.bgcolor:
                         surf_array2 = self.cycle_trans_back[surf_array]
                     else:
                         surf_array2 = self.cycle_trans[surf_array]
                     np.copyto(surf_array, surf_array2)
                     surf_array = None
                     surf_array2 = None
-                    #print(self.cycle_trans)
 
                     #Blit shaded image
                     screen.blit(self.smear_image,
