@@ -500,7 +500,9 @@ class Brush:
                     if not found_range:
                         # Didn't find current color in any range so cycle all colors
                         self.cycle_trans[0:config.NUM_COLORS-1] = np.arange(1,config.NUM_COLORS, dtype=np.uint8)
+                        self.cycle_trans[config.NUM_COLORS-1] = 0
                         self.cycle_trans_back[1:config.NUM_COLORS] = np.arange(0,config.NUM_COLORS-1, dtype=np.uint8)
+                        self.cycle_trans_back[0] = config.NUM_COLORS-1
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
