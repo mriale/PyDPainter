@@ -183,6 +183,16 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                     newcoords.append((x0,y0))
     return newcoords
 
+def smooth_image(image):
+    w,h = image.get_size()
+    i24 = image.convert(24)
+    ##i24_array = pygame.surfarray.pixels3d(i24)
+    ##print(i24_array)
+    ##i24_array = None
+    i24big = pygame.transform.smoothscale(i24, (w*7, h*7))
+    i24 = pygame.transform.smoothscale(i24big, (w, h))
+    image.blit(i24, (0,0))
+
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
     def __init__(self):
@@ -561,6 +571,23 @@ class Brush:
                     #Blit shaded image
                     screen.blit(self.smear_image,
                                 (x - self.handle[0], y - self.handle[1]))
+                elif drawmode == DrawMode.SMOOTH:
+                    #Allocate smooth image if needed
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+
+                    #Get canvas into smear image
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+                    #self.smear_image.blit(self.smear_stencil, (0,0))
+
+                    #Smooth image
+                    smooth_image(self.smear_image)
+                    self.smear_image.blit(self.smear_stencil, (0,0))
+
+                    #Blit smoothed image
+                    screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
 
