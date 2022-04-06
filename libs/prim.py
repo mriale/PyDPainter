@@ -196,19 +196,19 @@ def smooth_image(img):
     copy ul pixel, ur pixel, ll pixel, lr pixel
     """
 
-    imgaout[1:-1][1:-1][:] = 0
-    imgaout[1:-1][1:-1][:] += imgain[0:-2][0:-2][:]
-    imgaout[1:-1][1:-1][:] += imgain[1:-1][0:-2][:] << 1
-    imgaout[1:-1][1:-1][:] += imgain[2:]  [0:-2][:]
-    imgaout[1:-1][1:-1][:] += imgain[0:-2][1:-1][:] << 1
-    imgaout[1:-1][1:-1][:] += imgain[1:-1][1:-1][:] << 2
-    imgaout[1:-1][1:-1][:] += imgain[2:]  [1:-1][:] << 1
-    imgaout[1:-1][1:-1][:] += imgain[0:-2][2:]  [:]
-    imgaout[1:-1][1:-1][:] += imgain[1:-1][2:]  [:] << 1
-    imgaout[1:-1][1:-1][:] += imgain[2:]  [2:]  [:]
+    imgaout[1:-1,1:-1,:] = 0
+    imgaout[1:-1,1:-1,:] += imgain[0:-2,0:-2,:]
+    imgaout[1:-1,1:-1,:] += imgain[1:-1,0:-2,:] << 1
+    imgaout[1:-1,1:-1,:] += imgain[2:,  0:-2,:]
+    imgaout[1:-1,1:-1,:] += imgain[0:-2,1:-1,:] << 1
+    imgaout[1:-1,1:-1,:] += imgain[1:-1,1:-1,:] << 2
+    imgaout[1:-1,1:-1,:] += imgain[2:,  1:-1,:] << 1
+    imgaout[1:-1,1:-1,:] += imgain[0:-2,2:,  :]
+    imgaout[1:-1,1:-1,:] += imgain[1:-1,2:,  :] << 1
+    imgaout[1:-1,1:-1,:] += imgain[2:,  2:,  :]
     imgaout >>= 4
 
-    i24_array[:][:][:] = imgaout[:][:][:]
+    i24_array[:,:,:] = imgaout[:,:,:]
     i24_array = None
     img.blit(i24, (-1,-1))
 
