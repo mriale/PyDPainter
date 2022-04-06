@@ -210,7 +210,8 @@ def smooth_image(img):
 
     i24_array[:,:,:] = imgaout[:,:,:]
     i24_array = None
-    img.blit(i24, (-1,-1))
+    i8 = convert8(i24, config.pal)
+    img.blit(i8, (-1,-1))
 
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
