@@ -476,7 +476,7 @@ class Brush:
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.SMOOTH) and color == self.bgcolor:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
