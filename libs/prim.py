@@ -183,15 +183,34 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                     newcoords.append((x0,y0))
     return newcoords
 
-def smooth_image(image):
-    w,h = image.get_size()
-    i24 = image.convert(24)
-    ##i24_array = pygame.surfarray.pixels3d(i24)
-    ##print(i24_array)
-    ##i24_array = None
-    i24big = pygame.transform.smoothscale(i24, (w*7, h*7))
-    i24 = pygame.transform.smoothscale(i24big, (w, h))
-    image.blit(i24, (0,0))
+def smooth_image(img):
+    w,h = img.get_size()
+    i24 = pygame.Surface((w+2, h+2), 0, 24)
+    i24.blit(img, (1,1))
+    i24_array = pygame.surfarray.pixels3d(i24)
+    imgain = np.array(i24_array, dtype=np.uint16, copy=True)
+    imgaout = np.array(i24_array, dtype=np.uint16, copy=True)
+
+    """
+    copy top row, bottom row, left column, right column
+    copy ul pixel, ur pixel, ll pixel, lr pixel
+    """
+
+    imgaout[1:-1][1:-1][:] = 0
+    imgaout[1:-1][1:-1][:] += imgain[0:-2][0:-2][:]
+    imgaout[1:-1][1:-1][:] += imgain[1:-1][0:-2][:] << 1
+    imgaout[1:-1][1:-1][:] += imgain[2:]  [0:-2][:]
+    imgaout[1:-1][1:-1][:] += imgain[0:-2][1:-1][:] << 1
+    imgaout[1:-1][1:-1][:] += imgain[1:-1][1:-1][:] << 2
+    imgaout[1:-1][1:-1][:] += imgain[2:]  [1:-1][:] << 1
+    imgaout[1:-1][1:-1][:] += imgain[0:-2][2:]  [:]
+    imgaout[1:-1][1:-1][:] += imgain[1:-1][2:]  [:] << 1
+    imgaout[1:-1][1:-1][:] += imgain[2:]  [2:]  [:]
+    imgaout >>= 4
+
+    i24_array[:][:][:] = imgaout[:][:][:]
+    i24_array = None
+    img.blit(i24, (-1,-1))
 
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
