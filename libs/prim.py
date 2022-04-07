@@ -1808,10 +1808,16 @@ def convert8(pixel_canvas_rgb, pal):
             pixbuff8[ix,iy] = cdict[pixbuff24[ix,iy]]
         #find closest color
         else:
-            min_cdiff = 255*255*3
-            min_i = 255
             px = pixbuff24[ix,iy]
             r,g,b = px>>16, (px>>8)&255, px&255
+            ncol = np.array([r,g,b], dtype=np.int)
+            npal = np.array(pal, dtype=np.int)
+            nrgbdiff = ncol - npal
+            ncdiff = np.sum(nrgbdiff**2, axis=1)
+            min_i = np.argmin(ncdiff)
+            """
+            min_cdiff = 255*255*3
+            min_i = 255
             for i in range(len(pal)):
                 rdiff = r - pal[i][0]
                 gdiff = g - pal[i][1]
@@ -1820,6 +1826,7 @@ def convert8(pixel_canvas_rgb, pal):
                 if cdiff < min_cdiff:
                     min_cdiff = cdiff
                     min_i = i
+            """
             cdict[px] = min_i
             pixbuff8[ix,iy] = min_i
 
