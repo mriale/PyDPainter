@@ -184,6 +184,7 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
     return newcoords
 
 def smooth_image(img):
+    # Create input and output 24-bit images to smooth
     w,h = img.get_size()
     i24 = pygame.Surface((w+2, h+2), 0, 24)
     i24.blit(img, (1,1))
@@ -192,8 +193,14 @@ def smooth_image(img):
     imgaout = np.zeros_like(i24_array, dtype=np.uint16)
 
     """
-    copy top row, bottom row, left column, right column
-    copy ul pixel, ur pixel, ll pixel, lr pixel
+    Gaussian blur 3x3 =
+    [ 1 2 1 ]
+    [ 2 4 2 ]
+    [ 1 2 1 ]
+
+    Use convolution to apply 3x3 matrix to pixels.
+    We can use bit shifting instead of multiplication since all the values
+    in the matrix are powers of 2.
     """
 
     imgaout[1:-1,1:-1,:] += imgain[0:-2,0:-2,:]
@@ -207,8 +214,11 @@ def smooth_image(img):
     imgaout[1:-1,1:-1,:] += imgain[2:,  2:,  :]
     imgaout >>= 4
 
+    # Assign the output of the smoothing back in the 24-bit version of the input
     i24_array[:,:,:] = imgaout[:,:,:]
     i24_array = None
+
+    # Convert the 24-bit image back to indexed color and blit into original
     i8 = convert8(i24, config.pal)
     img.blit(i8, (-1,-1))
 
@@ -1800,6 +1810,8 @@ def convert8(pixel_canvas_rgb, pal):
     #create new 8-bit surface
     pixbuff8 = np.zeros_like(pixbuff24, dtype="uint32")
 
+    npal = np.array(pal, dtype=np.int)
+
     #loop through all pixels
     for ix,iy in np.ndindex(pixbuff24.shape):
         #assign exact match
@@ -1810,24 +1822,17 @@ def convert8(pixel_canvas_rgb, pal):
             px = pixbuff24[ix,iy]
             r,g,b = px>>16, (px>>8)&255, px&255
             ncol = np.array([r,g,b], dtype=np.int)
-            npal = np.array(pal, dtype=np.int)
+
+            # Find color distance
             nrgbdiff = ncol - npal
-            ncdiff = np.sum(nrgbdiff**2, axis=1)
+            ncdiff = np.sum(nrgbdiff*nrgbdiff, axis=1)
+
+            # Find the closest color index
             min_i = np.argmin(ncdiff)
-            """
-            min_cdiff = 255*255*3
-            min_i = 255
-            for i in range(len(pal)):
-                rdiff = r - pal[i][0]
-                gdiff = g - pal[i][1]
-                bdiff = b - pal[i][2]
-                cdiff = rdiff*rdiff + gdiff*gdiff + bdiff*bdiff
-                if cdiff < min_cdiff:
-                    min_cdiff = cdiff
-                    min_i = i
-            """
-            cdict[px] = min_i
+
+            # Assign color and update hash for next time
             pixbuff8[ix,iy] = min_i
+            cdict[px] = min_i
 
     #turn array back into surface
     surf8 = pygame.surfarray.make_surface(pixbuff8)
