@@ -636,7 +636,12 @@ class pydpainter:
 
     def try_recompose(self):
         if pygame.time.get_ticks() - self.last_recompose_timer > 16:
+            old_cursor = config.cursor.shape
+            if old_cursor == config.cursor.CROSS:
+                config.cursor.shape = config.cursor.BUSY
             config.recompose()
+            if old_cursor == config.cursor.CROSS:
+                config.cursor.shape = config.cursor.CROSS
 
     def recompose(self):
         if self.cycling:
@@ -709,7 +714,7 @@ class pydpainter:
 
         #blit requestor layer
         if self.pixel_req_rect != None:
-            self.cursor.shape = 1
+            self.cursor.shape = self.cursor.NORMAL
             pixel_canvas_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None
             self.minitoolbar.tip_canvas = None
@@ -938,13 +943,13 @@ class pydpainter:
                (self.toolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
                self.menubar.is_inside(self.get_mouse_pointer_pos(e)) or \
                wait_for_mouseup_gui):
-                self.cursor.shape = 1
+                self.cursor.shape = self.cursor.NORMAL
                 hide_draw_tool = True
             elif self.tool_selected == "fill":
-                self.cursor.shape = 2
+                self.cursor.shape = self.cursor.FILL
                 hide_draw_tool = False
             else:
-                self.cursor.shape = 0
+                self.cursor.shape = self.cursor.CROSS
                 hide_draw_tool = False
 
             #Do move action for toolbar events

@@ -13,6 +13,15 @@ with contextlib.redirect_stdout(None):
 
 class cursor:
     """This class renders the mouse pointer, which acts as a sprite"""
+    CROSS=0
+    NORMAL=1
+    FILL=2
+    DROPPER=3
+    RESIZE=4
+    ROTATE=5
+    LEFT_RIGHT=6
+    UP_DOWN=7
+    BUSY=8
     def __init__(self, screen, scaleX, scaleY, config, cursor_images):
         self.shape = 0
         self.visible = True
@@ -31,6 +40,7 @@ class cursor:
         self.center.append((9,9))
         self.center.append((9,9))
         self.center.append((9,9))
+        self.center.append((7,11))
 
     def draw(self):
         #draw mouse cursor

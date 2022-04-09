@@ -189,14 +189,13 @@ def smooth_image(img):
     i24.blit(img, (1,1))
     i24_array = pygame.surfarray.pixels3d(i24)
     imgain = np.array(i24_array, dtype=np.uint16, copy=True)
-    imgaout = np.array(i24_array, dtype=np.uint16, copy=True)
+    imgaout = np.zeros_like(i24_array, dtype=np.uint16)
 
     """
     copy top row, bottom row, left column, right column
     copy ul pixel, ur pixel, ll pixel, lr pixel
     """
 
-    imgaout[1:-1,1:-1,:] = 0
     imgaout[1:-1,1:-1,:] += imgain[0:-2,0:-2,:]
     imgaout[1:-1,1:-1,:] += imgain[1:-1,0:-2,:] << 1
     imgaout[1:-1,1:-1,:] += imgain[2:,  0:-2,:]
