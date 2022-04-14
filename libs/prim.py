@@ -183,6 +183,17 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                     newcoords.append((x0,y0))
     return newcoords
 
+def blend_images(img1, img2, blend_trans):
+    # Blend two images together and put back into img1
+    ia1 = pygame.surfarray.pixels2d(img1)
+    ia2 = pygame.surfarray.pixels2d(img2)
+
+    # Use transformation matrix to blend colors
+    ia1[:,:] = blend_trans[(ia1[:,:]), (ia2[:,:])]
+
+    ia1 = None
+    ia2 = None
+
 def smooth_image(img):
     # Create input and output 24-bit images to smooth
     w,h = img.get_size()
@@ -299,11 +310,13 @@ class Brush:
         self.smear_stencil = None
         self.smear_image = None
         self.smear_count = 0
+        self.blend2_image = None
         self.prev_x = None
         self.prev_y = None
         self.pen_down = False
         self.cycle_trans = np.arange(0,255, dtype=np.uint8)
         self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
+        self.blend_trans = np.empty((256,256), dtype=np.uint8)
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -485,7 +498,7 @@ class Brush:
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.SMOOTH) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH) and color == self.bgcolor:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
@@ -542,6 +555,22 @@ class Brush:
                         self.cycle_trans[config.NUM_COLORS-1] = 0
                         self.cycle_trans_back[1:config.NUM_COLORS] = np.arange(0,config.NUM_COLORS-1, dtype=np.uint8)
                         self.cycle_trans_back[0] = config.NUM_COLORS-1
+                elif drawmode == DrawMode.BLEND:
+                    #set up blend translation matrix
+                    self.blend_trans[:] = np.arange(0,256, dtype=np.uint8)
+                    found_range = False
+                    for crange in config.cranges:
+                        if not found_range and crange.is_active() and \
+                           config.color >= crange.low and config.color <= crange.high:
+                            found_range = True
+                            arange = crange.get_range()
+                            for ci in arange:
+                                for cj in arange:
+                                    self.blend_trans[ci,cj] = (ci + cj) // 2
+                    if not found_range:
+                        for ci in range(0,256):
+                            for cj in range(0,256):
+                                self.blend_trans[ci,cj] = (ci + cj) // 2
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -571,6 +600,33 @@ class Brush:
                         self.smear_image.set_palette(config.pal)
                         self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
                     elif self.smear_count == 0:
+                        screen.blit(self.smear_image,
+                                    (x - self.handle[0], y - self.handle[1]))
+
+                    self.prev_x = x
+                    self.prev_y = y
+                elif drawmode == DrawMode.BLEND:
+                    #Allocate blend2 image if needed
+                    if self.blend2_image == None or self.blend2_image.get_size() != self.rect[2:4]:
+                        self.blend2_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.blend2_image.set_palette(config.pal)
+                        self.blend2_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+
+                    self.smear_count = (self.smear_count + 1) % 2
+                    #Get canvas into smear image
+                    if self.prev_x != None:
+                        self.smear_image.blit(screen, (0,0), [self.prev_x - self.handle[0], self.prev_y - self.handle[1], self.rect[2], self.rect[3]])
+                        self.smear_image.blit(self.smear_stencil, (0,0))
+                    #Blit last stored brush down
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+                    elif self.smear_count == 0:
+                        #get canvas under brush
+                        self.blend2_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+                        self.blend2_image.blit(self.smear_stencil, (0,0))
+                        blend_images(self.smear_image, self.blend2_image, self.blend_trans)
                         screen.blit(self.smear_image,
                                     (x - self.handle[0], y - self.handle[1]))
 
