@@ -476,6 +476,7 @@ class pydpainter:
         self.help_on = True
         self.polylist = []
         self.airbrush_size = 10
+        self.coords_on = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
@@ -1050,6 +1051,10 @@ class pydpainter:
             if curr_action != None and len(te_list) == 0 and \
                len(mte_list) == 0 and len(me_list) == 0 and \
                not wait_for_mouseup_gui and not hide_draw_tool:
+                if config.coords_on:
+                    config.menubar.title_right = "%d,%d" % self.get_mouse_pixel_pos(e)
+                else:
+                    config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:
                     if e.buttons == (0,0,0):
                         curr_action.move(self.get_mouse_pixel_pos(e))

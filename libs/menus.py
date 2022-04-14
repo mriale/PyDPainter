@@ -842,6 +842,13 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoPrefsCoords(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.coords_on = self.gadget.checked
+        config.doKeyAction()
 
 def init_menubar(config_in):
     global config
@@ -961,8 +968,8 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Prefs", [
-            ["Coords", "|"],
-            ["AutoTransp"],
+            ["/Coords", "|", DoPrefsCoords],
+            ["/AutoTransp"],
         ]])
 
     return menubar
