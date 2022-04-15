@@ -951,7 +951,16 @@ class DoBrush(ToolDragAction):
 
     def drawfinal(self, coords, button):
         if button == 1 or button == 3:
-            config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, coordfrom=self.p1, coordto=coords)
+            bgcolor = config.bgcolor
+            if config.auto_transp_on:
+                x1,y1 = self.p1
+                x2,y2 = coords
+                col = config.pixel_canvas.get_at_mapped((x1,y1))
+                if config.pixel_canvas.get_at_mapped((x2,y1)) == col and \
+                   config.pixel_canvas.get_at_mapped((x2,y2)) == col and \
+                   config.pixel_canvas.get_at_mapped((x1,y2)) == col:
+                    bgcolor = col
+            config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords)
         if button == 1:
             pass
         elif button == 3:

@@ -477,6 +477,7 @@ class pydpainter:
         self.polylist = []
         self.airbrush_size = 10
         self.coords_on = False
+        self.auto_transp_on = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))

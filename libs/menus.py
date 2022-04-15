@@ -850,6 +850,14 @@ class DoPrefsCoords(MenuAction):
         config.coords_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsAutoTransp(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.auto_transp_on = self.gadget.checked
+        config.doKeyAction()
+
 def init_menubar(config_in):
     global config
     config = config_in
@@ -969,7 +977,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Prefs", [
             ["/Coords", "|", DoPrefsCoords],
-            ["/AutoTransp"],
+            ["/AutoTransp", " ", DoPrefsAutoTransp],
         ]])
 
     return menubar
