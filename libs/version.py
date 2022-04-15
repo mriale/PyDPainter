@@ -8,4 +8,4 @@ config = None
 def version_set_config(config_in):
     global config
     config = config_in
-    config.version = "\xDF 0.9.4"
+    config.version = "\xDF 0.9.5"
