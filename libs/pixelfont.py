@@ -26,7 +26,7 @@ class PixelFont(object):
         self.image = gadget.imgload(name, scaledown=scaledown, scaleX=scaleX, scaleY=scaleY)
         xs,ys = self.image.get_size()
         self.xsize = xs // 32
-        self.ysize = ys // 6
+        self.ysize = ys // 8
         self.image_color = {}
 
     def calcwidth(self, string):
@@ -51,8 +51,8 @@ class PixelFont(object):
             image_blit = self.image
 
         for c in string:
-            yo = ((ord(c) - 32) // 32) * self.ysize
-            xo = ((ord(c) - 32) %  32) * self.xsize
+            yo = (ord(c) // 32) * self.ysize
+            xo = (ord(c) %  32) * self.xsize
 
             if bgcolor != None:
                 pygame.draw.rect(surface, bgcolor, (destx, desty, self.xsize,self.ysize))
@@ -71,7 +71,7 @@ def main():
     #Initialize the configuration settings
     pygame.init()
         
-    sx,sy = 800,300
+    sx,sy = 800,600
     
     screen = pygame.display.set_mode((sx,sy))
 
@@ -88,17 +88,20 @@ def main():
         f.blitstring(screen, (0,0), "Jewel 8", fgcolor=(255,255,0), bgcolor=(255,0,0))
         f.blitstring(screen, (0,8), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", fgcolor=(255,0,0))
         f.blitstring(screen, (0,16), "abcdefghijkmlnopqrstuvwxyz", fgcolor=(0,0,255))
-        f.blitstring(screen, (0,24), "0123456789")
-        for i in range(0,7):
-            f.blitstring(screen, (0,32+(i*8)), char_range(chr(i*32),chr(((i+1)*32)-1)))
+        for i in range(0,8):
+            f.blitstring(screen, (0,24+(i*8)), char_range(chr(i*32),chr(((i+1)*32)-1)))
 
         f2.blitstring(screen, (0,100), "Jewel 16", fgcolor=(255,255,0), bgcolor=(255,0,0))
         f2.blitstring(screen, (0,116), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", fgcolor=(255,0,0))
         f2.blitstring(screen, (0,132), "abcdefghijkmlnopqrstuvwxyz", fgcolor=(0,0,255))
+        for i in range(0,8):
+            f2.blitstring(screen, (0,148+(i*16)), char_range(chr(i*32),chr(((i+1)*32)-1)))
 
-        f4.blitstring(screen, (0,160), "Jewel 32", fgcolor=(255,255,0), bgcolor=(255,0,0))
-        f4.blitstring(screen, (0,192), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", fgcolor=(0,0,255))
-        f4.blitstring(screen, (0,224), "abcdefghijkmlnopqrstuvwxyz", fgcolor=(0,0,255))
+        f4.blitstring(screen, (0,300), "Jewel 32", fgcolor=(255,255,0), bgcolor=(255,0,0))
+        f4.blitstring(screen, (0,332), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", fgcolor=(0,0,255))
+        f4.blitstring(screen, (0,364), "abcdefghijkmlnopqrstuvwxyz", fgcolor=(0,0,255))
+        for i in range(0,8):
+            f4.blitstring(screen, (0,396+(i*32)), char_range(chr(i*32),chr(((i+1)*32)-1)))
 
         for event in pygame.event.get():
             if event.type == QUIT:
