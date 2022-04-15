@@ -947,6 +947,7 @@ class pydpainter:
                wait_for_mouseup_gui):
                 self.cursor.shape = self.cursor.NORMAL
                 hide_draw_tool = True
+                config.menubar.title_right = ""
             elif self.tool_selected == "fill":
                 self.cursor.shape = self.cursor.FILL
                 hide_draw_tool = False
