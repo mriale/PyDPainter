@@ -243,6 +243,21 @@ class pydpainter:
             config.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
+
+        self.page_width = self.pixel_width
+        self.page_height = self.pixel_height
+        self.page_offset_x = 0
+        self.page_offset_y = 0
+        if self.pixel_width < 320 or self.pixel_height < 200:
+            self.pixel_width = max(320, self.pixel_width)
+            self.pixel_height = max(200, self.pixel_height)
+            new_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
+            new_canvas.set_palette(self.pal)
+            new_canvas.blit(self.pixel_canvas,(0,0))
+            self.pixel_canvas = new_canvas
+            self.page_offset_x = (self.pixel_width - self.page_width) // 2
+            self.page_offset_y = (self.pixel_height - self.page_height) // 2
+
         self.pixel_req_canvas = pygame.Surface((self.pixel_width, self.pixel_height))
         self.pixel_req_rect = None
 
@@ -433,8 +448,10 @@ class pydpainter:
         #Setup the pygame screen
         self.pixel_width = 320
         self.pixel_height = 200
-        #self.pixel_width = 640
-        #self.pixel_height = 400
+        self.page_width = self.pixel_width
+        self.page_height = self.pixel_height
+        self.page_offset_x = 0
+        self.page_offset_y = 0
         self.pixel_modes = ["square","NTSC","PAL"]
         self.pixel_aspects = [1.0, 10.0/11.0, 59.0/54.0]
         self.pixel_mode = "NTSC"
@@ -563,6 +580,19 @@ class pydpainter:
         mouseY = mouseY * self.pixel_height // screenY
         return((mouseX, mouseY))
 
+    def calc_page_pos(self, mouseX, mouseY):
+        mouseX -= self.page_offset_x
+        mouseY -= self.page_offset_y
+
+        #make sure coords don't go off page
+        mouseX = max(mouseX,0)
+        mouseY = max(mouseY,0)
+        mouseX = min(mouseX,self.page_width-1)
+        mouseY = min(mouseY,self.page_height-1)
+
+        return mouseX, mouseY
+
+
     def get_mouse_pixel_pos(self, event=None, ignore_grid=False):
         mouseX, mouseY = pygame.mouse.get_pos()
 
@@ -599,6 +629,16 @@ class pydpainter:
                         mouseY = ((mouseY - y0) * zoom_height) // yh + zy0
         else:
             self.zoom.mousedown_side = 0
+            #Don't apply page offset to reqestors
+            if self.pixel_req_rect != None:
+                rx,ry,rw,rh = self.pixel_req_rect
+                if mouseX >= rx and mouseX < rx+rw and \
+                   mouseY >= ry and mouseY < ry+rh:
+                    pass
+                else:
+                    mouseX, mouseY = self.calc_page_pos(mouseX, mouseY)
+            else:
+                mouseX, mouseY = self.calc_page_pos(mouseX, mouseY)
 
         if not event is None and event.type == MOUSEBUTTONDOWN:
             self.zoom.mousedown_side = mouseside
@@ -712,7 +752,9 @@ class pydpainter:
             pygame.draw.rect(pixel_canvas_rgb, (0,0,0), (w-6,0,6,self.pixel_height))
             pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (w-5,0,4,self.pixel_height))
         else:
-            pixel_canvas_rgb = self.pixel_canvas.convert()
+            pixel_canvas_rgb = pygame.Surface(self.pixel_canvas.get_size(),0)
+            pixel_canvas_rgb.fill((128,128,128)); # out of page bounds
+            pixel_canvas_rgb.blit(self.pixel_canvas, (self.page_offset_x, self.page_offset_y), (0,0,self.page_width, self.page_height))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
