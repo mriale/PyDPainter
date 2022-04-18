@@ -778,7 +778,7 @@ def fill_req(screen):
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f]
 Dither:-------------00
 [Cancel][OK]
-""", "%#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=FillGadget, font=config.font)
+""", "%#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -839,13 +839,14 @@ Dither:-------------00
 
         if len(gevents) == 0:
             if event.type == MOUSEBUTTONDOWN:
-                mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+                mouseX, mouseY = config.get_mouse_pointer_pos(event)
                 if config.toolbar.is_inside((mouseX, mouseY)):
                     palg = config.toolbar.tool_id("palette")
-                    palg.process_event(screen, event, config.get_mouse_pixel_pos)
+                    palg.process_event(screen, event, config.get_mouse_pointer_pos)
                     dithersampleg.need_redraw = True
                 elif not req.is_inside((mouseX, mouseY)):
-                    config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
+                    mouseX2, mouseY2 = config.get_mouse_pixel_pos(event)
+                    config.color = config.pixel_canvas.get_at_mapped((mouseX2, mouseY2))
                     dithersampleg.need_redraw = True
 
         for g in req.gadgets:

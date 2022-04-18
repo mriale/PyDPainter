@@ -275,7 +275,7 @@ _______      ^^ A^^
 [Range][1~2~3~4~5~6]
 Speed---------___^^
 [Cancel] [Undo] [OK]
-""", "%#:^", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPGadget, font=config.font)
+""", "%#:^", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=PPGadget, font=config.font)
 
     (rx,ry,rw,rh) = req.rect
     rx += 20

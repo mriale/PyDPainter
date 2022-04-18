@@ -258,6 +258,8 @@ class pydpainter:
             self.page_offset_x = (self.pixel_width - self.page_width) // 2
             self.page_offset_y = (self.pixel_height - self.page_height) // 2
 
+        self.pixel_canvas.set_clip((0,0,self.page_width,self.page_height))
+
         self.pixel_req_canvas = pygame.Surface((self.pixel_width, self.pixel_height))
         self.pixel_req_rect = None
 
@@ -720,15 +722,15 @@ class pydpainter:
 
             zx0 = zxc-(zoom_width//2)
             zy0 = zyc-(zoom_height//2)
+            if zx0+zoom_width > self.page_width:
+                zx0 = self.page_width - zoom_width
             if zx0 < 0:
                 zx0 = 0
-            elif zx0+zoom_width > self.pixel_width:
-                zx0 = self.pixel_width - zoom_width
 
+            if zy0+zoom_height > self.page_height:
+                zy0 = self.page_height - zoom_height
             if zy0 < 0:
                 zy0 = 0
-            elif zy0+zoom_height > self.pixel_height:
-                zy0 = self.pixel_height - zoom_height
 
             #Fix zoom center to be back in range
             zxc = zx0+(zoom_width//2)
@@ -739,16 +741,19 @@ class pydpainter:
 
             self.zoom.left_rect = (0,menu_bar_height, w,self.pixel_height)
             self.zoom.border_rect = (w-6,0,6,self.pixel_height)
-            #self.zoom.right_rect = (w,0, w*2+2,self.pixel_height)
             self.zoom.right_rect = (w,menu_bar_height, zoom_width*self.zoom.factor,zoom_height*self.zoom.factor)
 
-            pixel_canvas_rgb.blit(self.pixel_canvas, (0,self.zoom.yoffset), (self.zoom.xoffset,0, w,self.pixel_height))
+            # Draw left unzoomed image
+            pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (0,0,w,self.pixel_height))
+            pixel_canvas_rgb.blit(self.pixel_canvas, (0,self.zoom.yoffset), (self.zoom.xoffset,0, min(w,self.page_width),self.page_height))
+
+            # Draw right zoomed image
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, pixel_canvas_rgb)
             zoom_canvas.blit(pixel_canvas_rgb, (0,0), (zx0-self.zoom.xoffset,zy0+self.zoom.yoffset,zoom_width,zoom_height))
-            #zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (w*2,self.pixel_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             pixel_canvas_rgb.blit(zoom_canvas_scaled, (w,self.zoom.yoffset))
 
+            # Draw divider
             pygame.draw.rect(pixel_canvas_rgb, (0,0,0), (w-6,0,6,self.pixel_height))
             pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (w-5,0,4,self.pixel_height))
         else:
@@ -965,7 +970,7 @@ class pydpainter:
                config.toolbar.tool_id(config.tool_selected).action != None:
                 curr_action = config.toolbar.tool_id(config.tool_selected).action
 
-            #Get mintollbar events if any
+            #Get mintoolbar events if any
             if self.menubar.visible:
                 mte_list = self.minitoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
             else:
@@ -1097,7 +1102,7 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_canvas.get_height() - cy - 1)
+                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.page_height - cy - 1)
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:
