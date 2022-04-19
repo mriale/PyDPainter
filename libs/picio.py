@@ -200,12 +200,14 @@ def load_pic(filename):
     if ifftype == "ILBM":
         pic = load_iff(filename, config)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
+        pic.set_palette(config.pal)
     elif ifftype != "NONE":
         pic = pygame.image.load(filename)
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config)
         config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
+        pic.set_palette(config.pal)
     else:
         pic = config.pixel_canvas
 
