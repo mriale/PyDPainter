@@ -512,7 +512,7 @@ class pydpainter:
 
         self.cycling = False
         self.cycle_handled = False
-        self.cranges = [colorrange(5120,3,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
+        self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
         self.UNDO_INDEX_MAX = 5
         self.undo_image = []
