@@ -171,6 +171,7 @@ Preview
     list_itemsg.items = list(filter(lambda fname: is_latin_font(fname), list_itemsg.items))
     list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font_name)
     list_itemsg.value = list_itemsg.top_item
+    last_list_itemsg_value = list_itemsg.value
 
     #list up/down arrows
     list_upg = req.gadget_id("17_0")
@@ -297,20 +298,28 @@ Preview
             screen.set_clip(previewg.screenrect)
             pygame.draw.rect(screen, (0,0,0), previewg.screenrect, 0)
             if font_sizeg.value.isnumeric() and int(font_sizeg.value) > 0 and int(font_sizeg.value) <= 500:
-                prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value)*fontmult)
-                prefont.set_underline(underline)
-                surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
-                if config.aspectX != config.aspectY:
-                    sx,sy = surf.get_size()
-                    if config.aspectX == 2:
-                        sy //= 2
-                    else:
-                        sx //= 2
-                    if aa:
-                        surf = pygame.transform.smoothscale(surf, (sx,sy))
-                    else:
-                        surf = pygame.transform.scale(surf, (sx,sy))
-                screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
+                try:
+                    prefont = pygame.font.Font(pygame.font.match_font(list_itemsg.items[list_itemsg.value], bold=bold, italic=italic), int(font_sizeg.value)*fontmult)
+                    prefont.set_underline(underline)
+                    surf = prefont.render("The quick brown fox jumps over the lazy dog", aa, (255,255,255))
+                    if config.aspectX != config.aspectY:
+                        sx,sy = surf.get_size()
+                        if config.aspectX == 2:
+                            sy //= 2
+                        else:
+                            sx //= 2
+                        if aa:
+                            surf = pygame.transform.smoothscale(surf, (sx,sy))
+                        else:
+                            surf = pygame.transform.scale(surf, (sx,sy))
+
+                    screen.blit(surf, (previewg.screenrect[0], previewg.screenrect[1]))
+                    last_list_itemsg_value = list_itemsg.value
+                except:
+                    #revert back to known good font
+                    list_itemsg.value = last_list_itemsg_value
+                    list_itemsg.need_redraw = True
+                    screen.fill((255,0,0))
 
             screen.set_clip(None)
  

@@ -793,7 +793,7 @@ class pydpainter:
             self.scaled_image.blit(self.scanline_canvas, (0,0))
 
         #scale up image to screen resolution, blurring for retro effect
-        pygame.transform.smoothscale(self.scaled_image, self.screen_size, self.screen)
+        pygame.transform.smoothscale(self.scaled_image, self.screen.get_size(), self.screen)
         #blit tooltip layer
         if not self.toolbar.wait_for_tip and \
            self.toolbar.tip_canvas != None and \
