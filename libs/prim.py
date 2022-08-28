@@ -1686,7 +1686,7 @@ def floodfill(surface, fill_color, position):
         config.fillmode.bounds = copy.copy(FillMode.NOBOUNDS)
         if onscreen((x,y)):
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
-            maxx, maxy = config.page_width, config.page_height
+            maxx, maxy = config.screen_width, config.screen_height
             current_color = surf_array[x,y]
             if fill_color == current_color:
                 if config.fillmode.value == FillMode.SOLID:

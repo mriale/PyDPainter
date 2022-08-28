@@ -192,12 +192,12 @@ class pydpainter:
 
     def resize_display(self):
         while True:
-            new_screen_size = (int(config.pixel_width*config.scale*config.pixel_aspect), int(config.pixel_height*config.scale))
-            if (new_screen_size[0] > config.max_width or \
-                new_screen_size[1] > config.max_height):
+            new_window_size = (int(config.pixel_width*config.scale*config.pixel_aspect), int(config.pixel_height*config.scale))
+            if (new_window_size[0] > config.max_width or \
+                new_window_size[1] > config.max_height):
                     config.scale_dec()
-            elif (new_screen_size[0] < 290 or \
-                  new_screen_size[1] < 200):
+            elif (new_window_size[0] < self.screen_width_min or \
+                  new_window_size[1] < self.screen_height_min):
                     config.scale_inc()
             else:
                 break
@@ -213,13 +213,13 @@ class pydpainter:
 
         #Resizing the window in only one axis is doesn't work reliably on some
         # versions of Linux so do 2 resizes to force a resize in both X and Y.
-        if "screen_size" in dir(config) and \
+        if "window_size" in dir(config) and \
            platform.system() == "Linux" and \
-           (new_screen_size[0] == config.screen_size[0] or \
-            new_screen_size[1] == config.screen_size[1]):
-                config.screen = pygame.display.set_mode((new_screen_size[0]+1,new_screen_size[1]+1), display_flags)
-        config.screen = pygame.display.set_mode(new_screen_size, display_flags)
-        config.screen_size = new_screen_size
+           (new_window_size[0] == config.window_size[0] or \
+            new_window_size[1] == config.window_size[1]):
+                config.screen = pygame.display.set_mode((new_window_size[0]+1,new_window_size[1]+1), display_flags)
+        config.screen = pygame.display.set_mode(new_window_size, display_flags)
+        config.window_size = new_window_size
 
     def initialize_surfaces(self, reinit=False):
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
@@ -244,21 +244,30 @@ class pydpainter:
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
 
-        self.page_width = self.pixel_width
-        self.page_height = self.pixel_height
-        self.page_offset_x = 0
-        self.page_offset_y = 0
-        if self.pixel_width < 320 or self.pixel_height < 200:
-            self.pixel_width = max(320, self.pixel_width)
-            self.pixel_height = max(200, self.pixel_height)
+        self.screen_width = self.pixel_width
+        self.screen_height = self.pixel_height
+        self.screen_offset_x = 0
+        self.screen_offset_y = 0
+        if self.pixel_width < self.screen_width_min or self.pixel_height < self.screen_height_min:
+            self.pixel_width = max(self.screen_width_min, self.pixel_width)
+            self.pixel_height = max(self.screen_height_min, self.pixel_height)
             new_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
             new_canvas.set_palette(self.pal)
             new_canvas.blit(self.pixel_canvas,(0,0))
             self.pixel_canvas = new_canvas
-            self.page_offset_x = (self.pixel_width - self.page_width) // 2
-            self.page_offset_y = (self.pixel_height - self.page_height) // 2
+            self.screen_offset_x = (self.pixel_width - self.screen_width) // 2
+            self.screen_offset_y = (self.pixel_height - self.screen_height) // 2
+        elif self.pixel_width > self.screen_width_max or self.pixel_height > self.screen_height_max:
+            self.pixel_width = min(self.screen_width_max, self.pixel_width)
+            self.pixel_height = min(self.screen_height_max, self.pixel_height)
+            new_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
+            new_canvas.set_palette(self.pal)
+            new_canvas.blit(self.pixel_canvas,(0,0))
+            self.pixel_canvas = new_canvas
+            self.screen_offset_x = 0
+            self.screen_offset_y = 0
 
-        self.pixel_canvas.set_clip((0,0,self.page_width,self.page_height))
+        self.pixel_canvas.set_clip((0,0,self.screen_width,self.screen_height))
 
         self.pixel_req_canvas = pygame.Surface((self.pixel_width, self.pixel_height))
         self.pixel_req_rect = None
@@ -294,7 +303,7 @@ class pydpainter:
 
         self.scaled_image = pygame.Surface((self.pixel_width, self.pixel_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
-        self.cursor = cursor(self.scaled_image, self.pixel_width//320, self.pixel_height//200 * 2, self, cursor_images)
+        self.cursor = cursor(self.scaled_image, self.pixel_width//self.screen_width_min, self.pixel_height//self.screen_height_min * 2, self, cursor_images)
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
@@ -450,10 +459,14 @@ class pydpainter:
         #Setup the pygame screen
         self.pixel_width = 320
         self.pixel_height = 200
-        self.page_width = self.pixel_width
-        self.page_height = self.pixel_height
-        self.page_offset_x = 0
-        self.page_offset_y = 0
+        self.screen_width = self.pixel_width
+        self.screen_height = self.pixel_height
+        self.screen_offset_x = 0
+        self.screen_offset_y = 0
+        self.screen_width_min = 320
+        self.screen_height_min = 200
+        self.screen_width_max = 640
+        self.screen_height_max = 512
         self.pixel_modes = ["square","NTSC","PAL"]
         self.pixel_aspects = [1.0, 10.0/11.0, 59.0/54.0]
         self.pixel_mode = "NTSC"
@@ -577,20 +590,20 @@ class pydpainter:
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
-        screenX, screenY = self.screen_size
+        screenX, screenY = self.window_size
         mouseX = mouseX * self.pixel_width // screenX
         mouseY = mouseY * self.pixel_height // screenY
         return((mouseX, mouseY))
 
     def calc_page_pos(self, mouseX, mouseY):
-        mouseX -= self.page_offset_x
-        mouseY -= self.page_offset_y
+        mouseX -= self.screen_offset_x
+        mouseY -= self.screen_offset_y
 
         #make sure coords don't go off page
         mouseX = max(mouseX,0)
         mouseY = max(mouseY,0)
-        mouseX = min(mouseX,self.page_width-1)
-        mouseY = min(mouseY,self.page_height-1)
+        mouseX = min(mouseX,self.screen_width-1)
+        mouseY = min(mouseY,self.screen_height-1)
 
         return mouseX, mouseY
 
@@ -601,7 +614,7 @@ class pydpainter:
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
 
-        screenX, screenY = self.screen_size
+        screenX, screenY = self.window_size
         mouseX = mouseX * self.pixel_width // screenX
         mouseY = mouseY * self.pixel_height // screenY
 
@@ -722,13 +735,13 @@ class pydpainter:
 
             zx0 = zxc-(zoom_width//2)
             zy0 = zyc-(zoom_height//2)
-            if zx0+zoom_width > self.page_width:
-                zx0 = self.page_width - zoom_width
+            if zx0+zoom_width > self.screen_width:
+                zx0 = self.screen_width - zoom_width
             if zx0 < 0:
                 zx0 = 0
 
-            if zy0+zoom_height > self.page_height:
-                zy0 = self.page_height - zoom_height
+            if zy0+zoom_height > self.screen_height:
+                zy0 = self.screen_height - zoom_height
             if zy0 < 0:
                 zy0 = 0
 
@@ -745,7 +758,7 @@ class pydpainter:
 
             # Draw left unzoomed image
             pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (0,0,w,self.pixel_height))
-            pixel_canvas_rgb.blit(self.pixel_canvas, (0,self.zoom.yoffset), (self.zoom.xoffset,0, min(w,self.page_width),self.page_height))
+            pixel_canvas_rgb.blit(self.pixel_canvas, (0,self.zoom.yoffset), (self.zoom.xoffset,0, min(w,self.screen_width),self.screen_height))
 
             # Draw right zoomed image
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, pixel_canvas_rgb)
@@ -759,7 +772,7 @@ class pydpainter:
         else:
             pixel_canvas_rgb = pygame.Surface(self.pixel_canvas.get_size(),0)
             pixel_canvas_rgb.fill((128,128,128)); # out of page bounds
-            pixel_canvas_rgb.blit(self.pixel_canvas, (self.page_offset_x, self.page_offset_y), (0,0,self.page_width, self.page_height))
+            pixel_canvas_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y), (0,0,self.screen_width, self.screen_height))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
@@ -802,8 +815,8 @@ class pydpainter:
             tx = self.pixel_width-self.toolbar.rect[2]+self.toolbar.tip_x
             ty = (self.fonty-1 if self.menubar.visible else 0) + self.toolbar.tip_y
             t_size = self.toolbar.tip_canvas.get_size()
-            sx = (tx * self.screen_size[0] // self.pixel_width) - t_size[0]
-            sy = (ty * self.screen_size[1] // self.pixel_height) - (t_size[1]//2)
+            sx = (tx * self.window_size[0] // self.pixel_width) - t_size[0]
+            sy = (ty * self.window_size[1] // self.pixel_height) - (t_size[1]//2)
             self.screen.blit(self.toolbar.tip_canvas, (sx,sy))
 
         #blit minitoolbar tooltip layer
@@ -814,8 +827,8 @@ class pydpainter:
             tx = mtbx + self.minitoolbar.tip_x
             ty = self.minitoolbar.tip_y
             t_size = self.minitoolbar.tip_canvas.get_size()
-            sx = (tx * self.screen_size[0] // self.pixel_width) - t_size[0]
-            sy = (ty * self.screen_size[1] // self.pixel_height) - (t_size[1]//2)
+            sx = (tx * self.window_size[0] // self.pixel_width) - t_size[0]
+            sy = (ty * self.window_size[1] // self.pixel_height) - (t_size[1]//2)
             self.screen.blit(self.minitoolbar.tip_canvas, (sx,sy))
 
         pygame.display.flip()
@@ -1102,7 +1115,7 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.page_height - cy - 1)
+                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.screen_height - cy - 1)
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:

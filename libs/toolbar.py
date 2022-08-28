@@ -821,8 +821,8 @@ class toolbar:
                                 self.config.scale -= 1.0 / self.scaleY
                                 if self.config.scale < 1:
                                     self.config.scale = 1
-                            self.config.screen_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
-                            self.config.screen = pygame.display.set_mode(self.config.screen_size, RESIZABLE)
+                            self.config.window_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
+                            self.config.screen = pygame.display.set_mode(self.config.window_size, RESIZABLE)
                         elif sl_tool == self.sl_RASTER:
                                 self.config.scanlines = not self.config.scanlines
                         elif sl_tool == self.sl_ASPECT:
@@ -832,8 +832,8 @@ class toolbar:
                             elif self.sl_icon_state[self.sl_ASPECT] == 1:
                                 self.sl_icon_state[self.sl_ASPECT] = 0
                                 self.config.pixel_aspect = 1.0
-                            self.config.screen_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
-                            self.config.screen = pygame.display.set_mode(self.config.screen_size, RESIZABLE)
+                            self.config.window_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
+                            self.config.screen = pygame.display.set_mode(self.config.window_size, RESIZABLE)
 
         elif mouseX >= self.tools_x and self.tools_on:
             mouseX -= self.tools_x
