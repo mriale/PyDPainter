@@ -803,9 +803,9 @@ class toolbar:
                 self.mousedown = False
 
                 if self.sl_icons_on:
-                    mouseX -= self.config.pixel_width - len(self.sl_icon_state) * 10 - 1
+                    mouseX -= self.config.screen_width - len(self.sl_icon_state) * 10 - 1
                 else:
-                    mouseX -= self.config.pixel_width - 2 * 10 - 1
+                    mouseX -= self.config.screen_width - 2 * 10 - 1
 
                 if mouseX > 0:
                     sl_tool = mouseX//10
@@ -821,7 +821,7 @@ class toolbar:
                                 self.config.scale -= 1.0 / self.scaleY
                                 if self.config.scale < 1:
                                     self.config.scale = 1
-                            self.config.window_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
+                            self.config.window_size = (int(self.config.screen_width*self.config.scale*self.config.pixel_aspect), int(self.config.screen_height*self.config.scale))
                             self.config.screen = pygame.display.set_mode(self.config.window_size, RESIZABLE)
                         elif sl_tool == self.sl_RASTER:
                                 self.config.scanlines = not self.config.scanlines
@@ -832,7 +832,7 @@ class toolbar:
                             elif self.sl_icon_state[self.sl_ASPECT] == 1:
                                 self.sl_icon_state[self.sl_ASPECT] = 0
                                 self.config.pixel_aspect = 1.0
-                            self.config.window_size = (int(self.config.pixel_width*self.config.scale*self.config.pixel_aspect), int(self.config.pixel_height*self.config.scale))
+                            self.config.window_size = (int(self.config.screen_width*self.config.scale*self.config.pixel_aspect), int(self.config.screen_height*self.config.scale))
                             self.config.screen = pygame.display.set_mode(self.config.window_size, RESIZABLE)
 
         elif mouseX >= self.tools_x and self.tools_on:

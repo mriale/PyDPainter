@@ -863,7 +863,7 @@ def init_menubar(config_in):
     config = config_in
 
     h = config.fonty
-    w = config.pixel_canvas.get_width()
+    w = config.screen_width
     menubar_canvas = pygame.Surface((w,h),0)
     menubar = Menubar(menubar_canvas, (0,0,w,h), config.font)
     menubar.title = "PyDPainter"

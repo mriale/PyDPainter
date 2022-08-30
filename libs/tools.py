@@ -1093,8 +1093,8 @@ class PalGadget(ToolGadget):
             self.crng_arrows = pygame.image.load(os.path.join('data', 'crng_arrows.png'))
             value = 0
         if label == "#":
-            scaleX = config.pixel_width // 320
-            scaleY = config.pixel_height // 200
+            scaleX = config.screen_width // 320
+            scaleY = config.screen_height // 200
             scaledown = 4 // min(scaleX,scaleY)
             self.palettearrows_image = imgload('palettearrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
         super(PalGadget, self).__init__(type, label, rect, value, maxvalue, id, tool_type=ToolGadget.TT_CUSTOM, toolbar=toolbar, action=action)
@@ -1321,11 +1321,11 @@ def init_toolbar(config_in):
     global config
     config = config_in
 
-    scaleX = config.pixel_width // 320
-    scaleY = config.pixel_height // 200
+    scaleX = config.screen_width // 320
+    scaleY = config.screen_height // 200
     scaledown = 4 // min(scaleX,scaleY)
     tools_image = imgload('tools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
-    h = config.pixel_canvas.get_height()
+    h = config.screen_height
     w = tools_image.get_width()//3
     toolbar_canvas = pygame.Surface((w,h),0)
     toolbar = Toolbar(toolbar_canvas, config.cursor, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3)
@@ -1375,7 +1375,7 @@ def init_toolbar(config_in):
     toolbar.tools.append(PalGadget(Gadget.TYPE_CUSTOM, "#",
                          (0, tools_image.get_height() + 10 * scaleY,
                           tools_image.get_width()//3,
-                          config.pixel_canvas.get_height() - tools_image.get_height() - 20*scaleY), id="palette", toolbar=toolbar, action=DoPalette))
+                          config.screen_height - tools_image.get_height() - 20*scaleY), id="palette", toolbar=toolbar, action=DoPalette))
     toolbar.add_coords(toolbar.tool_id("palette"))
 
     return toolbar

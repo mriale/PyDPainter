@@ -24,8 +24,8 @@ def toolreq_set_config(config_in):
 class FontGadget(ListGadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "&":
-            scaleX = config.pixel_width // 320
-            scaleY = config.pixel_height // 200
+            scaleX = config.screen_width // 320
+            scaleY = config.screen_height // 200
             self.arrowup = np.array([[0,16], [16,0], [32,16]]) * np.array([scaleX/4,scaleY/4])
             self.arrowdown = np.array([[0,24], [32,24], [16,40]]) * np.array([scaleX/4,scaleY/4])
             self.font_sizeg = None
