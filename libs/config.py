@@ -131,6 +131,16 @@ class pydpainter:
         self.dinfo = pygame.display.Info()
         self.initialize()
 
+        #load picture if specified from command line
+        if len(sys.argv) > 1:
+            filename = sys.argv[1]
+            config.pixel_canvas = load_pic(filename)
+            config.truepal = list(config.pal)
+            config.pal = config.unique_palette(config.pal)
+            config.initialize_surfaces()
+            config.filepath = os.path.dirname(filename)
+            config.filename = filename
+
     def closest_scale4(self,maxnum,num):
         if num >= maxnum:
             return maxnum
@@ -611,8 +621,8 @@ class pydpainter:
         #make sure coords don't go off page
         mouseX = max(mouseX,0)
         mouseY = max(mouseY,0)
-        mouseX = min(mouseX,self.screen_width-1)
-        mouseY = min(mouseY,self.screen_height-1)
+        mouseX = min(mouseX,self.pixel_width-1)
+        mouseY = min(mouseY,self.pixel_height-1)
 
         return mouseX, mouseY
 
@@ -634,23 +644,20 @@ class pydpainter:
             if (mouseX < x0+xw or self.zoom.mousedown_side == 1) and self.zoom.mousedown_side != 2:
                 mouseside = 1
                 mouseX += self.zoom.xoffset
-                mouseY -= self.zoom.yoffset
+                mouseY += self.zoom.yoffset
             else:
                 mouseside = 2
                 x0,y0,xw,yh = self.zoom.right_rect
                 zx0,zy0, zoom_width,zoom_height = self.zoom.pixel_rect
-                if xw + zx0 == 0:
+                if xw == 0:
                     mouseX = 0
                 else:
-                    mouseX = (mouseX - x0) * zoom_width // xw + zx0
+                    mouseX = ((mouseX - x0) * zoom_width // xw) + zx0
 
-                if yh + zy0 == 0:
+                if yh == 0:
                     mouseY = 0
                 else:
-                    if self.menubar.visible:
-                        mouseY = (((mouseY - y0 - self.zoom.yoffset + 12) * zoom_height)) // yh + zy0
-                    else:
-                        mouseY = ((mouseY - y0) * zoom_height) // yh + zy0
+                    mouseY = (((mouseY - y0) * zoom_height) // yh) + zy0
         else:
             self.zoom.mousedown_side = 0
             #Don't apply page offset to reqestors
@@ -715,87 +722,89 @@ class pydpainter:
                 crange.apply_to_pal(self.pal)
             self.set_all_palettes(self.pal)
 
-        pixel_canvas_rgb = None
+        screen_rgb = None
         if self.zoom.on:
-            pixel_canvas_rgb = pygame.Surface(self.pixel_canvas.get_size(),0)
-            w = self.pixel_width // 3
-            #pygame.draw.rect(pixel_canvas_rgb, (64,64,64), (w,0,w*2,self.pixel_height))
+            screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
+            w = self.screen_width // 3
             zxc,zyc = self.zoom.center
             zoom_width = w*2 // self.zoom.factor
-            zoom_height = self.pixel_height // self.zoom.factor
-            self.zoom.yoffset = 0
+            zoom_height = self.screen_height // self.zoom.factor
+
+            menu_bar_height = 0
             if self.toolbar.visible:
                 zoom_width -= self.toolbar.rect[2] // self.zoom.factor
+            if self.menubar.visible:
+                zoom_height -= self.menubar.rect[3] // self.zoom.factor
+                menu_bar_height = self.menubar.rect[3]
 
-            self.zoom.xoffset = zxc - (w // 2)
+            self.zoom.xoffset = zxc - (w//2)
+            self.zoom.yoffset = zyc - ((self.screen_height-menu_bar_height) // 2)
+
             if self.zoom.xoffset < 0:
                 self.zoom.xoffset = 0
             elif self.zoom.xoffset > self.pixel_width - w + 6:
                 self.zoom.xoffset = self.pixel_width - w + 6
 
-            menu_bar_height = 0
-            if self.menubar.visible:
-                menu_bar_height = 12
-                self.zoom.yoffset = (zoom_height // 2) - zyc
-                if self.zoom.yoffset < 0:
-                    self.zoom.yoffset = 0
-                elif self.zoom.yoffset > 12:
-                    self.zoom.yoffset = 12
+            if self.zoom.yoffset < -menu_bar_height:
+                self.zoom.yoffset = -menu_bar_height
+            elif self.zoom.yoffset > self.pixel_height - self.screen_height:
+                self.zoom.yoffset = self.pixel_height - self.screen_height
 
             zx0 = zxc-(zoom_width//2)
             zy0 = zyc-(zoom_height//2)
-            if zx0+zoom_width > self.screen_width:
-                zx0 = self.screen_width - zoom_width
+
+            if zx0+zoom_width > self.pixel_width:
+                zx0 = self.pixel_width - zoom_width
             if zx0 < 0:
                 zx0 = 0
 
-            if zy0+zoom_height > self.screen_height:
-                zy0 = self.screen_height - zoom_height
+            if zy0+zoom_height > self.pixel_height:
+                zy0 = self.pixel_height - zoom_height
             if zy0 < 0:
                 zy0 = 0
 
             #Fix zoom center to be back in range
             zxc = zx0+(zoom_width//2)
-            zyc = zy0+(zoom_height//2)-self.zoom.yoffset
+            zyc = zy0+(zoom_height//2)
             self.zoom.center = (zxc,zyc)
 
             self.zoom.pixel_rect = (zx0,zy0, zoom_width,zoom_height)
 
-            self.zoom.left_rect = (0,menu_bar_height, w,self.pixel_height)
-            self.zoom.border_rect = (w-6,0,6,self.pixel_height)
+            self.zoom.left_rect = (0,menu_bar_height, w,self.screen_height)
+            self.zoom.border_rect = (w-6,0,6,self.screen_height)
             self.zoom.right_rect = (w,menu_bar_height, zoom_width*self.zoom.factor,zoom_height*self.zoom.factor)
 
             # Draw left unzoomed image
-            pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (0,0,w,self.pixel_height))
-            pixel_canvas_rgb.blit(self.pixel_canvas, (0,self.zoom.yoffset), (self.zoom.xoffset,0, min(w,self.screen_width),self.screen_height))
+            pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
+            screen_rgb.blit(self.pixel_canvas, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
+            #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
 
             # Draw right zoomed image
-            zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, pixel_canvas_rgb)
-            zoom_canvas.blit(pixel_canvas_rgb, (0,0), (zx0-self.zoom.xoffset,zy0+self.zoom.yoffset,zoom_width,zoom_height))
+            zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
+            zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
-            pixel_canvas_rgb.blit(zoom_canvas_scaled, (w,self.zoom.yoffset))
+            screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height))
 
             # Draw divider
-            pygame.draw.rect(pixel_canvas_rgb, (0,0,0), (w-6,0,6,self.pixel_height))
-            pygame.draw.rect(pixel_canvas_rgb, (128,128,128), (w-5,0,4,self.pixel_height))
+            pygame.draw.rect(screen_rgb, (0,0,0), (w-6,0,6,self.screen_height))
+            pygame.draw.rect(screen_rgb, (128,128,128), (w-5,0,4,self.screen_height))
         else:
-            pixel_canvas_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
-            pixel_canvas_rgb.fill((128,128,128)); # out of page bounds
-            #pixel_canvas_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y), (0,0,self.screen_width, self.screen_height))
-            pixel_canvas_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
+            screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
+            screen_rgb.fill((128,128,128)); # out of page bounds
+            screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
             self.cursor.shape = self.cursor.NORMAL
-            pixel_canvas_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
+            screen_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None
             self.minitoolbar.tip_canvas = None
 
         #blit toolbar layer
-        self.toolbar.draw(pixel_canvas_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
+        self.toolbar.draw(screen_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
 
         #blit menu layer
-        self.menubar.draw(pixel_canvas_rgb)
+        self.menubar.draw(screen_rgb)
 
         #blit minitoolbar layer
         if self.menubar.visible:
@@ -803,10 +812,10 @@ class pydpainter:
                 mtbx = self.screen_width-self.minitoolbar.rect[2]
             else:
                 mtbx = self.screen_width-(self.minitoolbar.rect[2]//5*2)
-            self.minitoolbar.draw(pixel_canvas_rgb, offset=(mtbx, 0))
+            self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #scale image double height
-        pygame.transform.scale(pixel_canvas_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
+        pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
 
         #draw mouse cursor
         self.cursor.draw()
