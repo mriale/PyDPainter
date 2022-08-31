@@ -263,29 +263,10 @@ class pydpainter:
 
         self.screen_offset_x = 0
         self.screen_offset_y = 0
-        if self.pixel_width < self.screen_width or self.pixel_height < self.screen_height:
-            #self.pixel_width = max(self.screen_width_min, self.pixel_width)
-            #self.pixel_height = max(self.screen_height_min, self.pixel_height)
-            #new_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
-            #new_canvas.set_palette(self.pal)
-            #new_canvas.blit(self.pixel_canvas,(0,0))
-            #self.pixel_canvas = new_canvas
+        if self.pixel_width < self.screen_width:
             self.screen_offset_x = (self.screen_width - self.pixel_width) // 2
+        if self.pixel_height < self.screen_height:
             self.screen_offset_y = (self.screen_height - self.pixel_height) // 2
-            pass
-        """
-        elif self.pixel_width > self.screen_width_max or self.pixel_height > self.screen_height_max:
-            self.pixel_width = min(self.screen_width_max, self.pixel_width)
-            self.pixel_height = min(self.screen_height_max, self.pixel_height)
-            new_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
-            new_canvas.set_palette(self.pal)
-            new_canvas.blit(self.pixel_canvas,(0,0))
-            self.pixel_canvas = new_canvas
-            self.screen_offset_x = 0
-            self.screen_offset_y = 0
-        """
-
-        #self.pixel_canvas.set_clip((0,0,self.screen_width,self.screen_height))
 
         self.pixel_req_canvas = pygame.Surface((self.screen_width, self.screen_height))
         self.pixel_req_rect = None
@@ -789,6 +770,34 @@ class pydpainter:
             pygame.draw.rect(screen_rgb, (0,0,0), (w-6,0,6,self.screen_height))
             pygame.draw.rect(screen_rgb, (128,128,128), (w-5,0,4,self.screen_height))
         else:
+            # calculate offsets for toolbar and menubar if visible
+            if config.toolbar.visible:
+                tw = config.toolbar.rect[2]
+            else:
+                tw = 0
+            if config.menubar.visible:
+                mh = config.menubar.rect[3]
+            else:
+                mh = 0
+            # Center canvas if smaller than the screen
+            if self.pixel_width < self.screen_width - tw:
+                self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
+            if self.pixel_height < self.screen_height - mh:
+                self.screen_offset_y = (self.screen_height - self.pixel_height - mh) // 2
+
+            # Restrict scrolling offset to edges of screen
+            if self.pixel_width >= self.screen_width - tw:
+                if self.screen_offset_x < self.screen_width - self.pixel_width - tw:
+                    self.screen_offset_x = self.screen_width - self.pixel_width - tw
+                elif self.screen_offset_x > 0:
+                    self.screen_offset_x = 0
+            if self.pixel_height >= self.screen_height - mh:
+                if self.screen_offset_y < self.screen_height - self.pixel_height:
+                    self.screen_offset_y = self.screen_height - self.pixel_height
+                elif self.screen_offset_y > mh:
+                    self.screen_offset_y = mh
+            print("offset=(%d,%d)" % (self.screen_offset_x,self.screen_offset_y))
+
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
             screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
@@ -938,6 +947,7 @@ class pydpainter:
         text_string = ""
         buttons = list(pygame.mouse.get_pressed())
         zoom_drag = None
+        pan_drag = None
 
         last_wait_for_mouseup_gui = False
 
@@ -1049,6 +1059,17 @@ class pydpainter:
                             curr_action.move(self.get_mouse_pixel_pos(e))
             elif curr_action != None and hide_draw_tool:
                 curr_action.hide()
+
+            #process middle mouse button for pan
+            if not config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button == 2:
+                pan_drag = self.get_mouse_pixel_pos(e)
+            if e.type == MOUSEBUTTONUP and e.button == 2:
+                pan_drag = None
+            if not config.zoom.on and buttons[1] and pan_drag != None:
+                x,y = self.get_mouse_pixel_pos(e)
+                cx,cy = (config.screen_offset_x, config.screen_offset_y)
+                dx,dy = pan_drag
+                (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
             if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5]:
