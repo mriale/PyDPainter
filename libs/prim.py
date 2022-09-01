@@ -1849,7 +1849,7 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
 
 cdict = {}
 lastpal = None
-def convert8(pixel_canvas_rgb, pal):
+def convert8(pixel_canvas_rgb, pal, is_bgr=False):
     global cdict
     global lastpal
     if pal != lastpal:
@@ -1876,7 +1876,10 @@ def convert8(pixel_canvas_rgb, pal):
         #find closest color
         else:
             px = pixbuff24[ix,iy]
-            r,g,b = px>>16, (px>>8)&255, px&255
+            if (is_bgr):
+                b,g,r = px>>16, (px>>8)&255, px&255
+            else:
+                r,g,b = px>>16, (px>>8)&255, px&255
             ncol = np.array([r,g,b], dtype=np.int)
 
             # Find color distance
@@ -1894,3 +1897,31 @@ def convert8(pixel_canvas_rgb, pal):
     surf8 = pygame.surfarray.make_surface(pixbuff8)
     surf8.set_palette(pal)
     return surf8
+
+def get_truecolor_palette(canvas, num_colors):
+    surf_array = pygame.surfarray.pixels2d(canvas)
+    #get rid of alpha channel and make 12 bit
+    surf_array &= 0x00f0f0f0
+    #find unique color indexes and counts of color indexes in pic
+    unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
+    surf_array = None
+    #put counts and color indexes into matrix together into histogram
+    hist_array = np.asarray((unique_colors, counts_colors)).transpose()
+    #print(hist_array)
+    #sort histogram descending by frequency
+    sorted_hist_array = hist_array[np.argsort(-hist_array[:, 1])]
+    #print(sorted_hist_array)
+    #take first num_colors indexes
+    colorlist = np.sort(sorted_hist_array[0:num_colors, 0])
+    #make sure to preserve color 0
+    if colorlist[0] != 0:
+        colorlist = np.sort(sorted_hist_array[0:num_colors-1, 0])
+        colorlist = np.insert(colorlist, 0, 0)
+    #print(colorlist)
+    #convert to palette array
+    pal=[]
+    for rgb in colorlist:
+        b,g,r = rgb>>16, (rgb>>8)&255, rgb&255
+        pal.append([r,g,b])
+    #print(pal)
+    return pal

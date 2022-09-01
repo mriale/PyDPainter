@@ -13,6 +13,7 @@ from struct import pack, unpack
 from chunk import Chunk
 
 from colorrange import *
+from prim import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -203,6 +204,14 @@ def load_pic(filename):
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
         pic = pygame.image.load(filename)
+        if pic.get_bitsize() > 8:
+            config.pal = get_truecolor_palette(pic.convert(), 256)
+            config.color_depth = 8
+            pic = convert8(pic, config.pal, is_bgr=True)
+        else:
+            config.pal = pic.get_palette()
+            config.color_depth = 8
+            
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config)
