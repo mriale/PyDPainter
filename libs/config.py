@@ -796,7 +796,6 @@ class pydpainter:
                     self.screen_offset_y = self.screen_height - self.pixel_height
                 elif self.screen_offset_y > mh:
                     self.screen_offset_y = mh
-            print("offset=(%d,%d)" % (self.screen_offset_x,self.screen_offset_y))
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
@@ -933,6 +932,17 @@ class pydpainter:
             for rangenum, crange in enumerate(self.cranges):
                 if crange.low < crange.high and crange.flags & 1 and crange.rate > 0:
                     pygame.time.set_timer(pygame.USEREVENT+1+rangenum, crange.rate_to_milli())
+
+    def resize_canvas(self, width, height):
+        # Crop or expand pixel canvas
+        new_pixel_canvas = pygame.Surface((width, height),0,8)
+        new_pixel_canvas.set_palette(config.pal)
+        new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+        config.pixel_canvas = new_pixel_canvas
+        config.pixel_width = width
+        config.pixel_height = height
+        config.clear_undo()
+        config.save_undo()
 
     def run(self):
         """

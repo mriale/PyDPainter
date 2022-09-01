@@ -191,6 +191,14 @@ class DoMergeBack(MenuAction):
         config.clear_undo()
         config.save_undo()
 
+class DoPageSize(MenuAction):
+    def selected(self, attrs):
+        page_size_req(config.pixel_req_canvas)
+
+class DoShowPage(MenuAction):
+    def selected(self, attrs):
+        page_preview_req(config.pixel_req_canvas)
+
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
         screen_format_req(config.pixel_req_canvas)
@@ -896,8 +904,8 @@ def init_menubar(config_in):
                 ["Merge in front", " ", DoMergeFront],
                 ["Merge in back", " ", DoMergeBack],
                 ]],
-            ["Page Size..."],
-            ["Show Page", "S"],
+            ["Page Size...", " ", DoPageSize],
+            ["Show Page", "S", DoShowPage],
             ["Screen Format...", " ", DoScreenFormat],
             ["About...", " ", DoAbout],
             ["Quit", "Q", DoQuit],
