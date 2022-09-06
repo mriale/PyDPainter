@@ -175,6 +175,8 @@ def screen_format_req(screen, new_clicked=False):
                       Out of:
 [NTSC~PAL]           [4096~16M]
 
+Resize Page: [Yes~No]
+
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
@@ -225,6 +227,19 @@ def screen_format_req(screen, new_clicked=False):
             gres.append(g)
 
     gDepth[bdepth-1].state = 1
+
+    #Gather page resize gadgets
+    resize_page = False
+    gResize = [None, None]
+    gResize[1] = req.gadget_id("13_9") #Yes
+    gResize[0] = req.gadget_id("17_9") #No
+    if new_clicked:
+        gResize[0].enabled = False
+        gResize[1].enabled = False
+
+    for i in range(0,2):
+        gResize[i].state = (resize_page == (i == 1))
+        gResize[i].need_redraw = True
 
     def apply_aspect():
         if aspect == 1:
@@ -376,6 +391,8 @@ def screen_format_req(screen, new_clicked=False):
                 cdepth = 256
                 apply_cdepth()
                 apply_mode()
+            elif ge.gadget in gResize:
+                resize_page = (gResize.index(ge.gadget) == 1)
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
                     ok_clicked = True
@@ -480,6 +497,11 @@ def screen_format_req(screen, new_clicked=False):
             g12bit.state = 1
         else:
             g24bit.state = 1
+
+        if resize_page:
+            gResize[1].state = 1
+        else:
+            gResize[0].state = 1
 
         if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
