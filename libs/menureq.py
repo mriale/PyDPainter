@@ -467,7 +467,7 @@ Resize Page: [Yes~No]
                     if halfbright:
                         dmode |= config.MODE_EXTRA_HALFBRIGHT
 
-                    if not new_clicked and (px != config.pixel_width or py != config.pixel_height):
+                    if not new_clicked and resize_page and (px != config.pixel_width or py != config.pixel_height):
                         new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
                         new_pixel_canvas.set_palette(config.pal)
                         config.pixel_canvas = new_pixel_canvas
