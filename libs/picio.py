@@ -206,11 +206,11 @@ def load_pic(filename):
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
-            config.color_depth = 8
+            config.color_depth = 256
             pic = convert8(pic, config.pal, is_bgr=True)
         else:
             config.pal = pic.get_palette()
-            config.color_depth = 8
+            config.color_depth = 256
             
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
