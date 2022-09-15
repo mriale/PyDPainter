@@ -1850,10 +1850,6 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
 def convert8(pixel_canvas_rgb, pal, is_bgr=False):
     #Create color map for all 16 million colors
     cmap = np.zeros(0x1000000, dtype="uint8")
-    #i = 0
-    #for p in pal:
-    #    cmap[(p[0]<<16) | (p[1]<<8) | p[2]] = i
-    #    i += 1
 
     #convert surface into RGB ints
     pixbuff24 = pygame.surfarray.array2d(pixel_canvas_rgb)
