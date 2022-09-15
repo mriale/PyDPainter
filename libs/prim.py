@@ -1847,20 +1847,17 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
                 lastcoord = coord
 
-cdict = {}
-lastpal = None
 def convert8(pixel_canvas_rgb, pal, is_bgr=False):
-    global cdict
-    global lastpal
-    if pal != lastpal:
-        #load palette into dictionary
-        lastpal = pal
-        cdict = {}
-        for p in pal:
-            cdict[(p[0]<<16) | (p[1]<<8) | p[2]] = len(cdict)
+    #Create color map for all 16 million colors
+    cmap = np.zeros(0x1000000, dtype="uint8")
+    #i = 0
+    #for p in pal:
+    #    cmap[(p[0]<<16) | (p[1]<<8) | p[2]] = i
+    #    i += 1
 
     #convert surface into RGB ints
     pixbuff24 = pygame.surfarray.array2d(pixel_canvas_rgb)
+    #get rid of alpha channel
     pixbuff24 &= 0x00FFFFFF
 
     #create new 8-bit surface
@@ -1868,30 +1865,29 @@ def convert8(pixel_canvas_rgb, pal, is_bgr=False):
 
     npal = np.array(pal, dtype=np.int)
 
-    #loop through all pixels
-    for ix,iy in np.ndindex(pixbuff24.shape):
-        #assign exact match
-        if pixbuff24[ix,iy] in cdict:
-            pixbuff8[ix,iy] = cdict[pixbuff24[ix,iy]]
-        #find closest color
+    #find unique colors
+    unique_colors = np.unique(pixbuff24)
+
+    #loop through unique colors
+    for color in unique_colors:
+        if (is_bgr):
+            b,g,r = color>>16, (color>>8)&255, color&255
         else:
-            px = pixbuff24[ix,iy]
-            if (is_bgr):
-                b,g,r = px>>16, (px>>8)&255, px&255
-            else:
-                r,g,b = px>>16, (px>>8)&255, px&255
-            ncol = np.array([r,g,b], dtype=np.int)
+            r,g,b = color>>16, (color>>8)&255, color&255
+        ncol = np.array([r,g,b], dtype=np.int)
 
-            # Find color distance
-            nrgbdiff = ncol - npal
-            ncdiff = np.sum(nrgbdiff*nrgbdiff, axis=1)
+        # Find color distance
+        nrgbdiff = ncol - npal
+        ncdiff = np.sum(nrgbdiff*nrgbdiff, axis=1)
 
-            # Find the closest color index
-            min_i = np.argmin(ncdiff)
+        # Find the closest color index
+        min_i = np.argmin(ncdiff)
 
-            # Assign color and update hash for next time
-            pixbuff8[ix,iy] = min_i
-            cdict[px] = min_i
+        # Assign color index to color map
+        cmap[color] = min_i
+
+    #map colors back to bitmap
+    pixbuff8[:] = cmap[pixbuff24[:]]
 
     #turn array back into surface
     surf8 = pygame.surfarray.make_surface(pixbuff8)
@@ -1902,6 +1898,7 @@ def get_truecolor_palette(canvas, num_colors):
     surf_array = pygame.surfarray.pixels2d(canvas)
     #get rid of alpha channel and make 12 bit
     surf_array &= 0x00f0f0f0
+    surf_array |= surf_array >> 4
     #find unique color indexes and counts of color indexes in pic
     unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
     surf_array = None
@@ -1921,7 +1918,7 @@ def get_truecolor_palette(canvas, num_colors):
     #convert to palette array
     pal=[]
     for rgb in colorlist:
-        b,g,r = rgb>>16, (rgb>>8)&255, rgb&255
+        r,g,b = rgb>>16, (rgb>>8)&255, rgb&255
         pal.append([r,g,b])
     #print(pal)
     return pal
