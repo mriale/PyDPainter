@@ -332,10 +332,10 @@ Preview
 
 
 def place_point(symm_center):
-    point_coords = (0,0)
     pixel_req_rect_bak = config.pixel_req_rect
     config.pixel_req_rect = None
     config.recompose()
+    ret_coords = list(symm_center)
     point_placed = False
     first_time = True
     while not point_placed:
@@ -351,8 +351,12 @@ def place_point(symm_center):
         if event.type == MOUSEMOTION:
             pass
         elif event.type == MOUSEBUTTONUP:
-            point_coords = (mouseX, mouseY)
+            ret_coords = (mouseX, mouseY)
             point_placed = True
+        elif event.type == KEYDOWN:
+            if event.key == K_ESCAPE:
+                point_placed = True
+
         config.clear_pixel_draw_canvas()
         #old center
         scx,scy = symm_center
@@ -378,7 +382,7 @@ def place_point(symm_center):
     config.clear_pixel_draw_canvas()
     config.recompose()
 
-    return point_coords
+    return ret_coords
 
 def place_grid(gcoords):
     n = 4
@@ -386,6 +390,7 @@ def place_grid(gcoords):
     ow = w
     h = gcoords[3]
     oh = h
+    ret_coords = list(gcoords)
     point_coords = (0,0)
     mpoint_coords = point_coords
     pixel_req_rect_bak = config.pixel_req_rect
@@ -421,6 +426,13 @@ def place_grid(gcoords):
             dragging = True
         elif event.type == MOUSEBUTTONUP:
             point_placed = True
+            wnew = int(abs(w))
+            hnew = int(abs(h))
+            ret_coords = [point_coords[0]%wnew, point_coords[1]%hnew, wnew, hnew]
+        elif event.type == KEYDOWN:
+            if event.key == K_ESCAPE:
+                point_placed = True
+
         config.clear_pixel_draw_canvas()
 
         pcx,pcy = point_coords
@@ -442,9 +454,7 @@ def place_grid(gcoords):
     config.clear_pixel_draw_canvas()
     config.recompose()
 
-    w = int(abs(w))
-    h = int(abs(h))
-    return (point_coords[0]%w, point_coords[1]%h, w, h)
+    return ret_coords
 
 def grid_req(screen):
     req = str2req("Grid", """
