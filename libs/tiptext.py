@@ -86,7 +86,8 @@ tiptext["brush"] = [
 tiptext["text"] = [
 "Text Tool [t]",
 "Click on canvas to place text cursor.",
-"Type text on keyboard to draw text"]
+"Type text on keyboard to draw text",
+"Right-click tool to change font"]
 
 tiptext["grid"] = [
 "Grid Toggle [g]",

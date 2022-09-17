@@ -1000,6 +1000,17 @@ def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrup
         primprops.continuous = True
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
 
+def add_xbounds(xbounds, y, x1, x2):
+    if y in xbounds:
+        xb1,xb2 = xbounds[y]
+        if x1 < xb1:
+            xb1 = x1
+        if x2 > xb2:
+            xb2 = x2
+        xbounds[y] = [xb1, xb2]
+    else:
+        xbounds[y] = [x1, x2]
+
 def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None):
     handlesymm = True
     if primprops != None:
@@ -1015,9 +1026,9 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
         err = (5 - radius*4)//4
         config.fillmode.bounds = [x0-radius, y0-radius, x0+radius, y0+radius]
 
-        start_shape()
-        hline(screen, color, y0, x0-y, x0+y, interrupt=interrupt, primprops=primprops)
-
+        #Rasterize bounds of circle (sometimes y is repeated)
+        xbounds = {}
+        add_xbounds(xbounds, y0, x0-y, x0+y)
         while x < y:
             x = x + 1
             if err < 0:
@@ -1026,10 +1037,16 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
                 y -= 1
                 err += 2*(x-y) + 1
 
-            hline(screen, color, y0 + y, x0 - x, x0 + x, interrupt=interrupt, primprops=primprops)
-            hline(screen, color, y0 - y, x0 - x, x0 + x, interrupt=interrupt, primprops=primprops)
-            hline(screen, color, y0 + x, x0 - y, x0 + y, interrupt=interrupt, primprops=primprops)
-            hline(screen, color, y0 - x, x0 - y, x0 + y, interrupt=interrupt, primprops=primprops)
+            add_xbounds(xbounds, y0 + y, x0 - x, x0 + x)
+            add_xbounds(xbounds, y0 - y, x0 - x, x0 + x)
+            add_xbounds(xbounds, y0 + x, x0 - y, x0 + y)
+            add_xbounds(xbounds, y0 - x, x0 - y, x0 + y)
+
+        #Draw the rasterized lines of the circle
+        start_shape()
+        for y in xbounds:
+            x1,x2 = xbounds[y]
+            hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
@@ -1355,6 +1372,14 @@ def add_vline(y, xs1, xs2):
         else:
             vlines[x] = [[y,y]]
 
+def hline_XOR(surf_array, y, xs1, xs2):
+    if surf_array.dtype == np.uint8:
+        #indexed color
+        surf_array[xs1:xs2,y] ^= config.NUM_COLORS-1
+    else:
+        #true color
+        surf_array[xs1:xs2,y] ^= 0x00ffffff
+
 def hline_SOLID(surf_array, color, y, xs1, xs2):
     if surf_array.dtype == np.uint8:
         #indexed color
@@ -1474,7 +1499,9 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)
 
-    if primprops.fillmode.value == FillMode.SOLID or color == config.bgcolor:
+    if primprops.xor:
+        hline_XOR(surf_array, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.SOLID or color == config.bgcolor:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BRUSH:
         hline_BRUSH(surf_array, y, x1, x2,xs1, xs2)

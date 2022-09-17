@@ -352,7 +352,7 @@ class DoAirbrush(ToolSingleAction):
     def selected(self, attrs):
         config.brush.pen_down = False
         if attrs["rightclick"]:
-            spacing_req(config.pixel_req_canvas)
+            self.size_airbrush()
         else:
             config.tool_selected = self.id
             config.subtool_selected = 0
@@ -385,6 +385,77 @@ class DoAirbrush(ToolSingleAction):
             config.save_undo()
             config.brush.pen_down = False
             self.move(coords)
+
+    def size_airbrush(self):
+        ax = config.aspectX
+        ay = config.aspectY
+        #Convert radius to lower right corner (45 degrees)
+        w = int(math.sin(math.pi/4) * config.airbrush_size / ax)
+        ow = w
+        h = int(math.sin(math.pi/4) * config.airbrush_size / ay)
+        oh = h
+        point_coords = (0,0)
+        mpoint_coords = point_coords
+        pixel_req_rect_bak = config.pixel_req_rect
+        config.pixel_req_rect = None
+        config.recompose()
+        dragging = False
+        point_placed = False
+        first_time = True
+        xor_props = PrimProps()
+        xor_props.xor = True
+
+        while not point_placed:
+            config.cursor.shape = 4
+            event = pygame.event.poll()
+            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = pygame.event.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = pygame.event.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if not dragging:
+                point_coords = (mouseX-w, mouseY-h)
+                mpoint_coords = (mouseX, mouseY)
+            if event.type == MOUSEMOTION:
+                if dragging:
+                    diffX = (mouseX - mpoint_coords[0]) // ax
+                    diffY = (mouseY - mpoint_coords[1]) // ay
+                    h = oh + diffY
+                    if h == 0:
+                        h = 1
+                    w = ow + diffX
+                    if w == 0:
+                        w = 1
+            elif event.type == MOUSEBUTTONDOWN:
+                dragging = True
+            elif event.type == MOUSEBUTTONUP and dragging:
+                point_placed = True
+                config.airbrush_size = radius
+            elif event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    point_placed = True
+
+            config.clear_pixel_draw_canvas()
+
+            pcx,pcy = point_coords
+            radius = int(math.sqrt(w*w + h*h))
+            if ax == ay:
+                fillcircle(config.pixel_canvas, 1, (pcx, pcy), radius, primprops=xor_props)
+            else:
+                fillellipse(config.pixel_canvas, 1, (pcx, pcy), radius*ax, radius*ay, primprops=xor_props)
+
+            config.menutitle_extra = str(pcx) + ", " + str(pcy) + ", " + str(w) + ", " + str(h)
+            config.recompose()
+            first_time = False
+
+        config.menutitle_extra = ""
+        config.pixel_req_rect = pixel_req_rect_bak
+        config.clear_pixel_draw_canvas()
+        config.recompose()
+
 
 class DoRect(ToolDragAction):
     """
