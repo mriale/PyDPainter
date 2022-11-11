@@ -12,6 +12,7 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
 sys.path.insert(0, 'libs')
 
 import pixelfont

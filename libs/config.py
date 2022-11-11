@@ -212,7 +212,7 @@ class pydpainter:
 
         return s
 
-    def resize_display(self):
+    def resize_display(self, resize_window = True):
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
             if (new_window_size[0] > config.max_width or \
@@ -227,21 +227,26 @@ class pydpainter:
         if 'SDL_VIDEO_WINDOW_POS' in os.environ:
             del os.environ['SDL_VIDEO_WINDOW_POS']
 
-        #Disable resizing on Mac
-        if platform.system() == "Darwin":
-            display_flags = HWSURFACE|DOUBLEBUF
-        else:
-            display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
+        if "toolbar" in dir(config):
+           config.toolbar.tip_canvas = None
+        if "minitoolbar" in dir(config):
+           config.minitoolbar.tip_canvas = None
 
-        #Resizing the window in only one axis is doesn't work reliably on some
-        # versions of Linux so do 2 resizes to force a resize in both X and Y.
+        display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
+
         if "window_size" in dir(config) and \
-           platform.system() == "Linux" and \
-           (new_window_size[0] == config.window_size[0] or \
-            new_window_size[1] == config.window_size[1]):
-                config.screen = pygame.display.set_mode((new_window_size[0]+1,new_window_size[1]+1), display_flags)
-        config.screen = pygame.display.set_mode(new_window_size, display_flags)
-        config.window_size = new_window_size
+           (new_window_size[0] == config.window_size[0] and new_window_size[1] == config.window_size[1]):
+            pass
+        else:
+            if resize_window:
+                #Wait for mouse buttons to be released before resizing window
+                pygame.event.get()
+                while True in pygame.mouse.get_pressed():
+                    pygame.event.get()
+                pygame.display.set_mode(new_window_size, display_flags)
+ 
+            config.screen = pygame.display.get_surface()
+            config.window_size = new_window_size
 
     def initialize_surfaces(self, reinit=False):
         self.screen_width = 320
@@ -455,7 +460,6 @@ class pydpainter:
 
         self.fontx = fontx
         self.fonty = fonty
-        self.font = PixelFont("jewel32.png", 8)
         self.text_tool_font_name = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
         self.text_tool_font_name = re.sub(r'bold$', '', self.text_tool_font_name)
         self.text_tool_font_type = 0
@@ -844,8 +848,12 @@ class pydpainter:
             #blit scanlines onto double-high image
             self.scaled_image.blit(self.scanline_canvas, (0,0))
 
-        #scale up image to screen resolution, blurring for retro effect
-        pygame.transform.smoothscale(self.scaled_image, self.screen.get_size(), self.screen)
+        #scale up screen to window resolution, blurring for retro effect
+        scaledup = pygame.transform.smoothscale(self.scaled_image, self.window_size)
+        self.screen.fill((128,128,128))
+        self.screen.blit(scaledup,(0,0))
+        scaledup = None
+
         #blit tooltip layer
         if not self.toolbar.wait_for_tip and \
            self.toolbar.tip_canvas != None and \
@@ -995,9 +1003,9 @@ class pydpainter:
             if e.type == pygame.QUIT:
                 config.running = False
 
-            if e.type == VIDEORESIZE and platform.system() != "Darwin":
+            if e.type == VIDEORESIZE:
                 config.scale = config.closest_scale((e.w, e.h))
-                config.resize_display()
+                config.resize_display(False)
                 self.recompose()
                 continue
 
@@ -1022,6 +1030,15 @@ class pydpainter:
             elif e.type == MOUSEBUTTONUP:
                 if e.button <= len(buttons):
                     buttons[e.button-1] = False
+
+            #Show system mouse pointer if outside of screen
+            if e.type == MOUSEMOTION:
+                if e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
+                    if not pygame.mouse.get_visible():
+                        pygame.mouse.set_visible(True)
+                else:
+                    if pygame.mouse.get_visible():
+                        pygame.mouse.set_visible(False)
 
             #Get toolbar events if any and set current action to tool selected
             te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
