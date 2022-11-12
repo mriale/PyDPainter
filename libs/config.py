@@ -164,13 +164,21 @@ class pydpainter:
         if config.scale <= 1:
             config.scale /= 2.0
         else:
-            config.scale -= 0.5
+            currscale = round(config.scale * 2.0) / 2.0
+            if abs(config.scale - currscale) < .01:
+                config.scale = currscale - 0.5
+            else:
+                config.scale = currscale
 
     def scale_inc(self):
         if config.scale < 1:
             config.scale *= 2.0
         else:
-            config.scale += 0.5
+            currscale = round(config.scale * 2.0) / 2.0
+            if abs(config.scale - currscale) < .01:
+                config.scale = currscale + 0.5
+            else:
+                config.scale = currscale
 
     def set_aspect(self, mode):
         self.pixel_mode = self.pixel_modes[mode]
@@ -197,22 +205,16 @@ class pydpainter:
         sy = oh / ph
 
         if sx < sy:
-            if size != None:
-                s = int(2.0*sx)/2.0
-            else:
-                s = round(2.0*sx)/2.0
+            s = sx
         else:
-            if size != None:
-                s = int(2.0*sy)/2.0
-            else:
-                s = round(2.0*sy)/2.0
+            s = sy
 
         if s < 0.51 or s > limit:
             s = config.scale
 
         return s
 
-    def resize_display(self, resize_window = True):
+    def resize_display(self, resize_window = True, first_init=False):
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
             if (new_window_size[0] > config.max_width or \
@@ -248,7 +250,7 @@ class pydpainter:
             config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
 
-    def initialize_surfaces(self, reinit=False):
+    def initialize_surfaces(self, reinit=False, first_init=False):
         self.screen_width = 320
  
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
@@ -296,8 +298,13 @@ class pydpainter:
         self.font = PixelFont("jewel32.png", sizeX=self.fontx, sizeY=self.fonty)
         self.fonty = int(self.fonty * 1.5)
 
-        config.scale = config.closest_scale()
-        config.resize_display()
+        if first_init:
+            config.scale = round(config.closest_scale())
+            config.resize_display()
+        else:
+            config.scale = config.closest_scale()
+            config.resize_display(False)
+
         config.color = 1
         config.bgcolor = 0
 
@@ -554,7 +561,7 @@ class pydpainter:
 
         reinit = self.readConfig()
 
-        self.initialize_surfaces(reinit=reinit)
+        self.initialize_surfaces(reinit=reinit, first_init=True)
         pygame.mouse.set_visible(False)
 
     def doKeyAction(self, curr_action=None):
