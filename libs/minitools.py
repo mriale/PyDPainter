@@ -44,6 +44,7 @@ class DoScale(MiniToolAction):
             config.scale_dec()
         else:
             config.scale_inc()
+        self.gadget.state = 0
         config.resize_display()
 
 class DoScanlines(MiniToolAction):
