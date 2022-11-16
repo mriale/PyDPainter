@@ -513,7 +513,7 @@ Resize Page: [Yes~No]
     else:
         config.recompose()
 
-    return
+    return ok_clicked
 
 
 def page_size_req(screen):

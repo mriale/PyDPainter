@@ -21,7 +21,9 @@ class MenuAction(Action):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
-        screen_format_req(config.pixel_req_canvas,new_clicked=True)
+        if screen_format_req(config.pixel_req_canvas,new_clicked=True):
+            config.modified_count = 0
+            config.filename = ""
 
 class DoOpen(MenuAction):
     def selected(self, attrs):
@@ -35,6 +37,7 @@ class DoOpen(MenuAction):
                 config.initialize_surfaces()
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
+                config.modified_count = 0
             except:
                 pass
 
@@ -47,6 +50,7 @@ class DoSave(MenuAction):
         if filename != (()) and filename != "":
             save_iff(filename, config)
             config.filename = filename
+            config.modified_count = 0
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
@@ -55,6 +59,7 @@ class DoSaveAs(MenuAction):
         if filename != (()) and filename != "":
             save_iff(filename, config)
             config.filename = filename
+            config.modified_count = 0
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):

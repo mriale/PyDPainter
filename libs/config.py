@@ -550,6 +550,8 @@ class pydpainter:
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
+        self.window_title = "PyDPainter"
+        self.modified_count = -1
         self.UNDO_INDEX_MAX = 5
         self.undo_image = []
         self.undo_index = -1
@@ -720,11 +722,27 @@ class pydpainter:
             if old_cursor == config.cursor.CROSS:
                 config.cursor.shape = config.cursor.CROSS
 
+    def redraw_window_title(self):
+        new_window_title = "PyDPainter - "
+        if config.filename == "":
+            new_window_title += "Untitled" 
+        else:
+            new_window_title += os.path.basename(config.filename)
+
+        if config.modified_count >= 1:
+            new_window_title += " (modified)"
+
+        if new_window_title != config.window_title:
+            config.window_title = new_window_title
+            pygame.display.set_caption(config.window_title)
+
     def recompose(self):
         if self.cycling:
             for crange in config.cranges:
                 crange.apply_to_pal(self.pal)
             self.set_all_palettes(self.pal)
+
+        self.redraw_window_title()
 
         screen_rgb = None
         if self.zoom.on:
@@ -893,6 +911,8 @@ class pydpainter:
         if self.suppress_undo:
             self.suppress_undo = False
             return
+
+        self.modified_count += 1
 
         #Backup for undo
         self.undo_index = self.undo_index + 1
