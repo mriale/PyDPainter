@@ -1270,3 +1270,5 @@ class pydpainter:
 
             self.recompose()
 
+            if not config.running and config.modified_count >= 1:
+                quit_req(config.pixel_req_canvas)
