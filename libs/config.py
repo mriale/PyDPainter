@@ -980,11 +980,14 @@ class pydpainter:
                 if crange.low < crange.high and crange.flags & 1 and crange.rate > 0:
                     pygame.time.set_timer(pygame.USEREVENT+1+rangenum, crange.rate_to_milli())
 
-    def resize_canvas(self, width, height):
+    def size_canvas(self, width, height, resize):
         # Crop or expand pixel canvas
         new_pixel_canvas = pygame.Surface((width, height),0,8)
         new_pixel_canvas.set_palette(config.pal)
-        new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+        if resize:
+            pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
+        else:
+            new_pixel_canvas.blit(config.pixel_canvas, (0,0))
         config.pixel_canvas = new_pixel_canvas
         config.pixel_width = width
         config.pixel_height = height
@@ -1271,4 +1274,9 @@ class pydpainter:
             self.recompose()
 
             if not config.running and config.modified_count >= 1:
-                quit_req(config.pixel_req_canvas)
+                answer = question_req(config.pixel_req_canvas,
+                         "Unsaved Changes",
+                         "Are you sure you want\nto quit PyDPainter?",
+                         ["Yes","No"])
+                if answer == 1:
+                    config.running = True

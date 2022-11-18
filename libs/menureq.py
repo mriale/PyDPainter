@@ -526,6 +526,8 @@ Or select one:
  [Full Page    xxx x yyy]
  [Overscan     xxx x yyy]
 
+Resize: [Yes~No]
+
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
@@ -562,6 +564,16 @@ Or select one:
         pageg[i].label = pageg[i].label.replace("xxx", str(page_size[i][0]))
         pageg[i].label = pageg[i].label.replace("yyy", str(page_size[i][1]))
 
+    #Gather page resize gadgets
+    resize_page = False
+    gResize = [None, None]
+    gResize[1] = req.gadget_id("8_8") #Yes
+    gResize[0] = req.gadget_id("12_8") #No
+
+    for i in range(0,2):
+        gResize[i].state = (resize_page == (i == 1))
+        gResize[i].need_redraw = True
+
     req.draw(screen)
     config.recompose()
 
@@ -576,8 +588,10 @@ Or select one:
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
-                    config.resize_canvas(int(widthg.value), int(heightg.value))
+                    config.size_canvas(int(widthg.value), int(heightg.value), resize_page)
                     running = 0
+                elif ge.gadget in gResize:
+                    resize_page = (gResize.index(ge.gadget) == 1)
                 elif ge.gadget.label == "Cancel":
                     running = 0
                 elif ge.gadget in pageg:
@@ -586,6 +600,11 @@ Or select one:
                     widthg.need_redraw = True
                     heightg.value = str(page_size[i][1])
                     heightg.need_redraw = True
+
+        if resize_page:
+            gResize[1].state = 1
+        else:
+            gResize[0].state = 1
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
@@ -741,18 +760,20 @@ more details.    ############
 
     return
 
-def quit_req(screen):
-    req = str2req("Unsaved Changes", """
-Are you sure you want
-to quit PyDPainter?
-[Yes][No]
-""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+def question_req(screen, title, text, buttons):
+    all_text = text + "\n"
+    for button_text in buttons:
+        all_text += "[" + button_text + "]"
+
+    req = str2req(title, all_text, "",
+          mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
     req.draw(screen)
     config.recompose()
 
+    button_clicked = -1
     running = 1
     while running:
         event = pygame.event.wait()
@@ -763,8 +784,7 @@ to quit PyDPainter?
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
-                if ge.gadget.label == "No":
-                    config.running = True
+                button_clicked = buttons.index(ge.gadget.label)
                 running = 0 
 
         if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
@@ -774,4 +794,4 @@ to quit PyDPainter?
     config.pixel_req_rect = None
     config.recompose()
 
-    return
+    return button_clicked
