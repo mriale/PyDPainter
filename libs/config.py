@@ -5,7 +5,7 @@ config.py
 Implement the global area of PyDPainter
 """
 
-import sys, math, os.path, random, colorsys, platform, re
+import sys, math, os.path, random, colorsys, platform, re, datetime
 
 from colorrange import *
 from cursor import *
@@ -495,7 +495,7 @@ class pydpainter:
         self.pixel_mode = "NTSC"
         self.pixel_aspect = 10.0/11.0 #NTSC
         self.color_depth = 16
-        self.display_mode = self.NTSC_MONITOR_ID # lores NTSC
+        self.display_mode = config.getPalNtscDefault()
         self.scale = 3
         self.scanlines = True
         self.brush = Brush()
@@ -573,6 +573,21 @@ class pydpainter:
             curr_action.move(config.get_mouse_pixel_pos())
         else:
             curr_action.drag(config.get_mouse_pixel_pos(), pygame.mouse.get_pressed())
+
+    def getPalNtscDefault(self):
+        display_mode = self.PAL_MONITOR_ID
+
+        #guess PAL or NTSC default by time zone
+        UTC_offset = int(round((datetime.datetime.now() - datetime.datetime.utcnow()).seconds/60/60,2))
+        if UTC_offset > 12:
+            UTC_offset -= 24
+
+        if UTC_offset >= -10 and UTC_offset <= -4: #North/South America
+            display_mode = self.NTSC_MONITOR_ID
+        elif UTC_offset == 9: #Japan
+            display_mode = self.NTSC_MONITOR_ID
+
+        return display_mode
 
     def setDrawMode(self, dm):
         mg = config.menubar.menu_id("mode")

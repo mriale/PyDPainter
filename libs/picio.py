@@ -215,6 +215,10 @@ def load_pic(filename):
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config)
+        elif pic.get_width() > 320 or pic.get_height() > 256:
+            config.display_mode |= config.MODE_HIRES | config.MODE_LACE
+        else:
+            config.display_mode &= ~(config.MODE_HIRES | config.MODE_LACE)
         config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
         pic.set_palette(config.pal)
     else:
