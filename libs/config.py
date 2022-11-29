@@ -810,6 +810,8 @@ class pydpainter:
             self.zoom.left_rect = (0,menu_bar_height, w,self.screen_height)
             self.zoom.border_rect = (w-6,0,6,self.screen_height)
             self.zoom.right_rect = (w,menu_bar_height, zoom_width*self.zoom.factor,zoom_height*self.zoom.factor)
+            zxsize = min(zx0+zoom_width, self.pixel_width)*self.zoom.factor
+            zysize = min(zy0+zoom_height, self.pixel_height)*self.zoom.factor
 
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
@@ -817,10 +819,11 @@ class pydpainter:
             #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
 
             # Draw right zoomed image
+            pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
             zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
-            screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height))
+            screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))
 
             # Draw divider
             pygame.draw.rect(screen_rgb, (0,0,0), (w-6,0,6,self.screen_height))
