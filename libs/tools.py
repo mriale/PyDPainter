@@ -34,12 +34,16 @@ class ToolDragAction(ToolAction):
         config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.p1 == None:
+            return
         if buttons[0]:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords, interrupt=True)
         elif buttons[2]:
             drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True)
 
     def drawfinal(self, coords, button):
+        if self.p1 == None:
+            return
         if button == 1:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords)
         elif button == 3:
@@ -74,6 +78,8 @@ class ToolDragAction(ToolAction):
             self.drawrubber(coords, buttons)
 
     def drag(self, coords, buttons):
+        if self.p1 == None:
+            return
         config.cycle_handled = True
         config.clear_pixel_draw_canvas()
         if buttons[0] or buttons[2]:
@@ -82,9 +88,20 @@ class ToolDragAction(ToolAction):
     def mouseup(self, coords, button):
         if not button in [1,3]:
             return
+        if self.p1 == None:
+            return
         config.cycle_handled = True
         config.clear_pixel_draw_canvas()
         self.drawfinal(coords, button)
+
+    def keydown(self, key, mod, unicode):
+        if key == K_ESCAPE:
+            config.clear_pixel_draw_canvas()
+            config.brush.pen_down = False
+            self.p1 = None
+            self.button = None
+            return True
+        return False
 
 class DoBIBrush(ToolAction):
     """
@@ -184,6 +201,8 @@ class DoDraw(ToolSingleAction):
 
     def drag(self, coords, buttons):
         if config.subtool_selected:
+            if self.polylist == None:
+                return
             if buttons[0] or buttons[2]:
                 drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
                 self.polylist.append(coords)
@@ -201,6 +220,8 @@ class DoDraw(ToolSingleAction):
     def mouseup(self, coords, button):
         if button in [1,3]:
             if config.subtool_selected:
+                if self.polylist == None:
+                    return
                 config.clear_pixel_draw_canvas()
                 if button == 1:
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
@@ -211,6 +232,16 @@ class DoDraw(ToolSingleAction):
             config.save_undo()
             config.brush.pen_down = False
             self.move(coords)
+
+    def keydown(self, key, mod, unicode):
+        if config.subtool_selected:
+            if key == K_ESCAPE:
+                config.clear_pixel_draw_canvas()
+                config.brush.pen_down = False
+                self.polylist = None
+                self.button = None
+                return True
+        return False
 
 class DoLine(ToolDragAction):
     """
@@ -309,6 +340,16 @@ class DoCurve(ToolSingleAction):
             elif button == 3:
                 drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords)
             self.line_end = coords
+
+    def keydown(self, key, mod, unicode):
+        if key == K_ESCAPE:
+            config.clear_pixel_draw_canvas()
+            config.brush.pen_down = False
+            self.line_start = None
+            self.line_end = None
+            self.button = None
+            return True
+        return False
 
 class DoFill(ToolSingleAction):
     """
@@ -461,6 +502,12 @@ class DoRect(ToolDragAction):
     """
     Rectangle tool
     """
+    def selected(self, attrs):
+        if attrs["subtool"] and attrs["rightclick"]:
+            fill_req(config.pixel_req_canvas)
+        else:
+            super().selected(attrs)
+
     def drawbefore(self, coords):
         mouseX, mouseY = coords
         drawxorcross(config.pixel_canvas, mouseX, mouseY)
@@ -486,6 +533,12 @@ class DoCircle(ToolDragAction):
     """
     Circle tool
     """
+    def selected(self, attrs):
+        if attrs["subtool"] and attrs["rightclick"]:
+            fill_req(config.pixel_req_canvas)
+        else:
+            super().selected(attrs)
+
     def drawbefore(self, coords):
         mouseX, mouseY = coords
         drawxorcross(config.pixel_canvas, mouseX, mouseY)
@@ -537,6 +590,12 @@ class DoEllipse(ToolDragAction):
     """
     Ellipse tool
     """
+    def selected(self, attrs):
+        if attrs["subtool"] and attrs["rightclick"]:
+            fill_req(config.pixel_req_canvas)
+        else:
+            super().selected(attrs)
+
     def drawbefore(self, coords):
         mouseX, mouseY = coords
         drawxorcross(config.pixel_canvas, mouseX, mouseY)
@@ -596,7 +655,10 @@ class DoPoly(ToolSingleAction):
     def selected(self, attrs):
         config.brush.pen_down = False
         if attrs["rightclick"]:
-            return
+            if attrs["subtool"]:
+                fill_req(config.pixel_req_canvas)
+            else:
+                spacing_req(config.pixel_req_canvas)
 
         config.tool_selected = self.id
         if attrs["subtool"]:
@@ -639,6 +701,18 @@ class DoPoly(ToolSingleAction):
             self.do_poly_fill.mouseup(coords, button)
         else:
             self.do_poly_line.mouseup(coords, button)
+
+    def keydown(self, key, mod, unicode):
+        if key == K_ESCAPE:
+            config.clear_pixel_draw_canvas()
+            self.do_poly_line.polylist = []
+            self.do_poly_fill.polylist = []
+            self.do_poly_line.last_coords = config.get_mouse_pixel_pos()
+            self.do_poly_fill.last_coords = config.get_mouse_pixel_pos()
+            self.do_poly_line.hidden = False
+            self.do_poly_fill.hidden = False
+            return True
+        return False
 
 class DoPolyLine(DoPoly):
     """
