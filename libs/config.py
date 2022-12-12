@@ -152,6 +152,7 @@ class pydpainter:
             config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
             config.filename = filename
+            config.modified_count = 0
 
     def closest_scale4(self,maxnum,num):
         if num >= maxnum:
@@ -1246,6 +1247,10 @@ class pydpainter:
                         config.menubar.visible = True
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
+                elif e.mod & KMOD_CTRL and e.key == K_z:
+                    config.undo()
+                elif e.mod & KMOD_CTRL and e.key == K_y:
+                    config.redo()
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
