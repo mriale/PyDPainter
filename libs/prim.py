@@ -79,7 +79,7 @@ def end_shape(screen, color, primprops=None, interrupt=False):
 
 def symm_coords_list(coords, handlesymm=True, interrupt=False):
     n = len(coords)
-    coords_symm = np.array([],dtype=np.int)
+    coords_symm = np.array([],dtype=np.int32)
     symm_len = 0
     last_symm_coords = None
     for i in range(n):
@@ -925,7 +925,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
             coordcontrol = (ecurves[i][j+2][0], ecurves[i][j+2][1])
             cl.coordlist[j:j+3] = drawcurve(screen, color, coordfrom, coordto, coordcontrol, coordsonly=True, handlesymm=False)
             cl0 = [item for sublist in cl.coordlist for item in sublist]
-            npcl = np.array(cl0, dtype=np.int)
+            npcl = np.array(cl0, dtype=np.int32)
             sl = {}
             for j in range(0,npcl.shape[0]):
                 x,y = npcl[j]
@@ -1886,7 +1886,7 @@ def convert8(pixel_canvas_rgb, pal, is_bgr=False):
     #create new 8-bit surface
     pixbuff8 = np.zeros_like(pixbuff24, dtype="uint32")
 
-    npal = np.array(pal, dtype=np.int)
+    npal = np.array(pal, dtype=np.int32)
 
     #find unique colors
     unique_colors = np.unique(pixbuff24)
@@ -1897,7 +1897,7 @@ def convert8(pixel_canvas_rgb, pal, is_bgr=False):
             b,g,r = color>>16, (color>>8)&255, color&255
         else:
             r,g,b = color>>16, (color>>8)&255, color&255
-        ncol = np.array([r,g,b], dtype=np.int)
+        ncol = np.array([r,g,b], dtype=np.int32)
 
         # Find color distance
         nrgbdiff = ncol - npal
