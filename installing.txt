@@ -1,6 +1,9 @@
 #for Windows
-python3 -m pip install -U pygame --user
-python3 -m pip install -U numpy --user
+Run:
+  install_pygame.bat
+OR
+  python3 -m pip install -U pygame --user
+  python3 -m pip install -U numpy --user
 
 #for Ubuntu 19.10 and below
 sudo apt install python3-pip
@@ -9,3 +12,7 @@ sudo pip3 install numpy
 
 #for Ubuntu 20.04 and above
 sudo apt install python3-pygame
+
+#for Mac and other Linux distros:
+sudo pip3 install pygame
+sudo pip3 install numpy

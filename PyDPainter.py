@@ -7,22 +7,44 @@ Build a usable pixel art paint program in pygame
 
 import sys, math, os, random, colorsys
 
-import contextlib
-with contextlib.redirect_stdout(None):
-    import pygame
-    from pygame.locals import *
+try:
+    import contextlib
+    with contextlib.redirect_stdout(None):
+        import pygame
+        from pygame.locals import *
 
-os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
-os.chdir(os.path.realpath(os.path.dirname(__file__)))
-sys.path.insert(0, 'libs')
+    os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
+    os.chdir(os.path.realpath(os.path.dirname(__file__)))
+    sys.path.insert(0, 'libs')
 
-import pixelfont
-from pixelfont import PixelFont
+    import pixelfont
+    from pixelfont import PixelFont
 
-from operator import itemgetter
+    from operator import itemgetter
 
-from config import *
+    from config import *
 
-if __name__ == "__main__":
-    config = pydpainter()
-    config.run()
+    if __name__ == "__main__":
+        config = pydpainter()
+        config.run()
+except:
+    import tkinter as tk
+    root = tk.Tk()
+
+    #Put out a useful message if pygame is not installed
+    message = tk.Label(root, text="""
+Some required Python modules are not installed:
+- pygame
+- numpy
+
+For Windows, double-click this BAT file to install:
+install_pygame.bat
+
+For Linux and other systems, see 'installing.txt'
+
+After the modules are successfully installed, re-run PyDPainter.
+""")
+    message.pack()
+
+    # keep the window displaying
+    root.mainloop()
