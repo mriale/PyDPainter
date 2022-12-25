@@ -383,6 +383,9 @@ Speed---------___^^
                     palg.need_redraw = True
                     colorg.value = color
                     colorg.need_redraw = True
+                    palette_page = color // 32 * 32
+                    palpageg.label = chr(65+(palette_page//32))
+                    palpageg.need_redraw = True
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
