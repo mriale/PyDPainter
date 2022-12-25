@@ -13,20 +13,7 @@ try:
         import pygame
         from pygame.locals import *
 
-    os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
-    os.chdir(os.path.realpath(os.path.dirname(__file__)))
-    sys.path.insert(0, 'libs')
-
-    import pixelfont
-    from pixelfont import PixelFont
-
-    from operator import itemgetter
-
-    from config import *
-
-    if __name__ == "__main__":
-        config = pydpainter()
-        config.run()
+    import numpy
 except:
     import tkinter as tk
     root = tk.Tk()
@@ -48,3 +35,21 @@ After the modules are successfully installed, re-run PyDPainter.
 
     # keep the window displaying
     root.mainloop()
+    exit(1)
+
+######################################################
+
+os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
+os.chdir(os.path.realpath(os.path.dirname(__file__)))
+sys.path.insert(0, 'libs')
+
+import pixelfont
+from pixelfont import PixelFont
+
+from operator import itemgetter
+
+from config import *
+
+if __name__ == "__main__":
+    config = pydpainter()
+    config.run()
