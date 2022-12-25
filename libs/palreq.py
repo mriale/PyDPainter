@@ -370,6 +370,20 @@ Speed---------___^^
             config.pal = list(backuppal)
             config.set_all_palettes(config.pal)
 
+        #Get color from pixel canvas
+        if event.type == MOUSEBUTTONUP and event.button == 1:
+            x,y = config.get_mouse_pixel_pos(event)
+            if x < rx or y < ry or x > rx+rw or y > ry+rh:
+                x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
+                if x1 >= 0 and y1 >= 0 and \
+                   x1<config.pixel_canvas.get_width() and \
+                   y1<config.pixel_canvas.get_height():
+                    color = config.pixel_canvas.get_at_mapped((x1,y1))
+                    palg.value = color
+                    palg.need_redraw = True
+                    colorg.value = color
+                    colorg.need_redraw = True
+
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK":

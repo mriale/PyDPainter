@@ -649,7 +649,7 @@ class pydpainter:
         return mouseX, mouseY
 
 
-    def get_mouse_pixel_pos(self, event=None, ignore_grid=False):
+    def get_mouse_pixel_pos(self, event=None, ignore_grid=False, ignore_req=False):
         mouseX, mouseY = pygame.mouse.get_pos()
 
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
@@ -661,7 +661,7 @@ class pydpainter:
 
         mouseside = 0
 
-        if self.zoom.on and self.pixel_req_rect == None:
+        if self.zoom.on and (self.pixel_req_rect == None or ignore_req):
             x0,y0,xw,yh = self.zoom.left_rect
             if (mouseX < x0+xw or self.zoom.mousedown_side == 1) and self.zoom.mousedown_side != 2:
                 mouseside = 1
