@@ -169,7 +169,10 @@ Preview
     list_itemsg.items = pygame.font.get_fonts()
     list_itemsg.items.sort()
     list_itemsg.items = list(filter(lambda fname: is_latin_font(fname), list_itemsg.items))
-    list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font_name)
+    if config.text_tool_font_name in list_itemsg.items:
+        list_itemsg.top_item = list_itemsg.items.index(config.text_tool_font_name)
+    else:
+        list_itemsg.top_item = 0
     list_itemsg.value = list_itemsg.top_item
     last_list_itemsg_value = list_itemsg.value
 
