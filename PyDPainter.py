@@ -17,6 +17,7 @@ try:
 except:
     import tkinter as tk
     root = tk.Tk()
+    root.title("PyDPainter Error")
 
     #Put out a useful message if pygame is not installed
     message = tk.Label(root, text="""
@@ -24,8 +25,7 @@ Some required Python modules are not installed:
 - pygame
 - numpy
 
-For Windows, double-click this BAT file to install:
-install_pygame.bat
+For Windows, run 'install_pygame.bat'
 
 For Linux and other systems, see 'installing.txt'
 
