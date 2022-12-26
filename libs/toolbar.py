@@ -70,7 +70,7 @@ class ToolGadget(Gadget):
                 
                 if quadrant == 0: #right
                     #tail
-                    tx = w-1
+                    tx = w-2
                     th = wrect.height
                     ty = (h - th) // 2
                     tw = wrect.width
