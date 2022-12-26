@@ -25,6 +25,17 @@ class DoNew(MenuAction):
             config.modified_count = 0
             config.filename = ""
 
+def io_error_req(title, message, filename, linelen=33):
+    if len(filename) > linelen:
+        short_file = "..." + filename[-(linelen-3):]
+    else:
+        short_file = filename
+    dummy = question_req(config.pixel_req_canvas,
+             title,
+             message % (short_file),
+             ["OK"])
+
+
 class DoOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
@@ -39,7 +50,7 @@ class DoOpen(MenuAction):
                 config.filename = filename
                 config.modified_count = 0
             except:
-                pass
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoSave(MenuAction):
     def selected(self, attrs):
@@ -221,7 +232,7 @@ class DoBrushOpen(MenuAction):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            #try:
+            try:
                 brush_config = copy.copy(config)
                 newimage = load_iff(filename, brush_config)
                 newimage.set_palette(config.pal)
@@ -233,8 +244,8 @@ class DoBrushOpen(MenuAction):
                 config.brush.image = reduced
                 config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
-            #except:
-                pass
+            except:
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
         config.doKeyAction()
 
 class DoBrushSaveAs(MenuAction):
