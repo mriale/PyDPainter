@@ -80,7 +80,7 @@ def quantize_palette(pal, color_depth=16):
         return newpal
 
 color_skew=[]
-for r in range(2,16):
+for r in range(2,30):
     for g in range(1,r+1):
         for b in range(1,g+1):
             color_skew.append(((r//2)*((r%2)*2-1), \
