@@ -407,12 +407,12 @@ class DoAirbrush(ToolSingleAction):
             config.brush.pen_down = True
             config.clear_pixel_draw_canvas()
             self.draw(config.color, coords)
-            pygame.time.set_timer(pygame.USEREVENT, 15)
+            pygame.time.set_timer(config.TOOLEVENT, 15)
         elif button == 3:
             config.brush.pen_down = True
             config.clear_pixel_draw_canvas()
             self.draw(config.bgcolor, coords)
-            pygame.time.set_timer(pygame.USEREVENT, 15)
+            pygame.time.set_timer(config.TOOLEVENT, 15)
 
     def drag(self, coords, buttons):
         if buttons[0]:
@@ -422,7 +422,7 @@ class DoAirbrush(ToolSingleAction):
 
     def mouseup(self, coords, button):
         if button in [1,3]:
-            pygame.time.set_timer(pygame.USEREVENT, 0)
+            pygame.time.set_timer(config.TOOLEVENT, 0)
             config.save_undo()
             config.brush.pen_down = False
             self.move(coords)
@@ -930,7 +930,7 @@ class DoText(ToolSingleAction):
 
     def deselected(self, attrs):
         self.stamptext()
-        pygame.time.set_timer(pygame.USEREVENT, 0)
+        pygame.time.set_timer(config.TOOLEVENT, 0)
 
     def drawbox(self, coords):
         if coords == None:
@@ -1002,7 +1002,7 @@ class DoText(ToolSingleAction):
 
     def move(self, coords):
         if self.pos == None:
-            pygame.time.set_timer(pygame.USEREVENT, 0)
+            pygame.time.set_timer(config.TOOLEVENT, 0)
             config.clear_pixel_draw_canvas()
             self.drawbox(coords)
             self.box_on = True
@@ -1016,7 +1016,7 @@ class DoText(ToolSingleAction):
         config.clear_pixel_draw_canvas()
         self.drawbox(coords)
         self.box_on = True
-        pygame.time.set_timer(pygame.USEREVENT, 0)
+        pygame.time.set_timer(config.TOOLEVENT, 0)
 
     def mousedown(self, coords, button):
         if button in [1,3]:
@@ -1032,7 +1032,7 @@ class DoText(ToolSingleAction):
         if button in [1,3]:
             config.clear_pixel_draw_canvas()
             self.text = ""
-            pygame.time.set_timer(pygame.USEREVENT, 100)
+            pygame.time.set_timer(config.TOOLEVENT, 100)
             self.pos = coords
             self.drawbox(coords)
             self.box_on = True
@@ -1444,11 +1444,11 @@ class PalGadget(ToolGadget):
                             g.render_tip()
                             self.wait_for_tip = True
                             self.tipg = g
-                            pygame.time.set_timer(USEREVENT+7, 1000)
+                            pygame.time.set_timer(config.TOOLTIPEVENT, 1000)
                     if not tip_on:
                         self.tip_canvas = None
-                elif event.type == USEREVENT+7:
-                    pygame.time.set_timer(USEREVENT+7, 0)
+                elif event.type == config.TOOLTIPEVENT:
+                    pygame.time.set_timer(config.TOOLTIPEVENT, 0)
                     self.toolbar.wait_for_tip = False
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
@@ -1473,7 +1473,7 @@ def init_toolbar(config_in):
     h = config.screen_height
     w = tools_image.get_width()//3
     toolbar_canvas = pygame.Surface((w,h),0)
-    toolbar = Toolbar(toolbar_canvas, config.cursor, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3)
+    toolbar = Toolbar(toolbar_canvas, config.cursor, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3, tip_event=config.TOOLTIPEVENT)
     toolbar.add_grid((0,21*scaleY,tools_image.get_width()//3, tools_image.get_height()-21*scaleY), 2, 9, attr_list=[
         ["dot",      ToolGadget.TT_GROUP,  "s", DoDot],
         ["draw",     ToolGadget.TT_GROUP,  "dD", DoDraw],
@@ -1554,7 +1554,7 @@ def main():
 
     scaleY = 1
     scaleX = 1
-    mytoolbar = Toolbar(toolbar_screen, cursor_layer, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3)
+    mytoolbar = Toolbar(toolbar_screen, cursor_layer, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3, tip_event=config.TOOLTIPEVENT)
     mytoolbar.add_grid((0,22*scaleY,tools_image.get_width()//3, tools_image.get_height()-22*scaleY), 2, 9, attr_list=[
         ["dot",      ToolGadget.TT_GROUP,  "s"],
         ["draw",     ToolGadget.TT_GROUP,  "dD"],

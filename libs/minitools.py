@@ -89,7 +89,7 @@ def init_minitoolbar(config_in):
     w = minitools_image.get_width()
     minitoolbar_canvas = pygame.Surface((w,h),0)
 
-    minitoolbar = Toolbar(minitoolbar_canvas, config.cursor, (0,0,w,h), minitools_image, height=numsubtools)
+    minitoolbar = Toolbar(minitoolbar_canvas, config.cursor, (0,0,w,h), minitools_image, height=numsubtools, tip_event=config.TOOLTIPEVENT)
     minitoolbar.add_grid((0,0,w,10*scaleY), numtools, 1, attr_list=[
         ["expand",    ToolGadget.TT_TOGGLE, "", DoExpand],
         ["help",      ToolGadget.TT_TOGGLE, "", DoHelp],

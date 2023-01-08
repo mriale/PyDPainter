@@ -127,7 +127,7 @@ class ToolGadget(Gadget):
 
 class Toolbar:
     """This class abstracts a generic toolbar"""
-    def __init__(self, screen, cursor, rect, image, width=1, height=1, offset=(0,0)):
+    def __init__(self, screen, cursor, rect, image, width=1, height=1, offset=(0,0), tip_event=pygame.USEREVENT):
         self.screen = screen
         self.cursor = cursor
         self.rect = rect
@@ -135,6 +135,7 @@ class Toolbar:
         self.width = width
         self.height = height
         self.offset = offset
+        self.tip_event = tip_event
         self.tools = []
         self.hotkey_map = {}
         self.coord_map = {}
@@ -371,12 +372,12 @@ class Toolbar:
                         toolg.render_tip()
                         self.wait_for_tip = True
                         self.tipg = toolg
-                        pygame.time.set_timer(USEREVENT+7, 1000)
+                        pygame.time.set_timer(self.tip_event, 1000)
             if not tip_on:
                 self.tip_canvas = None
                 self.tipg = None
-        elif event.type == USEREVENT+7:
-            pygame.time.set_timer(USEREVENT+7, 0)
+        elif event.type == self.tip_event:
+            pygame.time.set_timer(self.tip_event, 0)
             self.wait_for_tip = False
         return ge
 

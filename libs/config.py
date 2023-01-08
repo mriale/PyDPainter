@@ -551,6 +551,24 @@ class pydpainter:
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
+        #Color cycling user events
+        self.ALLCUSTOMEVENTS = []
+        self.CYCLEEVENTS = []
+        for i in range(len(self.cranges)):
+            user_event = pygame.event.custom_type()
+            self.CYCLEEVENTS.append(user_event)
+            self.ALLCUSTOMEVENTS.append(user_event)
+
+        #Tool user event - airbrush spray, text cursor blink, etc
+        user_event = pygame.event.custom_type()
+        self.TOOLEVENT = user_event
+        self.ALLCUSTOMEVENTS.append(user_event)
+
+        #Tool tip delay user event
+        user_event = pygame.event.custom_type()
+        self.TOOLTIPEVENT = user_event
+        self.ALLCUSTOMEVENTS.append(user_event)
+
         self.window_title = "PyDPainter"
         self.modified_count = -1
         self.UNDO_INDEX_MAX = 5
@@ -989,7 +1007,7 @@ class pydpainter:
             self.set_all_palettes(self.pal)
             config.brush.size = config.brush.size #invalidate bruch cache
             for rangenum, crange in enumerate(self.cranges):
-                pygame.time.set_timer(pygame.USEREVENT+1+rangenum, 0)
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], 0)
 
     def start_cycling(self):
         if not self.cycling:
@@ -997,7 +1015,8 @@ class pydpainter:
             self.cycling = True
             for rangenum, crange in enumerate(self.cranges):
                 if crange.low < crange.high and crange.flags & 1 and crange.rate > 0:
-                    pygame.time.set_timer(pygame.USEREVENT+1+rangenum, crange.rate_to_milli())
+                    pygame.time.set_timer(self.CYCLEEVENTS[rangenum], 0)
+                    pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):
         # Crop or expand pixel canvas
@@ -1044,8 +1063,8 @@ class pydpainter:
                 #get rid of extra resize events
                 continue
 
-            if e.type >= pygame.USEREVENT:
-                if e.type >= pygame.USEREVENT and pygame.event.peek(range(pygame.USEREVENT,pygame.USEREVENT+8)):
+            if e.type in self.ALLCUSTOMEVENTS:
+                if  pygame.event.peek(self.ALLCUSTOMEVENTS):
                     #get rid of extraneous color cycle and other user events
                     continue
 
@@ -1282,7 +1301,7 @@ class pydpainter:
                     else:
                         curr_action.mouseup(self.get_mouse_pixel_pos(e), e.button)
                         config.wait_for_mouseup = [False] * len(config.wait_for_mouseup)
-                elif e.type == USEREVENT:
+                elif e.type == self.TOOLEVENT:
                     if buttons[0] or buttons[2]:
                         curr_action.drag(self.get_mouse_pixel_pos(e), buttons)
                     else:
@@ -1290,7 +1309,7 @@ class pydpainter:
 
             last_wait_for_mouseup_gui = wait_for_mouseup_gui
 
-            if buttons[0] and e.type <= pygame.USEREVENT and not self.cycle_handled:
+            if buttons[0] and not e.type in self.ALLCUSTOMEVENTS and not self.cycle_handled:
                 cycle()
             self.cycle_handled = False
 

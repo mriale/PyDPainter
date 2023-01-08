@@ -76,7 +76,7 @@ class FontGadget(ListGadget):
             #Size up/down arrows
             if event.type == MOUSEBUTTONUP and event.button == 1 and \
                g.label == "&" and g.state != 0:
-                pygame.time.set_timer(pygame.USEREVENT, 0)
+                pygame.time.set_timer(config.TOOLEVENT, 0)
                 g.state = 0
                 g.need_redraw = True
                 handled = True
@@ -92,7 +92,7 @@ class FontGadget(ListGadget):
 
                 #handle left button
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
-                    pygame.time.set_timer(pygame.USEREVENT, 500)
+                    pygame.time.set_timer(config.TOOLEVENT, 500)
                     if y - gy < gh // 2:
                         #up arrow
                         g.state = 1
@@ -111,8 +111,8 @@ class FontGadget(ListGadget):
                     elif event.button == 5:
                         fontsize -= 1
 
-                elif event.type == USEREVENT:
-                    pygame.time.set_timer(pygame.USEREVENT, 100)
+                elif event.type == config.TOOLEVENT:
+                    pygame.time.set_timer(config.TOOLEVENT, 100)
                     if y - gy < gh // 2:
                         #up arrow
                         g.state = 1
