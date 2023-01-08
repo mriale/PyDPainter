@@ -32,6 +32,11 @@ fontx = 8
 
 config = None
 
+#Workaround for pygame timer bug:
+#  https://github.com/pygame/pygame/issues/3128
+#  https://github.com/pygame/pygame/pull/3062
+TIMEROFF = int((2^32)-1)
+
 def get_at_mapped(screen, coord):
     if "get_at_mapped" in dir(screen):
         return screen.get_at_mapped(coord)
@@ -1007,7 +1012,7 @@ class pydpainter:
             self.set_all_palettes(self.pal)
             config.brush.size = config.brush.size #invalidate bruch cache
             for rangenum, crange in enumerate(self.cranges):
-                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], 0)
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
 
     def start_cycling(self):
         if not self.cycling:
@@ -1015,7 +1020,6 @@ class pydpainter:
             self.cycling = True
             for rangenum, crange in enumerate(self.cranges):
                 if crange.low < crange.high and crange.flags & 1 and crange.rate > 0:
-                    pygame.time.set_timer(self.CYCLEEVENTS[rangenum], 0)
                     pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):

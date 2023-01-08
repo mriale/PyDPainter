@@ -13,6 +13,11 @@ from tiptext import *
 
 config = None
 
+#Workaround for pygame timer bug:
+#  https://github.com/pygame/pygame/issues/3128
+#  https://github.com/pygame/pygame/pull/3062
+TIMEROFF = int((2^32)-1)
+
 class ToolAction(Action):
     def hide(self):
         config.clear_pixel_draw_canvas()
@@ -422,7 +427,7 @@ class DoAirbrush(ToolSingleAction):
 
     def mouseup(self, coords, button):
         if button in [1,3]:
-            pygame.time.set_timer(config.TOOLEVENT, 0)
+            pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
             config.save_undo()
             config.brush.pen_down = False
             self.move(coords)
@@ -930,7 +935,7 @@ class DoText(ToolSingleAction):
 
     def deselected(self, attrs):
         self.stamptext()
-        pygame.time.set_timer(config.TOOLEVENT, 0)
+        pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
 
     def drawbox(self, coords):
         if coords == None:
@@ -1002,7 +1007,7 @@ class DoText(ToolSingleAction):
 
     def move(self, coords):
         if self.pos == None:
-            pygame.time.set_timer(config.TOOLEVENT, 0)
+            pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
             config.clear_pixel_draw_canvas()
             self.drawbox(coords)
             self.box_on = True
@@ -1016,7 +1021,7 @@ class DoText(ToolSingleAction):
         config.clear_pixel_draw_canvas()
         self.drawbox(coords)
         self.box_on = True
-        pygame.time.set_timer(config.TOOLEVENT, 0)
+        pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
 
     def mousedown(self, coords, button):
         if button in [1,3]:
@@ -1448,7 +1453,7 @@ class PalGadget(ToolGadget):
                     if not tip_on:
                         self.tip_canvas = None
                 elif event.type == config.TOOLTIPEVENT:
-                    pygame.time.set_timer(config.TOOLTIPEVENT, 0)
+                    pygame.time.set_timer(config.TOOLTIPEVENT, TIMEROFF)
                     self.toolbar.wait_for_tip = False
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":

@@ -28,6 +28,11 @@ from pygame.locals import *
 import pixelfont
 from pixelfont import *
 
+#Workaround for pygame timer bug:
+#  https://github.com/pygame/pygame/issues/3128
+#  https://github.com/pygame/pygame/pull/3062
+TIMEROFF = int((2^32)-1)
+
 fonty = 12
 fontx = 8
 
@@ -754,7 +759,7 @@ class ListGadget(Gadget):
                     if event.type == config.TOOLEVENT:
                         pygame.time.set_timer(config.TOOLEVENT, 100)
                     else:
-                        pygame.time.set_timer(config.TOOLEVENT, 0)
+                        pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
                         g.state = 0
                         g.need_redraw = True
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))

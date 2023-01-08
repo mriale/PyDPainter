@@ -14,6 +14,11 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+#Workaround for pygame timer bug:
+#  https://github.com/pygame/pygame/issues/3128
+#  https://github.com/pygame/pygame/pull/3062
+TIMEROFF = int((2^32)-1)
+
 config = None
 
 def toolreq_set_config(config_in):
@@ -76,7 +81,7 @@ class FontGadget(ListGadget):
             #Size up/down arrows
             if event.type == MOUSEBUTTONUP and event.button == 1 and \
                g.label == "&" and g.state != 0:
-                pygame.time.set_timer(config.TOOLEVENT, 0)
+                pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
                 g.state = 0
                 g.need_redraw = True
                 handled = True
