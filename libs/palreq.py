@@ -386,6 +386,10 @@ Speed---------___^^
                     palette_page = color // 32 * 32
                     palpageg.label = chr(65+(palette_page//32))
                     palpageg.need_redraw = True
+                    set_rgb_sliders(config.pal[color], rg, gg, bg)
+                    strg.value = rgb_to_hex(config.pal[color])
+                    strg.need_redraw = True
+                    set_hsv_sliders(config.pal[color], hg, sg, vg)
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
