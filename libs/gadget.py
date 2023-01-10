@@ -715,7 +715,7 @@ class ListGadget(Gadget):
                     if g.label == "^":
                         g.state = 1
                         g.need_redraw = True
-                        pygame.time.set_timer(config.TOOLEVENT, 500)
+                        pygame.time.set_timer(USEREVENT, 500)
                     #List text
                     elif g.label == "#":
                         item = (self.numlines * (y-gy-py-py) // (self.numlines * self.fonth)) + self.top_item
@@ -748,7 +748,7 @@ class ListGadget(Gadget):
                         g.scroll_delta(1)
 
             if (event.type == MOUSEBUTTONUP and event.button == 1) or \
-               event.type == config.TOOLEVENT:
+               event.type == USEREVENT:
                 #List up/down arrows
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
@@ -756,14 +756,14 @@ class ListGadget(Gadget):
                             g.scroll_delta(-1)
                         elif g.value == 1:
                             g.scroll_delta(1)
-                    if event.type == config.TOOLEVENT:
-                        pygame.time.set_timer(config.TOOLEVENT, 100)
+                    if event.type == USEREVENT:
+                        pygame.time.set_timer(USEREVENT, 100)
                     else:
-                        pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
+                        pygame.time.set_timer(USEREVENT, TIMEROFF)
                         g.state = 0
                         g.need_redraw = True
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
-                elif g.label == "@":
+                elif g.label == "@" and event.type == MOUSEBUTTONUP:
                     g.clicky = None
                     g.state = 0
                     g.need_redraw = True
