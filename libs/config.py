@@ -518,6 +518,8 @@ class pydpainter:
         self.NUM_COLORS = 32
         self.filename = ""
         self.filepath = os.path.expanduser("~")
+        self.spare_filename = self.filename
+        self.spare_filepath = self.filepath
         self.toolmode = 0
         self.tool_selected = 0
         self.subtool_selected = 0
@@ -576,6 +578,7 @@ class pydpainter:
 
         self.window_title = "PyDPainter"
         self.modified_count = -1
+        self.spare_modified_count = -1
         self.UNDO_INDEX_MAX = 5
         self.undo_image = []
         self.undo_index = -1
