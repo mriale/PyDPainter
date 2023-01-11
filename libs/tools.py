@@ -61,10 +61,10 @@ class ToolDragAction(ToolAction):
             spacing_req(config.pixel_req_canvas)
         else:
             config.tool_selected = self.id
-        if attrs["subtool"]:
-            config.subtool_selected = 1
-        else:
-            config.subtool_selected = 0
+            if attrs["subtool"]:
+                config.subtool_selected = 1
+            else:
+                config.subtool_selected = 0
         self.p1 = config.get_mouse_pixel_pos()
 
     def move(self, coords):
@@ -664,6 +664,7 @@ class DoPoly(ToolSingleAction):
                 fill_req(config.pixel_req_canvas)
             else:
                 spacing_req(config.pixel_req_canvas)
+            return
 
         config.tool_selected = self.id
         if attrs["subtool"]:
