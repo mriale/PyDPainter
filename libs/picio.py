@@ -203,6 +203,7 @@ def load_pic(filename):
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
+        cranges = []
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
@@ -215,12 +216,22 @@ def load_pic(filename):
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config)
+        elif pic.get_width() == 320 and pic.get_height() == 240:
+            #Set mode closest to VGA lores mode
+            config.display_mode = config.PAL_MONITOR_ID
+        elif pic.get_width() == 640 and pic.get_height() == 480:
+            #Set mode closest to VGA hires mode
+            config.display_mode = config.PAL_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
         elif pic.get_width() > 320 or pic.get_height() > 256:
             config.display_mode |= config.MODE_HIRES | config.MODE_LACE
         else:
             config.display_mode &= ~(config.MODE_HIRES | config.MODE_LACE)
         config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
         pic.set_palette(config.pal)
+
+        while len(cranges) < 6:
+            cranges.append(colorrange(0,1,0,0))
+        config.cranges = cranges
     else:
         pic = config.pixel_canvas
 
