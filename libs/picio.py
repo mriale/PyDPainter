@@ -143,6 +143,8 @@ def load_iff(filename, config):
                 #Amiga graphics mode
                 camg_bytes = chunk.read()
                 display_mode = unpack(">I", camg_bytes)
+                if display_mode & config.MODE_HAM:
+                    raise Exception("HAM mode not supported")
                 config.display_mode = display_mode[0] & config.OCS_MODES
             elif chunk.getname() == b'BMHD':
                 #bitmap header
