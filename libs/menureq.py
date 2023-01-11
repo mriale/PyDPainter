@@ -761,12 +761,21 @@ more details.    ############
     return
 
 def question_req(screen, title, text, buttons):
-    all_text = text + "\n"
+    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
+    all_text = dummy_text + "\n"
     for button_text in buttons:
         all_text += "[" + button_text + "]"
 
     req = str2req(title, all_text, "",
           mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+
+    #Replace dummy text with actual text
+    textlines = text.splitlines()
+    textrow = 0
+    for textline in textlines:
+        labelg = req.gadget_id("0_%d" % (textrow))
+        labelg.label = textline
+        textrow += 1
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
