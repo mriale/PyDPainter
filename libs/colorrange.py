@@ -18,21 +18,19 @@ class colorrange:
             self.rate = rate
         else:
             self.rate = 16384
-        self.flags = flags
-        if flags & 1 == 0:
-            self.low = 0
-            self.high = 0
-        else:
-            self.low = low
-            self.high = high
+        #Ignore active flag
+        self.active = True
+        self.reverse = True if flags & 2 else False
+        self.low = low
+        self.high = high
         self.last_timer = 0
 
     def apply_to_pal(self, pal):
         timer = pygame.time.get_ticks()
         rate_milli = self.rate_to_milli()
-        if pal != None and self.rate > 0 and self.flags & 1 and self.low != self.high and self.low < len(pal) and self.high < len(pal):
+        if pal != None and self.rate > 0 and self.active and self.low != self.high and self.low < len(pal) and self.high < len(pal):
             if timer // rate_milli != self.last_timer // rate_milli:
-                if self.flags & 2:
+                if self.reverse:
                     #reverse
                     lowcol = pal[self.low]
                     del pal[self.low]
@@ -74,20 +72,17 @@ class colorrange:
             return True
 
     def is_reverse(self):
-        if self.flags & 2:
-            return True
-        else:
-            return False
+        return self.reverse
 
     def set_reverse(self, revflag):
         if revflag:
-            self.flags = self.flags | 2
+            self.reverse = True
         else:
-            self.flags = self.flags & 253
+            self.reverse = False
 
     def get_dir(self):
         if self.is_active():
-            if self.flags & 2:
+            if self.reverse:
                 return -1
             else:
                 return 1
@@ -101,14 +96,16 @@ class colorrange:
             self.set_reverse(False)
 
     def get_flags(self):
-        if self.is_active():
-            return self.flags | 1
-        else:
-            return self.flags & 254
+        flags = 0
+        if self.active:
+            flags |= 1
+        if self.reverse:
+            flags |= 2
+        return flags
 
     def next_color(self, color_index):
         if color_index >= self.low and color_index <= self.high:
-            if self.flags & 2:
+            if self.reverse:
                 #reverse
                 color_index = color_index - 1
                 if color_index < self.low:
@@ -121,7 +118,7 @@ class colorrange:
         return color_index
 
     def get_range(self):
-        if self.flags & 2:
+        if self.reverse:
             #reverse
             return range(self.high, self.low-1, -1)
         else:
