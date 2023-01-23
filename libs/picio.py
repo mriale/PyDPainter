@@ -119,8 +119,8 @@ def decode_ilbm_body(body_bytes, compression, nPlanes, surf_array):
 def load_iff(filename, config):
     cranges = []
     pic = None
+    display_mode = -1
     try:
-        config.display_mode = 0
         iff_file = open(filename,'rb')
         iff_file.seek(12)
         chunk = Chunk(iff_file)
@@ -142,10 +142,9 @@ def load_iff(filename, config):
             elif chunk.getname() == b'CAMG':
                 #Amiga graphics mode
                 camg_bytes = chunk.read()
-                display_mode = unpack(">I", camg_bytes)
-                if display_mode[0] & config.MODE_HAM:
+                display_mode = unpack(">I", camg_bytes)[0] & config.OCS_MODES
+                if display_mode & config.MODE_HAM:
                     raise Exception("HAM mode not supported")
-                config.display_mode = display_mode[0] & config.OCS_MODES
             elif chunk.getname() == b'BMHD':
                 #bitmap header
                 bmhd_bytes = chunk.read()
@@ -171,7 +170,7 @@ def load_iff(filename, config):
                 decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
                 surf_array = None
 
-                if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+                if display_mode > 0 and display_mode & config.MODE_EXTRA_HALFBRIGHT:
                     for i in range(32):
                         config.pal[i+32] = (config.pal[i][0]//2, config.pal[i][1]//2, config.pal[i][2]//2)
 
@@ -182,6 +181,8 @@ def load_iff(filename, config):
             chunk = Chunk(iff_file)
     except EOFError:
         pass
+
+    config.display_mode = display_mode
 
     while len(cranges) < 6:
         cranges.append(colorrange(0,1,0,0))
@@ -218,16 +219,9 @@ def load_pic(filename):
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config)
-        elif pic.get_width() == 320 and pic.get_height() == 240:
-            #Set mode closest to VGA lores mode
-            config.display_mode = config.PAL_MONITOR_ID
-        elif pic.get_width() == 640 and pic.get_height() == 480:
-            #Set mode closest to VGA hires mode
-            config.display_mode = config.PAL_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
-        elif pic.get_width() > 320 or pic.get_height() > 256:
-            config.display_mode |= config.MODE_HIRES | config.MODE_LACE
         else:
-            config.display_mode &= ~(config.MODE_HIRES | config.MODE_LACE)
+            config.display_mode = -1
+
         config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
         pic.set_palette(config.pal)
 
@@ -236,6 +230,16 @@ def load_pic(filename):
         config.cranges = cranges
     else:
         pic = config.pixel_canvas
+
+    #Guess display mode
+    if config.display_mode < 0:
+        config.color_depth = 256
+        if pic.get_width() > 320 or pic.get_height() > 200:
+            #Assume square pixel VGA
+            config.display_mode = config.VGA_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
+            config.scanlines = False
+        else:
+            config.display_mode = config.NTSC_MONITOR_ID # Low Res 320x200
 
     return pic
 

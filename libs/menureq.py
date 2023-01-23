@@ -173,7 +173,7 @@ def screen_format_req(screen, new_clicked=False):
 [Interlace  320x400] [  8][128]
 [Hi-Res     640x400] [ 16][256]
                       Out of:
-[NTSC~PAL]           [4096~16M]
+[NTSC~PAL~VGA]       [4096~16M]
 
 Resize Page: [Yes~No]
 
@@ -181,10 +181,12 @@ Resize Page: [Yes~No]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
     #Get PAL/NTSC from current display mode
-    if config.display_mode & config.PAL_MONITOR_ID == config.PAL_MONITOR_ID:
+    if config.display_mode & config.MONITOR_ID_MASK == config.PAL_MONITOR_ID:
         aspect = 2
-    else:
+    elif config.display_mode & config.MONITOR_ID_MASK == config.NTSC_MONITOR_ID:
         aspect = 1
+    else:
+        aspect = 0
 
     #Get color depth (16 = 4096 colors and 256 = 16M colors)
     cdepth = config.color_depth
@@ -203,6 +205,7 @@ Resize Page: [Yes~No]
     #Gather NTSC/PAL gadgets
     gNTSC = req.gadget_id("0_7")
     gPAL = req.gadget_id("5_7")
+    gVGA = req.gadget_id("9_7")
 
     #Gather (OCS)ECS/AGA gadgets
     g12bit = req.gadget_id("21_7")
@@ -242,17 +245,26 @@ Resize Page: [Yes~No]
         gResize[i].need_redraw = True
 
     def apply_aspect():
-        if aspect == 1:
+        if aspect == 0:
+            gVGA.state = 1
+            for g in gres:
+                g.label = g.label.replace("256", "200")
+                g.label = g.label.replace("512", "480")
+                g.label = g.label.replace("400", "480")
+                g.need_redraw = True
+        elif aspect == 1:
             gNTSC.state = 1
             for g in gres:
                 g.label = g.label.replace("256", "200")
                 g.label = g.label.replace("512", "400")
+                g.label = g.label.replace("480", "400")
                 g.need_redraw = True
         else:
             gPAL.state = 1
             for g in gres:
                 g.label = g.label.replace("200", "256")
                 g.label = g.label.replace("400", "512")
+                g.label = g.label.replace("480", "512")
                 g.need_redraw = True
     apply_aspect()
 
@@ -374,6 +386,9 @@ Resize Page: [Yes~No]
             elif ge.gadget == gPAL:
                 aspect = 2
                 apply_aspect()
+            elif ge.gadget == gVGA:
+                aspect = 0
+                apply_aspect()
             elif ge.gadget in gres:
                 for i in range(len(gres)):
                     if ge.gadget == gres[i]:
@@ -486,7 +501,9 @@ Resize Page: [Yes~No]
 
         apply_bdepth()
 
-        if aspect == 1:
+        if aspect == 0:
+            gVGA.state = 1
+        elif aspect == 1:
             gNTSC.state = 1
         else:
             gPAL.state = 1

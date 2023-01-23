@@ -259,7 +259,7 @@ class pydpainter:
     def initialize_surfaces(self, reinit=False, first_init=False):
         self.screen_width = 320
  
-        if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
+        if self.display_mode & self.MONITOR_ID_MASK == self.PAL_MONITOR_ID:
             self.set_aspect(2)
             self.screen_height = 256
         else:
@@ -270,8 +270,13 @@ class pydpainter:
         self.aspectY = 1
         if config.display_mode & config.MODE_HIRES and \
            config.display_mode & config.MODE_LACE:
-            self.screen_width *= 2
-            self.screen_height *= 2
+            if config.display_mode & config.MONITOR_ID_MASK == config.VGA_MONITOR_ID:
+                self.set_aspect(0)
+                self.screen_width = 640
+                self.screen_height = 480
+            else:
+                self.screen_width *= 2
+                self.screen_height *= 2
         elif config.display_mode & config.MODE_HIRES:
             self.aspectX = 2
             self.screen_width *= 2
@@ -469,6 +474,8 @@ class pydpainter:
         self.MODE_HIRES              = 0x8000
         self.NTSC_MONITOR_ID         = 0x00011000
         self.PAL_MONITOR_ID          = 0x00021000
+        self.VGA_MONITOR_ID          = 0x00031000
+        self.MONITOR_ID_MASK         = 0x00031000
         self.OCS_MODES = self.MODE_LACE | self.MODE_EXTRA_HALFBRIGHT | self.MODE_HAM | self.MODE_HIRES | self.NTSC_MONITOR_ID | self.PAL_MONITOR_ID
 
         self.fontx = fontx
