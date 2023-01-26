@@ -1472,9 +1472,20 @@ def init_toolbar(config_in):
     global config
     config = config_in
 
+    sm = config.display_info.get_id(config.display_mode)
     scaleX = config.screen_width // 320
     scaleY = config.screen_height // 200
+
+    #Fix 800x600 mode
+    if sm.aspect_x == 1 and sm.aspect_y == 1 and scaleX != scaleY:
+        scaleY = scaleX
+    #Fix 1024x768 mode
+    if scaleX == 3 and scaleY == 3:
+        scaleX = 4
+        scaleY = 4
+
     scaledown = 4 // min(scaleX,scaleY)
+
     tools_image = imgload('tools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
     h = config.screen_height
     w = tools_image.get_width()//3

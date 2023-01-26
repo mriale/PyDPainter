@@ -168,10 +168,10 @@ def screen_format_req(screen, new_clicked=False):
     req = str2req("Choose Screen Format", """
                      Number of
       Format:         Colors:
-[Lo-Res     320x200] [  2][ 32]
-[Med-Res    640x200] [  4][ 64]
-[Interlace  320x400] [  8][128]
-[Hi-Res     640x400] [ 16][256]
+[Lo-Res     000x000] [  2][ 32]
+[Med-Res    000x000] [  4][ 64]
+[Interlace  000x000] [  8][128]
+[Hi-Res     000x000] [ 16][256]
                       Out of:
 [NTSC~PAL~VGA]       [4096~16M]
 
@@ -180,7 +180,10 @@ Resize Page: [Yes~No]
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
+    display_names = ["VGA","NTSC","PAL"]
+
     #Get PAL/NTSC from current display mode
+    global aspect
     if config.display_mode & config.MONITOR_ID_MASK == config.PAL_MONITOR_ID:
         aspect = 2
     elif config.display_mode & config.MONITOR_ID_MASK == config.NTSC_MONITOR_ID:
@@ -189,6 +192,7 @@ Resize Page: [Yes~No]
         aspect = 0
 
     #Get color depth (16 = 4096 colors and 256 = 16M colors)
+    global cdepth
     cdepth = config.color_depth
 
     #Get bitplane depth from current number of colors
@@ -212,16 +216,10 @@ Resize Page: [Yes~No]
     g24bit = req.gadget_id("26_7")
 
     #Get resolution from current screen mode
-    if config.display_mode & config.MODE_HIRES:
-        if config.display_mode & config.MODE_LACE:
-            res = 3
-        else:
-            res = 1
-    else:
-        if config.display_mode & config.MODE_LACE:
-            res = 2
-        else:
-            res = 0
+    modes = config.display_info.get_display(display_names[aspect])
+    res = 0
+    while modes[res].mode_id != config.display_mode:
+        res += 1
 
     #Gather screen mode gadgets
     gres = []
@@ -245,27 +243,30 @@ Resize Page: [Yes~No]
         gResize[i].need_redraw = True
 
     def apply_aspect():
+        global cdepth
         if aspect == 0:
             gVGA.state = 1
-            for g in gres:
-                g.label = g.label.replace("256", "200")
-                g.label = g.label.replace("512", "480")
-                g.label = g.label.replace("400", "480")
-                g.need_redraw = True
+            g12bit.enabled = False
+            g12bit.need_redraw = True
+            if cdepth == 16:
+                cdepth = 256
+                apply_cdepth()
         elif aspect == 1:
             gNTSC.state = 1
-            for g in gres:
-                g.label = g.label.replace("256", "200")
-                g.label = g.label.replace("512", "400")
-                g.label = g.label.replace("480", "400")
-                g.need_redraw = True
+            g12bit.enabled = True
+            g12bit.need_redraw = True
         else:
             gPAL.state = 1
-            for g in gres:
-                g.label = g.label.replace("200", "256")
-                g.label = g.label.replace("400", "512")
-                g.label = g.label.replace("480", "512")
-                g.need_redraw = True
+            g12bit.enabled = True
+            g12bit.need_redraw = True
+
+
+        modes = config.display_info.get_display(display_names[aspect])
+        i=0
+        for g in gres:
+            g.label = "%-10s%4dx%d" % (modes[i].name, modes[i].x, modes[i].y)
+            g.need_redraw = True
+            i += 1
     apply_aspect()
 
     def apply_cdepth():
@@ -463,21 +464,10 @@ Resize Page: [Yes~No]
                         config.backuppal = list(config.pal)
                         config.pixel_canvas.set_palette(config.pal)
 
-                    dmode = 0
-                    px = 320
-                    py = 200
-                    if res in [1,3]:
-                        dmode |= config.MODE_HIRES
-                        px *= 2
-                    if res in [2,3]:
-                        dmode |= config.MODE_LACE
-                        py *= 2
-
-                    if aspect == 1:
-                        dmode |= config.NTSC_MONITOR_ID
-                    else:
-                        dmode |= config.PAL_MONITOR_ID
-                        py = py * 128 // 100
+                    sm = config.display_info.get_display(display_names[aspect])[res]
+                    dmode = sm.mode_id
+                    px = sm.x
+                    py = sm.y
 
                     if halfbright:
                         dmode |= config.MODE_EXTRA_HALFBRIGHT

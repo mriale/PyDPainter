@@ -9,6 +9,7 @@ import sys, math, os.path, random, colorsys, platform, re, datetime
 
 from colorrange import *
 from cursor import *
+from displayinfo import *
 from toolbar import *
 from prim import *
 from palreq import *
@@ -257,32 +258,12 @@ class pydpainter:
             config.window_size = new_window_size
 
     def initialize_surfaces(self, reinit=False, first_init=False):
-        self.screen_width = 320
- 
-        if self.display_mode & self.MONITOR_ID_MASK == self.PAL_MONITOR_ID:
-            self.set_aspect(2)
-            self.screen_height = 256
-        else:
-            self.set_aspect(1)
-            self.screen_height = 200
-
-        self.aspectX = 1
-        self.aspectY = 1
-        if config.display_mode & config.MODE_HIRES and \
-           config.display_mode & config.MODE_LACE:
-            if config.display_mode & config.MONITOR_ID_MASK == config.VGA_MONITOR_ID:
-                self.set_aspect(0)
-                self.screen_width = 640
-                self.screen_height = 480
-            else:
-                self.screen_width *= 2
-                self.screen_height *= 2
-        elif config.display_mode & config.MODE_HIRES:
-            self.aspectX = 2
-            self.screen_width *= 2
-        elif config.display_mode & config.MODE_LACE:
-            self.aspectY = 2
-            self.screen_height *= 2
+        sm = config.display_info.get_id(self.display_mode)
+        self.screen_width = sm.x
+        self.screen_height = sm.y
+        self.pixel_aspect = sm.aspect
+        self.aspectX = sm.aspect_x
+        self.aspectY = sm.aspect_y
 
         if reinit:
             config.truepal = config.get_default_palette(config.NUM_COLORS)
@@ -476,7 +457,13 @@ class pydpainter:
         self.PAL_MONITOR_ID          = 0x00021000
         self.VGA_MONITOR_ID          = 0x00031000
         self.MONITOR_ID_MASK         = 0x00031000
+        self.MODE_VGA_MCGA_KEY       = 0x00031000
+        self.MODE_VGA_VGA_KEY        = 0x00039004
+        self.MODE_VGA_SVGA_KEY       = 0x00039005
+        self.MODE_VGA_XGA_KEY        = 0x00039006
         self.OCS_MODES = self.MODE_LACE | self.MODE_EXTRA_HALFBRIGHT | self.MODE_HAM | self.MODE_HIRES | self.NTSC_MONITOR_ID | self.PAL_MONITOR_ID
+
+        self.display_info = DisplayInfo()
 
         self.fontx = fontx
         self.fonty = fonty
