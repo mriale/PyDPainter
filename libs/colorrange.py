@@ -36,18 +36,20 @@ class colorrange:
                     del pal[self.low]
                     pal.insert(self.high, lowcol)
                     if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
-                        lowcol = pal[self.low + 32]
-                        del pal[self.low + 32]
-                        pal.insert(self.high + 32, lowcol)
+                        if self.low + 32 < len(pal):
+                            lowcol = pal[self.low + 32]
+                            del pal[self.low + 32]
+                            pal.insert(self.high + 32, lowcol)
                 else:
                     #normal
                     highcol = pal[self.high]
                     del pal[self.high]
                     pal.insert(self.low, highcol)
                     if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
-                        highcol = pal[self.high + 32]
-                        del pal[self.high + 32]
-                        pal.insert(self.low + 32, highcol)
+                        if self.high + 32 < len(pal):
+                            highcol = pal[self.high + 32]
+                            del pal[self.high + 32]
+                            pal.insert(self.low + 32, highcol)
         self.last_timer = timer
 
     def rate_to_milli(self):

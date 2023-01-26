@@ -49,6 +49,7 @@ class DisplayInfo:
         return s
 
     def get_id(self, id):
+        id &= ~0x80 #ignore Extra-Halfbright
         for sm in self.db:
             if sm.mode_id == id:
                 return sm

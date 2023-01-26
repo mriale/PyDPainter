@@ -182,6 +182,8 @@ def load_iff(filename, config):
     except EOFError:
         pass
 
+    if display_mode >= 0 and display_mode & config.MONITOR_ID_MASK == 0:
+        display_mode |= config.NTSC_MONITOR_ID
     config.display_mode = display_mode
 
     while len(cranges) < 6:
