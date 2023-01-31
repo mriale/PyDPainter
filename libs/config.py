@@ -36,7 +36,7 @@ config = None
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
 #  https://github.com/pygame/pygame/pull/3062
-TIMEROFF = int((2^32)-1)
+TIMEROFF = int((2**31)-1)
 
 def get_at_mapped(screen, coord):
     if "get_at_mapped" in dir(screen):
@@ -264,6 +264,7 @@ class pydpainter:
         self.pixel_aspect = sm.aspect
         self.aspectX = sm.aspect_x
         self.aspectY = sm.aspect_y
+        self.sm = sm
 
         if reinit:
             config.truepal = config.get_default_palette(config.NUM_COLORS)
@@ -318,7 +319,7 @@ class pydpainter:
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
-        self.cursor = cursor(self.scaled_image, self.screen_width//self.screen_width_min, self.screen_height//self.screen_height_min * 2, self, cursor_images)
+        self.cursor = cursor(self.scaled_image, self.sm.scaleX, self.sm.scaleY*2, self, cursor_images)
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)

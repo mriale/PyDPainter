@@ -16,7 +16,7 @@ config = None
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
 #  https://github.com/pygame/pygame/pull/3062
-TIMEROFF = int((2^32)-1)
+TIMEROFF = int((2**31)-1)
 
 class ToolAction(Action):
     def hide(self):
@@ -1244,9 +1244,9 @@ class PalGadget(ToolGadget):
             self.crng_arrows = pygame.image.load(os.path.join('data', 'crng_arrows.png'))
             value = 0
         if label == "#":
-            scaleX = config.screen_width // 320
-            scaleY = config.screen_height // 200
-            scaledown = 4 // min(scaleX,scaleY)
+            scaleX = config.sm.scaleX
+            scaleY = config.sm.scaleY
+            scaledown = config.sm.scaledown
             self.palettearrows_image = imgload('palettearrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
         super(PalGadget, self).__init__(type, label, rect, value, maxvalue, id, tool_type=ToolGadget.TT_CUSTOM, toolbar=toolbar, action=action)
 
@@ -1290,7 +1290,7 @@ class PalGadget(ToolGadget):
                 if numcolors <= 32:
                     color_height = int(round(h*1.0 / color_rows))
                 else:
-                    color_height = int(round((h-self.palettearrows_image.get_height())*1.0 / color_rows))
+                    color_height = int((h-self.palettearrows_image.get_height())*1.0 / color_rows)
 
                 self.value = config.color
                 if config.color < config.palette_page or config.color > config.palette_page + 31:
@@ -1472,19 +1472,10 @@ def init_toolbar(config_in):
     global config
     config = config_in
 
-    sm = config.display_info.get_id(config.display_mode)
-    scaleX = config.screen_width // 320
-    scaleY = config.screen_height // 200
-
-    #Fix 800x600 mode
-    if sm.aspect_x == 1 and sm.aspect_y == 1 and scaleX != scaleY:
-        scaleY = scaleX
-    #Fix 1024x768 mode
-    if scaleX == 3 and scaleY == 3:
-        scaleX = 4
-        scaleY = 4
-
-    scaledown = 4 // min(scaleX,scaleY)
+    sm = config.sm
+    scaleX = sm.scaleX
+    scaleY = sm.scaleY
+    scaledown = sm.scaledown
 
     tools_image = imgload('tools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
     h = config.screen_height

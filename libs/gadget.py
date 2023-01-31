@@ -31,7 +31,7 @@ from pixelfont import *
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
 #  https://github.com/pygame/pygame/pull/3062
-TIMEROFF = int((2^32)-1)
+TIMEROFF = int((2**31)-1)
 
 fonty = 12
 fontx = 8

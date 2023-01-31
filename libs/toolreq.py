@@ -17,7 +17,7 @@ with contextlib.redirect_stdout(None):
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
 #  https://github.com/pygame/pygame/pull/3062
-TIMEROFF = int((2^32)-1)
+TIMEROFF = int((2**31)-1)
 
 config = None
 
@@ -29,8 +29,8 @@ def toolreq_set_config(config_in):
 class FontGadget(ListGadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "&":
-            scaleX = config.screen_width // 320
-            scaleY = config.screen_height // 200
+            scaleX = rect[2] // 8
+            scaleY = rect[3] // 8
             self.arrowup = np.array([[0,16], [16,0], [32,16]]) * np.array([scaleX/4,scaleY/4])
             self.arrowdown = np.array([[0,24], [32,24], [16,40]]) * np.array([scaleX/4,scaleY/4])
             self.font_sizeg = None

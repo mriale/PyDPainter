@@ -22,8 +22,8 @@ palette_page = 0
 class PPGadget(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "^":
-            scaleX = config.screen_width // 320
-            scaleY = config.screen_height // 200
+            scaleX = rect[2] // 16
+            scaleY = rect[3] // 8
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
