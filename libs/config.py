@@ -648,6 +648,35 @@ class pydpainter:
         for img in config.undo_image:
             img.set_palette(pal)
 
+    def set_screen_offset(self, x, y):
+        # calculate offsets for toolbar and menubar if visible
+        if config.toolbar.visible:
+            tw = config.toolbar.rect[2]
+        else:
+            tw = 0
+        if config.menubar.visible:
+            mh = config.menubar.rect[3]
+        else:
+            mh = 0
+
+        # Center canvas if smaller than the screen
+        if self.pixel_width < self.screen_width - tw:
+            self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
+        if self.pixel_height < self.screen_height - mh:
+            self.screen_offset_y = (self.screen_height - self.pixel_height - mh) // 2
+
+        # Restrict scrolling offset to edges of screen
+        if self.pixel_width >= self.screen_width - tw:
+            if x < self.screen_width - self.pixel_width - tw:
+                self.screen_offset_x = self.screen_width - self.pixel_width - tw
+            elif x > 0:
+                self.screen_offset_x = 0
+        if self.pixel_height >= self.screen_height - mh:
+            if y < self.screen_height - self.pixel_height:
+                self.screen_offset_y = self.screen_height - self.pixel_height
+            elif y > mh:
+                self.screen_offset_y = mh
+
     def get_mouse_pointer_pos(self, event=None):
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
@@ -851,32 +880,7 @@ class pydpainter:
             pygame.draw.rect(screen_rgb, (0,0,0), (w-6,0,6,self.screen_height))
             pygame.draw.rect(screen_rgb, (128,128,128), (w-5,0,4,self.screen_height))
         else:
-            # calculate offsets for toolbar and menubar if visible
-            if config.toolbar.visible:
-                tw = config.toolbar.rect[2]
-            else:
-                tw = 0
-            if config.menubar.visible:
-                mh = config.menubar.rect[3]
-            else:
-                mh = 0
-            # Center canvas if smaller than the screen
-            if self.pixel_width < self.screen_width - tw:
-                self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
-            if self.pixel_height < self.screen_height - mh:
-                self.screen_offset_y = (self.screen_height - self.pixel_height - mh) // 2
-
-            # Restrict scrolling offset to edges of screen
-            if self.pixel_width >= self.screen_width - tw:
-                if self.screen_offset_x < self.screen_width - self.pixel_width - tw:
-                    self.screen_offset_x = self.screen_width - self.pixel_width - tw
-                elif self.screen_offset_x > 0:
-                    self.screen_offset_x = 0
-            if self.pixel_height >= self.screen_height - mh:
-                if self.screen_offset_y < self.screen_height - self.pixel_height:
-                    self.screen_offset_y = self.screen_height - self.pixel_height
-                elif self.screen_offset_y > mh:
-                    self.screen_offset_y = mh
+            self.set_screen_offset(self.screen_offset_x, self.screen_offset_y)
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
@@ -1277,6 +1281,7 @@ class pydpainter:
                     gotkey |= config.zoom.process_event(self.screen, e)
 
                 if gotkey:
+                    self.set_screen_offset(self.screen_offset_x, self.screen_offset_y)
                     self.doKeyAction(curr_action)
 
             #No toolbar event so process event as action on selected tool
