@@ -252,6 +252,7 @@ class pydpainter:
                 pygame.event.get()
                 while True in pygame.mouse.get_pressed():
                     pygame.event.get()
+                new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
  
             config.screen = pygame.display.get_surface()
