@@ -263,6 +263,7 @@ class pydpainter:
         self.screen_width = sm.x
         self.screen_height = sm.y
         self.pixel_aspect = sm.aspect
+        self.pixel_mode = sm.get_pixel_mode()
         self.aspectX = sm.aspect_x
         self.aspectY = sm.aspect_y
         self.sm = sm

@@ -61,10 +61,10 @@ class DoAspect(MiniToolAction):
     Change NTSC/PAL aspect ratio
     """
     def selected(self, attrs):
-        if config.display_mode & config.MONITOR_ID_MASK == config.PAL_MONITOR_ID:
+        if config.sm.get_pixel_mode() == "PAL":
             self.gadget.state = 2
             self.gadget.need_redraw = True
-        elif config.display_mode & config.MONITOR_ID_MASK == config.VGA_MONITOR_ID:
+        elif config.sm.get_pixel_mode() == "square":
             self.gadget.state = 0
             self.gadget.need_redraw = True
         config.set_aspect(self.gadget.state)
