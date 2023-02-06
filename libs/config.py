@@ -1122,11 +1122,9 @@ class pydpainter:
             #Show system mouse pointer if outside of screen
             if e.type == MOUSEMOTION:
                 if e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
-                    if not pygame.mouse.get_visible():
-                        pygame.mouse.set_visible(True)
+                    pygame.mouse.set_visible(True)
                 else:
-                    if pygame.mouse.get_visible():
-                        pygame.mouse.set_visible(False)
+                    pygame.mouse.set_visible(False)
 
             #Get toolbar events if any and set current action to tool selected
             te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
