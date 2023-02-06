@@ -38,6 +38,8 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 
+custom_event_counter = 1
+
 def get_at_mapped(screen, coord):
     if "get_at_mapped" in dir(screen):
         return screen.get_at_mapped(coord)
@@ -449,6 +451,16 @@ class pydpainter:
             pass
         return False
 
+    def new_custom_event(self):
+        global custom_event_counter
+        user_event = None
+        if "custom_type" in dir(pygame.event):
+            user_event = pygame.event.custom_type()
+        else:
+            user_event = USEREVENT + custom_event_counter
+            custom_event_counter += 1
+        return user_event
+
     def initialize(self):
         self.clock = pygame.time.Clock()
 
@@ -559,17 +571,17 @@ class pydpainter:
         self.ALLCUSTOMEVENTS = []
         self.CYCLEEVENTS = []
         for i in range(len(self.cranges)):
-            user_event = pygame.event.custom_type()
+            user_event = config.new_custom_event()
             self.CYCLEEVENTS.append(user_event)
             self.ALLCUSTOMEVENTS.append(user_event)
 
         #Tool user event - airbrush spray, text cursor blink, etc
-        user_event = pygame.event.custom_type()
+        user_event = config.new_custom_event()
         self.TOOLEVENT = user_event
         self.ALLCUSTOMEVENTS.append(user_event)
 
         #Tool tip delay user event
-        user_event = pygame.event.custom_type()
+        user_event = config.new_custom_event()
         self.TOOLTIPEVENT = user_event
         self.ALLCUSTOMEVENTS.append(user_event)
 
