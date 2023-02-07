@@ -410,18 +410,22 @@ Speed---------___^^
                     from_color = color
                     ge.gadget.state = 1
                     color_action = 1
+                    config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Ex":
                     from_color = color
                     ge.gadget.state = 1
                     color_action = 2
+                    config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Copy":
                     from_color = color
                     ge.gadget.state = 1
                     color_action = 3
+                    config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Range":
                     from_color = color
                     ge.gadget.state = 1
                     color_action = 4
+                    config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
                     current_range = int(ge.gadget.label)-1
                     palg.maxvalue = current_range
@@ -503,6 +507,7 @@ Speed---------___^^
                             config.set_all_palettes(config.pal)
                             color_action = 0
                             from_color = -1
+                            config.cursor.shape = config.cursor.NORMAL
                 elif ge.gadget.label == "^":
                     config.cranges[current_range].set_dir(speed_dirg.value)
                     speed_dirg.need_redraw = True
