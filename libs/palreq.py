@@ -408,22 +408,18 @@ Speed---------___^^
                     set_hsv_sliders(config.pal[color], hg, sg, vg)
                 elif ge.gadget.label == "Spread":
                     from_color = color
-                    ge.gadget.state = 1
                     color_action = 1
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Ex":
                     from_color = color
-                    ge.gadget.state = 1
                     color_action = 2
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Copy":
                     from_color = color
-                    ge.gadget.state = 1
                     color_action = 3
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Range":
                     from_color = color
-                    ge.gadget.state = 1
                     color_action = 4
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
@@ -467,9 +463,9 @@ Speed---------___^^
                                 #print(config.pal[to_color])
                                 for i in range(1,numcol-1):
                                     config.pal[from_color+i] = \
-                                        (int(round((config.pal[from_color][0]*(numcol-i) + config.pal[to_color][0]*i)/(numcol))), \
-                                         int(round((config.pal[from_color][1]*(numcol-i) + config.pal[to_color][1]*i)/(numcol))), \
-                                         int(round((config.pal[from_color][2]*(numcol-i) + config.pal[to_color][2]*i)/(numcol))))
+                                        (int((config.pal[from_color][0]*(numcol-i) + config.pal[to_color][0]*i)/(numcol)), \
+                                         int((config.pal[from_color][1]*(numcol-i) + config.pal[to_color][1]*i)/(numcol)), \
+                                         int((config.pal[from_color][2]*(numcol-i) + config.pal[to_color][2]*i)/(numcol)))
                             # exchange
                             elif color_action == 2:
                                 config.pal[from_color], config.pal[to_color] = \
