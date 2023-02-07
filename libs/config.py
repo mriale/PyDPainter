@@ -568,12 +568,13 @@ class pydpainter:
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
-        #Color cycling user events
+        #Allocate user events
         self.ALLCUSTOMEVENTS = []
 
         #Tool user event - airbrush spray, text cursor blink, etc
         self.TOOLEVENT = config.new_custom_event()
 
+        #Color cycling user events
         self.CYCLEEVENTS = []
         for i in range(len(self.cranges)):
             self.CYCLEEVENTS.append(config.new_custom_event())
