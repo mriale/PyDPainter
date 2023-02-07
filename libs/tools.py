@@ -1548,9 +1548,9 @@ def main():
     sx,sy = 200,200
 
     scaled_screen = pygame.display.set_mode((sx*3,sy*3), RESIZABLE)
-    screen = pygame.Surface((sx,sy),0,8)
+    screen = pygame.Surface((sx,sy),0)
     toolbar_screen = pygame.Surface((sx,sy),0,8)
-    cursor_images = pygame.image.load(os.path.join('data', 'cursors8.png'))
+    cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
     cursor_layer = Cursor(cursor_images)
     cursor_layer.set_centers([(7,7), (1,1), (7,15), (0,15)])
     layer = Layer(screen, scaletype=1, sublayers=[Layer(toolbar_screen), cursor_layer])
@@ -1562,7 +1562,7 @@ def main():
 
     scaleY = 1
     scaleX = 1
-    mytoolbar = Toolbar(toolbar_screen, cursor_layer, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3, tip_event=config.TOOLTIPEVENT)
+    mytoolbar = Toolbar(toolbar_screen, cursor_layer, (0,0,tools_image.get_width()//3, tools_image.get_height()), tools_image, width=3, tip_event=USEREVENT)
     mytoolbar.add_grid((0,22*scaleY,tools_image.get_width()//3, tools_image.get_height()-22*scaleY), 2, 9, attr_list=[
         ["dot",      ToolGadget.TT_GROUP,  "s"],
         ["draw",     ToolGadget.TT_GROUP,  "dD"],

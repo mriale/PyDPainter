@@ -801,7 +801,7 @@ class Requestor(object):
             self.font = font
 
         self.fontx = self.font.xsize
-        self.fonty = int(font.ysize * 1.5)
+        self.fonty = int(self.font.ysize * 1.5)
         self.need_redraw = True
         x,y,w,h = self.rect
         if self.label != "":
@@ -1105,9 +1105,9 @@ SPEED------------[v]
     sx,sy = 200,200
 
     scaled_screen = pygame.display.set_mode((sx*3,sy*3), RESIZABLE)
-    screen = pygame.Surface((sx,sy),0,8)
-    req_screen = pygame.Surface((sx,sy),0,8)
-    cursor_images = pygame.image.load(os.path.join('data', 'cursors8.png'))
+    screen = pygame.Surface((sx,sy),0)
+    req_screen = pygame.Surface((sx,sy),0)
+    cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
     cursor_layer = Cursor(cursor_images)
     cursor_layer.set_centers([(7,7), (1,1), (7,15), (0,15)])
     #layer = Layer(screen, offset=(10,10), scaletype=1, req=req, sublayers=[cursor_layer])
