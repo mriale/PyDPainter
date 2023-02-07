@@ -459,6 +459,7 @@ class pydpainter:
         else:
             user_event = USEREVENT + custom_event_counter
             custom_event_counter += 1
+        self.ALLCUSTOMEVENTS.append(user_event)
         return user_event
 
     def initialize(self):
@@ -571,20 +572,14 @@ class pydpainter:
         self.ALLCUSTOMEVENTS = []
 
         #Tool user event - airbrush spray, text cursor blink, etc
-        user_event = config.new_custom_event()
-        self.TOOLEVENT = user_event
-        self.ALLCUSTOMEVENTS.append(user_event)
+        self.TOOLEVENT = config.new_custom_event()
 
         self.CYCLEEVENTS = []
         for i in range(len(self.cranges)):
-            user_event = config.new_custom_event()
-            self.CYCLEEVENTS.append(user_event)
-            self.ALLCUSTOMEVENTS.append(user_event)
+            self.CYCLEEVENTS.append(config.new_custom_event())
 
         #Tool tip delay user event
-        user_event = config.new_custom_event()
-        self.TOOLTIPEVENT = user_event
-        self.ALLCUSTOMEVENTS.append(user_event)
+        self.TOOLTIPEVENT = config.new_custom_event()
 
         self.window_title = "PyDPainter"
         self.modified_count = -1
