@@ -730,7 +730,7 @@ class PPpic(Gadget):
 def about_req(screen):
     req = str2req("About", """
 PyDPainter       ############
-\xA92022 Mark Riale ############
+%-16s ############
 Version %-8s ############
                  ############
 Licensed under   ############
@@ -738,7 +738,7 @@ GPL 3 or later.  ############
 See LICENSE for  ############
 more details.    ############
              [OK]
-""" % (config.version), "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPpic, font=config.font)
+""" % (config.copyright,config.version), "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPpic, font=config.font)
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
