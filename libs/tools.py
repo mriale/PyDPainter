@@ -322,7 +322,7 @@ class DoCurve(ToolSingleAction):
             self.move(coords)
 
     def drag(self, coords, buttons):
-        if not (buttons[0] or butons[2]):
+        if not (buttons[0] or buttons[2]):
             return
 
         config.cycle_handled = True
