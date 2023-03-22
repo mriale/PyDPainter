@@ -249,13 +249,15 @@ class pydpainter:
            (new_window_size[0] == config.window_size[0] and new_window_size[1] == config.window_size[1]):
             pass
         else:
-            if resize_window:
+            if resize_window or pygame.version.vernum[0] == 1:
                 #Wait for mouse buttons to be released before resizing window
                 pygame.event.get()
                 while True in pygame.mouse.get_pressed():
                     pygame.event.get()
                 new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
+                if pygame.version.vernum[0] == 1:
+                    pygame.time.wait(300)
  
             config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
