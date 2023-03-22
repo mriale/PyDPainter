@@ -340,7 +340,7 @@ class Brush:
 
     def scale(self, image_in):
         size = self.__size
-        image = image_in
+        image = image_in.copy()
         image.set_palette(config.pal)
         w,h = image.get_size()
         if self.aspect != 1.0 or size != h:

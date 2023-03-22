@@ -1302,7 +1302,7 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.screen_height - cy - 1)
+                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:

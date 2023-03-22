@@ -315,7 +315,7 @@ class Gadget(object):
         x,y,w,h = self.screenrect
         mousex, mousey = coords
         if self.type == Gadget.TYPE_STRING:
-            value = ((mousex-x) // fontx) + self.scrollpos
+            value = ((mousex-x) // self.fontx) + self.scrollpos
             if value < 0:
                 return 0
             elif value >= len(self.value):
