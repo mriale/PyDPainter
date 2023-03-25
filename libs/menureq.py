@@ -142,6 +142,7 @@ File:_________________________
                     list_itemsg.need_redraw = True
                     file_pathg.value = filepath
                     file_pathg.need_redraw = True
+                    list_sliderg.need_redraw = True
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
@@ -175,6 +176,7 @@ File:_________________________
                         list_itemsg.need_redraw = True
                         file_pathg.value = filepath
                         file_pathg.need_redraw = True
+                        list_sliderg.need_redraw = True
                     else:
                         if file_nameg.value != "":
                             retval = os.path.join(filepath, file_nameg.value)
