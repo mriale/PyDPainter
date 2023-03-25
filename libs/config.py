@@ -515,7 +515,10 @@ class pydpainter:
         self.color_depth = 16
         self.display_mode = config.getPalNtscDefault()
         self.scale = 3
-        self.scanlines = True
+        self.SCANLINES_ON = 0
+        self.SCANLINES_OFF = 1
+        self.SCANLINES_NOSMOOTH = 2
+        self.scanlines = self.SCANLINES_ON
         self.brush = Brush()
 
         self.primprops = PrimProps()
@@ -927,12 +930,16 @@ class pydpainter:
         #draw mouse cursor
         self.cursor.draw()
 
-        if self.scanlines:
+        if self.scanlines == self.SCANLINES_ON:
             #blit scanlines onto double-high image
             self.scaled_image.blit(self.scanline_canvas, (0,0))
+            #scale up screen to window resolution, blurring for retro effect
+            scaledup = pygame.transform.smoothscale(self.scaled_image, self.window_size)
+        elif self.scanlines == self.SCANLINES_OFF:
+            scaledup = pygame.transform.smoothscale(self.scaled_image, self.window_size)
+        elif self.scanlines == self.SCANLINES_NOSMOOTH:
+            scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
-        #scale up screen to window resolution, blurring for retro effect
-        scaledup = pygame.transform.smoothscale(self.scaled_image, self.window_size)
         self.screen.fill((128,128,128))
         self.screen.blit(scaledup,(0,0))
         scaledup = None

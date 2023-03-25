@@ -239,7 +239,7 @@ def load_pic(filename):
         if pic.get_width() > 320 or pic.get_height() > 200:
             #Assume square pixel VGA
             config.display_mode = config.VGA_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
-            config.scanlines = False
+            config.scanlines = config.SCANLINES_OFF
         else:
             config.display_mode = config.NTSC_MONITOR_ID # Low Res 320x200
 
