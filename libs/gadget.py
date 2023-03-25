@@ -779,6 +779,35 @@ class ListGadget(Gadget):
                         self.listgadgets[self.L_ITEMS].need_redraw = True
                     else:
                         self.value = 0
+            elif (event.type == KEYDOWN):
+                if g.label == "#":
+                    numlines = self.screenrect[3] // self.fonth
+                    if event.key == K_DOWN:
+                        self.value += 1
+                        if self.value > len(self.items)-1:
+                            self.value = len(self.items)-1
+                        if self.value > self.top_item + numlines - 1:
+                            self.scroll_delta(1)
+                        self.need_redraw = True
+                    elif event.key == K_UP:
+                        self.value -= 1
+                        if self.value < 0:
+                            self.value = 0
+                        if self.value < self.top_item:
+                            self.scroll_delta(-1)
+                        self.need_redraw = True
+                    elif event.key == K_PAGEDOWN:
+                        self.value += numlines
+                        if self.value > len(self.items)-1:
+                            self.value = len(self.items)-1
+                        self.scroll_delta(numlines)
+                        self.need_redraw = True
+                    elif event.key == K_PAGEUP:
+                        self.value -= numlines
+                        if self.value < 0:
+                            self.value = 0
+                        self.scroll_delta(-numlines)
+                        self.need_redraw = True
         else:
             ge.extend(super(ListGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge

@@ -154,6 +154,31 @@ File:_________________________
                         last_click_ms = pygame.time.get_ticks()
             elif event.type == MOUSEBUTTONUP and event.button == 1:
                 wait_for_mouseup = 0
+            elif event.type == KEYDOWN:
+                if event.key in [K_DOWN, K_UP, K_PAGEDOWN, K_PAGEUP]:
+                    filename = list_itemsg.items[list_itemsg.value]
+                    if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
+                        file_nameg.value = ""
+                    else:
+                        file_nameg.value = filename
+                    file_nameg.need_redraw = True
+                elif event.key == K_RETURN:
+                    filename = list_itemsg.items[list_itemsg.value]
+                    if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
+                        if filename[0:2] == "\x92\x93":
+                            filepath = os.path.join(filepath, filename[2:])
+                        elif filename[0:2] == "..":
+                            filepath = os.path.abspath(os.path.join(filepath, ".."))
+                        list_itemsg.items = get_dir(filepath)
+                        list_itemsg.top_item = 0
+                        list_itemsg.value = list_itemsg.top_item
+                        list_itemsg.need_redraw = True
+                        file_pathg.value = filepath
+                        file_pathg.need_redraw = True
+                    else:
+                        if file_nameg.value != "":
+                            retval = os.path.join(filepath, file_nameg.value)
+                        running = 0
 
             req.draw(screen)
             config.recompose()
