@@ -59,7 +59,7 @@ class DoSave(MenuAction):
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            save_iff(filename, config)
+            save_pic(filename, config)
             config.filename = filename
             config.modified_count = 0
 
@@ -68,7 +68,7 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            save_iff(filename, config)
+            save_pic(filename, config)
             config.filename = filename
             config.modified_count = 0
 
@@ -259,7 +259,7 @@ class DoBrushSaveAs(MenuAction):
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
-            save_iff(filename, brush_config)
+            save_pic(filename, brush_config)
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
