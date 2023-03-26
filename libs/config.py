@@ -1056,6 +1056,16 @@ class pydpainter:
         config.pixel_canvas = new_pixel_canvas
         config.pixel_width = width
         config.pixel_height = height
+
+        # Crop or expand spare pixel canvas
+        new_pixel_canvas = pygame.Surface((width, height),0,8)
+        new_pixel_canvas.set_palette(config.pal)
+        if resize:
+            pygame.transform.scale(config.pixel_spare_canvas, (width, height), new_pixel_canvas)
+        else:
+            new_pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
+        config.pixel_spare_canvas = new_pixel_canvas
+
         config.clear_undo()
         config.save_undo()
 
