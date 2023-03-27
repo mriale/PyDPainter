@@ -52,9 +52,16 @@ class DoScanlines(MiniToolAction):
     Toggle scanline mode
     """
     def selected(self, attrs):
-        config.scanlines = False
+        if config.scanlines == config.SCANLINES_ON:
+            self.gadget.state = 1
+            self.gadget.need_redraw = True
+        config.scanlines = self.gadget.state
+
     def deselected(self, attrs):
-        config.scanlines = True
+        if config.scanlines == config.SCANLINES_OFF:
+            self.gadget.state = 2
+            self.gadget.need_redraw = True
+        config.scanlines = self.gadget.state
 
 class DoAspect(MiniToolAction):
     """
@@ -103,7 +110,7 @@ def init_minitoolbar(config_in):
 
     minitoolbar.tool_id("help").state = 1 if config.help_on else 0
     minitoolbar.tool_id("scale").has_subtool = True
-    minitoolbar.tool_id("scanlines").state = 0 if config.scanlines else 1
+    minitoolbar.tool_id("scanlines").state = config.scanlines
     minitoolbar.tool_id("aspect").state = pmode[config.pixel_mode]
 
     return minitoolbar

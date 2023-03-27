@@ -239,7 +239,7 @@ def load_pic(filename):
         if pic.get_width() > 320 or pic.get_height() > 200:
             #Assume square pixel VGA
             config.display_mode = config.VGA_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
-            config.scanlines = False
+            config.scanlines = config.SCANLINES_OFF
         else:
             config.display_mode = config.NTSC_MONITOR_ID # Low Res 320x200
 
@@ -340,8 +340,7 @@ def c2p(surf_array):
 #save IFF file
 def save_iff(filename, config):
     nPlanes = int(math.log(len(config.pal),2))
-    crngfile = re.sub(r"\.[^.]+$", ".iff", filename)
-    newfile = open(crngfile, 'wb')
+    newfile = open(filename, 'wb')
     newfile.write(b'FORM\0\0\0\0ILBM')
     
     write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
@@ -384,3 +383,12 @@ def save_iff(filename, config):
 
     close_iff(newfile)
 
+#save picture
+def save_pic(filename, config):
+    if '.' not in filename:
+        filename += ".iff"
+    if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
+       (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
+        save_iff(filename, config)
+    else:
+        pygame.image.save(config.pixel_canvas, filename)
