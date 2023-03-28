@@ -36,13 +36,29 @@ def io_error_req(title, message, filename, linelen=33):
              ["OK"])
 
 
+prev_time = 0
+prev_percent = -1
+def load_progress(percent):
+    global prev_time
+    global prev_percent
+    if percent != prev_percent:
+        print(percent)
+        prev_percent = percent
+
+    curr_time = pygame.time.get_ticks()
+    if curr_time - prev_time > 16:
+        prev_time = curr_time
+        pygame.event.get()
+        config.recompose()
+
 class DoOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             try:
-                config.pixel_canvas = load_pic(filename)
+                config.cursor.shape = config.cursor.BUSY
+                config.pixel_canvas = load_pic(filename, status_func=load_progress)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
                 config.initialize_surfaces()

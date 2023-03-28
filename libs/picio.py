@@ -201,7 +201,7 @@ def load_iff(filename, config):
 
     return pic
 
-def load_pic(filename):
+def load_pic(filename, status_func=None):
     ifftype = iff_type(filename)
     if ifftype == "ILBM":
         pic = load_iff(filename, config)
@@ -213,7 +213,7 @@ def load_pic(filename):
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
             config.color_depth = 256
-            pic = convert8(pic, config.pal, is_bgr=True)
+            pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         else:
             config.pal = pic.get_palette()
             config.color_depth = 256

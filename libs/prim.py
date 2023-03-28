@@ -1874,7 +1874,7 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
                 lastcoord = coord
 
-def convert8(pixel_canvas_rgb, pal, is_bgr=False):
+def convert8(pixel_canvas_rgb, pal, is_bgr=False, status_func=None):
     #Create color map for all 16 million colors
     cmap = np.zeros(0x1000000, dtype="uint8")
 
@@ -1891,8 +1891,12 @@ def convert8(pixel_canvas_rgb, pal, is_bgr=False):
     #find unique colors
     unique_colors = np.unique(pixbuff24)
 
+    color_count = 0
     #loop through unique colors
     for color in unique_colors:
+        color_count += 1
+        if status_func != None:
+            status_func(color_count * 100 // len(unique_colors))
         if (is_bgr):
             b,g,r = color>>16, (color>>8)&255, color&255
         else:
