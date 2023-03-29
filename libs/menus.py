@@ -37,28 +37,29 @@ def io_error_req(title, message, filename, linelen=33):
 
 
 prev_time = 0
-prev_percent = -1
+prev_percent = 0
+progress_req = None
 def load_progress(percent):
     global prev_time
     global prev_percent
     if percent != prev_percent:
-        print(percent)
         prev_percent = percent
 
     curr_time = pygame.time.get_ticks()
     if curr_time - prev_time > 16:
         prev_time = curr_time
-        pygame.event.get()
-        config.recompose()
+        update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
 class DoOpen(MenuAction):
     def selected(self, attrs):
+        global progress_req
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
-                config.cursor.shape = config.cursor.BUSY
                 config.pixel_canvas = load_pic(filename, status_func=load_progress)
+                close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
                 config.initialize_surfaces()
@@ -66,6 +67,7 @@ class DoOpen(MenuAction):
                 config.filename = filename
                 config.modified_count = 0
             except:
+                close_progress_req(progress_req)
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoSave(MenuAction):

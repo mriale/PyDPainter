@@ -904,7 +904,7 @@ class pydpainter:
 
         #blit requestor layer
         if self.pixel_req_rect != None:
-            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO]:
+            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO, self.cursor.BUSY]:
                 self.cursor.shape = self.cursor.NORMAL
             screen_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None

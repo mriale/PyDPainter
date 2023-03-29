@@ -838,3 +838,62 @@ def question_req(screen, title, text, buttons):
     config.recompose()
 
     return button_clicked
+
+
+class PPprogress(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.pic = imgload('logo.png')
+        super(PPprogress, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        px = font.xsize//8
+        py = font.ysize//8
+        self.screenrect = (x+xo,y+yo,w,h)
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                pygame.draw.rect(screen, bgcolor, self.screenrect)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo,w*self.value//100,h))
+                progress_str = "%d%%"%(self.value)
+                font.blitstring(screen, (x+xo+(w-len(progress_str)*font.xsize)//2,y+yo+2*py), progress_str, fgcolor)
+                screen.set_clip(None)
+        else:
+            super(PPprogress, self).draw(screen, font, offset)
+
+def open_progress_req(screen, title):
+    req = str2req(title, """
+#############################
+""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPprogress, font=config.font)
+
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+    progressg = req.gadget_id("0_0")
+    progressg.value = 0
+    config.cursor.shape = config.cursor.BUSY
+    req.draw(screen)
+    config.recompose()
+    return req
+
+def update_progress_req(req, screen, progress):
+    progressg = req.gadget_id("0_0")
+    progressg.value = progress
+    progressg.need_redraw = True
+    pygame.event.get()
+    req.draw(screen)
+    config.recompose()
+
+def close_progress_req(req):
+    config.pixel_req_rect = None
+    config.cursor.shape = config.cursor.NORMAL
+    config.recompose()
