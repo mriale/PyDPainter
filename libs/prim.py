@@ -1896,7 +1896,7 @@ def convert8(pixel_canvas_rgb, pal, is_bgr=False, status_func=None):
     for color in unique_colors:
         color_count += 1
         if status_func != None:
-            status_func(color_count * 100 // len(unique_colors))
+            status_func(color_count / len(unique_colors))
         if (is_bgr):
             b,g,r = color>>16, (color>>8)&255, color&255
         else:

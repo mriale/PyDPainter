@@ -864,8 +864,8 @@ class PPprogress(Gadget):
             if self.label == "#":
                 screen.set_clip(self.screenrect)
                 pygame.draw.rect(screen, bgcolor, self.screenrect)
-                pygame.draw.rect(screen, hcolor, (x+xo,y+yo,w*self.value//100,h))
-                progress_str = "%d%%"%(self.value)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo,int(w*self.value),h))
+                progress_str = "%d%%"%(self.value*100)
                 font.blitstring(screen, (x+xo+(w-len(progress_str)*font.xsize)//2,y+yo+2*py), progress_str, fgcolor)
                 screen.set_clip(None)
         else:
