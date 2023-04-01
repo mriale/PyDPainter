@@ -37,6 +37,27 @@ def get_dir(path):
         dirlist = ["<Not found>"]
     return dirlist + filelist
 
+
+filetype_list = np.array([
+["IFF", "Amiga IFF image"],
+["ILBM","Amiga IFF image"],
+["BMP", "Windows BMP image"],
+["JPG", "JPEG image"],
+["JPEG","JPEG image"],
+["PNG", "PNG image"],
+["TGA", "Targa image"],
+])
+
+def get_type(filename):
+    retval = "type"
+    matches = re.search(r"\.([^.]+)$", filename)
+    if matches:
+        ext = matches.group(1).upper()
+        if ext in filetype_list[:,0]:
+            retval = ext
+    return ("%-4s\x98" % (retval))
+
+
 def file_req(screen, title, action_label, filepath, filename):
     req = str2req(title, """
 Path:_________________________
@@ -50,7 +71,7 @@ Path:_________________________
 ############################@@
 ############################@@
 ############################^^
-File:_________________________
+File:___________________[type\x98]
 [%s][Cancel]
 """%(action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
@@ -91,6 +112,9 @@ File:_________________________
     file_nameg = req.gadget_id("5_11")
     file_nameg.value = filename
     file_nameg.maxvalue = 255
+
+    #File type
+    file_typeg = req.gadget_id("24_11")
 
     #take care of non-square pixels
     fontmult = 1
@@ -146,6 +170,8 @@ File:_________________________
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
+                    file_typeg.label = get_type(filename)
+                    file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
                             retval = os.path.join(filepath, file_nameg.value)
@@ -160,9 +186,12 @@ File:_________________________
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
+                        file_typeg.label = get_type("")
                     else:
                         file_nameg.value = filename
+                        file_typeg.label = get_type(filename)
                     file_nameg.need_redraw = True
+                    file_typeg.need_redraw = True
                 elif event.key == K_RETURN:
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
