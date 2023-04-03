@@ -42,23 +42,63 @@ filetype_list = np.array([
 ["IFF", "Amiga IFF image"],
 ["ILBM","Amiga IFF image"],
 ["BMP", "Windows BMP image"],
-["JPG", "JPEG image"],
-["JPEG","JPEG image"],
+["JPG", "JPEG image (lossy)"],
+["JPEG","JPEG image (lossy)"],
 ["PNG", "PNG image"],
 ["TGA", "Targa image"],
 ])
 
 def get_type(filename):
     retval = "type"
+    ext = ""
     matches = re.search(r"\.([^.]+)$", filename)
     if matches:
         ext = matches.group(1).upper()
         if ext in filetype_list[:,0]:
             retval = ext
-    return ("%-4s\x98" % (retval))
+        else:
+            ext = ""
+    return (ext, ("%-4s\x98" % (retval)))
+
+def pick_file_type(screen, req, file_typeg, ext):
+    rx,ry,rw,rh = file_typeg.rect
+    fontx = req.font.xsize
+    fonty = req.font.ysize
+    px = fontx*2
+    py = ry-(fonty*len(filetype_list))
+    pw = rx+rw-px
+    ph = ry-py
+    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (px,py,pw,ph))
+    req.gadgets.append(pickg)
+    req.draw(screen)
+    config.recompose()
+
+class PPtypelist(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        super(PPtypelist, self).__init__(type, label, rect, value, maxvalue, id)
+        
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                screen.fill(bgcolor)
+        else:
+            super(PPtypelist, self).draw(screen, font, offset)
 
 
-def file_req(screen, title, action_label, filepath, filename):
+def file_req(screen, title, action_label, filepath, filename, has_type=False):
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -71,13 +111,14 @@ Path:_________________________
 ############################@@
 ############################@@
 ############################^^
-File:___________________[type\x98]
+File:___________________%s
 [%s][Cancel]
-"""%(action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+"""%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
     retval = ""
+    ext = ""
 
     #list items
     list_itemsg = req.gadget_id("0_1")
@@ -114,7 +155,11 @@ File:___________________[type\x98]
     file_nameg.maxvalue = 255
 
     #File type
-    file_typeg = req.gadget_id("24_11")
+    if has_type:
+        file_typeg = req.gadget_id("24_11")
+    else:
+        # Create dummy gadget
+        file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
 
     #take care of non-square pixels
     fontmult = 1
@@ -144,6 +189,8 @@ File:___________________[type\x98]
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget == file_typeg:
+                    pick_file_type(screen, req, file_typeg, ext)
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
                     filepath = file_pathg.value
@@ -170,7 +217,7 @@ File:___________________[type\x98]
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
-                    file_typeg.label = get_type(filename)
+                    ext, file_typeg.label = get_type(filename)
                     file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
@@ -186,10 +233,10 @@ File:___________________[type\x98]
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
-                        file_typeg.label = get_type("")
+                        ext, file_typeg.label = get_type("")
                     else:
                         file_nameg.value = filename
-                        file_typeg.label = get_type(filename)
+                        ext, file_typeg.label = get_type(filename)
                     file_nameg.need_redraw = True
                     file_typeg.need_redraw = True
                 elif event.key == K_RETURN:

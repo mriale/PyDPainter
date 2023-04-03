@@ -71,7 +71,7 @@ class DoSave(MenuAction):
         config.stop_cycling()
         filename = config.filename
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             save_pic(filename, config)
             config.filename = filename
@@ -80,7 +80,7 @@ class DoSave(MenuAction):
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             if not save_pic(filename, config, overwrite=False):
                 answer = question_req(config.pixel_req_canvas,
@@ -276,7 +276,7 @@ class DoBrushOpen(MenuAction):
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
