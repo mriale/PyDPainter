@@ -201,7 +201,7 @@ def load_iff(filename, config):
 
     return pic
 
-def load_pic(filename):
+def load_pic(filename, status_func=None):
     ifftype = iff_type(filename)
     if ifftype == "ILBM":
         pic = load_iff(filename, config)
@@ -212,8 +212,12 @@ def load_pic(filename):
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
+            if len(config.pal) < 256:
+                defaultpal = config.get_default_palette(256)
+                while len(config.pal) < 256:
+                    config.pal.append(defaultpal[len(config.pal)])
             config.color_depth = 256
-            pic = convert8(pic, config.pal, is_bgr=True)
+            pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         else:
             config.pal = pic.get_palette()
             config.color_depth = 256
@@ -384,11 +388,18 @@ def save_iff(filename, config):
     close_iff(newfile)
 
 #save picture
-def save_pic(filename, config):
+def save_pic(filename, config, overwrite=True):
     if '.' not in filename:
         filename += ".iff"
+
+    # Check if file exists
+    if overwrite == False and os.path.isfile(filename):
+        return False
+
     if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
        (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
         save_iff(filename, config)
     else:
         pygame.image.save(config.pixel_canvas, filename)
+
+    return True

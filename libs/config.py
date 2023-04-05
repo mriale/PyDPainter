@@ -514,6 +514,12 @@ class pydpainter:
         self.pixel_aspect = 10.0/11.0 #NTSC
         self.color_depth = 16
         self.display_mode = config.getPalNtscDefault()
+        if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
+            self.pixel_height = 256
+            self.screen_height_min = 256
+            self.pixel_mode = "PAL"
+            self.pixel_aspect = 59.0/54.0 #PAL
+
         self.scale = 3
         self.SCANLINES_ON = 0
         self.SCANLINES_OFF = 1
@@ -904,7 +910,7 @@ class pydpainter:
 
         #blit requestor layer
         if self.pixel_req_rect != None:
-            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO]:
+            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO, self.cursor.BUSY]:
                 self.cursor.shape = self.cursor.NORMAL
             screen_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None

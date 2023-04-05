@@ -37,7 +37,135 @@ def get_dir(path):
         dirlist = ["<Not found>"]
     return dirlist + filelist
 
-def file_req(screen, title, action_label, filepath, filename):
+
+filetype_list = np.array([
+["IFF", "Amiga IFF image"],
+["ILBM","Amiga IFF image"],
+["BMP", "Windows BMP image"],
+["JPG", "JPEG image (lossy)"],
+["JPEG","JPEG image (lossy)"],
+["PNG", "PNG image"],
+["TGA", "Targa image"],
+])
+
+def get_type(filename):
+    retval = "type"
+    ext = ""
+    matches = re.search(r"\.([^.]+)$", filename)
+    if matches:
+        ext = matches.group(1).upper()
+        if ext in filetype_list[:,0]:
+            retval = ext
+        else:
+            ext = ""
+    return (ext, ("%-4s\x98" % (retval)))
+
+def pick_file_type(screen, req, file_typeg, ext):
+    retval = -1
+    req_backup = screen.copy()
+    rx,ry,rw,rh = file_typeg.rect
+    fontx = req.font.xsize
+    fonty = req.font.ysize
+    lx = fontx*2
+    ly = ry-(fonty*len(filetype_list)+fonty//2)
+    lw = rx+rw-lx
+    lh = ry-ly
+    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (lx,ly,lw,lh))
+    pickg.value = -1
+    req.gadgets.append(pickg)
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    wait_for_mouseup = 0
+
+    while running:
+        event = pygame.event.wait()
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            x,y = req.mouse_pixel_mapper(event)
+            if pickg.pointin((x,y), pickg.screenrect):
+                retval = pickg.value
+            running = 0
+        else:
+            gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0
+
+        req.draw(screen)
+        config.recompose()
+
+    req.gadgets.remove(pickg)
+    screen.blit(req_backup, (0,0))
+    config.recompose()
+    return retval
+
+class PPtypelist(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        super(PPtypelist, self).__init__(type, label, rect, value, maxvalue, id)
+        
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        px = font.xsize//8
+        py = font.ysize//8
+        self.offsetx = xo
+        self.offsety = yo
+        fontx = font.xsize
+        fonty = font.ysize
+        self.fontw = fontx
+        self.fonth = fonty
+        self.screenrect = (x+xo,y+yo,w,h)
+        srx,sry,srw,srh = self.screenrect
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                screen.fill(bgcolor)
+                pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
+                pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
+                for i in range(len(filetype_list)):
+                    (label,desc) = filetype_list[i]
+                    if self.value == i:
+                        bg = fgcolor
+                        fg = bgcolor
+                    else:
+                        bg = bgcolor
+                        fg = fgcolor
+                    font.blitstring(screen, (x+xo+px+px,y+yo+py+py+i*fonty), "%-5s%-22s"%(label,desc), fg, bg)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo, w-px, py), 0)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo, px, h), 0)
+                
+        else:
+            super(PPtypelist, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+        py = g.fonth // 8
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                if g.label == "#":
+                    g.value = (y-gy-py-py)//g.fonth
+                    g.need_redraw = True
+        return ge
+
+
+def file_req(screen, title, action_label, filepath, filename, has_type=False):
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -50,13 +178,14 @@ Path:_________________________
 ############################@@
 ############################@@
 ############################^^
-File:_________________________
+File:___________________%s
 [%s][Cancel]
-"""%(action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+"""%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
     retval = ""
+    ext = ""
 
     #list items
     list_itemsg = req.gadget_id("0_1")
@@ -92,6 +221,15 @@ File:_________________________
     file_nameg.value = filename
     file_nameg.maxvalue = 255
 
+    #File type
+    if has_type:
+        file_typeg = req.gadget_id("24_11")
+        if filename == "":
+            file_typeg.enabled = False
+    else:
+        # Create dummy gadget
+        file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
+
     #take care of non-square pixels
     fontmult = 1
     if config.aspectX != config.aspectY:
@@ -120,6 +258,12 @@ File:_________________________
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget == file_typeg:
+                    picki = pick_file_type(screen, req, file_typeg, ext)
+                    if picki >=0 and picki < len(filetype_list):
+                        filename = re.sub(r"\.[^.]+$", "."+filetype_list[picki][0].lower(), filename)
+                        file_nameg.value = filename
+                        file_nameg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
                     filepath = file_pathg.value
@@ -143,9 +287,14 @@ File:_________________________
                     file_pathg.value = filepath
                     file_pathg.need_redraw = True
                     list_sliderg.need_redraw = True
+                    file_typeg.enabled = False
+                    file_typeg.need_redraw = True
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
+                    ext, file_typeg.label = get_type(filename)
+                    file_typeg.enabled = True
+                    file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
                             retval = os.path.join(filepath, file_nameg.value)
@@ -160,9 +309,15 @@ File:_________________________
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
+                        ext, file_typeg.label = get_type("")
+                        file_typeg.enabled = False
                     else:
                         file_nameg.value = filename
+                        ext, file_typeg.label = get_type(filename)
+                        file_typeg.enabled = True
+
                     file_nameg.need_redraw = True
+                    file_typeg.need_redraw = True
                 elif event.key == K_RETURN:
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
@@ -838,3 +993,62 @@ def question_req(screen, title, text, buttons):
     config.recompose()
 
     return button_clicked
+
+
+class PPprogress(Gadget):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.pic = imgload('logo.png')
+        super(PPprogress, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        px = font.xsize//8
+        py = font.ysize//8
+        self.screenrect = (x+xo,y+yo,w,h)
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                pygame.draw.rect(screen, bgcolor, self.screenrect)
+                pygame.draw.rect(screen, hcolor, (x+xo,y+yo,int(w*self.value),h))
+                progress_str = "%d%%"%(self.value*100)
+                font.blitstring(screen, (x+xo+(w-len(progress_str)*font.xsize)//2,y+yo+2*py), progress_str, fgcolor)
+                screen.set_clip(None)
+        else:
+            super(PPprogress, self).draw(screen, font, offset)
+
+def open_progress_req(screen, title):
+    req = str2req(title, """
+#############################
+""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPprogress, font=config.font)
+
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+    progressg = req.gadget_id("0_0")
+    progressg.value = 0
+    config.cursor.shape = config.cursor.BUSY
+    req.draw(screen)
+    config.recompose()
+    return req
+
+def update_progress_req(req, screen, progress):
+    progressg = req.gadget_id("0_0")
+    progressg.value = progress
+    progressg.need_redraw = True
+    pygame.event.get()
+    req.draw(screen)
+    config.recompose()
+
+def close_progress_req(req):
+    config.pixel_req_rect = None
+    config.cursor.shape = config.cursor.NORMAL
+    config.recompose()

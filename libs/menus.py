@@ -36,13 +36,26 @@ def io_error_req(title, message, filename, linelen=33):
              ["OK"])
 
 
+prev_time = 0
+progress_req = None
+def load_progress(percent):
+    global prev_time
+
+    curr_time = pygame.time.get_ticks()
+    if curr_time - prev_time > 33:
+        prev_time = curr_time
+        update_progress_req(progress_req, config.pixel_req_canvas, percent)
+
 class DoOpen(MenuAction):
     def selected(self, attrs):
+        global progress_req
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
-                config.pixel_canvas = load_pic(filename)
+                config.pixel_canvas = load_pic(filename, status_func=load_progress)
+                close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
                 config.initialize_surfaces()
@@ -50,6 +63,7 @@ class DoOpen(MenuAction):
                 config.filename = filename
                 config.modified_count = 0
             except:
+                close_progress_req(progress_req)
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoSave(MenuAction):
@@ -57,7 +71,7 @@ class DoSave(MenuAction):
         config.stop_cycling()
         filename = config.filename
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             save_pic(filename, config)
             config.filename = filename
@@ -66,9 +80,17 @@ class DoSave(MenuAction):
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, config)
+            if not save_pic(filename, config, overwrite=False):
+                answer = question_req(config.pixel_req_canvas,
+                         "File Exists",
+                         "Overwrite this file?",
+                         ["Yes","No"])
+                if answer == 0:
+                    save_pic(filename, config, overwrite=True)
+                else:
+                    return
             config.filename = filename
             config.modified_count = 0
 
@@ -254,12 +276,20 @@ class DoBrushOpen(MenuAction):
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
-            save_pic(filename, brush_config)
+            if not save_pic(filename, brush_config, overwrite=False):
+                answer = question_req(config.pixel_req_canvas,
+                         "File Exists",
+                         "Overwrite this file?",
+                         ["Yes","No"])
+                if answer == 0:
+                    save_pic(filename, brush_config, overwrite=True)
+                else:
+                    return
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
