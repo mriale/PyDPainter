@@ -514,6 +514,12 @@ class pydpainter:
         self.pixel_aspect = 10.0/11.0 #NTSC
         self.color_depth = 16
         self.display_mode = config.getPalNtscDefault()
+        if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
+            self.pixel_height = 256
+            self.screen_height_min = 256
+            self.pixel_mode = "PAL"
+            self.pixel_aspect = 59.0/54.0 #PAL
+
         self.scale = 3
         self.SCANLINES_ON = 0
         self.SCANLINES_OFF = 1
