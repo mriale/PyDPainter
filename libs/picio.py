@@ -212,6 +212,10 @@ def load_pic(filename, status_func=None):
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
+            if len(config.pal) < 256:
+                defaultpal = config.get_default_palette(256)
+                while len(config.pal) < 256:
+                    config.pal.append(defaultpal[len(config.pal)])
             config.color_depth = 256
             pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         else:
