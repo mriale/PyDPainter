@@ -224,6 +224,14 @@ class pydpainter:
         return s
 
     def resize_display(self, resize_window = True, first_init=False):
+        if config.fullscreen:
+            scale = config.max_height / config.screen_height
+            new_window_size = (int(config.screen_width*scale*config.pixel_aspect), int(config.screen_height*scale))
+            pygame.display.set_mode((config.max_width, config.max_height), FULLSCREEN|HWSURFACE|DOUBLEBUF)
+            config.screen = pygame.display.get_surface()
+            config.window_size = new_window_size
+            return
+
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
             if (new_window_size[0] > config.max_width or \
@@ -513,6 +521,7 @@ class pydpainter:
         self.pixel_mode = "NTSC"
         self.pixel_aspect = 10.0/11.0 #NTSC
         self.color_depth = 16
+        self.fullscreen = False
         self.display_mode = config.getPalNtscDefault()
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
             self.pixel_height = 256
@@ -1305,6 +1314,9 @@ class pydpainter:
                     else:
                         config.toolbar.visible = True
                         config.menubar.visible = True
+                elif e.key == K_F11:
+                    config.fullscreen = not config.fullscreen
+                    config.resize_display()
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.key == K_z:
