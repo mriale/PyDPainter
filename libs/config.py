@@ -5,6 +5,7 @@ config.py
 Implement the global area of PyDPainter
 """
 
+import asyncio
 import sys, math, os.path, random, colorsys, platform, re, datetime
 
 from colorrange import *
@@ -1075,7 +1076,7 @@ class pydpainter:
         config.clear_undo()
         config.save_undo()
 
-    def run(self):
+    async def run(self):
         """
         This method is the main application loop.
         """
@@ -1356,6 +1357,7 @@ class pydpainter:
             self.cycle_handled = False
 
             self.recompose()
+            await asyncio.sleep(0)
 
             if not config.running and config.modified_count >= 1:
                 answer = question_req(config.pixel_req_canvas,
