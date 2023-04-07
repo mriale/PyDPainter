@@ -223,14 +223,18 @@ class pydpainter:
 
         return s
 
-    def resize_display(self, resize_window = True, first_init=False):
+    def resize_display(self, resize_window=True, first_init=False, force=False):
         if config.fullscreen:
+            if force:
+                config.scale_bak = config.scale
             scale = config.max_height / config.screen_height
             new_window_size = (int(config.screen_width*scale*config.pixel_aspect), int(config.screen_height*scale))
             pygame.display.set_mode((config.max_width, config.max_height), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
             return
+        elif force:
+            config.scale = config.scale_bak
 
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
@@ -253,11 +257,11 @@ class pydpainter:
 
         display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
 
-        if "window_size" in dir(config) and \
+        if not force and "window_size" in dir(config) and \
            (new_window_size[0] == config.window_size[0] and new_window_size[1] == config.window_size[1]):
             pass
         else:
-            if resize_window or pygame.version.vernum[0] == 1:
+            if force or resize_window or pygame.version.vernum[0] == 1:
                 #Wait for mouse buttons to be released before resizing window
                 pygame.event.get()
                 while True in pygame.mouse.get_pressed():
@@ -530,6 +534,7 @@ class pydpainter:
             self.pixel_aspect = 59.0/54.0 #PAL
 
         self.scale = 3
+        self.scale_bak = 3
         self.SCANLINES_ON = 0
         self.SCANLINES_OFF = 1
         self.SCANLINES_NOSMOOTH = 2
@@ -1316,7 +1321,7 @@ class pydpainter:
                         config.menubar.visible = True
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
-                    config.resize_display()
+                    config.resize_display(force=True)
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.key == K_z:
