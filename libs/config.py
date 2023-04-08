@@ -971,9 +971,9 @@ class pydpainter:
         if config.fullscreen:
             ox = (self.screen.get_width() - scaledup.get_width()) // 2
             oy = (self.screen.get_height() - scaledup.get_height()) // 2
-            self.screen.blit(scaledup,(ox,0))
         else:
-            self.screen.blit(scaledup,(0,0))
+            ox, oy = 0,0
+        self.screen.blit(scaledup,(ox,oy))
         scaledup = None
 
         #blit tooltip layer
@@ -984,8 +984,8 @@ class pydpainter:
             tx = self.screen_width-self.toolbar.rect[2]+self.toolbar.tip_x
             ty = (self.fonty-1 if self.menubar.visible else 0) + self.toolbar.tip_y
             t_size = self.toolbar.tip_canvas.get_size()
-            sx = (tx * self.window_size[0] // self.screen_width) - t_size[0]
-            sy = (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.toolbar.tip_canvas, (sx,sy))
 
         #blit minitoolbar tooltip layer
@@ -996,8 +996,8 @@ class pydpainter:
             tx = mtbx + self.minitoolbar.tip_x
             ty = self.minitoolbar.tip_y
             t_size = self.minitoolbar.tip_canvas.get_size()
-            sx = (tx * self.window_size[0] // self.screen_width) - t_size[0]
-            sy = (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.minitoolbar.tip_canvas, (sx,sy))
 
         pygame.display.flip()
