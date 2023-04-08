@@ -961,7 +961,7 @@ class pydpainter:
         elif self.scanlines == self.SCANLINES_NOSMOOTH:
             scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
-        self.screen.fill((128,128,128))
+        self.screen.fill((0,0,0))
         self.screen.blit(scaledup,(0,0))
         scaledup = None
 
