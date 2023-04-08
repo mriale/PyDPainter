@@ -718,7 +718,10 @@ class pydpainter:
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
-        screenX, screenY = self.window_size
+        if config.fullscreen:
+            screenX, screenY = self.max_width, self.max_height
+        else:
+            screenX, screenY = self.window_size
         mouseX = mouseX * self.screen_width // screenX
         mouseY = mouseY * self.screen_height // screenY
         return((mouseX, mouseY))
@@ -742,7 +745,10 @@ class pydpainter:
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
 
-        screenX, screenY = self.window_size
+        if config.fullscreen:
+            screenX, screenY = self.max_width, self.max_height
+        else:
+            screenX, screenY = self.window_size
         mouseX = mouseX * self.screen_width // screenX
         mouseY = mouseY * self.screen_height // screenY
 
@@ -962,7 +968,12 @@ class pydpainter:
             scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
         self.screen.fill((0,0,0))
-        self.screen.blit(scaledup,(0,0))
+        if config.fullscreen:
+            ox = (self.screen.get_width() - scaledup.get_width()) // 2
+            oy = (self.screen.get_height() - scaledup.get_height()) // 2
+            self.screen.blit(scaledup,(ox,0))
+        else:
+            self.screen.blit(scaledup,(0,0))
         scaledup = None
 
         #blit tooltip layer
@@ -1159,7 +1170,9 @@ class pydpainter:
 
             #Show system mouse pointer if outside of screen
             if e.type == MOUSEMOTION:
-                if e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
+                if config.fullscreen:
+                    pygame.mouse.set_visible(False)
+                elif e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
                     pygame.mouse.set_visible(True)
                 else:
                     pygame.mouse.set_visible(False)
