@@ -942,7 +942,7 @@ class pydpainter:
             if config.minitoolbar.tool_id("expand").state == 1:
                 mtbx = self.screen_width-self.minitoolbar.rect[2]
             else:
-                mtbx = self.screen_width-(self.minitoolbar.rect[2]//5*2)
+                mtbx = self.screen_width-(self.minitoolbar.rect[2]//len(self.minitoolbar.tools)*2)
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #scale image double height
@@ -1322,6 +1322,7 @@ class pydpainter:
                         config.menubar.visible = True
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
+                    config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
                     config.resize_display(force=True)
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
