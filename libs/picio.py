@@ -10,8 +10,6 @@ import numpy as np
 
 from struct import pack, unpack
 
-from chunk import Chunk
-
 from colorrange import *
 from prim import *
 
@@ -114,6 +112,28 @@ def decode_ilbm_body(body_bytes, compression, nPlanes, surf_array):
         planes_in = np.frombuffer(body_bytes,dtype=np.uint8).reshape(h,nPlanes,w2b(w))
 
     p2c(planes_in, surf_array)
+
+class Chunk(object):
+    """This class implements IFF chunk reading"""
+    def __init__(self, iff_file):
+        self.iff_file = iff_file
+        self.name = iff_file.read(4)
+        if len(self.name) == 0:
+            raise EOFError
+        len_bytes = iff_file.read(4)
+        if len(len_bytes) == 0:
+            raise EOFError
+        len_tuple = unpack(">I", len_bytes)
+        self.length = len_tuple[0]
+
+    def getname(self):
+        return self.name
+
+    def read(self):
+        return self.iff_file.read(self.length)
+
+    def skip(self):
+        return self.iff_file.seek(self.length, 1)
 
 #read in an IFF file
 def load_iff(filename, config):
