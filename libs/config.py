@@ -223,7 +223,20 @@ class pydpainter:
 
         return s
 
-    def resize_display(self, resize_window = True, first_init=False):
+    def resize_display(self, resize_window=True, first_init=False, force=False):
+        if config.fullscreen:
+            if force:
+                config.scale_bak = config.scale
+            scale = min(config.max_height / config.screen_height,\
+                        config.max_width / config.screen_width / config.pixel_aspect)
+            new_window_size = (int(config.screen_width*scale*config.pixel_aspect), int(config.screen_height*scale))
+            pygame.display.set_mode((config.max_width, config.max_height), FULLSCREEN|HWSURFACE|DOUBLEBUF)
+            config.screen = pygame.display.get_surface()
+            config.window_size = new_window_size
+            return
+        elif force:
+            config.scale = config.scale_bak
+
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
             if (new_window_size[0] > config.max_width or \
@@ -245,11 +258,11 @@ class pydpainter:
 
         display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
 
-        if "window_size" in dir(config) and \
+        if not force and "window_size" in dir(config) and \
            (new_window_size[0] == config.window_size[0] and new_window_size[1] == config.window_size[1]):
             pass
         else:
-            if resize_window or pygame.version.vernum[0] == 1:
+            if force or resize_window or pygame.version.vernum[0] == 1:
                 #Wait for mouse buttons to be released before resizing window
                 pygame.event.get()
                 while True in pygame.mouse.get_pressed():
@@ -513,6 +526,7 @@ class pydpainter:
         self.pixel_mode = "NTSC"
         self.pixel_aspect = 10.0/11.0 #NTSC
         self.color_depth = 16
+        self.fullscreen = False
         self.display_mode = config.getPalNtscDefault()
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
             self.pixel_height = 256
@@ -521,6 +535,7 @@ class pydpainter:
             self.pixel_aspect = 59.0/54.0 #PAL
 
         self.scale = 3
+        self.scale_bak = 3
         self.SCANLINES_ON = 0
         self.SCANLINES_OFF = 1
         self.SCANLINES_NOSMOOTH = 2
@@ -703,7 +718,10 @@ class pydpainter:
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
-        screenX, screenY = self.window_size
+        if config.fullscreen:
+            screenX, screenY = self.max_width, self.max_height
+        else:
+            screenX, screenY = self.window_size
         mouseX = mouseX * self.screen_width // screenX
         mouseY = mouseY * self.screen_height // screenY
         return((mouseX, mouseY))
@@ -727,7 +745,10 @@ class pydpainter:
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
 
-        screenX, screenY = self.window_size
+        if config.fullscreen:
+            screenX, screenY = self.max_width, self.max_height
+        else:
+            screenX, screenY = self.window_size
         mouseX = mouseX * self.screen_width // screenX
         mouseY = mouseY * self.screen_height // screenY
 
@@ -927,7 +948,7 @@ class pydpainter:
             if config.minitoolbar.tool_id("expand").state == 1:
                 mtbx = self.screen_width-self.minitoolbar.rect[2]
             else:
-                mtbx = self.screen_width-(self.minitoolbar.rect[2]//5*2)
+                mtbx = self.screen_width-(self.minitoolbar.rect[2]//len(self.minitoolbar.tools)*2)
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #scale image double height
@@ -946,8 +967,13 @@ class pydpainter:
         elif self.scanlines == self.SCANLINES_NOSMOOTH:
             scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
-        self.screen.fill((128,128,128))
-        self.screen.blit(scaledup,(0,0))
+        self.screen.fill((0,0,0))
+        if config.fullscreen:
+            ox = (self.screen.get_width() - scaledup.get_width()) // 2
+            oy = (self.screen.get_height() - scaledup.get_height()) // 2
+        else:
+            ox, oy = 0,0
+        self.screen.blit(scaledup,(ox,oy))
         scaledup = None
 
         #blit tooltip layer
@@ -958,8 +984,8 @@ class pydpainter:
             tx = self.screen_width-self.toolbar.rect[2]+self.toolbar.tip_x
             ty = (self.fonty-1 if self.menubar.visible else 0) + self.toolbar.tip_y
             t_size = self.toolbar.tip_canvas.get_size()
-            sx = (tx * self.window_size[0] // self.screen_width) - t_size[0]
-            sy = (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.toolbar.tip_canvas, (sx,sy))
 
         #blit minitoolbar tooltip layer
@@ -970,8 +996,8 @@ class pydpainter:
             tx = mtbx + self.minitoolbar.tip_x
             ty = self.minitoolbar.tip_y
             t_size = self.minitoolbar.tip_canvas.get_size()
-            sx = (tx * self.window_size[0] // self.screen_width) - t_size[0]
-            sy = (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.minitoolbar.tip_canvas, (sx,sy))
 
         pygame.display.flip()
@@ -1144,7 +1170,9 @@ class pydpainter:
 
             #Show system mouse pointer if outside of screen
             if e.type == MOUSEMOTION:
-                if e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
+                if config.fullscreen:
+                    pygame.mouse.set_visible(False)
+                elif e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
                     pygame.mouse.set_visible(True)
                 else:
                     pygame.mouse.set_visible(False)
@@ -1305,6 +1333,10 @@ class pydpainter:
                     else:
                         config.toolbar.visible = True
                         config.menubar.visible = True
+                elif e.key == K_F11:
+                    config.fullscreen = not config.fullscreen
+                    config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
+                    config.resize_display(force=True)
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.key == K_z:

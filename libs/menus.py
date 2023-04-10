@@ -968,8 +968,8 @@ def init_menubar(config_in):
                 ["Stretch", "Z", DoBrushStretch],
                 ["Halve", "h", DoBrushHalve],
                 ["Double", "H", DoBrushDouble],
-                ["Double Horiz", " ", DoBrushDoubleHoriz],
-                ["Double Vert", " ", DoBrushDoubleVert],
+                ["Double Horiz", "X", DoBrushDoubleHoriz],
+                ["Double Vert", "Y", DoBrushDoubleVert],
                 ]],
             ["Flip", [
                 ["Horiz", "x", DoBrushFlipX],
