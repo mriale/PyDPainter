@@ -294,7 +294,9 @@ class DoBrushSaveAs(MenuAction):
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
-            return
+            if not "image_backup" in dir(config.brush):
+                return
+            config.brush.type = config.brush.CUSTOM
         backup = config.brush.image_backup.copy()
         backup.set_palette(config.pal)
         surf_array = pygame.surfarray.pixels2d(backup)
