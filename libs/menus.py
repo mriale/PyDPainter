@@ -909,6 +909,14 @@ class DoPrefsCoords(MenuAction):
         config.coords_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsFlipCoords(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.coords_flip = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsAutoTransp(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1041,6 +1049,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Prefs", [
             ["/Coords", "|", DoPrefsCoords],
+            ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             [" Save Config", " ", DoPrefsSave],
         ]])

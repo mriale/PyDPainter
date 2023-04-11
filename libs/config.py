@@ -603,9 +603,11 @@ class pydpainter:
         self.constrain_x = -1
         self.constrain_y = -1
         self.help_on = True
+        self.p1 = None
         self.polylist = []
         self.airbrush_size = 10
         self.coords_on = False
+        self.coords_flip = False
         self.auto_transp_on = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
@@ -1387,7 +1389,17 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                    if config.p1 != None and True in pygame.mouse.get_pressed():
+                        if config.coords_flip:
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx-config.p1[0], cy-config.p1[1])
+                        else:
+                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx-config.p1[0], config.p1[1]-cy)
+                    else:
+                        if config.coords_flip:
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx, cy)
+                        else:
+                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                        config.p1 = None
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:
