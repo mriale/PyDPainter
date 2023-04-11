@@ -915,6 +915,11 @@ class DoPrefsAutoTransp(MenuAction):
         config.auto_transp_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsSave(MenuAction):
+    def selected(self, attrs):
+        config.saveConfig()
+        config.doKeyAction()
+
 def init_menubar(config_in):
     global config
     config = config_in
@@ -1035,6 +1040,7 @@ def init_menubar(config_in):
         ["Prefs", [
             ["/Coords", "|", DoPrefsCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            [" Save Config", " ", DoPrefsSave],
         ]])
 
     return menubar

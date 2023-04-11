@@ -277,12 +277,13 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
-        self.screen_width = sm.x
-        self.screen_height = sm.y
-        self.pixel_aspect = sm.aspect
-        self.pixel_mode = sm.get_pixel_mode()
-        self.aspectX = sm.aspect_x
-        self.aspectY = sm.aspect_y
+        if not reinit:
+            self.screen_width = sm.x
+            self.screen_height = sm.y
+            self.pixel_aspect = sm.aspect
+            self.pixel_mode = sm.get_pixel_mode()
+            self.aspectX = sm.aspect_x
+            self.aspectY = sm.aspect_y
         self.sm = sm
 
         if reinit:
@@ -429,12 +430,22 @@ class pydpainter:
         if 'HOME' in os.environ:
             home = os.environ['HOME']
         try:
+            sm = config.display_info.get_id(self.display_mode)
             f = open(os.path.join(home,".pydpainter"),"w")
             f.write("display_mode=%08x\n" % (self.display_mode))
             f.write("pixel_width=%d\n" % (self.pixel_width))
             f.write("pixel_height=%d\n" % (self.pixel_height))
+            f.write("screen_width=%d\n" % (self.screen_width))
+            f.write("screen_height=%d\n" % (self.screen_height))
             f.write("color_depth=%d\n" % (self.color_depth))
             f.write("NUM_COLORS=%d\n" % (self.NUM_COLORS))
+            f.write("pixel_mode=%s\n" % (self.pixel_mode))
+            f.write("pixel_aspect=%f\n" % (self.pixel_aspect))
+            f.write("aspectX=%f\n" % (sm.aspect_x))
+            f.write("aspectY=%f\n" % (sm.aspect_y))
+            f.write("fullscreen=%s\n" % (self.fullscreen))
+            f.write("scale=%f\n" % (self.scale))
+            f.write("scanlines=%d\n" % (self.scanlines))
             f.close()
         except:
             pass
@@ -448,7 +459,7 @@ class pydpainter:
             for line in f:
                 if line.lstrip()[0] == '#':
                     continue
-                vars = line.split("=")
+                vars = line.strip().split("=")
                 if len(vars) == 2:
                     if vars[0] == "display_mode":
                         self.display_mode = int(vars[1], 16)
@@ -456,10 +467,29 @@ class pydpainter:
                         self.pixel_width = int(vars[1])
                     elif vars[0] == "pixel_height":
                         self.pixel_height = int(vars[1])
+                    elif vars[0] == "screen_width":
+                        self.screen_width = int(vars[1])
+                    elif vars[0] == "screen_height":
+                        self.screen_height = int(vars[1])
                     elif vars[0] == "color_depth":
                         self.color_depth = int(vars[1])
                     elif vars[0] == "NUM_COLORS":
                         self.NUM_COLORS = int(vars[1])
+                    elif vars[0] == "pixel_mode":
+                        self.pixel_mode = vars[1]
+                    elif vars[0] == "pixel_aspect":
+                        self.pixel_aspect = float(vars[1])
+                    elif vars[0] == "aspectX":
+                        self.aspectX = float(vars[1])
+                    elif vars[0] == "aspectY":
+                        self.aspectY = float(vars[1])
+                    elif vars[0] == "fullscreen":
+                        self.fullscreen = True if vars[1] == "True" else False
+                    elif vars[0] == "scale":
+                        self.scale = float(vars[1])
+                        config.resize_display()
+                    elif vars[0] == "scanlines":
+                        self.scanlines = int(vars[1])
             f.close()
             return True
         except:
