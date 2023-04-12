@@ -19,6 +19,8 @@ enhance it with some features to help it better coexist in the modern world.
 
 YouTube video: [Quick PyDPainter Demo](https://youtu.be/GGfsSvbrb4o)
 
+Facebook group: [PyDPainter](https://www.facebook.com/groups/583338860398152/?ref=share)
+
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
 ![screenshot](pydpainter-screenshot.png)
