@@ -351,6 +351,13 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
 
+        # set prefs
+        self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
+        self.menubar.menu_id("prefs").menu_id("flipcoords").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
+        self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
+        self.menubar.hide_menus = self.hide_menus
+
         self.clear_undo()
         config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
@@ -446,6 +453,10 @@ class pydpainter:
             f.write("fullscreen=%s\n" % (self.fullscreen))
             f.write("scale=%f\n" % (self.scale))
             f.write("scanlines=%d\n" % (self.scanlines))
+            f.write("coords_on=%s\n" % (self.coords_on))
+            f.write("coords_flip=%s\n" % (self.coords_flip))
+            f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
+            f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.close()
         except:
             pass
@@ -490,6 +501,14 @@ class pydpainter:
                         config.resize_display()
                     elif vars[0] == "scanlines":
                         self.scanlines = int(vars[1])
+                    elif vars[0] == "coords_on":
+                        self.coords_on = True if vars[1] == "True" else False
+                    elif vars[0] == "coords_flip":
+                        self.coords_flip = True if vars[1] == "True" else False
+                    elif vars[0] == "auto_transp_on":
+                        self.auto_transp_on = True if vars[1] == "True" else False
+                    elif vars[0] == "hide_menus":
+                        self.hide_menus = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -609,6 +628,7 @@ class pydpainter:
         self.coords_on = False
         self.coords_flip = False
         self.auto_transp_on = False
+        self.hide_menus = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))

@@ -925,6 +925,14 @@ class DoPrefsAutoTransp(MenuAction):
         config.auto_transp_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsHideMenus(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.menubar.hide_menus = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1051,6 +1059,7 @@ def init_menubar(config_in):
             ["/Coords", "|", DoPrefsCoords],
             ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            ["/Hide Menus", " ", DoPrefsHideMenus],
             [" Save Config", " ", DoPrefsSave],
         ]])
 
