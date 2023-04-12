@@ -643,7 +643,7 @@ class pydpainter:
         self.window_title = "PyDPainter"
         self.modified_count = -1
         self.spare_modified_count = -1
-        self.UNDO_INDEX_MAX = 5
+        self.UNDO_INDEX_MAX = 20
         self.undo_image = []
         self.undo_index = -1
         self.suppress_undo = False
@@ -1371,6 +1371,8 @@ class pydpainter:
                     config.resize_display(force=True)
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
+                elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
+                    config.redo()
                 elif e.mod & KMOD_CTRL and e.key == K_z:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
