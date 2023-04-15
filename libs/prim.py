@@ -1855,6 +1855,12 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
+
+            # special case for horizontal line
+            if miny == maxy:
+                hline(screen, color, miny, minx, maxx)
+                config.try_recompose()
+
         end_shape(screen, color, interrupt=interrupt)
 
 
