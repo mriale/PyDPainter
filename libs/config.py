@@ -1321,9 +1321,9 @@ class pydpainter:
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.key == K_PERIOD:
+                if e.unicode == ".":
                     gotkey = True
-                elif e.key == K_PLUS or e.key == K_EQUALS:
+                elif e.unicode == "+" or e.unicode == "=":
                     gotkey = True
                     if self.tool_selected == "airbrush":
                         self.airbrush_size += 1
@@ -1332,7 +1332,7 @@ class pydpainter:
                     else:
                         self.brush.size += 1
                         setBIBrush()
-                elif e.key == K_MINUS:
+                elif e.unicode == "-":
                     gotkey = True
                     if self.tool_selected == "airbrush": #Airbrush
                         self.airbrush_size -= 1
@@ -1341,18 +1341,18 @@ class pydpainter:
                     else:
                         self.brush.size -= 1
                         setBIBrush()
-                elif e.key == K_RIGHTBRACKET:
+                elif e.unicode == "]":
                     gotkey = True
-                    if e.mod & KMOD_SHIFT:
-                        self.bgcolor = (self.bgcolor + 1) % config.NUM_COLORS
-                    else:
-                        self.color = (self.color + 1) % config.NUM_COLORS
-                elif e.key == K_LEFTBRACKET:
+                    self.color = (self.color + 1) % config.NUM_COLORS
+                elif e.unicode == "}":
                     gotkey = True
-                    if e.mod & KMOD_SHIFT:
-                        self.bgcolor = (self.bgcolor - 1) % config.NUM_COLORS
-                    else:
-                        self.color = (self.color - 1) % config.NUM_COLORS
+                    self.bgcolor = (self.bgcolor + 1) % config.NUM_COLORS
+                elif e.unicode == "[":
+                    gotkey = True
+                    self.color = (self.color - 1) % config.NUM_COLORS
+                elif e.unicode == "{":
+                    gotkey = True
+                    self.bgcolor = (self.bgcolor - 1) % config.NUM_COLORS
                 elif e.unicode == ",":
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
