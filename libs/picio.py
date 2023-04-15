@@ -221,7 +221,7 @@ def load_iff(filename, config):
 
     return pic
 
-def load_pic(filename, status_func=None):
+def load_pic(filename, config, status_func=None):
     ifftype = iff_type(filename)
     if ifftype == "ILBM":
         pic = load_iff(filename, config)

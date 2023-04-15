@@ -54,7 +54,7 @@ class DoOpen(MenuAction):
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
-                config.pixel_canvas = load_pic(filename, status_func=load_progress)
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
@@ -259,7 +259,7 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
-                newimage = load_iff(filename, brush_config)
+                newimage = load_pic(filename, brush_config)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()

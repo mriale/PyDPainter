@@ -154,7 +154,7 @@ class pydpainter:
         #load picture if specified from command line
         if len(sys.argv) > 1:
             filename = sys.argv[1]
-            config.pixel_canvas = load_pic(filename)
+            config.pixel_canvas = load_pic(filename, config)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
             config.initialize_surfaces()
