@@ -146,6 +146,7 @@ class Menubar:
         self.menulevel = 0
         self.need_redraw = True
         self.fadesurf = None
+        self.hide_menus = False
 
     def add_submenu(self, menug, menus):
         x,y,w,h = menug.rect
@@ -330,6 +331,13 @@ class Menubar:
         if self.visible and event.type == MOUSEBUTTONDOWN and event.button in [1,3]:
             if event.button == 3:
                 rightclick = True
+            if self.is_inside((x,y)):
+                self.menus_on = True
+                for mg in self.menug_list:
+                    if mg.pointin((x,y), mg.screenrect):
+                        mg.state = 2
+                    else:
+                        mg.state = 0
             for menug in self.menug_list:
                 if menug.pointin((x,y), menug.rect):
                     self.wait_for_mouseup[event.button] = True
@@ -373,7 +381,7 @@ class Menubar:
         elif event.type == MOUSEMOTION:
             if event.buttons == (0,0,0):
                 self.wait_for_mouseup = [False, False, False, False]
-            if self.is_inside((x,y)) and event.buttons == (0,0,0):
+            if not self.hide_menus and self.is_inside((x,y)) and event.buttons == (0,0,0):
                 self.menus_on = True
                 for mg in self.menug_list:
                     if mg.pointin((x,y), mg.screenrect):
@@ -381,6 +389,7 @@ class Menubar:
                     else:
                         mg.state = 0
             elif self.is_inside((x,y)) and True in self.wait_for_mouseup:
+                self.menus_on = True
                 for mg in self.menug_list:
                     if mg.pointin((x,y), mg.screenrect):
                         mg.state = 2

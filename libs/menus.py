@@ -54,7 +54,7 @@ class DoOpen(MenuAction):
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
-                config.pixel_canvas = load_pic(filename, status_func=load_progress)
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
@@ -259,7 +259,7 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
-                newimage = load_iff(filename, brush_config)
+                newimage = load_pic(filename, brush_config)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
@@ -294,7 +294,9 @@ class DoBrushSaveAs(MenuAction):
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
-            return
+            if not "image_backup" in dir(config.brush):
+                return
+            config.brush.type = config.brush.CUSTOM
         backup = config.brush.image_backup.copy()
         backup.set_palette(config.pal)
         surf_array = pygame.surfarray.pixels2d(backup)
@@ -907,12 +909,33 @@ class DoPrefsCoords(MenuAction):
         config.coords_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsFlipCoords(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.coords_flip = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsAutoTransp(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
             return
         self.gadget.checked = not self.gadget.checked
         config.auto_transp_on = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsHideMenus(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.menubar.hide_menus = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsSave(MenuAction):
+    def selected(self, attrs):
+        config.saveConfig()
         config.doKeyAction()
 
 def init_menubar(config_in):
@@ -1034,7 +1057,10 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Prefs", [
             ["/Coords", "|", DoPrefsCoords],
+            ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            ["/Hide Menus", " ", DoPrefsHideMenus],
+            [" Save Config", " ", DoPrefsSave],
         ]])
 
     return menubar

@@ -35,6 +35,8 @@ def get_dir(path):
         dirlist.sort(key=str.casefold)
     except FileNotFoundError:
         dirlist = ["<Not found>"]
+    except:
+        dirlist = ["<Error>"]
     return dirlist + filelist
 
 
@@ -244,6 +246,7 @@ File:___________________%s
     wait_for_mouseup = 0
 
     while running or wait_for_mouseup:
+        string_enter = False
         event = pygame.event.wait()
         gevents = req.process_event(screen, event)
 
@@ -271,6 +274,9 @@ File:___________________%s
                     list_itemsg.top_item = 0
                     list_itemsg.value = list_itemsg.top_item
                     list_itemsg.need_redraw = True
+                    list_sliderg.need_redraw = True
+                if ge.type == ge.TYPE_GADGETUP and event.type == KEYDOWN and event.key == K_RETURN:
+                    string_enter = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
@@ -318,7 +324,7 @@ File:___________________%s
 
                     file_nameg.need_redraw = True
                     file_typeg.need_redraw = True
-                elif event.key == K_RETURN:
+                elif event.key == K_RETURN and list_itemsg.items[0][0] != "<" and not string_enter:
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         if filename[0:2] == "\x92\x93":

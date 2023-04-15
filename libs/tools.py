@@ -77,6 +77,7 @@ class ToolDragAction(ToolAction):
         config.brush.pen_down = True
         config.cycle_handled = True
         self.p1 = coords
+        config.p1 = coords
         buttons = [button==1, button==2, button==3]
         config.clear_pixel_draw_canvas()
         if buttons[0] or buttons[2]:
@@ -95,6 +96,7 @@ class ToolDragAction(ToolAction):
             return
         if self.p1 == None:
             return
+        config.p1 = None
         config.cycle_handled = True
         config.clear_pixel_draw_canvas()
         self.drawfinal(coords, button)

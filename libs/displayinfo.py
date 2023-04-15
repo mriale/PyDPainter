@@ -73,3 +73,8 @@ class DisplayInfo:
                 l.append(sm)
         return l
 
+    def match_resolution(self, x, y):
+        for sm in self.db:
+            if sm.x == x and sm.y == y:
+                return sm
+        return None

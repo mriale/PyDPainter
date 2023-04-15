@@ -154,7 +154,7 @@ class pydpainter:
         #load picture if specified from command line
         if len(sys.argv) > 1:
             filename = sys.argv[1]
-            config.pixel_canvas = load_pic(filename)
+            config.pixel_canvas = load_pic(filename, config)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
             config.initialize_surfaces()
@@ -277,12 +277,13 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
-        self.screen_width = sm.x
-        self.screen_height = sm.y
-        self.pixel_aspect = sm.aspect
-        self.pixel_mode = sm.get_pixel_mode()
-        self.aspectX = sm.aspect_x
-        self.aspectY = sm.aspect_y
+        if not reinit:
+            self.screen_width = sm.x
+            self.screen_height = sm.y
+            self.pixel_aspect = sm.aspect
+            self.pixel_mode = sm.get_pixel_mode()
+            self.aspectX = sm.aspect_x
+            self.aspectY = sm.aspect_y
         self.sm = sm
 
         if reinit:
@@ -349,6 +350,13 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
+
+        # set prefs
+        self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
+        self.menubar.menu_id("prefs").menu_id("flipcoords").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
+        self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
+        self.menubar.hide_menus = self.hide_menus
 
         self.clear_undo()
         config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
@@ -429,12 +437,26 @@ class pydpainter:
         if 'HOME' in os.environ:
             home = os.environ['HOME']
         try:
+            sm = config.display_info.get_id(self.display_mode)
             f = open(os.path.join(home,".pydpainter"),"w")
             f.write("display_mode=%08x\n" % (self.display_mode))
             f.write("pixel_width=%d\n" % (self.pixel_width))
             f.write("pixel_height=%d\n" % (self.pixel_height))
+            f.write("screen_width=%d\n" % (self.screen_width))
+            f.write("screen_height=%d\n" % (self.screen_height))
             f.write("color_depth=%d\n" % (self.color_depth))
             f.write("NUM_COLORS=%d\n" % (self.NUM_COLORS))
+            f.write("pixel_mode=%s\n" % (self.pixel_mode))
+            f.write("pixel_aspect=%f\n" % (self.pixel_aspect))
+            f.write("aspectX=%f\n" % (sm.aspect_x))
+            f.write("aspectY=%f\n" % (sm.aspect_y))
+            f.write("fullscreen=%s\n" % (self.fullscreen))
+            f.write("scale=%f\n" % (self.scale))
+            f.write("scanlines=%d\n" % (self.scanlines))
+            f.write("coords_on=%s\n" % (self.coords_on))
+            f.write("coords_flip=%s\n" % (self.coords_flip))
+            f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
+            f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.close()
         except:
             pass
@@ -448,7 +470,7 @@ class pydpainter:
             for line in f:
                 if line.lstrip()[0] == '#':
                     continue
-                vars = line.split("=")
+                vars = line.strip().split("=")
                 if len(vars) == 2:
                     if vars[0] == "display_mode":
                         self.display_mode = int(vars[1], 16)
@@ -456,10 +478,37 @@ class pydpainter:
                         self.pixel_width = int(vars[1])
                     elif vars[0] == "pixel_height":
                         self.pixel_height = int(vars[1])
+                    elif vars[0] == "screen_width":
+                        self.screen_width = int(vars[1])
+                    elif vars[0] == "screen_height":
+                        self.screen_height = int(vars[1])
                     elif vars[0] == "color_depth":
                         self.color_depth = int(vars[1])
                     elif vars[0] == "NUM_COLORS":
                         self.NUM_COLORS = int(vars[1])
+                    elif vars[0] == "pixel_mode":
+                        self.pixel_mode = vars[1]
+                    elif vars[0] == "pixel_aspect":
+                        self.pixel_aspect = float(vars[1])
+                    elif vars[0] == "aspectX":
+                        self.aspectX = float(vars[1])
+                    elif vars[0] == "aspectY":
+                        self.aspectY = float(vars[1])
+                    elif vars[0] == "fullscreen":
+                        self.fullscreen = True if vars[1] == "True" else False
+                    elif vars[0] == "scale":
+                        self.scale = float(vars[1])
+                        config.resize_display()
+                    elif vars[0] == "scanlines":
+                        self.scanlines = int(vars[1])
+                    elif vars[0] == "coords_on":
+                        self.coords_on = True if vars[1] == "True" else False
+                    elif vars[0] == "coords_flip":
+                        self.coords_flip = True if vars[1] == "True" else False
+                    elif vars[0] == "auto_transp_on":
+                        self.auto_transp_on = True if vars[1] == "True" else False
+                    elif vars[0] == "hide_menus":
+                        self.hide_menus = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -573,10 +622,13 @@ class pydpainter:
         self.constrain_x = -1
         self.constrain_y = -1
         self.help_on = True
+        self.p1 = None
         self.polylist = []
         self.airbrush_size = 10
         self.coords_on = False
+        self.coords_flip = False
         self.auto_transp_on = False
+        self.hide_menus = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
@@ -611,7 +663,7 @@ class pydpainter:
         self.window_title = "PyDPainter"
         self.modified_count = -1
         self.spare_modified_count = -1
-        self.UNDO_INDEX_MAX = 5
+        self.UNDO_INDEX_MAX = 20
         self.undo_image = []
         self.undo_index = -1
         self.suppress_undo = False
@@ -1269,9 +1321,9 @@ class pydpainter:
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.key == K_PERIOD:
+                if e.unicode == ".":
                     gotkey = True
-                elif e.key == K_PLUS or e.key == K_EQUALS:
+                elif e.unicode == "+" or e.unicode == "=":
                     gotkey = True
                     if self.tool_selected == "airbrush":
                         self.airbrush_size += 1
@@ -1280,7 +1332,7 @@ class pydpainter:
                     else:
                         self.brush.size += 1
                         setBIBrush()
-                elif e.key == K_MINUS:
+                elif e.unicode == "-":
                     gotkey = True
                     if self.tool_selected == "airbrush": #Airbrush
                         self.airbrush_size -= 1
@@ -1289,18 +1341,18 @@ class pydpainter:
                     else:
                         self.brush.size -= 1
                         setBIBrush()
-                elif e.key == K_RIGHTBRACKET:
+                elif e.unicode == "]":
                     gotkey = True
-                    if e.mod & KMOD_SHIFT:
-                        self.bgcolor = (self.bgcolor + 1) % config.NUM_COLORS
-                    else:
-                        self.color = (self.color + 1) % config.NUM_COLORS
-                elif e.key == K_LEFTBRACKET:
+                    self.color = (self.color + 1) % config.NUM_COLORS
+                elif e.unicode == "}":
                     gotkey = True
-                    if e.mod & KMOD_SHIFT:
-                        self.bgcolor = (self.bgcolor - 1) % config.NUM_COLORS
-                    else:
-                        self.color = (self.color - 1) % config.NUM_COLORS
+                    self.bgcolor = (self.bgcolor + 1) % config.NUM_COLORS
+                elif e.unicode == "[":
+                    gotkey = True
+                    self.color = (self.color - 1) % config.NUM_COLORS
+                elif e.unicode == "{":
+                    gotkey = True
+                    self.bgcolor = (self.bgcolor - 1) % config.NUM_COLORS
                 elif e.unicode == ",":
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
@@ -1339,6 +1391,8 @@ class pydpainter:
                     config.resize_display(force=True)
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
+                elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
+                    config.redo()
                 elif e.mod & KMOD_CTRL and e.key == K_z:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
@@ -1357,7 +1411,17 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                    if config.p1 != None and True in pygame.mouse.get_pressed():
+                        if config.coords_flip:
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx-config.p1[0], cy-config.p1[1])
+                        else:
+                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx-config.p1[0], config.p1[1]-cy)
+                    else:
+                        if config.coords_flip:
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx, cy)
+                        else:
+                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                        config.p1 = None
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:
