@@ -436,6 +436,8 @@ class pydpainter:
         home = ""
         if 'HOME' in os.environ:
             home = os.environ['HOME']
+        elif 'HOMEDRIVE' in os.environ and 'HOMEPATH' in os.environ:
+            home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
         try:
             sm = config.display_info.get_id(self.display_mode)
             f = open(os.path.join(home,".pydpainter"),"w")
@@ -465,6 +467,8 @@ class pydpainter:
         home = ""
         if 'HOME' in os.environ:
             home = os.environ['HOME']
+        elif 'HOMEDRIVE' in os.environ and 'HOMEPATH' in os.environ:
+            home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
         try:
             f = open(os.path.join(home,".pydpainter"),"r")
             for line in f:
