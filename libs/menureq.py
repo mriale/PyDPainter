@@ -406,7 +406,7 @@ Resize Page: [Yes~No]
     #Get resolution from current screen mode
     modes = config.display_info.get_display(display_names[aspect])
     res = 0
-    while modes[res].mode_id != config.display_mode:
+    while modes[res].mode_id != config.display_mode & ~config.MODE_EXTRA_HALFBRIGHT:
         res += 1
 
     #Gather screen mode gadgets
