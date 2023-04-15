@@ -260,7 +260,10 @@ def load_pic(filename, status_func=None):
     #Guess display mode
     if config.display_mode < 0:
         config.color_depth = 256
-        if pic.get_width() > 320 or pic.get_height() > 200:
+        sm = config.display_info.match_resolution(pic.get_width(), pic.get_height())
+        if sm != None:
+            config.display_mode = sm.mode_id
+        elif pic.get_width() > 320 or pic.get_height() > 200:
             #Assume square pixel VGA
             config.display_mode = config.VGA_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
             config.scanlines = config.SCANLINES_OFF
