@@ -433,11 +433,7 @@ class pydpainter:
         return newpal[0:numcols]
 
     def saveConfig(self):
-        home = ""
-        if 'HOME' in os.environ:
-            home = os.environ['HOME']
-        elif 'HOMEDRIVE' in os.environ and 'HOMEPATH' in os.environ:
-            home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+        home = os.path.expanduser('~')
         try:
             sm = config.display_info.get_id(self.display_mode)
             f = open(os.path.join(home,".pydpainter"),"w")
@@ -464,11 +460,7 @@ class pydpainter:
             pass
 
     def readConfig(self):
-        home = ""
-        if 'HOME' in os.environ:
-            home = os.environ['HOME']
-        elif 'HOMEDRIVE' in os.environ and 'HOMEPATH' in os.environ:
-            home = os.environ['HOMEDRIVE'] + os.environ['HOMEPATH']
+        home = os.path.expanduser('~')
         try:
             f = open(os.path.join(home,".pydpainter"),"r")
             for line in f:
