@@ -390,8 +390,16 @@ class DoAirbrush(ToolSingleAction):
     """
     Airbrush tool
     """
+    def cycle(self):
+        if config.drawmode.value == DrawMode.CYCLE:
+            color = config.color
+            for crange in config.cranges:
+               color = crange.next_color(color)
+            config.color = color
+
     def draw(self, color, coords):
         for i in range(0,5):
+            self.cycle()
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):
