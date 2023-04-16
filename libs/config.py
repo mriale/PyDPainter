@@ -190,6 +190,9 @@ class pydpainter:
                 config.scale = currscale
 
     def set_aspect(self, mode):
+        if config.force_1_to_1_pixels:
+            mode = 0
+            config.minitoolbar.tool_id("aspect").state = 0
         self.pixel_mode = self.pixel_modes[mode]
         self.pixel_aspect = self.pixel_aspects[mode]
         if self.display_mode & self.MODE_LACE:
@@ -280,8 +283,12 @@ class pydpainter:
         if not reinit:
             self.screen_width = sm.x
             self.screen_height = sm.y
-            self.pixel_aspect = sm.aspect
-            self.pixel_mode = sm.get_pixel_mode()
+            if config.force_1_to_1_pixels:
+                self.pixel_aspect = sm.aspect_y / sm.aspect_x
+                self.pixel_mode = "square"
+            else:
+                self.pixel_aspect = sm.aspect
+                self.pixel_mode = sm.get_pixel_mode()
             self.aspectX = sm.aspect_x
             self.aspectY = sm.aspect_y
         self.sm = sm
@@ -356,6 +363,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("flipcoords").checked = self.coords_flip
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
+        self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.hide_menus = self.hide_menus
 
         self.clear_undo()
@@ -455,6 +463,7 @@ class pydpainter:
             f.write("coords_flip=%s\n" % (self.coords_flip))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
+            f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.close()
         except:
             pass
@@ -505,6 +514,8 @@ class pydpainter:
                         self.auto_transp_on = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
                         self.hide_menus = True if vars[1] == "True" else False
+                    elif vars[0] == "force_1_to_1_pixels":
+                        self.force_1_to_1_pixels = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -625,6 +636,7 @@ class pydpainter:
         self.coords_flip = False
         self.auto_transp_on = False
         self.hide_menus = False
+        self.force_1_to_1_pixels = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
