@@ -40,6 +40,8 @@ def iff_type(filename):
             ilbm_header = iff_file.read(4)
             if ilbm_header == b'ILBM':
                 retval = "ILBM"
+            elif ilbm_header == b'PBM ':
+                retval = "PBM"
             elif ilbm_header == b'ANIM':
                 retval = "ANIM"
         iff_file.close()
@@ -113,6 +115,18 @@ def decode_ilbm_body(body_bytes, compression, nPlanes, surf_array):
 
     p2c(planes_in, surf_array)
 
+#read bytes into bitmap
+def decode_pbm_body(body_bytes, compression, nPlanes, surf_array):
+    w = len(surf_array)
+    h = len(surf_array[0])
+
+    if compression:
+        raw_array = bytearray(w2b(w)*8*h)
+        byterun_decode(body_bytes, raw_array)
+        surf_array[:,:] = np.asarray(raw_array,dtype=np.uint8).reshape(h,w2b(w)*8).transpose()
+    else:
+        surf_array[:,:] = np.frombuffer(body_bytes,dtype=np.uint8).reshape(h,w2b(w)*8).transpose()
+
 class Chunk(object):
     """This class implements IFF chunk reading"""
     def __init__(self, iff_file):
@@ -136,7 +150,7 @@ class Chunk(object):
         return self.iff_file.seek(self.length, 1)
 
 #read in an IFF file
-def load_iff(filename, config):
+def load_iff(filename, config, ifftype):
     cranges = []
     pic = None
     display_mode = -1
@@ -150,7 +164,8 @@ def load_iff(filename, config):
                 #create color range from chunk
                 crng_bytes = chunk.read()
                 (pad, rate, flags, low, high) = unpack(">HHHBB", crng_bytes)
-                cranges.append(colorrange(rate,flags,low,high))
+                if len(cranges) < 6:
+                    cranges.append(colorrange(rate,flags,low,high))
             elif chunk.getname() == b'CCRT':
                 #Graphicraft color range
                 ccrt_bytes = chunk.read()
@@ -187,7 +202,10 @@ def load_iff(filename, config):
                 body_bytes = chunk.read()
                 pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
                 surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
-                decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
+                if ifftype == "ILBM":
+                    decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
+                elif ifftype == "PBM":
+                    decode_pbm_body(body_bytes, compression, nPlanes, surf_array)
                 surf_array = None
 
                 if display_mode > 0 and display_mode & config.MODE_EXTRA_HALFBRIGHT:
@@ -223,8 +241,8 @@ def load_iff(filename, config):
 
 def load_pic(filename, config, status_func=None):
     ifftype = iff_type(filename)
-    if ifftype == "ILBM":
-        pic = load_iff(filename, config)
+    if ifftype in ["ILBM", "PBM"]:
+        pic = load_iff(filename, config, ifftype)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
@@ -244,7 +262,7 @@ def load_pic(filename, config, status_func=None):
             
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
-            load_iff(iffinfo_file, config)
+            load_iff(iffinfo_file, config, "ILBM")
         else:
             config.display_mode = -1
 
