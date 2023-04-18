@@ -43,6 +43,7 @@ def get_dir(path):
 filetype_list = np.array([
 ["IFF", "Amiga IFF image"],
 ["ILBM","Amiga IFF image"],
+["LBM", "PC IFF PBM image"],
 ["BMP", "Windows BMP image"],
 ["JPG", "JPEG image (lossy)"],
 ["JPEG","JPEG image (lossy)"],

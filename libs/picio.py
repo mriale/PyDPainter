@@ -393,10 +393,20 @@ def c2p(surf_array):
     return np.packbits(bits).reshape(h,8,w2b(w))[:,::-1,:]
 
 #save IFF file
-def save_iff(filename, config):
+def save_iff(filename, config, ifftype):
     nPlanes = int(math.log(len(config.pal),2))
     newfile = open(filename, 'wb')
-    newfile.write(b'FORM\0\0\0\0ILBM')
+    newfile.write(b'FORM\0\0\0\0')
+    if ifftype == "PBM":
+        newfile.write(b'PBM ')
+        nplanes = 8
+        pal = list(config.truepal)
+        defpal = config.get_default_palette(256)
+        while len(pal) < 256:
+            pal.append(defpal[len(pal)])
+    else:
+        newfile.write(b'ILBM')
+        pal = config.truepal
     
     write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
         config.pixel_width, config.pixel_height, \
@@ -411,7 +421,7 @@ def save_iff(filename, config):
         ))
 
     cmap_chunk = b''
-    for col in config.truepal:
+    for col in pal:
         cmap_chunk += pack(">BBB", col[0], col[1], col[2])
     write_chunk(newfile, b'CMAP', cmap_chunk)
 
@@ -423,16 +433,32 @@ def save_iff(filename, config):
     body = b''
     out_canvas = config.pixel_canvas
     w,h = out_canvas.get_size()
-    if w != w2b(w):
-        out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
-        out_canvas.set_palette(config.pal)
-        out_canvas.blit(config.pixel_canvas, (0,0))
-    surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
-    planes_out = c2p(surf_array)
-    #body = planes_out[:,:nPlanes,:].tobytes()
-    for y in range(0,len(planes_out)):
-        for p in range(0,nPlanes):
-            body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
+    if ifftype == "ILBM":
+        if w != w2b(w):   # make sure width is divisible by 16
+            out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
+            out_canvas.set_palette(config.pal)
+            out_canvas.blit(config.pixel_canvas, (0,0))
+        surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
+        planes_out = c2p(surf_array)
+
+        # write out bitplanes interleaved one line at a time
+        for y in range(0,len(planes_out)):
+            for p in range(0,nPlanes):
+                body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
+    elif ifftype == "PBM":
+        if w & 1:
+            we = w + 1   # make sure width is even
+            out_canvas = pygame.Surface((we, h),0, depth=8)
+            out_canvas.set_palette(config.pal)
+            out_canvas.blit(config.pixel_canvas, (0,0))
+        else:
+            we = w       # width is already even
+        surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
+        chunky_out = surf_array.transpose()
+
+        # write out chunky bitmap one line at a time
+        for y in range(0,len(chunky_out)):
+            body += byterun_encode(chunky_out[y,:].flatten()).tobytes()
 
     write_chunk(newfile, b'BODY', body)
 
@@ -449,7 +475,9 @@ def save_pic(filename, config, overwrite=True):
 
     if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
        (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
-        save_iff(filename, config)
+        save_iff(filename, config, "ILBM")
+    elif len(filename) > 4 and filename[-4:].lower() == ".lbm":
+        save_iff(filename, config, "PBM")
     else:
         pygame.image.save(config.pixel_canvas, filename)
 
