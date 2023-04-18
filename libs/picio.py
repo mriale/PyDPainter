@@ -121,11 +121,11 @@ def decode_pbm_body(body_bytes, compression, nPlanes, surf_array):
     h = len(surf_array[0])
 
     if compression:
-        raw_array = bytearray(w2b(w)*8*h)
+        raw_array = bytearray(w*h)
         byterun_decode(body_bytes, raw_array)
-        surf_array[:,:] = np.asarray(raw_array,dtype=np.uint8).reshape(h,w2b(w)*8).transpose()
+        surf_array[:,:] = np.asarray(raw_array,dtype=np.uint8).reshape(h,w).transpose()
     else:
-        surf_array[:,:] = np.frombuffer(body_bytes,dtype=np.uint8).reshape(h,w2b(w)*8).transpose()
+        surf_array[:,:] = np.frombuffer(body_bytes,dtype=np.uint8).reshape(h,w).transpose()
 
 class Chunk(object):
     """This class implements IFF chunk reading"""
@@ -144,10 +144,15 @@ class Chunk(object):
         return self.name
 
     def read(self):
-        return self.iff_file.read(self.length)
+        retval = self.iff_file.read(self.length)
+        if self.length & 1 == 1:
+            self.iff_file.seek(1, 1) #make sure word-aligned
+        return retval
 
     def skip(self):
-        return self.iff_file.seek(self.length, 1)
+        self.iff_file.seek(self.length, 1)
+        if self.length & 1 == 1:
+            self.iff_file.seek(1, 1) #make sure word-aligned
 
 #read in an IFF file
 def load_iff(filename, config, ifftype):
@@ -200,11 +205,17 @@ def load_iff(filename, config, ifftype):
             elif chunk.getname() == b'BODY':
                 #bitmap (interleaved)
                 body_bytes = chunk.read()
-                pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
-                surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
                 if ifftype == "ILBM":
+                    pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
+                    surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
                     decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
                 elif ifftype == "PBM":
+                    if w & 1:
+                        we = w + 1   # make sure width is even
+                    else:
+                        we = w       # width is already even
+                    pic = pygame.Surface((we, h),0, depth=8)
+                    surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
                     decode_pbm_body(body_bytes, compression, nPlanes, surf_array)
                 surf_array = None
 
@@ -213,7 +224,6 @@ def load_iff(filename, config, ifftype):
                         config.pal[i+32] = (config.pal[i][0]//2, config.pal[i][1]//2, config.pal[i][2]//2)
 
                 pic.set_palette(config.pal)
-                #pic = pygame.image.load(filename)
             else:
                 chunk.skip()
             chunk = Chunk(iff_file)
