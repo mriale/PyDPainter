@@ -654,6 +654,8 @@ class pydpainter:
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
+        self.meta_alt = 0
+
         #Allocate user events
         self.ALLCUSTOMEVENTS = []
 
@@ -685,13 +687,21 @@ class pydpainter:
         self.initialize_surfaces(reinit=reinit, first_init=True)
         pygame.mouse.set_visible(False)
 
+    def get_mouse_pressed(self):
+        if config.meta_alt == 0:
+            return pygame.mouse.get_pressed()
+        elif config.meta_alt == 1:
+            return (1,0,0)
+        elif config.meta_alt == 2:
+            return (0,1,0)
+
     def doKeyAction(self, curr_action=None):
         if curr_action == None:
             curr_action = config.toolbar.tool_id(config.tool_selected).action
-        if pygame.mouse.get_pressed() == (0,0,0):
+        if self.get_mouse_pressed() == (0,0,0):
             curr_action.move(config.get_mouse_pixel_pos())
         else:
-            curr_action.drag(config.get_mouse_pixel_pos(), pygame.mouse.get_pressed())
+            curr_action.drag(config.get_mouse_pixel_pos(), self.get_mouse_pressed())
 
     def getPalNtscDefault(self):
         display_mode = self.PAL_MONITOR_ID
@@ -797,6 +807,17 @@ class pydpainter:
         mouseY = min(mouseY,self.pixel_height-1)
 
         return mouseX, mouseY
+
+
+    def nudge_mouse_pixel(self, x, y):
+        mouseX, mouseY = pygame.mouse.get_pos()
+        if config.fullscreen:
+            screenX, screenY = self.max_width, self.max_height
+        else:
+            screenX, screenY = self.window_size
+        mouseX += x * screenX // self.screen_width
+        mouseY += y * screenY // self.screen_height
+        pygame.mouse.set_pos(mouseX, mouseY)
 
 
     def get_mouse_pixel_pos(self, event=None, ignore_grid=False, ignore_req=False):
@@ -1172,7 +1193,7 @@ class pydpainter:
         stopX = 0
         stopY = 0
         text_string = ""
-        buttons = list(pygame.mouse.get_pressed())
+        buttons = list(config.get_mouse_pressed())
         zoom_drag = None
         pan_drag = None
 
@@ -1287,10 +1308,10 @@ class pydpainter:
                     if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
                        te.gadget.tool_type == ToolGadget.TT_GROUP:
                         if e.type == KEYDOWN:
-                            if pygame.mouse.get_pressed() == (0,0,0):
+                            if self.get_mouse_pressed() == (0,0,0):
                                 curr_action.move(self.get_mouse_pixel_pos(e))
                             else:
-                                curr_action.drag(self.get_mouse_pixel_pos(e), pygame.mouse.get_pressed())
+                                curr_action.drag(self.get_mouse_pixel_pos(e), self.get_mouse_pressed())
                         else:
                             curr_action.move(self.get_mouse_pixel_pos(e))
             elif curr_action != None and hide_draw_tool:
@@ -1364,6 +1385,21 @@ class pydpainter:
                 elif e.unicode == ",":
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
+                elif e.mod & KMOD_META:
+                    if e.key == K_RIGHT:
+                        self.nudge_mouse_pixel(1, 0)
+                    elif e.key == K_LEFT:
+                        self.nudge_mouse_pixel(-1, 0)
+                    elif e.key == K_DOWN:
+                        self.nudge_mouse_pixel(0, 1)
+                    elif e.key == K_UP:
+                        self.nudge_mouse_pixel(0, -1)
+                    if e.mod & KMOD_LALT:
+                        config.meta_alt = 1
+                        self.doKeyAction()
+                    elif e.mod & KMOD_RALT:
+                        config.meta_alt = 2
+                        self.doKeyAction()
                 elif e.key == K_RIGHT and not config.zoom.on:
                     gotkey = True
                     config.screen_offset_x -= 5
@@ -1419,7 +1455,7 @@ class pydpainter:
                not wait_for_mouseup_gui and not hide_draw_tool:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    if config.p1 != None and True in pygame.mouse.get_pressed():
+                    if config.p1 != None and True in self.get_mouse_pressed():
                         if config.coords_flip:
                             config.menubar.title_right = "%4d\x94%4d\x96" % (cx-config.p1[0], cy-config.p1[1])
                         else:
@@ -1460,7 +1496,7 @@ class pydpainter:
             self.cycle_handled = False
 
             self.recompose()
-
+            
             if not config.running and config.modified_count >= 1:
                 answer = question_req(config.pixel_req_canvas,
                          "Unsaved Changes",
