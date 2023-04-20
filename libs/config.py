@@ -655,6 +655,9 @@ class pydpainter:
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
         self.meta_alt = 0
+        self.busy_start_time = 0
+        self.busy_end_time = 0
+        self.BUSY_LAG_TIME = 500
 
         #Allocate user events
         self.ALLCUSTOMEVENTS = []
@@ -903,10 +906,21 @@ class pydpainter:
                             MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION)) and \
                pygame.time.get_ticks() - self.last_recompose_timer > timeout
 
+    def is_busy(self):
+        ticks = pygame.time.get_ticks()
+        if ticks - self.busy_start_time > self.BUSY_LAG_TIME:
+            self.busy_start_time = ticks - self.BUSY_LAG_TIME
+            return True
+        elif ticks - self.busy_end_time > self.BUSY_LAG_TIME:
+            self.busy_end_time = ticks - self.BUSY_LAG_TIME
+            return False
+        else:
+            return False
+
     def try_recompose(self):
         if pygame.time.get_ticks() - self.last_recompose_timer > 16:
             old_cursor = config.cursor.shape
-            if old_cursor == config.cursor.CROSS:
+            if self.is_busy() and old_cursor == config.cursor.CROSS:
                 config.cursor.shape = config.cursor.BUSY
             config.recompose()
             if old_cursor == config.cursor.CROSS:
