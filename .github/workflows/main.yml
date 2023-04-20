@@ -23,4 +23,4 @@ jobs:
     - uses: actions/upload-artifact@v2
       with:
         name: name-of-artifact
-        path: dist
+        path: dist/windows
