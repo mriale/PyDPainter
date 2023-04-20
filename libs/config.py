@@ -640,7 +640,7 @@ class pydpainter:
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
-        pygame.key.set_repeat(500, 100)
+        pygame.key.set_repeat(500, 50)
 
         self.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
         self.pal = self.get_default_palette()
@@ -655,8 +655,11 @@ class pydpainter:
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
         self.meta_alt = 0
+        self.last_mouse_nudge_time = 0
+        self.nudge_accel = 1
+        self.NUDGE_ACCEL_MAX = 20
         self.busy_start_time = 0
-        self.busy_end_time = 0
+        self.busy_last_coords = (0,0)
         self.BUSY_LAG_TIME = 500
 
         #Allocate user events
@@ -908,14 +911,13 @@ class pydpainter:
 
     def is_busy(self):
         ticks = pygame.time.get_ticks()
-        if ticks - self.busy_start_time > self.BUSY_LAG_TIME:
+        retval = False
+        if ticks - self.busy_start_time > self.BUSY_LAG_TIME and \
+           self.busy_last_coords == pygame.mouse.get_pos():
             self.busy_start_time = ticks - self.BUSY_LAG_TIME
-            return True
-        elif ticks - self.busy_end_time > self.BUSY_LAG_TIME:
-            self.busy_end_time = ticks - self.BUSY_LAG_TIME
-            return False
-        else:
-            return False
+            retval = True
+        self.busy_last_coords = pygame.mouse.get_pos()
+        return retval
 
     def try_recompose(self):
         if pygame.time.get_ticks() - self.last_recompose_timer > 16:
@@ -1400,20 +1402,28 @@ class pydpainter:
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
                 elif e.mod & KMOD_META:
+                    ticks = pygame.time.get_ticks()
+                    if ticks - config.last_mouse_nudge_time < 100:
+                        config.nudge_accel += 2
+                        if config.nudge_accel > config.NUDGE_ACCEL_MAX:
+                            config.nudge_accel = config.NUDGE_ACCEL_MAX
+                    else:
+                        config.nudge_accel = 1
                     if e.key == K_RIGHT:
-                        self.nudge_mouse_pixel(1, 0)
+                        self.nudge_mouse_pixel(config.nudge_accel, 0)
                     elif e.key == K_LEFT:
-                        self.nudge_mouse_pixel(-1, 0)
+                        self.nudge_mouse_pixel(-config.nudge_accel, 0)
                     elif e.key == K_DOWN:
-                        self.nudge_mouse_pixel(0, 1)
+                        self.nudge_mouse_pixel(0, config.nudge_accel)
                     elif e.key == K_UP:
-                        self.nudge_mouse_pixel(0, -1)
+                        self.nudge_mouse_pixel(0, -config.nudge_accel)
                     if e.mod & KMOD_LALT:
                         config.meta_alt = 1
                         self.doKeyAction()
                     elif e.mod & KMOD_RALT:
                         config.meta_alt = 2
                         self.doKeyAction()
+                    config.last_mouse_nudge_time = pygame.time.get_ticks()
                 elif e.key == K_RIGHT and not config.zoom.on:
                     gotkey = True
                     config.screen_offset_x -= 5
