@@ -693,13 +693,28 @@ class pydpainter:
         self.initialize_surfaces(reinit=reinit, first_init=True)
         pygame.mouse.set_visible(False)
 
-    def get_mouse_pressed(self):
+    def get_mouse_pressed(self, e=None):
+        if e != None and "mods" in dir(e):
+            mods = e.mods
+        else:
+            mods =  pygame.key.get_mods()
+        config.meta_alt = 0
+        if mods & KMOD_META:
+            if mods & KMOD_LALT:
+                config.meta_alt = 1
+            if mods & KMOD_RALT:
+                config.meta_alt = 3
+
         if config.meta_alt == 0:
-            return pygame.mouse.get_pressed()
+            if e != None and "buttons" in dir(e):
+                buttons = e.buttons
+            else:
+                buttons = pygame.mouse.get_pressed()
         elif config.meta_alt == 1:
-            return (1,0,0)
-        elif config.meta_alt == 2:
-            return (0,1,0)
+            buttons = (1,0,0)
+        elif config.meta_alt == 3:
+            buttons = (0,0,1)
+        return buttons
 
     def doKeyAction(self, curr_action=None):
         if curr_action == None:
@@ -1257,7 +1272,7 @@ class pydpainter:
 
             #Keep track of button states
             if e.type == MOUSEMOTION:
-                buttons = list(e.buttons)
+                buttons = list(config.get_mouse_pressed(e))
             elif e.type == MOUSEBUTTONDOWN:
                 if e.button <= len(buttons):
                     buttons[e.button-1] = True
@@ -1417,12 +1432,6 @@ class pydpainter:
                         self.nudge_mouse_pixel(0, config.nudge_accel)
                     elif e.key == K_UP:
                         self.nudge_mouse_pixel(0, -config.nudge_accel)
-                    if e.mod & KMOD_LALT:
-                        config.meta_alt = 1
-                        self.doKeyAction()
-                    elif e.mod & KMOD_RALT:
-                        config.meta_alt = 2
-                        self.doKeyAction()
                     config.last_mouse_nudge_time = pygame.time.get_ticks()
                 elif e.key == K_RIGHT and not config.zoom.on:
                     gotkey = True
@@ -1444,7 +1453,6 @@ class pydpainter:
                 elif e.key == K_F9:
                     if config.menubar.visible:
                         config.menubar.visible = False
-                    else:
                         config.menubar.visible = True
                 elif e.key == K_F10:
                     if config.toolbar.visible:
@@ -1473,6 +1481,20 @@ class pydpainter:
                     self.set_screen_offset(self.screen_offset_x, self.screen_offset_y)
                     self.doKeyAction(curr_action)
 
+            #process keyboard mouse clicks
+            if e.type == KEYDOWN:
+                if e.mod & KMOD_META:
+                    if e.key == K_LALT or e.key == K_RALT:
+                        mbuttons = config.get_mouse_pressed(e)
+                        curr_action.mousedown(self.get_mouse_pixel_pos(e), config.meta_alt)
+                        config.doKeyAction()
+            if e.type == KEYUP:
+                if e.mod & KMOD_META:
+                    if e.key == K_LALT or e.key == K_RALT:
+                        curr_action.mouseup(self.get_mouse_pixel_pos(e), config.meta_alt)
+                        mbuttons = config.get_mouse_pressed(e)
+                        config.doKeyAction()
+
             #No toolbar event so process event as action on selected tool
             if curr_action != None and len(te_list) == 0 and \
                len(mte_list) == 0 and len(me_list) == 0 and \
@@ -1493,10 +1515,11 @@ class pydpainter:
                 else:
                     config.menubar.title_right = ""
                 if e.type == MOUSEMOTION:
-                    if e.buttons == (0,0,0):
+                    mbuttons = self.get_mouse_pressed(e)
+                    if mbuttons == (0,0,0):
                         curr_action.move(self.get_mouse_pixel_pos(e))
                     else:
-                        curr_action.drag(self.get_mouse_pixel_pos(e), e.buttons)
+                        curr_action.drag(self.get_mouse_pixel_pos(e), mbuttons)
                 elif e.type == MOUSEBUTTONDOWN and buttons[0] != buttons[2]:
                     zoom_region = config.zoom.region(e.pos)
                     config.wait_for_mouseup[zoom_region] = True
