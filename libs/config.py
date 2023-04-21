@@ -1483,17 +1483,15 @@ class pydpainter:
 
             #process keyboard mouse clicks
             if e.type == KEYDOWN:
-                if e.mod & KMOD_META:
-                    if e.key == K_LALT or e.key == K_RALT:
-                        mbuttons = config.get_mouse_pressed(e)
-                        curr_action.mousedown(self.get_mouse_pixel_pos(e), config.meta_alt)
-                        config.doKeyAction()
+                if e.mod & KMOD_META and e.mod & KMOD_ALT:
+                    if e.key in [K_LALT, K_RALT, K_LMETA, K_RMETA] and config.meta_alt == 0:
+                        config.get_mouse_pressed(e)
+                        if config.meta_alt != 0:
+                            curr_action.mousedown(self.get_mouse_pixel_pos(e), config.meta_alt)
             if e.type == KEYUP:
-                if e.mod & KMOD_META:
-                    if e.key == K_LALT or e.key == K_RALT:
-                        curr_action.mouseup(self.get_mouse_pixel_pos(e), config.meta_alt)
-                        mbuttons = config.get_mouse_pressed(e)
-                        config.doKeyAction()
+                if e.key in [K_LALT, K_RALT, K_LMETA, K_RMETA] and config.meta_alt != 0:
+                    curr_action.mouseup(self.get_mouse_pixel_pos(e), config.meta_alt)
+                    config.get_mouse_pressed(e)
 
             #No toolbar event so process event as action on selected tool
             if curr_action != None and len(te_list) == 0 and \
