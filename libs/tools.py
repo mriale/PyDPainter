@@ -119,12 +119,17 @@ class DoBIBrush(ToolAction):
     brushnames["square"] = 2
     brushnames["spray"] = 3
     def selected(self, attrs):
+        if config.brush.type == Brush.CUSTOM:
+            was_custom = True
+        else:
+            was_custom = False
         config.brush.pen_down = False
         size = int(self.id[-1:])
         name = self.id[0:-1]
         config.brush.type = DoBIBrush.brushnames[name]
         config.brush.size = size
-        config.setDrawMode(DrawMode.COLOR)
+        if was_custom:
+            config.setDrawMode(DrawMode.COLOR)
 
 class DoDot(ToolSingleAction):
     """
@@ -390,8 +395,16 @@ class DoAirbrush(ToolSingleAction):
     """
     Airbrush tool
     """
+    def cycle(self):
+        if config.drawmode.value == DrawMode.CYCLE:
+            color = config.color
+            for crange in config.cranges:
+               color = crange.next_color(color)
+            config.color = color
+
     def draw(self, color, coords):
         for i in range(0,5):
+            self.cycle()
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):

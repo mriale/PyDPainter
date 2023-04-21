@@ -933,6 +933,18 @@ class DoPrefsHideMenus(MenuAction):
         config.menubar.hide_menus = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsForce1To1Pixels(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.force_1_to_1_pixels = self.gadget.checked
+        if config.force_1_to_1_pixels:
+            config.set_aspect(0)
+            config.resize_display()
+            config.minitoolbar.tool_id("aspect").state = 0
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1060,6 +1072,7 @@ def init_menubar(config_in):
             ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             ["/Hide Menus", " ", DoPrefsHideMenus],
+            ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             [" Save Config", " ", DoPrefsSave],
         ]])
 

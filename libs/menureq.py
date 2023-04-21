@@ -43,6 +43,7 @@ def get_dir(path):
 filetype_list = np.array([
 ["IFF", "Amiga IFF image"],
 ["ILBM","Amiga IFF image"],
+["LBM", "PC IFF PBM image"],
 ["BMP", "Windows BMP image"],
 ["JPG", "JPEG image (lossy)"],
 ["JPEG","JPEG image (lossy)"],
@@ -406,7 +407,7 @@ Resize Page: [Yes~No]
     #Get resolution from current screen mode
     modes = config.display_info.get_display(display_names[aspect])
     res = 0
-    while modes[res].mode_id != config.display_mode:
+    while modes[res].mode_id != config.display_mode & ~config.MODE_EXTRA_HALFBRIGHT:
         res += 1
 
     #Gather screen mode gadgets
@@ -917,14 +918,14 @@ class PPpic(Gadget):
 
 def about_req(screen):
     req = str2req("About", """
-PyDPainter       ############
-%-16s ############
-Version %-8s ############
-                 ############
-Licensed under   ############
-GPL 3 or later.  ############
-See LICENSE for  ############
-more details.    ############
+PyDPainter           ############
+%-20.20s ############
+Version %-12.12s ############
+                     ############
+Licensed under GPL 3 ############
+or later. See LICENSE############
+for more details.    ############
+                     ############
              [OK]
 """ % (config.copyright,config.version), "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPpic, font=config.font)
 
