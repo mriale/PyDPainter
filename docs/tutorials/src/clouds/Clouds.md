@@ -42,3 +42,5 @@ Usually I use the second smallest `+`-shaped circle brush to smooth the edges of
 In the next tutorial, we'll show you how you can easily draw the Sun, planets, and plasma balls like these:
 
 ![sun wrap](sun_wrap.jpg)
+
+###### Tutorial written by Stephane Anquetil
