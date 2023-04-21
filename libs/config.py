@@ -581,6 +581,8 @@ class pydpainter:
         self.pixel_aspects = [1.0, 10.0/11.0, 59.0/54.0]
         self.pixel_mode = "NTSC"
         self.pixel_aspect = 10.0/11.0 #NTSC
+        self.aspectX = 1
+        self.aspectY = 1
         self.color_depth = 16
         self.fullscreen = False
         self.display_mode = config.getPalNtscDefault()
