@@ -119,12 +119,17 @@ class DoBIBrush(ToolAction):
     brushnames["square"] = 2
     brushnames["spray"] = 3
     def selected(self, attrs):
+        if config.brush.type == Brush.CUSTOM:
+            was_custom = True
+        else:
+            was_custom = False
         config.brush.pen_down = False
         size = int(self.id[-1:])
         name = self.id[0:-1]
         config.brush.type = DoBIBrush.brushnames[name]
         config.brush.size = size
-        config.setDrawMode(DrawMode.COLOR)
+        if was_custom:
+            config.setDrawMode(DrawMode.COLOR)
 
 class DoDot(ToolSingleAction):
     """
