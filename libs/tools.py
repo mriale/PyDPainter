@@ -403,8 +403,8 @@ class DoAirbrush(ToolSingleAction):
             config.color = color
 
     def draw(self, color, coords):
+        self.cycle()
         for i in range(0,5):
-            self.cycle()
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):
