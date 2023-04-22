@@ -1067,8 +1067,8 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
 
 
 def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
-    x,y = coordfrom
-    x2,y2 = coordto
+    x,y = int(coordfrom[0]), int(coordfrom[1])
+    x2,y2 = int(coordto[0]), int(coordto[1])
 
     cl = CoordList(1)
 
