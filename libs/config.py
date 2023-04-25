@@ -1260,6 +1260,25 @@ class pydpainter:
                 self.recompose()
                 continue
 
+            #Load in droppped file
+            if e.type == DROPFILE:
+                filename = e.file
+                if filename != (()) and filename != "":
+                    progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+                    try:
+                        config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                        close_progress_req(progress_req)
+                        config.truepal = list(config.pal)
+                        config.pal = config.unique_palette(config.pal)
+                        config.initialize_surfaces()
+                        config.filepath = os.path.dirname(filename)
+                        config.filename = filename
+                        config.modified_count = 0
+                    except:
+                        close_progress_req(progress_req)
+                        io_error_req("Load Error", "Unable to open image:\n%s", filename)
+
+
             #Intercept keys for toolbar
             if e.type in [KEYDOWN,KEYUP]:
                 if curr_action != None:
