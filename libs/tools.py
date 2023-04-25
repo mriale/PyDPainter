@@ -18,6 +18,13 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 
+def cycle():
+    if config.drawmode.value == DrawMode.CYCLE:
+        color = config.color
+        for crange in config.cranges:
+           color = crange.next_color(color)
+        config.color = color
+
 class ToolAction(Action):
     def hide(self):
         config.clear_pixel_draw_canvas()
@@ -218,6 +225,7 @@ class DoDraw(ToolSingleAction):
             if buttons[0] or buttons[2]:
                 drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
                 self.polylist.append(coords)
+                config.cycle_handled = True
         else:
             if buttons[0]:
                 drawmode = config.drawmode.value
@@ -381,6 +389,9 @@ class DoFill(ToolSingleAction):
     def move(self, coords):
         pass
 
+    def drag(self, coords, buttons):
+        config.cycle_handled = True
+
     def mousedown(self, coords, button):
         if button == 1:
             floodfill(config.pixel_canvas, config.color, coords)
@@ -395,15 +406,8 @@ class DoAirbrush(ToolSingleAction):
     """
     Airbrush tool
     """
-    def cycle(self):
-        if config.drawmode.value == DrawMode.CYCLE:
-            color = config.color
-            for crange in config.cranges:
-               color = crange.next_color(color)
-            config.color = color
-
     def draw(self, color, coords):
-        self.cycle()
+        cycle()
         for i in range(0,5):
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
@@ -548,6 +552,8 @@ class DoRect(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoCircle(ToolDragAction):
     """
@@ -605,6 +611,8 @@ class DoCircle(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoEllipse(ToolDragAction):
     """
@@ -644,6 +652,8 @@ class DoEllipse(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoPoly(ToolSingleAction):
     """
@@ -867,6 +877,7 @@ class DoPolyFill(DoPoly):
                 self.last_coords = coords
                 self.draw_p1()
         self.hidden = False
+        config.cycle_handled = True
 
     def drag(self, coords, buttons):
         if buttons[0] or buttons[2]:
@@ -874,6 +885,7 @@ class DoPolyFill(DoPoly):
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
             self.last_coords = coords
         self.hidden = False
+        config.cycle_handled = True
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -889,6 +901,7 @@ class DoPolyFill(DoPoly):
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
                     self.polylist = []
                     config.save_undo()
+                    cycle()
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
                     fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
