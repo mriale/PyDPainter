@@ -117,6 +117,20 @@ class ToolDragAction(ToolAction):
             return True
         return False
 
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            self.drawfinal(coords, button)
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
+        return False
+
 class DoBIBrush(ToolAction):
     """
     Built-In brushes
@@ -271,6 +285,8 @@ class DoLine(ToolDragAction):
         config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         if buttons[0]:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords, interrupt=True)
         elif buttons[2]:
@@ -539,6 +555,8 @@ class DoRect(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         if buttons[0]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected, interrupt=True)
         elif buttons[2]:
@@ -572,6 +590,8 @@ class DoCircle(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         mouseX, mouseY = coords
         startX, startY = self.p1
         ax = config.aspectX
@@ -631,6 +651,8 @@ class DoEllipse(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         mouseX, mouseY = coords
         startX, startY = self.p1
         radiusX = int(abs(mouseX-startX))
