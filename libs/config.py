@@ -132,6 +132,17 @@ def setBIBrush():
     return
 
 
+prev_time = 0
+progress_req = None
+def drop_load_progress(percent):
+    global prev_time
+
+    curr_time = pygame.time.get_ticks()
+    if curr_time - prev_time > 33:
+        prev_time = curr_time
+        update_progress_req(progress_req, config.pixel_req_canvas, percent)
+
+
 class pydpainter:
 
     def __init__(self):
@@ -1264,9 +1275,10 @@ class pydpainter:
             if e.type == DROPFILE:
                 filename = e.file
                 if filename != (()) and filename != "":
+                    global progress_req
                     progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
                     try:
-                        config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
                         close_progress_req(progress_req)
                         config.truepal = list(config.pal)
                         config.pal = config.unique_palette(config.pal)
