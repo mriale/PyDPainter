@@ -580,6 +580,7 @@ class DoBrushShear(MenuAction):
                     shearimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
                     shearimage.set_palette(config.pal)
                     shearimage.set_colorkey(config.brush.bgcolor)
+                    shearimage.fill(config.brush.bgcolor)
                     clist = drawline(config.pixel_canvas, 1, (0,0), (xoffset,h), coordsonly=True)
                     if xoffset < 0:
                         imgXoffset = -xoffset
@@ -713,6 +714,7 @@ class DoBrushBendX(MenuAction):
                     bendimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
                     bendimage.set_palette(config.pal)
                     bendimage.set_colorkey(config.brush.bgcolor)
+                    bendimage.fill(config.brush.bgcolor)
                     if mouseY-my < -h//2:
                         clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, 0), (0,h), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
                     elif mouseY-my > h//2:
@@ -786,6 +788,7 @@ class DoBrushBendY(MenuAction):
                     bendimage = pygame.Surface((w, h+abs(yoffset)),0, config.pixel_canvas)
                     bendimage.set_palette(config.pal)
                     bendimage.set_colorkey(config.brush.bgcolor)
+                    bendimage.fill(config.brush.bgcolor)
                     if mouseX-mx < -w//2:
                         clist = drawcurve(config.pixel_canvas, 1, (0, mouseY-my), (w,0), (w//2,(mouseY-my)//4), coordsonly=True, handlesymm=False)
                     elif mouseX-mx > w//2:
