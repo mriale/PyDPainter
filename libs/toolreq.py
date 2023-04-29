@@ -802,7 +802,7 @@ def fill_req(screen):
 [Pattern]    #########
              #########
              #########
-Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f]
+Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~<>]
 Dither:-------------00
 [Cancel][OK]
 """, "%#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
