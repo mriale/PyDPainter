@@ -1595,6 +1595,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
 
+    if len(hlines) == 0:
+        return
+
     if primprops.fillmode.value == FillMode.BOTH_FIT:
         #Find color range
         cyclemode = False
