@@ -810,7 +810,7 @@ class FillMode:
     HORIZ_FIT = 9
     BOTH_FIT = 10
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "<>"]
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91"]
     NOBOUNDS = [65535,65535,-1,-1]
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
@@ -1642,6 +1642,11 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             #Increment shape array pixel count from trimmed shape
             surf_array += surf_trim
 
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
         #Create mask of finished shape
         tfmask = np.not_equal(surf_array, 0)
 
@@ -1649,21 +1654,38 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         max_pixels = np.amax(surf_array)
         if cur_crange.get_dir() == -1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
-        surf_array *= numcolors
+        surf_array *= numcolors * 256   # multiply for more precision
         surf_array //= max_pixels + 1
-        surf_array += cur_crange.low
+        surf_array += cur_crange.low * 256
 
-        #find safe BG color
+        if primprops.fillmode.gradient_dither > 0:
+            #Random dither
+            dither_range = 32 * primprops.fillmode.gradient_dither
+            dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
+            surf_array += dither_array
+        elif primprops.fillmode.gradient_dither < 0:
+            dither_order4 = (FillMode.ORDER4 - 8) * 16
+            dither_array = np.tile(dither_order4, ((w+3)//4,(h+3)//4))
+            surf_array += dither_array[0:w,0:h]
+
+        #Force out of range colors back into range
+        tfarray = np.less(surf_array, cur_crange.low * 256)
+        surf_array[tfarray] = cur_crange.low * 256
+        tfarray = np.greater(surf_array, cur_crange.high * 256)
+        surf_array[tfarray] = cur_crange.high * 256
+
+        #Find safe BG color
         bgcolor = 0
         if cur_crange.low == 0:
             bgcolor = cur_crange.high + 1
 
-        #convert to image and blit to screen
+        #Convert to image and blit to screen
         shape_image = pygame.Surface((w, h),0,8)
         shape_image.set_palette(config.pal)
         shape_image.fill(bgcolor)
         shape_image.set_colorkey(bgcolor)
         surf_array2 = pygame.surfarray.pixels2d(shape_image)
+        surf_array //= 256
         surf_array2[tfmask] = surf_array[tfmask]
         surf_array2 = None
         screen.blit(shape_image, (xo,yo))
