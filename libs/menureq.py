@@ -347,6 +347,8 @@ File:___________________%s
             req.draw(screen)
             config.recompose()
 
+    config.filepath = filepath
+
     config.pixel_req_rect = None
     config.recompose()
 
