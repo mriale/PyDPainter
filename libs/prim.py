@@ -22,6 +22,7 @@ def prim_set_config(config_in):
 symm_mat = None
 symm_mat_num = 0
 symm_center = [0,0]
+hlines = []
 vlines = {}
 ell_mat = None
 ell_angle = 0
@@ -69,11 +70,15 @@ def add_bounds(coords):
         config.fillmode.bounds[3] = y
 
 def start_shape():
+    global hlines
     global vlines
+    hlines = []
     vlines = {}
 
 def end_shape(screen, color, primprops=None, interrupt=False):
     global vlines
+    drawhlines(screen, color, primprops=primprops, interrupt=interrupt)
+    hlines = []
     drawvlines(screen, color, primprops=primprops, interrupt=interrupt)
     vlines = {}
 
@@ -803,8 +808,9 @@ class FillMode:
     VERT_FIT = 7
     HORIZONTAL = 8
     HORIZ_FIT = 9
+    BOTH_FIT = 10
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f"]
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91"]
     NOBOUNDS = [65535,65535,-1,-1]
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
@@ -1067,8 +1073,8 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
 
 
 def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
-    x,y = coordfrom
-    x2,y2 = coordto
+    x,y = int(coordfrom[0]), int(coordfrom[1])
+    x2,y2 = int(coordto[0]), int(coordto[1])
 
     cl = CoordList(1)
 
@@ -1470,6 +1476,16 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             #true color
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
+def hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    add_vline(y, xs1, xs2)
+
+def hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
 def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
@@ -1510,9 +1526,9 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
-        if primprops.fillmode.predraw:
-            hline_SOLID(surf_array, color, y, xs1, xs2)
-        add_vline(y, xs1, xs2)
+        hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.BOTH_FIT:
+        hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value >= FillMode.VERTICAL:
         #get color range
         cyclemode = False
@@ -1573,6 +1589,109 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     #free array and unlock surface
     surf_array = None
 
+
+def drawhlines(screen, color, primprops=None, interrupt=False):
+    global hlines
+    if primprops == None:
+        primprops = config.primprops
+
+    if len(hlines) == 0:
+        return
+
+    if primprops.fillmode.value == FillMode.BOTH_FIT:
+        #Find color range
+        cyclemode = False
+        for crange in config.cranges:
+            if crange.is_active() and color >= crange.low and color <= crange.high:
+                cyclemode = True
+                arange = crange.get_range()
+                numcolors = len(arange)
+                cur_crange = crange
+                color = arange[0]
+        if not cyclemode:
+            return
+
+        #Find bounds of shape
+        hlines_min = np.amin(hlines, axis=0)
+        hlines_max = np.amax(hlines, axis=0)
+        xo = hlines_min[1] - 1
+        yo = hlines_min[0] - 1
+        w = hlines_max[2] - xo + 2
+        h = hlines_max[0] - yo + 2
+
+        #Create numpy array for shape
+        surf_array = np.zeros((w,h), dtype=int)
+
+        #Render shape into numpy array
+        for y,x1,x2 in hlines:
+            surf_array[x1-xo:x2-xo+1,y-yo] = 1
+        surf_trim = surf_array.copy()
+
+        #Build up array of number of pixels to the edge
+        while (np.count_nonzero(surf_trim) > 0):
+            #Create mask to cut away edges
+            tfarray = np.equal(surf_trim, 0)
+            surf_mask = np.zeros((w,h), dtype=int)
+            surf_mask[tfarray] = 1
+
+            #Trim edges of shape
+            surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
+            surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
+            surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
+            surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
+            tfarray = np.not_equal(surf_trim, 1)
+            surf_trim[tfarray] = 0
+
+            #Increment shape array pixel count from trimmed shape
+            surf_array += surf_trim
+
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        #Create mask of finished shape
+        tfmask = np.not_equal(surf_array, 0)
+
+        #Map counts to colors in the range
+        max_pixels = np.amax(surf_array)
+        if cur_crange.get_dir() == -1:
+            surf_array[tfmask] = max_pixels - surf_array[tfmask]
+        surf_array *= numcolors * 256   # multiply for more precision
+        surf_array //= max_pixels + 1
+        surf_array += cur_crange.low * 256
+
+        if primprops.fillmode.gradient_dither > 0:
+            #Random dither
+            dither_range = 32 * primprops.fillmode.gradient_dither
+            dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
+            surf_array += dither_array
+        elif primprops.fillmode.gradient_dither < 0:
+            dither_order4 = (FillMode.ORDER4 - 8) * 16
+            dither_array = np.tile(dither_order4, ((w+3)//4,(h+3)//4))
+            surf_array += dither_array[0:w,0:h]
+
+        #Force out of range colors back into range
+        tfarray = np.less(surf_array, cur_crange.low * 256)
+        surf_array[tfarray] = cur_crange.low * 256
+        tfarray = np.greater(surf_array, cur_crange.high * 256)
+        surf_array[tfarray] = cur_crange.high * 256
+
+        #Find safe BG color
+        bgcolor = 0
+        if cur_crange.low == 0:
+            bgcolor = cur_crange.high + 1
+
+        #Convert to image and blit to screen
+        shape_image = pygame.Surface((w, h),0,8)
+        shape_image.set_palette(config.pal)
+        shape_image.fill(bgcolor)
+        shape_image.set_colorkey(bgcolor)
+        surf_array2 = pygame.surfarray.pixels2d(shape_image)
+        surf_array //= 256
+        surf_array2[tfmask] = surf_array[tfmask]
+        surf_array2 = None
+        screen.blit(shape_image, (xo,yo))
 
 def drawvlines(screen, color, primprops=None, interrupt=False):
     global vlines

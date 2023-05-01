@@ -18,6 +18,13 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 
+def cycle():
+    if config.drawmode.value == DrawMode.CYCLE:
+        color = config.color
+        for crange in config.cranges:
+           color = crange.next_color(color)
+        config.color = color
+
 class ToolAction(Action):
     def hide(self):
         config.clear_pixel_draw_canvas()
@@ -108,6 +115,20 @@ class ToolDragAction(ToolAction):
             self.p1 = None
             self.button = None
             return True
+        return False
+
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            self.drawfinal(coords, button)
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
         return False
 
 class DoBIBrush(ToolAction):
@@ -218,6 +239,7 @@ class DoDraw(ToolSingleAction):
             if buttons[0] or buttons[2]:
                 drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
                 self.polylist.append(coords)
+                config.cycle_handled = True
         else:
             if buttons[0]:
                 drawmode = config.drawmode.value
@@ -263,6 +285,8 @@ class DoLine(ToolDragAction):
         config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         if buttons[0]:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords, interrupt=True)
         elif buttons[2]:
@@ -381,6 +405,9 @@ class DoFill(ToolSingleAction):
     def move(self, coords):
         pass
 
+    def drag(self, coords, buttons):
+        config.cycle_handled = True
+
     def mousedown(self, coords, button):
         if button == 1:
             floodfill(config.pixel_canvas, config.color, coords)
@@ -395,16 +422,9 @@ class DoAirbrush(ToolSingleAction):
     """
     Airbrush tool
     """
-    def cycle(self):
-        if config.drawmode.value == DrawMode.CYCLE:
-            color = config.color
-            for crange in config.cranges:
-               color = crange.next_color(color)
-            config.color = color
-
     def draw(self, color, coords):
+        cycle()
         for i in range(0,5):
-            self.cycle()
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):
@@ -535,6 +555,8 @@ class DoRect(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         if buttons[0]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected, interrupt=True)
         elif buttons[2]:
@@ -548,6 +570,8 @@ class DoRect(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoCircle(ToolDragAction):
     """
@@ -566,6 +590,8 @@ class DoCircle(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         mouseX, mouseY = coords
         startX, startY = self.p1
         ax = config.aspectX
@@ -605,6 +631,8 @@ class DoCircle(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoEllipse(ToolDragAction):
     """
@@ -623,6 +651,8 @@ class DoEllipse(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        if self.leave_trace(coords, buttons):
+            return
         mouseX, mouseY = coords
         startX, startY = self.p1
         radiusX = int(abs(mouseX-startX))
@@ -644,6 +674,8 @@ class DoEllipse(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if config.subtool_selected:
+            cycle()
 
 class DoPoly(ToolSingleAction):
     """
@@ -867,6 +899,7 @@ class DoPolyFill(DoPoly):
                 self.last_coords = coords
                 self.draw_p1()
         self.hidden = False
+        config.cycle_handled = True
 
     def drag(self, coords, buttons):
         if buttons[0] or buttons[2]:
@@ -874,6 +907,7 @@ class DoPolyFill(DoPoly):
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
             self.last_coords = coords
         self.hidden = False
+        config.cycle_handled = True
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -889,6 +923,7 @@ class DoPolyFill(DoPoly):
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
                     self.polylist = []
                     config.save_undo()
+                    cycle()
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
                     fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)

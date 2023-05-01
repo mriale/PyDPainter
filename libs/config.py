@@ -132,6 +132,17 @@ def setBIBrush():
     return
 
 
+prev_time = 0
+progress_req = None
+def drop_load_progress(percent):
+    global prev_time
+
+    curr_time = pygame.time.get_ticks()
+    if curr_time - prev_time > 33:
+        prev_time = curr_time
+        update_progress_req(progress_req, config.pixel_req_canvas, percent)
+
+
 class pydpainter:
 
     def __init__(self):
@@ -277,6 +288,12 @@ class pydpainter:
  
             config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
+
+    def get_range(self, color):
+        for crange in config.cranges:
+            if crange.is_active() and color >= crange.low and color <= crange.high:
+                return crange
+        return None
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
@@ -1259,6 +1276,26 @@ class pydpainter:
                 config.resize_display(False)
                 self.recompose()
                 continue
+
+            #Load in droppped file
+            if e.type == DROPFILE:
+                filename = e.file
+                if filename != (()) and filename != "":
+                    global progress_req
+                    progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+                    try:
+                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
+                        close_progress_req(progress_req)
+                        config.truepal = list(config.pal)
+                        config.pal = config.unique_palette(config.pal)
+                        config.initialize_surfaces()
+                        config.filepath = os.path.dirname(filename)
+                        config.filename = filename
+                        config.modified_count = 0
+                    except:
+                        close_progress_req(progress_req)
+                        io_error_req("Load Error", "Unable to open image:\n%s", filename)
+
 
             #Intercept keys for toolbar
             if e.type in [KEYDOWN,KEYUP]:

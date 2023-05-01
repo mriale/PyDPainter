@@ -796,14 +796,15 @@ class FillGadget(Gadget):
 def fill_req(screen):
     config.stop_cycling()
     req = str2req("Fill Type", """
-[Solid]      #########
-[Brush]      #########
-[Wrap]       #########
-[Pattern]    #########
-             #########
-             #########
-Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f]
-Dither:-------------00
+[Solid]     ###########
+[Brush]     ###########
+[Wrap]      ###########
+[Pattern]   ###########
+            ###########
+            ###########
+            ###########
+Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
+Dither:----------------00
 [Cancel][OK]
 """, "%#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
@@ -814,19 +815,19 @@ Dither:-------------00
         if g.label == str(config.fillmode):
             g.state = 1
 
-    ditherg = req.gadget_id("7_7")
+    ditherg = req.gadget_id("7_8")
     ditherg.maxvalue = 22
     ditherg.value = config.fillmode.gradient_dither + 1
     ditherg.need_redraw = True
 
-    dithervalg = req.gadget_id("20_7")
+    dithervalg = req.gadget_id("23_8")
     if ditherg.value > 0:
         dithervalg.label = "%2d" % (ditherg.value-1)
     else:
-        dithervalg.label = "\x90\x91"
+        dithervalg.label = "\x99\x9a"
     dithervalg.need_redraw = True
 
-    dithersampleg = req.gadget_id("13_0")
+    dithersampleg = req.gadget_id("12_0")
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.need_redraw = True
@@ -859,7 +860,7 @@ Dither:-------------00
                 if ditherg.value > 0:
                     dithervalg.label = "%2d" % (ditherg.value-1)
                 else:
-                    dithervalg.label = "\x90\x91"
+                    dithervalg.label = "\x99\x9a"
                 dithervalg.need_redraw = True
                 dithersampleg.value = ditherg.value - 1
                 dithersampleg.need_redraw = True

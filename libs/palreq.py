@@ -504,6 +504,12 @@ Speed---------___^^
                             color_action = 0
                             from_color = -1
                             config.cursor.shape = config.cursor.NORMAL
+
+                            # redraw color sliders after palette changes
+                            set_rgb_sliders(config.pal[color], rg, gg, bg)
+                            strg.value = rgb_to_hex(config.pal[color])
+                            strg.need_redraw = True
+                            set_hsv_sliders(config.pal[color], hg, sg, vg)
                 elif ge.gadget.label == "^":
                     config.cranges[current_range].set_dir(speed_dirg.value)
                     speed_dirg.need_redraw = True
