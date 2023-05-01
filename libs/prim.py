@@ -1477,12 +1477,12 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
 def hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2):
-    if primprops.fillmode.predraw:
+    if primprops.fillmode.predraw or config.get_range(color) == None:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     add_vline(y, xs1, xs2)
 
 def hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2):
-    if primprops.fillmode.predraw:
+    if primprops.fillmode.predraw or config.get_range(color) == None:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     hlines.append([y, xs1, xs2])
 

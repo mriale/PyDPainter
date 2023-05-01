@@ -289,6 +289,12 @@ class pydpainter:
             config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
 
+    def get_range(self, color):
+        for crange in config.cranges:
+            if crange.is_active() and color >= crange.low and color <= crange.high:
+                return crange
+        return None
+
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
         if not reinit:
