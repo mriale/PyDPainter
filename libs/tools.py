@@ -424,7 +424,10 @@ class DoAirbrush(ToolSingleAction):
     """
     def draw(self, color, coords):
         cycle()
-        for i in range(0,5):
+        max_spray = 5
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            max_spray = 1
+        for i in range(0,max_spray):
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):
