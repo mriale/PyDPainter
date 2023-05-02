@@ -26,6 +26,7 @@ hlines = []
 vlines = {}
 ell_mat = None
 ell_angle = 0
+ell_coords = (-1,-1)
 
 def onscreen(coords):
     w = config.pixel_width
@@ -843,6 +844,7 @@ class PrimProps:
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     global ell_mat
     global ell_angle
+    global ell_coords
 
     ccoords = []
 
@@ -858,8 +860,9 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     #rotate ellipse if needed
     if angle != 0:
         #recalc matrix only if necessary
-        if angle != ell_angle:
+        if angle != ell_angle or coords != ell_coords:
             ell_angle = angle
+            ell_coords = coords
             q = angle * math.pi / 180.0
             trans1   = np.matrix([[  1,   0, 0],
                                   [  0,   1, 0],
