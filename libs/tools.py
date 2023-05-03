@@ -683,6 +683,7 @@ class DoEllipse(ToolDragAction):
         if self.state == self.ST_CENTER:
             config.brush.pen_down = True
             self.p1 = coords
+            config.p1 = coords
             config.clear_pixel_draw_canvas()
             if button == 1:
                 config.brush.draw(config.pixel_canvas, config.color, coords)
@@ -711,6 +712,7 @@ class DoEllipse(ToolDragAction):
             self.p1 = None
             self.p2 = None
             self.p3 = None
+            config.p1 = None
             config.brush.pen_down = False
             self.move(coords)
 
@@ -738,6 +740,7 @@ class DoEllipse(ToolDragAction):
             mouseX, mouseY = coords
             angle0 = math.atan2(p2y-p1y, p2x-p1x) * (180.0/math.pi)
             angle = math.atan2(mouseY-p1y, mouseX-p1x) * (180.0/math.pi) - angle0
+            config.menubar.title_right = ("%d"+chr(0xB0))%((angle))
             if buttons[0]:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
             elif buttons[2]:
@@ -764,6 +767,7 @@ class DoEllipse(ToolDragAction):
             self.p1 = None
             self.p2 = None
             self.p3 = None
+            config.p1 = None
             self.state = self.ST_CENTER
             config.save_undo()
             config.brush.pen_down = False
@@ -778,6 +782,7 @@ class DoEllipse(ToolDragAction):
             self.p1 = None
             self.p2 = None
             self.p3 = None
+            config.p1 = None
             self.button = None
             self.state = self.ST_CENTER
             return True
