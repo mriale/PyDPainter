@@ -412,6 +412,7 @@ class DoBrushOutline(MenuAction):
         #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
         newimage.set_palette(config.pal)
+        newimage.fill(config.brush.bgcolor)
         newimage.set_colorkey(config.brush.bgcolor)
 
         #create brush to add edges
