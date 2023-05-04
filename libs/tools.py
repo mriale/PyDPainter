@@ -733,13 +733,15 @@ class DoEllipse(ToolDragAction):
                 drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
         elif self.state == self.ST_ROTATE:
             config.clear_pixel_draw_canvas()
+            ax = config.aspectX
+            ay = config.aspectY
             p2x, p2y = self.p2
             p1x, p1y = self.p1
             radiusX = int(abs(p2x-p1x))
             radiusY = int(abs(p2y-p1y))
             mouseX, mouseY = coords
-            angle0 = math.atan2(p2y-p1y, p2x-p1x) * (180.0/math.pi)
-            angle = math.atan2(mouseY-p1y, mouseX-p1x) * (180.0/math.pi) - angle0
+            angle0 = math.atan2((p2y-p1y)/ay, (p2x-p1x)/ax) * (180.0/math.pi)
+            angle = math.atan2((mouseY-p1y)/ay, (mouseX-p1x)/ax) * (180.0/math.pi) - angle0
             config.menubar.title_right = ("%d"+chr(0xB0))%((angle))
             if buttons[0]:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
@@ -753,13 +755,15 @@ class DoEllipse(ToolDragAction):
         config.cycle_handled = True
         if self.state == self.ST_ROTATE:
             config.clear_pixel_draw_canvas()
+            ax = config.aspectX
+            ay = config.aspectY
             p2x, p2y = self.p2
             p1x, p1y = self.p1
             radiusX = int(abs(p2x-p1x))
             radiusY = int(abs(p2y-p1y))
             mouseX, mouseY = coords
-            angle0 = math.atan2(p2y-p1y, p2x-p1x) * (180.0/math.pi)
-            angle = math.atan2(mouseY-p1y, mouseX-p1x) * (180.0/math.pi) - angle0
+            angle0 = math.atan2((p2y-p1y)/ay, (p2x-p1x)/ax) * (180.0/math.pi)
+            angle = math.atan2((mouseY-p1y)/ay, (mouseX-p1x)/ax) * (180.0/math.pi) - angle0
             if button == 1:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle)
             elif button == 3:
