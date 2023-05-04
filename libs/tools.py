@@ -199,6 +199,8 @@ class DoDraw(ToolSingleAction):
     def selected(self, attrs):
         config.brush.pen_down = False
         if attrs["rightclick"]:
+            if attrs["subtool"]:
+                fill_req(config.pixel_req_canvas)
             return
         config.tool_selected = self.id
         if attrs["subtool"]:
