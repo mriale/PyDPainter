@@ -1390,6 +1390,21 @@ def hline_XOR(surf_array, y, xs1, xs2):
         surf_array[xs1:xs2,y] ^= 0x00ffffff
 
 def hline_SOLID(surf_array, color, y, xs1, xs2):
+    #don't draw if off screen
+    size = surf_array.shape
+    if y<0 or y>=size[1]:
+        return
+    if xs1<0 and xs2<0:
+        return
+    if xs1>size[0] and xs2>size[0]:
+        return
+
+    #clip to edges of screen
+    if xs1<0:
+        xs1=0
+    if xs2>size[0]-1:
+        xs2=size[0]-1
+
     if surf_array.dtype == np.uint8:
         #indexed color
         surf_array[xs1:xs2+1,y] = color
@@ -1493,14 +1508,16 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
 
-    #don't draw if off screen
     size = screen.get_size()
-    if y<0 or y>=size[1]:
-        return
-    if x1<0 and x2<0:
-        return
-    if x1>size[0] and x2>size[0]:
-        return
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #don't draw if off screen
+        if y<0 or y>=size[1]:
+            return
+        if x1<0 and x2<0:
+            return
+        if x1>size[0] and x2>size[0]:
+            return
 
     color = copy.copy(color_in)
 
@@ -1509,11 +1526,13 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
         x1,x2 = (x2,x1)
     xs1,xs2 = (x1,x2)
 
-    #clip to edges of screen
-    if xs1<0:
-        xs1=0
-    if xs2>size[0]-1:
-        xs2=size[0]-1
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #clip to edges of screen
+        if xs1<0:
+            xs1=0
+        if xs2>size[0]-1:
+            xs2=size[0]-1
 
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)
