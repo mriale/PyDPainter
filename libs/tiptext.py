@@ -67,6 +67,7 @@ tiptext["ellipse"] = [
 outline + " [e]",
 filled + " [E]",
 dragshape,
+"Drag again to rotate.",
 lbf, rbb]
 
 tiptext["poly"] = [
