@@ -265,6 +265,7 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
+        self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if coordfrom == None:
                 coordfrom = (0,0)
@@ -292,11 +293,9 @@ class Brush:
             self.image_orig = self.image.copy()
             self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
-            self.handle = [w//2, h//2]
-            self.handle_frac = [0.5, 0.5]
             self.__size = h
             self.aspect = 1.0
-            self.rect = [-self.handle[0], -self.handle[1], w, h]
+            self.calc_handle(w, h)
         else:
             self.image = None
             self.rect = [0,0,size,size]
@@ -306,13 +305,9 @@ class Brush:
             self.bgcolor_orig = bgcolor
             self.__size = size
             self.aspect = 1.0
-            self.handle = [size//2, size//2]
-            self.handle_frac = [0.5, 0.5]
-            self.rect = [-self.handle[0], -self.handle[1],
-                         size, size]
+            self.calc_handle(size, size)
 
         self.cache = BrushCache()
-        self.handle_type = self.CENTER
         self.smear_stencil = None
         self.smear_image = None
         self.smear_count = 0
@@ -343,6 +338,23 @@ class Brush:
 
         self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
+
+    def get_wh(self):
+        if self.type == Brush.CUSTOM:
+            return self.image.get_size()
+        else:
+            ax = config.aspectX
+            ay = config.aspectY
+            if self.type == Brush.SQUARE:
+                return ((self.size+1)*ax, (self.size+1)*ay)
+            elif self.type == Brush.SPRAY:
+                return ((self.size*3*ax+1, self.size*3*ay+1))
+            elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+                if self.size == 1:
+                    return (1, 1)
+                else:
+                    return (self.size*2*ax, self.size*2*ay)
+
 
     def scale(self, image_in):
         size = self.__size
@@ -452,8 +464,9 @@ class Brush:
             image.fill(color)
             return image
         elif self.type == Brush.SPRAY:
-            image = pygame.Surface((self.size*3+1, self.size*3+1),0, config.pixel_canvas)
-            self.calc_handle(image.get_width(), image.get_height())
+            image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
+            w,h = image.get_size()
+            self.calc_handle(w,h)
             image.set_palette(config.pal)
             
             if color == 0:
@@ -476,7 +489,7 @@ class Brush:
                 old_state = random.getstate()
                 random.seed(self.size)
                 for i in range(0, self.size * 3):
-                    image.set_at(config.airbrush_coords(self.handle[0], self.handle[1], size=self.size*1.5), color)
+                    image.set_at(config.airbrush_coords(w//2, h//2, size=self.size*1.5), color)
                 random.setstate(old_state)
 
             return image
