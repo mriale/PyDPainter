@@ -412,6 +412,7 @@ class DoBrushOutline(MenuAction):
         #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
         newimage.set_palette(config.pal)
+        newimage.fill(config.brush.bgcolor)
         newimage.set_colorkey(config.brush.bgcolor)
 
         #create brush to add edges
@@ -831,16 +832,12 @@ class DoBrushBendY(MenuAction):
 
 class DoBrushHandleCenter(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
         config.brush.handle_type = config.brush.CENTER
         config.brush.size = config.brush.size
         config.doKeyAction()
 
 class DoBrushHandleCorner(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
         if config.brush.handle_type >= config.brush.CORNER_UL and config.brush.handle_type < config.brush.CORNER_LL:
             config.brush.handle_type += 1
         else:
@@ -850,9 +847,6 @@ class DoBrushHandleCorner(MenuAction):
 
 class DoBrushHandlePlace(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
-
         point_coords = config.get_mouse_pixel_pos(ignore_grid=True)
         config.recompose()
         point_placed = False
@@ -873,7 +867,7 @@ class DoBrushHandlePlace(MenuAction):
             elif event.type == MOUSEBUTTONUP:
                 point_placed = True
             config.clear_pixel_draw_canvas()
-            config.pixel_canvas.blit(config.brush.image, (point_coords[0]-config.brush.handle[0], point_coords[1]-config.brush.handle[1]))
+            config.brush.draw(config.pixel_canvas, config.color, point_coords)
             #current center
             drawline(config.pixel_canvas, 1,
                 (mouseX,0), (mouseX,config.pixel_canvas.get_height()),
@@ -886,7 +880,7 @@ class DoBrushHandlePlace(MenuAction):
 
         bxo = point_coords[0]-config.brush.handle[0]
         byo = point_coords[1]-config.brush.handle[1]
-        bw,bh = config.brush.image.get_size()
+        bw,bh = config.brush.get_wh()
 
         config.brush.handle_type = config.brush.PLACE
         config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]

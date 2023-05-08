@@ -26,6 +26,7 @@ hlines = []
 vlines = {}
 ell_mat = None
 ell_angle = 0
+ell_coords = (-1,-1)
 
 def onscreen(coords):
     w = config.pixel_width
@@ -264,6 +265,7 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
+        self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if coordfrom == None:
                 coordfrom = (0,0)
@@ -291,11 +293,9 @@ class Brush:
             self.image_orig = self.image.copy()
             self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
-            self.handle = [w//2, h//2]
-            self.handle_frac = [0.5, 0.5]
             self.__size = h
             self.aspect = 1.0
-            self.rect = [-self.handle[0], -self.handle[1], w, h]
+            self.calc_handle(w, h)
         else:
             self.image = None
             self.rect = [0,0,size,size]
@@ -305,13 +305,9 @@ class Brush:
             self.bgcolor_orig = bgcolor
             self.__size = size
             self.aspect = 1.0
-            self.handle = [size//2, size//2]
-            self.handle_frac = [0.5, 0.5]
-            self.rect = [-self.handle[0], -self.handle[1],
-                         size, size]
+            self.calc_handle(size, size)
 
         self.cache = BrushCache()
-        self.handle_type = self.CENTER
         self.smear_stencil = None
         self.smear_image = None
         self.smear_count = 0
@@ -342,6 +338,23 @@ class Brush:
 
         self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
+
+    def get_wh(self):
+        if self.type == Brush.CUSTOM:
+            return self.image.get_size()
+        else:
+            ax = config.aspectX
+            ay = config.aspectY
+            if self.type == Brush.SQUARE:
+                return ((self.size+1)*ax, (self.size+1)*ay)
+            elif self.type == Brush.SPRAY:
+                return ((self.size*3*ax+1, self.size*3*ay+1))
+            elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+                if self.size == 1:
+                    return (1, 1)
+                else:
+                    return (self.size*2*ax, self.size*2*ay)
+
 
     def scale(self, image_in):
         size = self.__size
@@ -451,8 +464,9 @@ class Brush:
             image.fill(color)
             return image
         elif self.type == Brush.SPRAY:
-            image = pygame.Surface((self.size*3+1, self.size*3+1),0, config.pixel_canvas)
-            self.calc_handle(image.get_width(), image.get_height())
+            image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
+            w,h = image.get_size()
+            self.calc_handle(w,h)
             image.set_palette(config.pal)
             
             if color == 0:
@@ -475,7 +489,7 @@ class Brush:
                 old_state = random.getstate()
                 random.seed(self.size)
                 for i in range(0, self.size * 3):
-                    image.set_at(config.airbrush_coords(self.handle[0], self.handle[1], size=self.size*1.5), color)
+                    image.set_at(config.airbrush_coords(w//2, h//2, size=self.size*1.5), color)
                 random.setstate(old_state)
 
             return image
@@ -843,6 +857,7 @@ class PrimProps:
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     global ell_mat
     global ell_angle
+    global ell_coords
 
     ccoords = []
 
@@ -858,8 +873,9 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     #rotate ellipse if needed
     if angle != 0:
         #recalc matrix only if necessary
-        if angle != ell_angle:
+        if angle != ell_angle or coords != ell_coords:
             ell_angle = angle
+            ell_coords = coords
             q = angle * math.pi / 180.0
             trans1   = np.matrix([[  1,   0, 0],
                                   [  0,   1, 0],
@@ -1387,6 +1403,21 @@ def hline_XOR(surf_array, y, xs1, xs2):
         surf_array[xs1:xs2,y] ^= 0x00ffffff
 
 def hline_SOLID(surf_array, color, y, xs1, xs2):
+    #don't draw if off screen
+    size = surf_array.shape
+    if y<0 or y>=size[1]:
+        return
+    if xs1<0 and xs2<0:
+        return
+    if xs1>size[0] and xs2>size[0]:
+        return
+
+    #clip to edges of screen
+    if xs1<0:
+        xs1=0
+    if xs2>size[0]-1:
+        xs2=size[0]-1
+
     if surf_array.dtype == np.uint8:
         #indexed color
         surf_array[xs1:xs2+1,y] = color
@@ -1490,14 +1521,16 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
 
-    #don't draw if off screen
     size = screen.get_size()
-    if y<0 or y>=size[1]:
-        return
-    if x1<0 and x2<0:
-        return
-    if x1>size[0] and x2>size[0]:
-        return
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #don't draw if off screen
+        if y<0 or y>=size[1]:
+            return
+        if x1<0 and x2<0:
+            return
+        if x1>size[0] and x2>size[0]:
+            return
 
     color = copy.copy(color_in)
 
@@ -1506,11 +1539,13 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
         x1,x2 = (x2,x1)
     xs1,xs2 = (x1,x2)
 
-    #clip to edges of screen
-    if xs1<0:
-        xs1=0
-    if xs2>size[0]-1:
-        xs2=size[0]-1
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #clip to edges of screen
+        if xs1<0:
+            xs1=0
+        if xs2>size[0]-1:
+            xs2=size[0]-1
 
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)

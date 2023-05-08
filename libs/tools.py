@@ -151,6 +151,7 @@ class DoBIBrush(ToolAction):
         config.brush.size = size
         if was_custom:
             config.setDrawMode(DrawMode.COLOR)
+            config.brush.handle_type = config.brush.CENTER
 
 class DoDot(ToolSingleAction):
     """
@@ -199,6 +200,8 @@ class DoDraw(ToolSingleAction):
     def selected(self, attrs):
         config.brush.pen_down = False
         if attrs["rightclick"]:
+            if attrs["subtool"]:
+                fill_req(config.pixel_req_canvas)
             return
         config.tool_selected = self.id
         if attrs["subtool"]:
@@ -424,7 +427,10 @@ class DoAirbrush(ToolSingleAction):
     """
     def draw(self, color, coords):
         cycle()
-        for i in range(0,5):
+        max_spray = 5
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            max_spray = 1
+        for i in range(0,max_spray):
             config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
 
     def hide(self):
@@ -638,44 +644,156 @@ class DoEllipse(ToolDragAction):
     """
     Ellipse tool
     """
+    ST_CENTER = 0
+    ST_XY = 1
+    ST_ROTATE = 2
     def selected(self, attrs):
+        config.brush.pen_down = False
         if attrs["subtool"] and attrs["rightclick"]:
             fill_req(config.pixel_req_canvas)
+        elif attrs["rightclick"]:
+            spacing_req(config.pixel_req_canvas)
         else:
             super().selected(attrs)
+        self.p1 = config.get_mouse_pixel_pos()
+        self.p2 = None
+        self.p3 = None
+        self.button = None
+        self.state = self.ST_CENTER
 
-    def drawbefore(self, coords):
+    def move(self, coords):
         mouseX, mouseY = coords
-        drawxorcross(config.pixel_canvas, mouseX, mouseY)
-        if config.subtool_selected == 0:
-            config.brush.draw(config.pixel_canvas, config.color, coords)
+        config.clear_pixel_draw_canvas()
+        if self.state == self.ST_CENTER:
+            drawxorcross(config.pixel_canvas, mouseX, mouseY)
+            if config.subtool_selected == 0:
+                config.brush.draw(config.pixel_canvas, config.color, coords)
+        elif self.state == self.ST_XY:
+            startX, startY = self.p1
+            radiusX = int(abs(mouseX-startX))
+            radiusY = int(abs(mouseY-startY))
+            if self.button == 1:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+            elif self.button == 3:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
 
-    def drawrubber(self, coords, buttons):
-        if self.leave_trace(coords, buttons):
+    def mousedown(self, coords, button):
+        if not button in [1,3]:
             return
-        mouseX, mouseY = coords
-        startX, startY = self.p1
-        radiusX = int(abs(mouseX-startX))
-        radiusY = int(abs(mouseY-startY))
-        if buttons[0]:
-            drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
-        elif buttons[2]:
-            drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
 
-    def drawfinal(self, coords, button):
-        mouseX, mouseY = coords
-        startX, startY = self.p1
-        radiusX = int(abs(mouseX-startX))
-        radiusY = int(abs(mouseY-startY))
-        if button == 1:
-            drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected)
-        elif button == 3:
-            drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected)
-        config.save_undo()
-        config.brush.pen_down = False
-        self.move(coords)
-        if config.subtool_selected:
-            cycle()
+        config.cycle_handled = True
+
+        if self.state == self.ST_CENTER:
+            config.brush.pen_down = True
+            self.p1 = coords
+            config.p1 = coords
+            config.clear_pixel_draw_canvas()
+            if button == 1:
+                config.brush.draw(config.pixel_canvas, config.color, coords)
+            elif button == 3:
+                config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+            self.button = button
+            self.state = self.ST_XY
+        elif self.state == self.ST_XY:
+            config.clear_pixel_draw_canvas()
+            self.p2 = coords
+            mouseX, mouseY = coords
+            startX, startY = self.p1
+            radiusX = int(abs(mouseX-startX))
+            radiusY = int(abs(mouseY-startY))
+            if button == 1:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+            elif button == 3:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+            self.state = self.ST_ROTATE
+        elif self.state == self.ST_ROTATE:
+            if button == 1:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected)
+            elif button == 3:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected)
+            config.save_undo()
+            self.p1 = None
+            self.p2 = None
+            self.p3 = None
+            config.p1 = None
+            config.brush.pen_down = False
+            self.move(coords)
+
+    def drag(self, coords, buttons):
+        if not (buttons[0] or buttons[2]):
+            return
+
+        config.cycle_handled = True
+        if self.state == self.ST_XY:
+            config.clear_pixel_draw_canvas()
+            mouseX, mouseY = coords
+            startX, startY = self.p1
+            radiusX = int(abs(mouseX-startX))
+            radiusY = int(abs(mouseY-startY))
+            if buttons[0]:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+            elif buttons[2]:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+        elif self.state == self.ST_ROTATE:
+            config.clear_pixel_draw_canvas()
+            ax = config.aspectX
+            ay = config.aspectY
+            p2x, p2y = self.p2
+            p1x, p1y = self.p1
+            radiusX = int(abs(p2x-p1x))
+            radiusY = int(abs(p2y-p1y))
+            mouseX, mouseY = coords
+            angle0 = math.atan2((p2y-p1y)/ay, (p2x-p1x)/ax) * (180.0/math.pi)
+            angle = math.atan2((mouseY-p1y)/ay, (mouseX-p1x)/ax) * (180.0/math.pi) - angle0
+            config.menubar.title_right = ("%d"+chr(0xB0))%((angle))
+            if buttons[0]:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
+            elif buttons[2]:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
+
+    def mouseup(self, coords, button):
+        if not button in [1,3]:
+            return
+
+        config.cycle_handled = True
+        if self.state == self.ST_ROTATE:
+            config.clear_pixel_draw_canvas()
+            ax = config.aspectX
+            ay = config.aspectY
+            p2x, p2y = self.p2
+            p1x, p1y = self.p1
+            radiusX = int(abs(p2x-p1x))
+            radiusY = int(abs(p2y-p1y))
+            mouseX, mouseY = coords
+            angle0 = math.atan2((p2y-p1y)/ay, (p2x-p1x)/ax) * (180.0/math.pi)
+            angle = math.atan2((mouseY-p1y)/ay, (mouseX-p1x)/ax) * (180.0/math.pi) - angle0
+            if button == 1:
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle)
+            elif button == 3:
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle)
+            self.p1 = None
+            self.p2 = None
+            self.p3 = None
+            config.p1 = None
+            self.state = self.ST_CENTER
+            config.save_undo()
+            config.brush.pen_down = False
+            self.move(coords)
+            if config.subtool_selected:
+                cycle()
+
+    def keydown(self, key, mod, unicode):
+        if key == K_ESCAPE:
+            config.clear_pixel_draw_canvas()
+            config.brush.pen_down = False
+            self.p1 = None
+            self.p2 = None
+            self.p3 = None
+            config.p1 = None
+            self.button = None
+            self.state = self.ST_CENTER
+            return True
+        return False
 
 class DoPoly(ToolSingleAction):
     """
