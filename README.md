@@ -26,4 +26,6 @@ Facebook group: [PyDPainter](https://www.facebook.com/groups/583338860398152/?re
 
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
+Documentation: [Table of Contents](docs/TOC.md)
+
 ![screenshot](pydpainter-screenshot.png)
