@@ -295,6 +295,12 @@ class Menubar:
         if self.menus_on:
             for mg in self.menug_list:
                 mg.draw(screen, self.font)
+            #redraw submenus over parent menu items
+            for g in self.menug_list:
+                if g.state == 2 and g.menubox != None:
+                    for g2 in g.menug_list:
+                        if g2.state == 2 and g2.menubox != None:
+                            g2.draw(screen, self.font)
         else:
             titlestring = self.title + " " + self.title_extra
             self.font.blitstring(screen, (xo+(self.font.xsize//2), yo+((h-self.font.ysize)//2)), titlestring, fgcolor, bgcolor)
