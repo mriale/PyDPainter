@@ -898,6 +898,46 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoStencilMake(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilMake")
+        config.doKeyAction()
+
+class DoStencilRemake(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilRemake")
+        config.doKeyAction()
+
+class DoStencilLockFG(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilLockFG")
+        config.doKeyAction()
+
+class DoStencilReverse(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilReverse")
+        config.doKeyAction()
+
+class DoStencilOnOff(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilOnOff")
+        config.doKeyAction()
+
+class DoStencilFree(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilFree")
+        config.doKeyAction()
+
+class DoStencilOpen(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilOpen")
+        config.doKeyAction()
+
+class DoStencilSave(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilSave")
+        config.doKeyAction()
+
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1058,7 +1098,16 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Effect", [
-            ["!Stencil"],
+            ["Stencil", [
+                ["Make...", " ", DoStencilMake],
+                ["Remake", " ", DoStencilRemake],
+                ["Lock FG", " ", DoStencilLockFG],
+                ["Reverse", " ", DoStencilReverse],
+                ["On/Off", " ", DoStencilOnOff],
+                ["Free", " ", DoStencilFree],
+                ["Open...", " ", DoStencilOpen],
+                ["Save...", " ", DoStencilSave],
+            ]],
             ["!Background"],
             ["!Perspective"],
         ]])

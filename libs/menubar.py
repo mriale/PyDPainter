@@ -246,6 +246,20 @@ class Menubar:
                         rx += xdiff
                         g2.rect = (rx,ry,rw,rh)
 
+        #reposition submenus
+        xdiff = 0
+        for g in menug.menug_list:
+            if g.menubox != None:
+                xdiff = self.screen.get_width() - (g.menubox[0] + g.menubox[2] + 2)
+                if xdiff > 0:
+                    xdiff = 0
+                if xdiff != 0:
+                    g.menubox[0] += xdiff
+                    for g2 in g.menug_list:
+                        rx,ry,rw,rh = g2.rect
+                        rx += xdiff
+                        g2.rect = (rx,ry,rw,rh)
+
     def add_menu(self, menus):
         x,y,w,h = self.rect
         xo = 0
