@@ -1061,3 +1061,157 @@ def close_progress_req(req):
     config.pixel_req_rect = None
     config.cursor.shape = config.cursor.NORMAL
     config.recompose()
+
+class PPstencil(Gadget):
+    """
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        self.pic = imgload('logo.png')
+        super(PPstencil, self).__init__(type, label, rect, value, maxvalue, id)
+    """
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+
+            if self.label == "#":
+                # Draw color palette
+                numcolors = len(config.pal)
+                if numcolors >= 32:
+                    color_cols = 4
+                elif numcolors == 16:
+                    color_cols = 2
+                elif numcolors == 8:
+                    color_cols = 2
+                elif numcolors <= 4:
+                    color_cols = 1
+                    
+                colors_shown = 32
+                if numcolors < colors_shown:
+                    colors_shown = numcolors
+
+                color_rows = colors_shown // color_cols
+                color_spacing = w // color_cols
+                color_width = w // color_cols * 3 // 4
+                color_height = int(round(h*1.0 / color_rows))
+
+                if self.value == None:
+                    self.value = 1
+
+                screen.set_clip(self.screenrect)
+                curcolor = 0 #palette_page
+                self.palette_bounds = []
+                for j in range(0,color_cols):
+                    for i in range(0,color_rows):
+                        self.palette_bounds.append((x+xo+1+j*color_spacing,y+yo+1+i*color_height,color_width-1,color_height, curcolor))
+                        pygame.draw.rect(screen, config.pal[curcolor], (x+xo+1+j*color_spacing,y+yo+1+i*color_height,color_width-1,color_height), 0)
+                        curcolor += 1
+        else:
+            super(PPstencil, self).draw(screen, font, offset)
+
+def stencil_req(screen):
+    req = str2req("Make Stencil", """
+[Clear ]    Locked:
+[Invert]##############
+        ##############
+        ##############
+        ##############
+[ Make ]##############
+[Cancel]##############
+""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPstencil, font=config.font)
+
+    (rx,ry,rw,rh) = req.rect
+    rx += 20
+    ry += int(config.menubar.rect[3] * 1.5)
+    req.rect = (rx,ry,rw,rh)
+    config.pixel_req_rect = req.get_screen_rect()
+    req.draggable = True
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "Cancel":
+                    running = 0 
+
+        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            #keep requestor within screen
+            (rx,ry,rw,rh) = req.rect
+            if ry < 14:
+                ry = 14
+            if ry > screen.get_height()-20:
+                ry = screen.get_height()-20
+            if rx < -rw+20:
+                rx = -rw+20
+            if rx > screen.get_width()-40:
+                rx = screen.get_width()-40
+            req.rect = (rx,ry,rw,rh)
+            config.pixel_req_rect = req.get_screen_rect()
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return
+
+def question_req(screen, title, text, buttons):
+    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
+    all_text = dummy_text + "\n"
+    for button_text in buttons:
+        all_text += "[" + button_text + "]"
+
+    req = str2req(title, all_text, "",
+          mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+
+    #Replace dummy text with actual text
+    textlines = text.splitlines()
+    textrow = 0
+    for textline in textlines:
+        labelg = req.gadget_id("0_%d" % (textrow))
+        labelg.label = textline
+        textrow += 1
+
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+    req.draw(screen)
+    config.recompose()
+
+    button_clicked = -1
+    running = 1
+    while running:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                button_clicked = buttons.index(ge.gadget.label)
+                running = 0 
+
+        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return button_clicked

@@ -900,7 +900,7 @@ class DoMode(MenuAction):
 
 class DoStencilMake(MenuAction):
     def selected(self, attrs):
-        print("DoStencilMake")
+        stencil_req(config.pixel_req_canvas)
         config.doKeyAction()
 
 class DoStencilRemake(MenuAction):
@@ -1103,7 +1103,7 @@ def init_menubar(config_in):
                 ["Remake", " ", DoStencilRemake],
                 ["Lock FG", " ", DoStencilLockFG],
                 ["Reverse", " ", DoStencilReverse],
-                ["On/Off", " ", DoStencilOnOff],
+                ["On/Off", "`", DoStencilOnOff],
                 ["Free", " ", DoStencilFree],
                 ["Open...", " ", DoStencilOpen],
                 ["Save...", " ", DoStencilSave],
