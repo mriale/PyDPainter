@@ -1063,11 +1063,10 @@ def close_progress_req(req):
     config.recompose()
 
 class PPstencil(Gadget):
-    """
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.pic = imgload('logo.png')
+        self.is_stencil_color = list(config.is_stencil_color)
         super(PPstencil, self).__init__(type, label, rect, value, maxvalue, id)
-    """
+
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
         x,y,w,h = self.rect
@@ -1075,6 +1074,8 @@ class PPstencil(Gadget):
         self.offsetx = xo
         self.offsety = yo
         self.screenrect = (x+xo,y+yo,w,h)
+        px = font.xsize//8
+        py = font.ysize//8
 
         if self.type == Gadget.TYPE_CUSTOM:
             if not self.need_redraw:
@@ -1107,15 +1108,47 @@ class PPstencil(Gadget):
                     self.value = 1
 
                 screen.set_clip(self.screenrect)
+                screen.fill(bgcolor)
                 curcolor = 0 #palette_page
                 self.palette_bounds = []
                 for j in range(0,color_cols):
                     for i in range(0,color_rows):
-                        self.palette_bounds.append((x+xo+1+j*color_spacing,y+yo+1+i*color_height,color_width-1,color_height, curcolor))
+                        self.palette_bounds.append((x+xo+1+j*color_spacing,y+yo+1+i*color_height,color_spacing-1,color_height, curcolor))
                         pygame.draw.rect(screen, config.pal[curcolor], (x+xo+1+j*color_spacing,y+yo+1+i*color_height,color_width-1,color_height), 0)
+                        #Draw selected colors
+                        if self.is_stencil_color[curcolor]:
+                            pygame.draw.rect(screen, fgcolor, (x+xo+j*color_spacing+color_width,y+yo+py+1+i*color_height,px*2,color_height-py-py), 0)
+                            pygame.draw.rect(screen, fgcolor, (x+xo+j*color_spacing+color_width,y+yo+py+py+1+i*color_height,px*3,color_height-(4*py)), 0)
                         curcolor += 1
         else:
             super(PPstencil, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    if g.label == "#":
+                        for i in range(len(self.palette_bounds)):
+                            x1,y1,x2,y2,colorindex = self.palette_bounds[i]
+                            if x >= x1 and x <= x1+x2-1 and y >= y1 and y <= y1+y2-1:
+                                g.need_redraw = True
+                                self.is_stencil_color[colorindex] = not self.is_stencil_color[colorindex]
+                                ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+        else:
+            ge.extend(super(PPstencil, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 
 def stencil_req(screen):
     req = str2req("Make Stencil", """
@@ -1134,8 +1167,11 @@ def stencil_req(screen):
     req.rect = (rx,ry,rw,rh)
     config.pixel_req_rect = req.get_screen_rect()
     req.draggable = True
+    config.stop_cycling()
     req.draw(screen)
     config.recompose()
+
+    colorsg = req.gadget_id("8_1")
 
     running = 1
     while running:
@@ -1148,6 +1184,16 @@ def stencil_req(screen):
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "Cancel":
+                    running = 0 
+                elif ge.gadget.label == "Clear ":
+                    colorsg.is_stencil_color = [False] * len(config.pal)
+                    colorsg.need_redraw = True
+                elif ge.gadget.label == "Invert":
+                    for i in range(len(colorsg.is_stencil_color)):
+                        colorsg.is_stencil_color[i] = not colorsg.is_stencil_color[i]
+                    colorsg.need_redraw = True
+                if ge.gadget.label == " Make ":
+                    config.is_stencil_color = list(colorsg.is_stencil_color)
                     running = 0 
 
         if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
