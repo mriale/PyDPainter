@@ -46,6 +46,7 @@ tiptext["airbrush"] = [
 "Airbrush Tool",
 "Hold button to spray dots randomly around cursor.",
 lbf, rbb,
+"Hold [CTRL] key to slow down spray rate.",
 "Right-click tool to adjust spray size."]
 
 tiptext["rect"] = [
@@ -118,7 +119,7 @@ tiptext["undo"] = [
 "Undo [u] / Redo [U] Tool",
 "Left-click tool to undo [u] last change to canvas.",
 "Right-click tool to redo [U] last change to canvas.",
-"There are 5 levels of undo/redo"]
+"There are multiple levels of undo/redo"]
 
 tiptext["clear"] = [
 "Clear Tool [K]",
