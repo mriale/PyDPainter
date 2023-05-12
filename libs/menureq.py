@@ -1064,7 +1064,14 @@ def close_progress_req(req):
 
 class PPstencil(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.is_stencil_color = np.copy(config.is_stencil_color)
+        if label == "#":
+            self.is_stencil_color = np.copy(config.is_stencil_color)
+        elif label == "^":
+            scaleX = rect[2] // 16
+            scaleY = rect[3] // 8
+            scaledown = 4 // min(scaleX,scaleY)
+            self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
+            value = 0
         super(PPstencil, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -1120,6 +1127,30 @@ class PPstencil(Gadget):
                             pygame.draw.rect(screen, fgcolor, (x+xo+j*color_spacing+color_width,y+yo+py+1+i*color_height,px*2,color_height-py-py), 0)
                             pygame.draw.rect(screen, fgcolor, (x+xo+j*color_spacing+color_width,y+yo+py+py+1+i*color_height,px*3,color_height-(4*py)), 0)
                         curcolor += 1
+                screen.set_clip(None)
+            elif self.label == "^": # direction arrow
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
+                if self.state == 0:
+                    pygame.draw.rect(screen, fgcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+                else:
+                    pygame.draw.rect(screen, hcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+
+                ah = self.crng_arrows.get_height()
+                aw = self.crng_arrows.get_width() // 4
+
+                if self.value == 1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
+                elif self.value == -1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
+                elif self.value == -2:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*2,0,aw,ah))
+                elif self.value == 2:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
+                screen.set_clip(None)
         else:
             super(PPstencil, self).draw(screen, font, offset)
 
@@ -1157,9 +1188,11 @@ def stencil_req(screen):
         ##############
         ##############
         ##############
+        ##############
+        ##############
 [ Make ]##############
-[Cancel]##############
-""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPstencil, font=config.font)
+[Cancel]    ^^ A^^
+""", "#^", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPstencil, font=config.font)
 
     (rx,ry,rw,rh) = req.rect
     rx += 20
@@ -1168,6 +1201,17 @@ def stencil_req(screen):
     config.pixel_req_rect = req.get_screen_rect()
     req.draggable = True
     config.stop_cycling()
+
+    #palette page
+    palette_page = 0
+    palpageg = req.gadget_id("15_8")
+    ppx,ppy,ppw,pph = palpageg.rect
+    palpageg.rect = (ppx-(config.fontx//2),ppy,ppw,pph)
+    palpage_lg = req.gadget_id("12_8")
+    palpage_lg.value = -2
+    palpage_rg = req.gadget_id("16_8")
+    palpage_rg.value = 2
+
     req.draw(screen)
     config.recompose()
 
