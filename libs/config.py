@@ -374,6 +374,7 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
+        self.is_stencil_color = np.array([False] * self.NUM_COLORS, dtype=bool)
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
@@ -674,7 +675,7 @@ class pydpainter:
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
         self.stencil_on = False
-        self.is_stencil_color = np.array([False] * len(self.pal), dtype=bool)
+        self.is_stencil_color = None
         self.stencil_image = None
 
         self.meta_alt = 0

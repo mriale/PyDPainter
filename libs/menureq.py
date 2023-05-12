@@ -149,7 +149,6 @@ class PPtypelist(Gadget):
             super(PPtypelist, self).draw(screen, font, offset)
 
     def process_event(self, screen, event, mouse_pixel_mapper):
-        global palette_page
         ge = []
         x,y = mouse_pixel_mapper()
         g = self
@@ -1062,6 +1061,8 @@ def close_progress_req(req):
     config.cursor.shape = config.cursor.NORMAL
     config.recompose()
 
+palette_page = 0
+
 class PPstencil(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         if label == "#":
@@ -1116,7 +1117,7 @@ class PPstencil(Gadget):
 
                 screen.set_clip(self.screenrect)
                 screen.fill(bgcolor)
-                curcolor = 0 #palette_page
+                curcolor = palette_page
                 self.palette_bounds = []
                 for j in range(0,color_cols):
                     for i in range(0,color_rows):
@@ -1150,6 +1151,17 @@ class PPstencil(Gadget):
                     screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*2,0,aw,ah))
                 elif self.value == 2:
                     screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*3,0,aw,ah))
+
+                if not self.enabled:
+                    for i in range(x+xo, x+xo+w+1, 2):
+                        for j in range(y+yo, y+yo+h+1, 4):
+                            pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
+                    for i in range(x+xo+1, x+xo+w+1, 2):
+                        for j in range(y+yo+2, y+yo+h+1, 4):
+                            pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
+                    fadesurf = pygame.Surface((w,h), SRCALPHA)
+                    fadesurf.fill((bgcolor[0],bgcolor[1],bgcolor[2],128))
+                    screen.blit(fadesurf, self.screenrect)
                 screen.set_clip(None)
         else:
             super(PPstencil, self).draw(screen, font, offset)
@@ -1176,6 +1188,25 @@ class PPstencil(Gadget):
                                 g.need_redraw = True
                                 self.is_stencil_color[colorindex] = not self.is_stencil_color[colorindex]
                                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                    elif g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if abs(g.value) == 1:
+                            g.value = -g.value
+                        elif g.value == -2:
+                            palette_page -= 32
+                            if palette_page < 0:
+                                palette_page = 0
+                        elif g.value == 2:
+                            palette_page += 32
+                            if palette_page >= config.NUM_COLORS:
+                                palette_page = config.NUM_COLORS - 32
+                    g.state = 0
+                    g.need_redraw = True
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
         else:
             ge.extend(super(PPstencil, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
@@ -1203,7 +1234,6 @@ def stencil_req(screen):
     config.stop_cycling()
 
     #palette page
-    palette_page = 0
     palpageg = req.gadget_id("15_8")
     ppx,ppy,ppw,pph = palpageg.rect
     palpageg.rect = (ppx-(config.fontx//2),ppy,ppw,pph)
@@ -1211,6 +1241,15 @@ def stencil_req(screen):
     palpage_lg.value = -2
     palpage_rg = req.gadget_id("16_8")
     palpage_rg.value = 2
+
+    if len(config.pal) > 32 and not config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+        palpageg.enabled = True
+        palpage_lg.enabled = True
+        palpage_rg.enabled = True
+    else:
+        palpageg.enabled = False
+        palpage_lg.enabled = False
+        palpage_rg.enabled = False
 
     req.draw(screen)
     config.recompose()
@@ -1250,6 +1289,11 @@ def stencil_req(screen):
                 if ge.gadget.label == " Make ":
                     config.is_stencil_color[:] = colorsg.is_stencil_color[:]
                     running = 0 
+            elif ge.gadget.type == Gadget.TYPE_CUSTOM:
+                if ge.gadget.label == "^":
+                    palpageg.label = chr(65+(palette_page//32))
+                    palpageg.need_redraw = True
+                    colorsg.need_redraw = True
 
         if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
