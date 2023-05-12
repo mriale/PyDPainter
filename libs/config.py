@@ -674,7 +674,7 @@ class pydpainter:
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
 
         self.stencil_on = False
-        self.is_stencil_color = [False] * len(self.pal)
+        self.is_stencil_color = np.array([False] * len(self.pal), dtype=bool)
         self.stencil_image = None
 
         self.meta_alt = 0

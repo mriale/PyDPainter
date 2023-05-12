@@ -1064,7 +1064,7 @@ def close_progress_req(req):
 
 class PPstencil(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.is_stencil_color = list(config.is_stencil_color)
+        self.is_stencil_color = np.copy(config.is_stencil_color)
         super(PPstencil, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -1186,14 +1186,13 @@ def stencil_req(screen):
                 if ge.gadget.label == "Cancel":
                     running = 0 
                 elif ge.gadget.label == "Clear ":
-                    colorsg.is_stencil_color = [False] * len(config.pal)
+                    colorsg.is_stencil_color[:] = False
                     colorsg.need_redraw = True
                 elif ge.gadget.label == "Invert":
-                    for i in range(len(colorsg.is_stencil_color)):
-                        colorsg.is_stencil_color[i] = not colorsg.is_stencil_color[i]
+                    colorsg.is_stencil_color = np.invert(colorsg.is_stencil_color)
                     colorsg.need_redraw = True
                 if ge.gadget.label == " Make ":
-                    config.is_stencil_color = list(colorsg.is_stencil_color)
+                    config.is_stencil_color[:] = colorsg.is_stencil_color[:]
                     running = 0 
 
         if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
