@@ -1181,6 +1181,18 @@ def stencil_req(screen):
         if event.type == KEYDOWN and event.key == K_ESCAPE:
             running = 0 
 
+        #Get color from pixel canvas
+        if event.type == MOUSEBUTTONUP and event.button == 1:
+            x,y = config.get_mouse_pixel_pos(event)
+            if x < rx or y < ry or x > rx+rw or y > ry+rh:
+                x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
+                if x1 >= 0 and y1 >= 0 and \
+                   x1<config.pixel_canvas.get_width() and \
+                   y1<config.pixel_canvas.get_height():
+                    colorindex = config.pixel_canvas.get_at_mapped((x1,y1))
+                    colorsg.need_redraw = True
+                    colorsg.is_stencil_color[colorindex] = not colorsg.is_stencil_color[colorindex]
+
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "Cancel":
