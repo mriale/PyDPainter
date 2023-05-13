@@ -920,7 +920,7 @@ class DoStencilReverse(MenuAction):
 
 class DoStencilOnOff(MenuAction):
     def selected(self, attrs):
-        print("DoStencilOnOff")
+        config.stencil_on = not config.stencil_on
         config.doKeyAction()
 
 class DoStencilFree(MenuAction):

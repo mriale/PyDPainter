@@ -1212,6 +1212,21 @@ class PPstencil(Gadget):
         return ge
 
 
+def make_stencil():
+    config.stencil_image = config.pixel_canvas.copy()
+
+    #find bgcolor and set colors not in the stencil to it
+    off_colors = np.where(config.is_stencil_color == False)
+    if len(off_colors) > 0 and len(off_colors[0]) > 0:
+        bgcolor = int(off_colors[0][0])
+        config.stencil_image.set_colorkey(bgcolor)
+        surf_array = pygame.surfarray.pixels2d(config.stencil_image)
+        for col in off_colors[0]:
+            surf_array[np.where(surf_array == int(col))] = bgcolor
+        surf_array = None
+
+    config.stencil_on = True
+
 def stencil_req(screen):
     req = str2req("Make Stencil", """
 [Clear ]    Locked:
@@ -1288,6 +1303,7 @@ def stencil_req(screen):
                     colorsg.need_redraw = True
                 if ge.gadget.label == " Make ":
                     config.is_stencil_color[:] = colorsg.is_stencil_color[:]
+                    make_stencil()
                     running = 0 
             elif ge.gadget.type == Gadget.TYPE_CUSTOM:
                 if ge.gadget.label == "^":

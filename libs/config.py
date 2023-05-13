@@ -989,6 +989,9 @@ class pydpainter:
 
         self.redraw_window_title()
 
+        if config.stencil_on and config.stencil_image != None:
+            config.pixel_canvas.blit(config.stencil_image, (0,0))
+
         screen_rgb = None
         if self.zoom.on:
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
