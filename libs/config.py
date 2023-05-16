@@ -14,6 +14,7 @@ from toolbar import *
 from prim import *
 from palreq import *
 from picio import *
+from stencil import *
 from tools import *
 from minitools import *
 from menubar import *
@@ -153,6 +154,7 @@ class pydpainter:
         toolreq_set_config(self)
         menureq_set_config(self)
         picio_set_config(self)
+        stencil_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
         pygame.init()
@@ -374,7 +376,7 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
-        self.is_stencil_color = np.array([False] * self.NUM_COLORS, dtype=bool)
+        self.stencil.clear()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
@@ -670,13 +672,11 @@ class pydpainter:
         self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
+        self.stencil = Stencil()
+
         self.cycling = False
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
-
-        self.stencil_on = False
-        self.is_stencil_color = None
-        self.stencil_image = None
 
         self.meta_alt = 0
         self.last_mouse_nudge_time = 0
@@ -792,6 +792,7 @@ class pydpainter:
             pal.extend([pal_in[0]] * (256 - len(pal)))
         config.pixel_canvas.set_palette(pal)
         config.pixel_spare_canvas.set_palette(pal)
+        config.stencil.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -989,8 +990,7 @@ class pydpainter:
 
         self.redraw_window_title()
 
-        if config.stencil_on and config.stencil_image != None:
-            config.pixel_canvas.blit(config.stencil_image, (0,0))
+        config.stencil.draw(config.pixel_canvas)
 
         screen_rgb = None
         if self.zoom.on:

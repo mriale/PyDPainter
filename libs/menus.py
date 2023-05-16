@@ -905,7 +905,7 @@ class DoStencilMake(MenuAction):
 
 class DoStencilRemake(MenuAction):
     def selected(self, attrs):
-        print("DoStencilRemake")
+        config.stencil.remake(config.pixel_canvas)
         config.doKeyAction()
 
 class DoStencilLockFG(MenuAction):
@@ -920,12 +920,12 @@ class DoStencilReverse(MenuAction):
 
 class DoStencilOnOff(MenuAction):
     def selected(self, attrs):
-        config.stencil_on = not config.stencil_on
+        config.stencil.enable = not config.stencil.enable
         config.doKeyAction()
 
 class DoStencilFree(MenuAction):
     def selected(self, attrs):
-        print("DoStencilFree")
+        config.stencil.image = None
         config.doKeyAction()
 
 class DoStencilOpen(MenuAction):
