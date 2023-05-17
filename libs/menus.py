@@ -69,6 +69,7 @@ class DoOpen(MenuAction):
 class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.clear_pixel_draw_canvas()
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
@@ -76,6 +77,7 @@ class DoSave(MenuAction):
             save_pic(filename, config)
             config.filename = filename
             config.modified_count = 0
+        config.doKeyAction()
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
