@@ -1264,7 +1264,8 @@ def stencil_req(screen):
             running = 0 
 
         #Get color from pixel canvas
-        if event.type == MOUSEBUTTONUP and event.button == 1:
+        buttons = config.get_mouse_pressed(event)
+        if event.type in [MOUSEBUTTONDOWN, MOUSEMOTION] and True in buttons:
             x,y = config.get_mouse_pixel_pos(event)
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
@@ -1273,7 +1274,10 @@ def stencil_req(screen):
                    y1<config.pixel_canvas.get_height():
                     colorindex = config.pixel_canvas.get_at_mapped((x1,y1))
                     colorsg.need_redraw = True
-                    colorsg.is_stencil_color[colorindex] = not colorsg.is_stencil_color[colorindex]
+                    if buttons[0]:
+                        colorsg.is_stencil_color[colorindex] = True
+                    elif buttons[2]:
+                        colorsg.is_stencil_color[colorindex] = False
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
