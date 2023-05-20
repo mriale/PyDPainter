@@ -917,7 +917,8 @@ class DoStencilLockFG(MenuAction):
 
 class DoStencilReverse(MenuAction):
     def selected(self, attrs):
-        print("DoStencilReverse")
+        stencil_is_color = np.invert(config.stencil.is_color)
+        config.stencil.make(config.pixel_canvas, stencil_is_color)
         config.doKeyAction()
 
 class DoStencilOnOff(MenuAction):
