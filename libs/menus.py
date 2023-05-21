@@ -240,7 +240,9 @@ class DoPageSize(MenuAction):
 
 class DoShowPage(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
         page_preview_req(config.pixel_req_canvas)
+        config.doKeyAction()
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
