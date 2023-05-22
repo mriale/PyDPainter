@@ -1520,6 +1520,9 @@ class pydpainter:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
                     config.redo()
+                elif e.unicode == chr(178): #AZERTY backtick key
+                    config.stencil.enable = not config.stencil.enable
+                    config.doKeyAction()
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
