@@ -143,10 +143,14 @@ class Menubar:
         self.title = ""
         self.title_extra = ""
         self.title_right = ""
+        self.indicators = {}
         self.menulevel = 0
         self.need_redraw = True
         self.fadesurf = None
         self.hide_menus = False
+
+    def add_indicator(self, name, renderer):
+        self.indicators[name] = renderer
 
     def add_submenu(self, menug, menus):
         x,y,w,h = menug.rect
@@ -307,7 +311,9 @@ class Menubar:
             if len(self.title_right) > 0:
                 trw = self.font.xsize * (len(self.title_right) + 2)
                 self.font.blitstring(screen, (xo+w-(self.font.xsize//2)-trw, yo+((h-self.font.ysize)//2)), self.title_right, fgcolor, bgcolor)
-
+            for key in self.indicators:
+                renderer = self.indicators[key]
+                renderer(screen)
 
     def menu_id(self, id):
         notletter = re.compile('[^a-z]')
