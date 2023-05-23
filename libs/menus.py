@@ -933,16 +933,6 @@ class DoStencilFree(MenuAction):
         config.stencil.image = None
         config.doKeyAction()
 
-class DoStencilOpen(MenuAction):
-    def selected(self, attrs):
-        print("DoStencilOpen")
-        config.doKeyAction()
-
-class DoStencilSave(MenuAction):
-    def selected(self, attrs):
-        print("DoStencilSave")
-        config.doKeyAction()
-
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1106,12 +1096,10 @@ def init_menubar(config_in):
             ["Stencil", [
                 ["Make...", " ", DoStencilMake],
                 ["Remake", " ", DoStencilRemake],
-                ["Lock FG", " ", DoStencilLockFG],
+                ["!Lock FG", " ", DoStencilLockFG],
                 ["Reverse", " ", DoStencilReverse],
                 ["On/Off", "`", DoStencilOnOff],
                 ["Free", " ", DoStencilFree],
-                ["Open...", " ", DoStencilOpen],
-                ["Save...", " ", DoStencilSave],
             ]],
             ["!Background"],
             ["!Perspective"],
