@@ -197,12 +197,14 @@ class DoPictureRemap(MenuAction):
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas, config.pixel_spare_canvas = config.pixel_spare_canvas, config.pixel_canvas
         config.filepath, config.spare_filepath = config.spare_filepath, config.filepath
         config.filename, config.spare_filename = config.spare_filename, config.filename
         config.modified_count, config.spare_modified_count = config.spare_modified_count, config.modified_count
         config.clear_undo()
         config.save_undo()
+        config.doKeyAction()
 
 class DoSpareCopy(MenuAction):
     def selected(self, attrs):
