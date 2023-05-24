@@ -1180,12 +1180,20 @@ class pydpainter:
         if config.undo_index > len(config.undo_image) - 1:
             config.undo_index = len(config.undo_image) - 1
         config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        if config.stencil.enable:
+            # Recalculate stencil
+            config.stencil.enable = True
+        config.doKeyAction()
 
     def undo(self):
         config.undo_index = config.undo_index - 1
         if config.undo_index < 0:
             config.undo_index = 0
         config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        if config.stencil.enable:
+            # Recalculate stencil
+            config.stencil.enable = True
+        config.doKeyAction()
 
     def airbrush_coords(self, xc, yc, size=-1):
         if size < 0:
