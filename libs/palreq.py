@@ -372,6 +372,7 @@ Speed---------___^^
 
         #Get color from pixel canvas
         if event.type == MOUSEBUTTONUP and event.button == 1:
+            config.stop_cycling()
             x,y = config.get_mouse_pixel_pos(event)
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
@@ -532,9 +533,7 @@ Speed---------___^^
             elif ge.gadget.type == Gadget.TYPE_PROP:
                 if ge.gadget.id == speedg.id:
                     if config.cranges[current_range].is_active():
-                        if ge.event.type == MOUSEBUTTONUP:
-                            config.stop_cycling()
-                        else:
+                        if ge.event.type in [MOUSEBUTTONDOWN, MOUSEMOTION]:
                             config.start_cycling()
                         config.cranges[current_range].set_hz(ge.gadget.value)
                         speed_numg.value = str(speedg.value)

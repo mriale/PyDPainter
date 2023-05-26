@@ -1220,9 +1220,9 @@ class pydpainter:
         if not self.cycling:
             self.backuppal = list(self.pal)
             self.cycling = True
-            for rangenum, crange in enumerate(self.cranges):
-                if crange.low < crange.high and crange.rate > 0:
-                    pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
+        for rangenum, crange in enumerate(self.cranges):
+            if crange.low < crange.high and crange.rate > 0:
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):
         # Crop or expand pixel canvas
