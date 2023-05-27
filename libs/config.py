@@ -1299,6 +1299,7 @@ class pydpainter:
                 filename = e.file
                 if filename != (()) and filename != "":
                     global progress_req
+                    config.stencil.enable = False
                     progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
                     try:
                         config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
