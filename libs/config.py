@@ -1222,6 +1222,7 @@ class pydpainter:
             self.cycling = True
         for rangenum, crange in enumerate(self.cranges):
             if crange.low < crange.high and crange.rate > 0:
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):

@@ -21,6 +21,7 @@ class MenuAction(Action):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
@@ -50,6 +51,7 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
@@ -98,18 +100,23 @@ class DoSaveAs(MenuAction):
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
         config.save_undo()
         config.doKeyAction()
 
 class DoPictureFlipY(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
         config.save_undo()
         config.doKeyAction()
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         self.toolHide()
         palette_req(config.pixel_req_canvas)
 
@@ -172,6 +179,8 @@ class DoPictureBG2FG(MenuAction):
 
 class DoPictureBGxFG(MenuAction):
     def selected(self, attrs):
+        config.stop_cycling()
+        config.stencil.enable = False
         #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -187,6 +196,7 @@ class DoPictureBGxFG(MenuAction):
 class DoPictureRemap(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.stencil.enable = False
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
@@ -238,6 +248,7 @@ class DoMergeBack(MenuAction):
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         page_size_req(config.pixel_req_canvas)
 
 class DoShowPage(MenuAction):
@@ -248,6 +259,7 @@ class DoShowPage(MenuAction):
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         screen_format_req(config.pixel_req_canvas)
 
 class DoAbout(MenuAction):
