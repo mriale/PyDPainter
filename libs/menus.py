@@ -933,18 +933,29 @@ class DoStencilLockFG(MenuAction):
 
 class DoStencilReverse(MenuAction):
     def selected(self, attrs):
-        stencil_is_color = np.invert(config.stencil.is_color)
-        config.stencil.make(config.pixel_canvas, stencil_is_color)
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+            config.stencil.reverse()
         config.doKeyAction()
 
 class DoStencilOnOff(MenuAction):
     def selected(self, attrs):
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
         config.stencil.enable = not config.stencil.enable
         config.doKeyAction()
 
 class DoStencilFree(MenuAction):
     def selected(self, attrs):
-        config.stencil.image = None
+        if config.stencil.image != None:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+        config.stencil.free()
         config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):

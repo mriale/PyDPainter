@@ -29,18 +29,8 @@ class Stencil:
     def enable(self, enable):
         if self.image != None:
             if enable:
-                # Use mask to recreate stencil image
                 config.clear_pixel_draw_canvas()
                 self.image = config.pixel_canvas.copy()
-
-                #find bgcolor
-                off_colors = np.where(self.is_color == False)
-                if len(off_colors) > 0 and len(off_colors[0]) > 0:
-                    bgcolor = int(off_colors[0][0])
-                    self.image.set_colorkey(bgcolor)
-                    surf_array = pygame.surfarray.pixels2d(self.image)
-                    surf_array[self.mask] = bgcolor
-                    surf_array = None
                 config.menubar.indicators["stencil"] = self.draw_indicator
             self.__enable = enable
 
@@ -55,24 +45,37 @@ class Stencil:
 
     def remake(self, screen):
         self.image = screen.copy()
-
-        #find bgcolor and set colors not in the stencil to it
-        off_colors = np.where(self.is_color == False)
-        if len(off_colors) > 0 and len(off_colors[0]) > 0:
-            bgcolor = int(off_colors[0][0])
-            self.image.set_colorkey(bgcolor)
-            surf_array = pygame.surfarray.pixels2d(self.image)
-            for col in off_colors[0]:
-                surf_array[np.where(surf_array == int(col))] = bgcolor
-            self.mask = np.where(surf_array == bgcolor)
-            surf_array = None
-
+        #create mask
+        surf_array = pygame.surfarray.pixels2d(self.image)
+        self.mask = np.where(self.is_color[surf_array])
+        surf_array = None
         self.__enable = True
         config.menubar.indicators["stencil"] = self.draw_indicator
 
+    def reverse(self):
+        if self.mask != None:
+            self.image = config.pixel_canvas.copy()
+            #Draw mask and reverse it
+            mask_image = config.pixel_canvas.copy()
+            surf_array = pygame.surfarray.pixels2d(mask_image)
+            surf_array[:,:] = 0
+            surf_array[self.mask] = 1
+            self.mask = np.where(surf_array == 0)
+            surf_array = None
+            self.is_color = np.invert(self.is_color)
+
+    def free(self):
+        config.stencil.__enable = False
+        config.stencil.image = None
+        config.stencil.mask = None
+ 
     def draw(self, screen):
-        if self.__enable and self.image != None:
-            screen.blit(self.image, (0,0))
+        if self.__enable and self.image != None and self.mask != None:
+            surf_array = pygame.surfarray.pixels2d(screen)
+            surf_array2 = pygame.surfarray.pixels2d(self.image)
+            surf_array[self.mask] = surf_array2[self.mask]
+            surf_array = None
+            surf_array2 = None
 
     def draw_indicator(self, screen):
         if self.__enable:
