@@ -21,6 +21,7 @@ class MenuAction(Action):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
@@ -50,6 +51,7 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
@@ -69,6 +71,7 @@ class DoOpen(MenuAction):
 class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.clear_pixel_draw_canvas()
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
@@ -76,6 +79,7 @@ class DoSave(MenuAction):
             save_pic(filename, config)
             config.filename = filename
             config.modified_count = 0
+        config.doKeyAction()
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
@@ -96,18 +100,23 @@ class DoSaveAs(MenuAction):
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
         config.save_undo()
         config.doKeyAction()
 
 class DoPictureFlipY(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
         config.save_undo()
         config.doKeyAction()
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         self.toolHide()
         palette_req(config.pixel_req_canvas)
 
@@ -170,6 +179,8 @@ class DoPictureBG2FG(MenuAction):
 
 class DoPictureBGxFG(MenuAction):
     def selected(self, attrs):
+        config.stop_cycling()
+        config.stencil.enable = False
         #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -185,6 +196,7 @@ class DoPictureBGxFG(MenuAction):
 class DoPictureRemap(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.stencil.enable = False
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
@@ -195,12 +207,14 @@ class DoPictureRemap(MenuAction):
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas, config.pixel_spare_canvas = config.pixel_spare_canvas, config.pixel_canvas
         config.filepath, config.spare_filepath = config.spare_filepath, config.filepath
         config.filename, config.spare_filename = config.spare_filename, config.filename
         config.modified_count, config.spare_modified_count = config.spare_modified_count, config.modified_count
         config.clear_undo()
         config.save_undo()
+        config.doKeyAction()
 
 class DoSpareCopy(MenuAction):
     def selected(self, attrs):
@@ -234,14 +248,18 @@ class DoMergeBack(MenuAction):
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         page_size_req(config.pixel_req_canvas)
 
 class DoShowPage(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
         page_preview_req(config.pixel_req_canvas)
+        config.doKeyAction()
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         screen_format_req(config.pixel_req_canvas)
 
 class DoAbout(MenuAction):
@@ -898,6 +916,48 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoStencilMake(MenuAction):
+    def selected(self, attrs):
+        stencil_req(config.pixel_req_canvas)
+        config.doKeyAction()
+
+class DoStencilRemake(MenuAction):
+    def selected(self, attrs):
+        config.stencil.remake(config.pixel_canvas)
+        config.doKeyAction()
+
+class DoStencilLockFG(MenuAction):
+    def selected(self, attrs):
+        print("DoStencilLockFG")
+        config.doKeyAction()
+
+class DoStencilReverse(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+            config.stencil.reverse()
+        config.doKeyAction()
+
+class DoStencilOnOff(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+        config.stencil.enable = not config.stencil.enable
+        config.doKeyAction()
+
+class DoStencilFree(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.image != None:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+        config.stencil.free()
+        config.doKeyAction()
+
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1058,7 +1118,14 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Effect", [
-            ["!Stencil"],
+            ["Stencil", [
+                ["Make...", " ", DoStencilMake],
+                ["Remake", " ", DoStencilRemake],
+                ["!Lock FG", " ", DoStencilLockFG],
+                ["Reverse", " ", DoStencilReverse],
+                ["On/Off", "`", DoStencilOnOff],
+                ["Free", " ", DoStencilFree],
+            ]],
             ["!Background"],
             ["!Perspective"],
         ]])

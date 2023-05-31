@@ -249,10 +249,29 @@ def load_iff(filename, config, ifftype):
 
     return pic
 
+def pal_power_2(palin):
+    ncol = len(palin)
+    #Copy palette to avoid tuple that we can't append to
+    pal = []
+    for color in palin:
+        r,g,b = color
+        pal.append((r,g,b))
+
+    #Get default palette to append to end
+    defpal = config.get_default_palette(256)
+
+    #Add colors to bring count up to a power of 2
+    while ncol < 2 or (math.ceil(math.log2(ncol)) != math.floor(math.log2(ncol))):
+        pal.append(defpal[len(pal)])
+        ncol += 1
+
+    return pal
+
 def load_pic(filename, config, status_func=None):
     ifftype = iff_type(filename)
     if ifftype in ["ILBM", "PBM"]:
         pic = load_iff(filename, config, ifftype)
+        config.pal = pal_power_2(config.pal)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
@@ -260,14 +279,17 @@ def load_pic(filename, config, status_func=None):
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
-            if len(config.pal) < 256:
-                defaultpal = config.get_default_palette(256)
-                while len(config.pal) < 256:
-                    config.pal.append(defaultpal[len(config.pal)])
+            config.pal = pal_power_2(config.pal)
             config.color_depth = 256
             pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         else:
-            config.pal = pic.get_palette()
+            #Clone bitmap and blit back so colors can be added to palette
+            newpic = pygame.Surface(pic.get_size(), 0, pic)
+            config.pal = pal_power_2(pic.get_palette())
+            pic.set_palette(config.pal)
+            newpic.set_palette(config.pal)
+            newpic.blit(pic,(0,0))
+            pic = newpic
             config.color_depth = 256
             
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
@@ -276,7 +298,7 @@ def load_pic(filename, config, status_func=None):
         else:
             config.display_mode = -1
 
-        config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
+        config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
 
         while len(cranges) < 6:

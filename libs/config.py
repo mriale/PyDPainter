@@ -14,6 +14,7 @@ from toolbar import *
 from prim import *
 from palreq import *
 from picio import *
+from stencil import *
 from tools import *
 from minitools import *
 from menubar import *
@@ -153,6 +154,7 @@ class pydpainter:
         toolreq_set_config(self)
         menureq_set_config(self)
         picio_set_config(self)
+        stencil_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
         pygame.init()
@@ -374,6 +376,7 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
+        self.stencil.clear()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
@@ -669,6 +672,8 @@ class pydpainter:
         self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
+        self.stencil = Stencil()
+
         self.cycling = False
         self.cycle_handled = False
         self.cranges = [colorrange(5120,1,20,31), colorrange(2560,1,3,7), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0), colorrange(2560,1,0,0)]
@@ -787,6 +792,7 @@ class pydpainter:
             pal.extend([pal_in[0]] * (256 - len(pal)))
         config.pixel_canvas.set_palette(pal)
         config.pixel_spare_canvas.set_palette(pal)
+        config.stencil.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -984,6 +990,8 @@ class pydpainter:
 
         self.redraw_window_title()
 
+        config.stencil.draw(config.pixel_canvas)
+
         screen_rgb = None
         if self.zoom.on:
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
@@ -1172,12 +1180,20 @@ class pydpainter:
         if config.undo_index > len(config.undo_image) - 1:
             config.undo_index = len(config.undo_image) - 1
         config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        if config.stencil.enable:
+            # Recalculate stencil
+            config.stencil.enable = True
+        config.doKeyAction()
 
     def undo(self):
         config.undo_index = config.undo_index - 1
         if config.undo_index < 0:
             config.undo_index = 0
         config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        if config.stencil.enable:
+            # Recalculate stencil
+            config.stencil.enable = True
+        config.doKeyAction()
 
     def airbrush_coords(self, xc, yc, size=-1):
         if size < 0:
@@ -1204,9 +1220,10 @@ class pydpainter:
         if not self.cycling:
             self.backuppal = list(self.pal)
             self.cycling = True
-            for rangenum, crange in enumerate(self.cranges):
-                if crange.low < crange.high and crange.rate > 0:
-                    pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
+        for rangenum, crange in enumerate(self.cranges):
+            if crange.low < crange.high and crange.rate > 0:
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
+                pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):
         # Crop or expand pixel canvas
@@ -1282,6 +1299,7 @@ class pydpainter:
                 filename = e.file
                 if filename != (()) and filename != "":
                     global progress_req
+                    config.stencil.enable = False
                     progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
                     try:
                         config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
@@ -1512,6 +1530,9 @@ class pydpainter:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
                     config.redo()
+                elif e.unicode == chr(178): #AZERTY backtick key
+                    config.stencil.enable = not config.stencil.enable
+                    config.doKeyAction()
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
