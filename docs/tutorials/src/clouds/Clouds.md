@@ -39,7 +39,7 @@ When you're done it should look like a screenful of clouds:
 * Smooth Mode is a bit rough sometimes with a large brush. If you want quality anti-aliasing that respects details, you'll have to smooth with a smaller brush, pixel by pixel to get the right effect.
 Usually I use the second smallest `+`-shaped circle brush to smooth the edges of objects. This gives a nice blurred look on the edges without blurring too much of the inside of the object.
 
-In the next tutorial, we'll show you how you can easily draw the Sun, planets, and plasma balls like these:
+In the [next tutorial](../plasma/Plasma.md), we'll show you how you can easily draw the Sun, planets, and plasma balls like these:
 
 ![sun wrap](sun_wrap.jpg)
 
