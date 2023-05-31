@@ -8,5 +8,5 @@ config = None
 def version_set_config(config_in):
     global config
     config = config_in
-    config.version = "1.1.0 dev"
+    config.version = "1.1.0"
     config.copyright = "\xA92023 Mark Riale"
