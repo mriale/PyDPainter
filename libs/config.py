@@ -1164,6 +1164,7 @@ class pydpainter:
         while len(self.undo_image)-1 > self.undo_index:
             self.undo_image.pop()
 
+        config.stencil.draw(self.pixel_canvas)
         self.undo_image[self.undo_index] = pygame.Surface(self.pixel_canvas.get_size(),0, self.pixel_canvas)
         self.undo_image[self.undo_index].set_palette(self.pal)
         self.undo_image[self.undo_index].blit(self.pixel_canvas, (0,0))
