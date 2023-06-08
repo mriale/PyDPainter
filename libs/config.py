@@ -1250,6 +1250,12 @@ class pydpainter:
         config.clear_undo()
         config.save_undo()
 
+    def ypos_display(self, y):
+        if config.coords_flip:
+            return y
+        else:
+            return config.pixel_height - y - 1
+
     def run(self):
         """
         This method is the main application loop.
