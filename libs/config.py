@@ -6,6 +6,7 @@ Implement the global area of PyDPainter
 """
 
 import sys, math, os.path, random, colorsys, platform, re, datetime
+import argparse
 
 from colorrange import *
 from cursor import *
@@ -160,13 +161,25 @@ class pydpainter:
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
+        #parse command line
+        parser = argparse.ArgumentParser(description='A usable pixel art program written in Python')
+        parser.add_argument('filename',
+                            help='filename of picture to load',
+                            nargs='?')
+        parser.add_argument('--config',
+                            action='store',
+                            default=os.path.join(os.path.expanduser('~'),".pydpainter"),
+                            help='configuration file to use',
+                            required=False)
+        config.args = parser.parse_args()
+
         #initialize system
         self.dinfo = pygame.display.Info()
         self.initialize()
 
         #load picture if specified from command line
-        if len(sys.argv) > 1:
-            filename = sys.argv[1]
+        if config.args.filename:
+            filename = config.args.filename
             config.pixel_canvas = load_pic(filename, config)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
@@ -461,10 +474,9 @@ class pydpainter:
         return newpal[0:numcols]
 
     def saveConfig(self):
-        home = os.path.expanduser('~')
         try:
             sm = config.display_info.get_id(self.display_mode)
-            f = open(os.path.join(home,".pydpainter"),"w")
+            f = open(config.args.config,"w")
             f.write("display_mode=%08x\n" % (self.display_mode))
             f.write("pixel_width=%d\n" % (self.pixel_width))
             f.write("pixel_height=%d\n" % (self.pixel_height))
@@ -476,6 +488,7 @@ class pydpainter:
             f.write("pixel_aspect=%f\n" % (self.pixel_aspect))
             f.write("aspectX=%f\n" % (sm.aspect_x))
             f.write("aspectY=%f\n" % (sm.aspect_y))
+            f.write("filepath=%s\n" % (self.filepath))
             f.write("fullscreen=%s\n" % (self.fullscreen))
             f.write("scale=%f\n" % (self.scale))
             f.write("scanlines=%d\n" % (self.scanlines))
@@ -489,9 +502,8 @@ class pydpainter:
             pass
 
     def readConfig(self):
-        home = os.path.expanduser('~')
         try:
-            f = open(os.path.join(home,".pydpainter"),"r")
+            f = open(config.args.config,"r")
             for line in f:
                 if line.lstrip()[0] == '#':
                     continue
@@ -519,6 +531,8 @@ class pydpainter:
                         self.aspectX = float(vars[1])
                     elif vars[0] == "aspectY":
                         self.aspectY = float(vars[1])
+                    elif vars[0] == "filepath":
+                        self.filepath = vars[1]
                     elif vars[0] == "fullscreen":
                         self.fullscreen = True if vars[1] == "True" else False
                     elif vars[0] == "scale":
