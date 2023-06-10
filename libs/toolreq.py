@@ -850,10 +850,10 @@ def draw_fill_indicator(screen):
         prev_color = config.color
 
     if prev_fill_image == None:
+        prev_fill_image = pygame.Surface((px*16,py*9), 0, screen)
         need_redraw = True
 
     if need_redraw:
-        prev_fill_image = pygame.Surface((px*16,py*9), 0, screen)
         fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
 
     if config.fillmode.value != config.fillmode.SOLID:
