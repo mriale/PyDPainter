@@ -820,6 +820,44 @@ class FillGadget(Gadget):
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
+prev_fillmode = None
+prev_color = -1
+prev_fill_image = None
+def draw_fill_indicator(screen):
+    global prev_fillmode
+    global prev_color
+    global prev_fill_image
+    need_redraw = True
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+
+    #check for change in fill mode
+    if prev_fillmode != None and \
+       prev_fillmode.value == config.fillmode.value and \
+       prev_fillmode.gradient_dither == config.fillmode.gradient_dither:
+        need_redraw = False
+    else:
+        prev_fillmode = copy.copy(config.fillmode)
+
+    #check for change in color range
+    if prev_color != config.color:
+        need_redraw = True
+        for crange in config.cranges:
+            if crange.is_active() and \
+               prev_color >= crange.low and prev_color <= crange.high and \
+               config.color >= crange.low and config.color <= crange.high:
+                need_redraw = False
+        prev_color = config.color
+
+    if prev_fill_image == None:
+        need_redraw = True
+
+    if need_redraw:
+        prev_fill_image = pygame.Surface((px*16,py*9), 0, screen)
+        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
+
+    if config.fillmode.value != config.fillmode.SOLID:
+        screen.blit(prev_fill_image, (px*180, py))
 
 def fill_req(screen):
     config.stop_cycling()
@@ -877,6 +915,7 @@ Dither:----------------00
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.fillmode.value = fillmode_value
                     config.fillmode.gradient_dither = ditherg.value - 1
+                    config.menubar.indicators["fillmode"] = draw_fill_indicator
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
