@@ -850,13 +850,15 @@ def draw_fill_indicator(screen):
         prev_color = config.color
 
     if prev_fill_image == None:
-        prev_fill_image = pygame.Surface((px*16,py*9), 0, screen)
+        prev_fill_image = pygame.Surface((px*16,py*9), 0, 8)
+        prev_fill_image.set_palette(config.pal)
         need_redraw = True
 
     if need_redraw:
         fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
 
     if config.fillmode.value != config.fillmode.SOLID:
+        prev_fill_image.set_palette(config.pal)
         screen.blit(prev_fill_image, (px*180, py))
 
 def fill_req(screen):
