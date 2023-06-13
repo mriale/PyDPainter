@@ -116,7 +116,6 @@ class DoPictureFlipY(MenuAction):
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         self.toolHide()
         palette_req(config.pixel_req_canvas)
 
