@@ -957,6 +957,27 @@ class DoStencilFree(MenuAction):
         config.stencil.free()
         config.doKeyAction()
 
+class DoBackgroundFix(MenuAction):
+    def selected(self, attrs):
+        config.background.fix(config.pixel_canvas)
+        config.brush.pen_down = False
+        config.pixel_canvas.fill(config.bgcolor);
+        config.pixel_canvas.set_colorkey(config.bgcolor)
+        config.save_undo()
+        config.toolbar.tool_id("text").action.cleartext()
+        config.doKeyAction()
+
+class DoBackgroundFree(MenuAction):
+    def selected(self, attrs):
+        if config.background.image != None:
+            config.clear_pixel_draw_canvas()
+            config.background.image.blit(config.pixel_canvas, (0,0))
+            config.background.draw(config.pixel_canvas)
+            config.save_undo()
+        config.background.free()
+        config.pixel_canvas.set_colorkey(None)
+        config.doKeyAction()
+
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1125,7 +1146,10 @@ def init_menubar(config_in):
                 ["On/Off", "`", DoStencilOnOff],
                 ["Free", " ", DoStencilFree],
             ]],
-            ["!Background"],
+            ["Background", [
+                ["Fix", " ", DoBackgroundFix],
+                ["Free", " ", DoBackgroundFree],
+            ]],
             ["!Perspective"],
         ]])
 

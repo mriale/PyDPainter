@@ -16,6 +16,7 @@ from prim import *
 from palreq import *
 from picio import *
 from stencil import *
+from background import *
 from tools import *
 from minitools import *
 from menubar import *
@@ -156,6 +157,7 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         stencil_set_config(self)
+        background_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
         pygame.init()
@@ -687,6 +689,7 @@ class pydpainter:
         self.pixel_canvas.set_palette(self.pal)
 
         self.stencil = Stencil()
+        self.background = Background()
 
         self.cycling = False
         self.cycle_handled = False
@@ -807,6 +810,7 @@ class pydpainter:
         config.pixel_canvas.set_palette(pal)
         config.pixel_spare_canvas.set_palette(pal)
         config.stencil.set_palette(pal)
+        config.background.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -1080,6 +1084,7 @@ class pydpainter:
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
+            config.background.draw(screen_rgb)
             screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
