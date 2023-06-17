@@ -1066,12 +1066,14 @@ class pydpainter:
 
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
+            config.background.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
             screen_rgb.blit(self.pixel_canvas, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
             #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
 
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
+            config.background.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))

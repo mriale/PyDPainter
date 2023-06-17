@@ -967,9 +967,25 @@ class DoBackgroundFix(MenuAction):
         config.toolbar.tool_id("text").action.cleartext()
         config.doKeyAction()
 
+class DoBackgroundOpen(MenuAction):
+    def selected(self, attrs):
+        filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            try:
+                config.background.open(filename)
+                config.pixel_canvas.set_colorkey(config.bgcolor)
+            except:
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+        config.doKeyAction()
+
+class DoBackgroundOnOff(MenuAction):
+    def selected(self, attrs):
+        config.background.enable = not config.background.enable
+        config.doKeyAction()
+
 class DoBackgroundFree(MenuAction):
     def selected(self, attrs):
-        if config.background.image != None:
+        if config.background.image != None and not config.background.is_reference:
             config.clear_pixel_draw_canvas()
             config.background.image.blit(config.pixel_canvas, (0,0))
             config.background.draw(config.pixel_canvas)
@@ -1148,6 +1164,8 @@ def init_menubar(config_in):
             ]],
             ["Background", [
                 ["Fix", " ", DoBackgroundFix],
+                ["Open...", " ", DoBackgroundOpen],
+                ["On/Off", "\\", DoBackgroundOnOff],
                 ["Free", " ", DoBackgroundFree],
             ]],
             ["!Perspective"],
