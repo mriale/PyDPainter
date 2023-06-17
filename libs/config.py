@@ -314,17 +314,16 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
-        if not reinit:
-            self.screen_width = sm.x
-            self.screen_height = sm.y
-            if config.force_1_to_1_pixels:
-                self.pixel_aspect = sm.aspect_y / sm.aspect_x
-                self.pixel_mode = "square"
-            else:
-                self.pixel_aspect = sm.aspect
-                self.pixel_mode = sm.get_pixel_mode()
-            self.aspectX = sm.aspect_x
-            self.aspectY = sm.aspect_y
+        self.screen_width = sm.x
+        self.screen_height = sm.y
+        if config.force_1_to_1_pixels:
+            self.pixel_aspect = sm.aspect_y / sm.aspect_x
+            self.pixel_mode = "square"
+        else:
+            self.pixel_aspect = sm.aspect
+            self.pixel_mode = sm.get_pixel_mode()
+        self.aspectX = sm.aspect_x
+        self.aspectY = sm.aspect_y
         self.sm = sm
 
         if reinit:
