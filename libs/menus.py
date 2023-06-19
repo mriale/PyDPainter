@@ -959,6 +959,7 @@ class DoStencilFree(MenuAction):
 
 class DoBackgroundFix(MenuAction):
     def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         config.background.fix(config.pixel_canvas)
         config.brush.pen_down = False
         config.pixel_canvas.fill(config.bgcolor);
@@ -969,6 +970,7 @@ class DoBackgroundFix(MenuAction):
 
 class DoBackgroundOpen(MenuAction):
     def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             try:
@@ -1155,7 +1157,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Effect", [
             ["Stencil", [
-                ["Make...", " ", DoStencilMake],
+                ["Make...", "~", DoStencilMake],
                 ["Remake", " ", DoStencilRemake],
                 ["!Lock FG", " ", DoStencilLockFG],
                 ["Reverse", " ", DoStencilReverse],
@@ -1165,7 +1167,7 @@ def init_menubar(config_in):
             ["Background", [
                 ["Fix", " ", DoBackgroundFix],
                 ["Open...", " ", DoBackgroundOpen],
-                ["On/Off", "\\", DoBackgroundOnOff],
+                ["On/Off", "ctrl-b", DoBackgroundOnOff],
                 ["Free", " ", DoBackgroundFree],
             ]],
             ["!Perspective"],
