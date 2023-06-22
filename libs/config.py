@@ -258,11 +258,12 @@ class pydpainter:
         if config.fullscreen:
             if force:
                 config.scale_bak = config.scale
+            pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
+            config.screen = pygame.display.get_surface()
+            config.max_width, config.max_height = config.screen.get_size()
             scale = min(config.max_height / config.screen_height,\
                         config.max_width / config.screen_width / config.pixel_aspect)
             new_window_size = (int(config.screen_width*scale*config.pixel_aspect), int(config.screen_height*scale))
-            pygame.display.set_mode((config.max_width, config.max_height), FULLSCREEN|HWSURFACE|DOUBLEBUF)
-            config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
             return
         elif force:
