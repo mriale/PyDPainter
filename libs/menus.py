@@ -962,6 +962,7 @@ class DoBackgroundFix(MenuAction):
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         config.background.fix(config.pixel_canvas)
         config.brush.pen_down = False
+        config.bgcolor = 0;
         config.pixel_canvas.fill(config.bgcolor);
         config.pixel_canvas.set_colorkey(config.bgcolor)
         config.save_undo()
@@ -975,6 +976,7 @@ class DoBackgroundOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 config.background.open(filename)
+                config.bgcolor = 0;
                 config.pixel_canvas.set_colorkey(config.bgcolor)
             except:
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)

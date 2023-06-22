@@ -51,6 +51,7 @@ class Background:
  
     def draw(self, screen):
         if self.__enable and self.image != None:
+            config.bgcolor = 0
             screen.blit(self.image, (config.screen_offset_x, config.screen_offset_y))
         elif not self.__enable and self.image != None:
             screen.fill(config.pal[0])
