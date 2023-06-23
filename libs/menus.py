@@ -72,11 +72,15 @@ class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
+        merge_config = copy.copy(config)
+        if config.background.enable and config.background.image and not config.background.is_reference:
+            merge_config.pixel_canvas = config.background.image.copy()
+            merge_config.pixel_canvas.blit(config.pixel_canvas, (0,0))
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, config)
+            save_pic(filename, merge_config)
             config.filename = filename
             config.modified_count = 0
         config.doKeyAction()
@@ -84,15 +88,19 @@ class DoSave(MenuAction):
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        merge_config = copy.copy(config)
+        if config.background.enable and config.background.image and not config.background.is_reference:
+            merge_config.pixel_canvas = config.background.image.copy()
+            merge_config.pixel_canvas.blit(config.pixel_canvas, (0,0))
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            if not save_pic(filename, config, overwrite=False):
+            if not save_pic(filename, merge_config, overwrite=False):
                 answer = question_req(config.pixel_req_canvas,
                          "File Exists",
                          "Overwrite this file?",
                          ["Yes","No"])
                 if answer == 0:
-                    save_pic(filename, config, overwrite=True)
+                    save_pic(filename, merge_config, overwrite=True)
                 else:
                     return
             config.filename = filename
