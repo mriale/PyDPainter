@@ -77,7 +77,7 @@ class Background:
         if self.__enable and self.image != None and not self.is_reference:
             pic = self.image.copy()
             pic.blit(config.pixel_canvas, (0,0))
-        elif not self.__enable and self.image != None:
+        elif self.is_reference or (not self.__enable and self.image != None):
             pic = self.image.copy()
             pic.fill(config.pal[0])
             pic.blit(config.pixel_canvas, (0,0))
