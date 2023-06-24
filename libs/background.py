@@ -45,9 +45,19 @@ class Background:
         self.is_reference = True
         config.menubar.indicators["background"] = self.draw_indicator
 
-    def free(self):
+    def clear(self):
         self.__enable = False
         self.image = None
+
+    def free(self):
+        if config.background.image != None and not config.background.is_reference:
+            config.clear_pixel_draw_canvas()
+            self.image.blit(config.pixel_canvas, (0,0))
+            self.draw(config.pixel_canvas)
+            config.save_undo()
+        self.__enable = False
+        self.image = None
+        config.pixel_canvas.set_colorkey(None)
  
     def draw(self, screen):
         if self.__enable and self.image != None:
@@ -61,6 +71,17 @@ class Background:
             screen.blit(self.image, coords, rect)
         elif not self.__enable and self.image != None:
             pygame.draw.rect(screen, config.pal[0], (coords[0], coords[1], rect[2], rect[3]))
+
+    def get_flattened(self):
+        pic = config.pixel_canvas
+        if self.__enable and self.image != None and not self.is_reference:
+            pic = self.image.copy()
+            pic.blit(config.pixel_canvas, (0,0))
+        elif not self.__enable and self.image != None:
+            pic = self.image.copy()
+            pic.fill(config.pal[0])
+            pic.blit(config.pixel_canvas, (0,0))
+        return pic
 
     def draw_indicator(self, screen):
         if self.__enable:

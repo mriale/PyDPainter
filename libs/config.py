@@ -360,6 +360,11 @@ class pydpainter:
             config.scale = config.closest_scale()
             config.resize_display(False)
 
+        self.primprops = PrimProps()
+        self.matte_erase = False
+        self.last_drawmode = 2
+        self.drawmode = self.primprops.drawmode
+        self.fillmode = self.primprops.fillmode
         config.color = 1
         config.bgcolor = 0
 
@@ -393,6 +398,7 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
         self.stencil.clear()
+        self.background.clear()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on

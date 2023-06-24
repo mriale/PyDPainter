@@ -601,6 +601,7 @@ Resize Page: [Yes~No]
                 resize_page = (gResize.index(ge.gadget) == 1)
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
+                    config.background.free()
                     ok_clicked = True
                     num_colors = 2**bdepth
                     if bdepth == 6 and cdepth == 16:
@@ -814,7 +815,7 @@ Resize: [Yes~No]
 
 class PreviewPic(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.pic = config.pixel_canvas.convert()
+        self.pic = config.background.get_flattened().convert()
         super(PreviewPic, self).__init__(type, label, rect, value, maxvalue, id)
  
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):

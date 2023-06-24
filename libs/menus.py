@@ -57,6 +57,8 @@ class DoOpen(MenuAction):
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                config.bgcolor = 0
+                config.color = 1
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
@@ -73,9 +75,7 @@ class DoSave(MenuAction):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
-        if config.background.enable and config.background.image and not config.background.is_reference:
-            merge_config.pixel_canvas = config.background.image.copy()
-            merge_config.pixel_canvas.blit(config.pixel_canvas, (0,0))
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
@@ -89,9 +89,7 @@ class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         merge_config = copy.copy(config)
-        if config.background.enable and config.background.image and not config.background.is_reference:
-            merge_config.pixel_canvas = config.background.image.copy()
-            merge_config.pixel_canvas.blit(config.pixel_canvas, (0,0))
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
             if not save_pic(filename, merge_config, overwrite=False):
@@ -997,13 +995,7 @@ class DoBackgroundOnOff(MenuAction):
 
 class DoBackgroundFree(MenuAction):
     def selected(self, attrs):
-        if config.background.image != None and not config.background.is_reference:
-            config.clear_pixel_draw_canvas()
-            config.background.image.blit(config.pixel_canvas, (0,0))
-            config.background.draw(config.pixel_canvas)
-            config.save_undo()
         config.background.free()
-        config.pixel_canvas.set_colorkey(None)
         config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):
