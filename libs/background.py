@@ -78,7 +78,8 @@ class Background:
             pic = self.image.copy()
             pic.blit(config.pixel_canvas, (0,0))
         elif self.is_reference or (not self.__enable and self.image != None):
-            pic = self.image.copy()
+            pic = config.pixel_canvas.copy()
+            pic.set_colorkey(None)
             pic.fill(config.pal[0])
             pic.blit(config.pixel_canvas, (0,0))
         return pic
