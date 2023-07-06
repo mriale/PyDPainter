@@ -16,6 +16,7 @@ from prim import *
 from palreq import *
 from picio import *
 from stencil import *
+from background import *
 from tools import *
 from minitools import *
 from menubar import *
@@ -156,6 +157,7 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         stencil_set_config(self)
+        background_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
         pygame.init()
@@ -256,15 +258,17 @@ class pydpainter:
         if config.fullscreen:
             if force:
                 config.scale_bak = config.scale
+            pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
+            config.screen = pygame.display.get_surface()
+            config.max_width, config.max_height = config.screen.get_size()
             scale = min(config.max_height / config.screen_height,\
                         config.max_width / config.screen_width / config.pixel_aspect)
             new_window_size = (int(config.screen_width*scale*config.pixel_aspect), int(config.screen_height*scale))
-            pygame.display.set_mode((config.max_width, config.max_height), FULLSCREEN|HWSURFACE|DOUBLEBUF)
-            config.screen = pygame.display.get_surface()
             config.window_size = new_window_size
             return
         elif force:
             config.scale = config.scale_bak
+            config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
         while True:
             new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
@@ -312,17 +316,16 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
-        if not reinit:
-            self.screen_width = sm.x
-            self.screen_height = sm.y
-            if config.force_1_to_1_pixels:
-                self.pixel_aspect = sm.aspect_y / sm.aspect_x
-                self.pixel_mode = "square"
-            else:
-                self.pixel_aspect = sm.aspect
-                self.pixel_mode = sm.get_pixel_mode()
-            self.aspectX = sm.aspect_x
-            self.aspectY = sm.aspect_y
+        self.screen_width = sm.x
+        self.screen_height = sm.y
+        if config.force_1_to_1_pixels:
+            self.pixel_aspect = sm.aspect_y / sm.aspect_x
+            self.pixel_mode = "square"
+        else:
+            self.pixel_aspect = sm.aspect
+            self.pixel_mode = sm.get_pixel_mode()
+        self.aspectX = sm.aspect_x
+        self.aspectY = sm.aspect_y
         self.sm = sm
 
         if reinit:
@@ -357,6 +360,11 @@ class pydpainter:
             config.scale = config.closest_scale()
             config.resize_display(False)
 
+        self.primprops = PrimProps()
+        self.matte_erase = False
+        self.last_drawmode = 2
+        self.drawmode = self.primprops.drawmode
+        self.fillmode = self.primprops.fillmode
         config.color = 1
         config.bgcolor = 0
 
@@ -390,6 +398,7 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
         self.stencil.clear()
+        self.background.clear()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
@@ -600,6 +609,8 @@ class pydpainter:
         self.last_recompose_timer = 0
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h
+        self.max_width_init = self.dinfo.current_w
+        self.max_height_init = self.dinfo.current_h
         #Setup the pygame screen
         self.pixel_width = 320
         self.pixel_height = 200
@@ -687,6 +698,7 @@ class pydpainter:
         self.pixel_canvas.set_palette(self.pal)
 
         self.stencil = Stencil()
+        self.background = Background()
 
         self.cycling = False
         self.cycle_handled = False
@@ -807,6 +819,7 @@ class pydpainter:
         config.pixel_canvas.set_palette(pal)
         config.pixel_spare_canvas.set_palette(pal)
         config.stencil.set_palette(pal)
+        config.background.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -1062,12 +1075,14 @@ class pydpainter:
 
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
+            config.background.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
             screen_rgb.blit(self.pixel_canvas, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
             #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
 
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
+            config.background.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))
@@ -1080,11 +1095,12 @@ class pydpainter:
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
+            config.background.draw(screen_rgb)
             screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
-            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO, self.cursor.BUSY]:
+            if self.cursor.shape not in [self.cursor.NORMAL, self.cursor.NORMALTO, self.cursor.DROPPER, self.cursor.BUSY]:
                 self.cursor.shape = self.cursor.NORMAL
             screen_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None

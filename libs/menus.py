@@ -57,6 +57,8 @@ class DoOpen(MenuAction):
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                config.bgcolor = 0
+                config.color = 1
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
@@ -72,11 +74,13 @@ class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
+        merge_config = copy.copy(config)
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, config)
+            save_pic(filename, merge_config)
             config.filename = filename
             config.modified_count = 0
         config.doKeyAction()
@@ -84,15 +88,17 @@ class DoSave(MenuAction):
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        merge_config = copy.copy(config)
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            if not save_pic(filename, config, overwrite=False):
+            if not save_pic(filename, merge_config, overwrite=False):
                 answer = question_req(config.pixel_req_canvas,
                          "File Exists",
                          "Overwrite this file?",
                          ["Yes","No"])
                 if answer == 0:
-                    save_pic(filename, config, overwrite=True)
+                    save_pic(filename, merge_config, overwrite=True)
                 else:
                     return
             config.filename = filename
@@ -927,7 +933,7 @@ class DoStencilRemake(MenuAction):
 
 class DoStencilLockFG(MenuAction):
     def selected(self, attrs):
-        print("DoStencilLockFG")
+        config.stencil.lock_fg(config.pixel_canvas)
         config.doKeyAction()
 
 class DoStencilReverse(MenuAction):
@@ -955,6 +961,41 @@ class DoStencilFree(MenuAction):
             config.stencil.draw(config.pixel_canvas)
             config.save_undo()
         config.stencil.free()
+        config.doKeyAction()
+
+class DoBackgroundFix(MenuAction):
+    def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
+        config.background.fix(config.pixel_canvas)
+        config.brush.pen_down = False
+        config.bgcolor = 0;
+        config.pixel_canvas.fill(config.bgcolor);
+        config.pixel_canvas.set_colorkey(config.bgcolor)
+        config.save_undo()
+        config.toolbar.tool_id("text").action.cleartext()
+        config.doKeyAction()
+
+class DoBackgroundOpen(MenuAction):
+    def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
+        filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            try:
+                config.background.open(filename)
+                config.bgcolor = 0;
+                config.pixel_canvas.set_colorkey(config.bgcolor)
+            except:
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+        config.doKeyAction()
+
+class DoBackgroundOnOff(MenuAction):
+    def selected(self, attrs):
+        config.background.enable = not config.background.enable
+        config.doKeyAction()
+
+class DoBackgroundFree(MenuAction):
+    def selected(self, attrs):
+        config.background.free()
         config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):
@@ -1118,14 +1159,19 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Effect", [
             ["Stencil", [
-                ["Make...", " ", DoStencilMake],
+                ["Make...", "~", DoStencilMake],
                 ["Remake", " ", DoStencilRemake],
-                ["!Lock FG", " ", DoStencilLockFG],
+                ["Lock FG", " ", DoStencilLockFG],
                 ["Reverse", " ", DoStencilReverse],
                 ["On/Off", "`", DoStencilOnOff],
                 ["Free", " ", DoStencilFree],
             ]],
-            ["!Background"],
+            ["Background", [
+                ["Fix", " ", DoBackgroundFix],
+                ["Open...", " ", DoBackgroundOpen],
+                ["On/Off", "ctrl-b", DoBackgroundOnOff],
+                ["Free", " ", DoBackgroundFree],
+            ]],
             ["!Perspective"],
         ]])
 

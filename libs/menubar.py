@@ -422,10 +422,10 @@ class Menubar:
                     else:
                         mg.state = 0
             elif True in self.wait_for_mouseup:
+                inssm = False
                 for mg in self.menug_list:
                     if mg.state == 2:
                         for smg in mg.menug_list:
-                            inssm = False
                             if smg.state == 2:
                                 for ssmg in smg.menug_list:
                                     if ssmg.pointin((x,y), ssmg.screenrect):

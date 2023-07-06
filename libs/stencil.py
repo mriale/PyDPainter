@@ -52,6 +52,15 @@ class Stencil:
         self.__enable = True
         config.menubar.indicators["stencil"] = self.draw_indicator
 
+    def lock_fg(self, screen):
+        self.image = screen.copy()
+        #create mask
+        surf_array = pygame.surfarray.pixels2d(self.image)
+        self.mask = np.where(surf_array != 0)
+        surf_array = None
+        self.__enable = True
+        config.menubar.indicators["stencil"] = self.draw_indicator
+
     def reverse(self):
         if self.mask != None:
             self.image = config.pixel_canvas.copy()

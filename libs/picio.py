@@ -182,7 +182,7 @@ def load_iff(filename, config, ifftype):
             elif chunk.getname() == b'CAMG':
                 #Amiga graphics mode
                 camg_bytes = chunk.read()
-                display_mode = unpack(">I", camg_bytes)[0] & config.OCS_MODES
+                display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
                     raise Exception("HAM mode not supported")
             elif chunk.getname() == b'BMHD':
@@ -308,7 +308,7 @@ def load_pic(filename, config, status_func=None):
         pic = config.pixel_canvas
 
     #Guess display mode
-    if config.display_mode < 0:
+    if config.display_mode < 0 or config.display_info.get_id(config.display_mode) == None:
         config.color_depth = 256
         sm = config.display_info.match_resolution(pic.get_width(), pic.get_height())
         if sm != None:

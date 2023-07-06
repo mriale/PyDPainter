@@ -258,6 +258,12 @@ def palette_req(screen):
     global palette_page
     config.stop_cycling()
 
+    CA_SPREAD = 1
+    CA_EXCHANGE = 2
+    CA_COPY = 3
+    CA_RANGE = 4
+    CA_PICK = 5
+
     backuppal = list(config.truepal)
     config.pal = list(config.truepal)
     color = config.color
@@ -270,7 +276,7 @@ def palette_req(screen):
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
-_______      ^^ A^^
+_______[Pick]^^ A^^
 [Spread]   [Ex~Copy]
 [Range][1~2~3~4~5~6]
 Speed---------___^^
@@ -380,6 +386,16 @@ Speed---------___^^
                    x1<config.pixel_canvas.get_width() and \
                    y1<config.pixel_canvas.get_height():
                     color = config.pixel_canvas.get_at_mapped((x1,y1))
+                    if color_action == CA_PICK:
+                        if color == config.bgcolor and config.background.enable:
+                            config.pal[from_color] = tuple(config.background.image.get_at((x1,y1)))[0:3]
+                            config.pal = config.quantize_palette(config.pal, config.color_depth)
+                            config.set_all_palettes(config.pal)
+                            color = from_color
+                        else:
+                            config.pal[from_color] = config.pal[color]
+                            color = from_color
+                        config.cursor.shape = config.cursor.NORMAL
                     palg.value = color
                     palg.need_redraw = True
                     colorg.value = color
@@ -409,20 +425,24 @@ Speed---------___^^
                     set_hsv_sliders(config.pal[color], hg, sg, vg)
                 elif ge.gadget.label == "Spread":
                     from_color = color
-                    color_action = 1
+                    color_action = CA_SPREAD
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Ex":
                     from_color = color
-                    color_action = 2
+                    color_action = CA_EXCHANGE
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Copy":
                     from_color = color
-                    color_action = 3
+                    color_action = CA_COPY
                     config.cursor.shape = config.cursor.NORMALTO
                 elif ge.gadget.label == "Range":
                     from_color = color
-                    color_action = 4
+                    color_action = CA_RANGE
                     config.cursor.shape = config.cursor.NORMALTO
+                elif ge.gadget.label == "Pick":
+                    from_color = color
+                    color_action = CA_PICK
+                    config.cursor.shape = config.cursor.DROPPER
                 elif ge.gadget.label >= "1" and ge.gadget.label <= "6":
                     current_range = int(ge.gadget.label)-1
                     palg.maxvalue = current_range
@@ -454,11 +474,11 @@ Speed---------___^^
                         set_hsv_sliders(config.pal[color], hg, sg, vg)
                         to_color = color
                         if color_action >= 0:
-                            if color < from_color and color_action != 3:
+                            if color < from_color and color_action in [CA_SPREAD, CA_RANGE]:
                                 to_color = from_color
                                 from_color = color
                             # spread
-                            if color_action == 1:
+                            if color_action == CA_SPREAD:
                                 numcol = to_color - from_color + 1
                                 #print(config.pal[from_color])
                                 #print(config.pal[to_color])
@@ -468,14 +488,14 @@ Speed---------___^^
                                          int((config.pal[from_color][1]*(numcol-i) + config.pal[to_color][1]*i)/(numcol)), \
                                          int((config.pal[from_color][2]*(numcol-i) + config.pal[to_color][2]*i)/(numcol)))
                             # exchange
-                            elif color_action == 2:
+                            elif color_action == CA_EXCHANGE:
                                 config.pal[from_color], config.pal[to_color] = \
                                     config.pal[to_color], config.pal[from_color]
                             # copy
-                            elif color_action == 3:
+                            elif color_action == CA_COPY:
                                 config.pal[to_color] = config.pal[from_color]
                             # range
-                            elif color_action == 4:
+                            elif color_action == CA_RANGE:
                                 if from_color == to_color:
                                     config.cranges[current_range].low = 0
                                     config.cranges[current_range].high = 0
