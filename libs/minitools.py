@@ -47,6 +47,18 @@ class DoScale(MiniToolAction):
         self.gadget.state = 0
         config.resize_display()
 
+class DoFullscreen(MiniToolAction):
+    """
+    Toggle full-screen mode
+    """
+    def selected(self, attrs):
+        config.fullscreen = True
+        config.resize_display(force=True)
+
+    def deselected(self, attrs):
+        config.fullscreen = False
+        config.resize_display(force=True)
+
 class DoScanlines(MiniToolAction):
     """
     Toggle scanline mode
@@ -93,7 +105,7 @@ def init_minitoolbar(config_in):
     scaleY = config.fonty // 12
     scaledown = 4 // min(scaleX,scaleY)
     minitools_image = imgload('minitools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
-    numtools=5
+    numtools=6
     numsubtools=3
     h = minitools_image.get_height()//numsubtools
     w = minitools_image.get_width()
@@ -104,12 +116,14 @@ def init_minitoolbar(config_in):
         ["expand",    ToolGadget.TT_TOGGLE, "", DoExpand],
         ["help",      ToolGadget.TT_TOGGLE, "", DoHelp],
         ["scale",     ToolGadget.TT_SINGLE, "", DoScale],
+        ["fullscreen",ToolGadget.TT_TOGGLE, "", DoFullscreen],
         ["scanlines", ToolGadget.TT_TOGGLE, "", DoScanlines],
         ["aspect",    ToolGadget.TT_TOGGLE, "", DoAspect]
     ])
 
     minitoolbar.tool_id("help").state = 1 if config.help_on else 0
     minitoolbar.tool_id("scale").has_subtool = True
+    minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
     minitoolbar.tool_id("scanlines").state = config.scanlines
     minitoolbar.tool_id("aspect").state = pmode[config.pixel_mode]
 

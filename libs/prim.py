@@ -22,9 +22,11 @@ def prim_set_config(config_in):
 symm_mat = None
 symm_mat_num = 0
 symm_center = [0,0]
+hlines = []
 vlines = {}
 ell_mat = None
 ell_angle = 0
+ell_coords = (-1,-1)
 
 def onscreen(coords):
     w = config.pixel_width
@@ -69,11 +71,15 @@ def add_bounds(coords):
         config.fillmode.bounds[3] = y
 
 def start_shape():
+    global hlines
     global vlines
+    hlines = []
     vlines = {}
 
 def end_shape(screen, color, primprops=None, interrupt=False):
     global vlines
+    drawhlines(screen, color, primprops=primprops, interrupt=interrupt)
+    hlines = []
     drawvlines(screen, color, primprops=primprops, interrupt=interrupt)
     vlines = {}
 
@@ -259,6 +265,7 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
+        self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if coordfrom == None:
                 coordfrom = (0,0)
@@ -286,11 +293,9 @@ class Brush:
             self.image_orig = self.image.copy()
             self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
-            self.handle = [w//2, h//2]
-            self.handle_frac = [0.5, 0.5]
             self.__size = h
             self.aspect = 1.0
-            self.rect = [-self.handle[0], -self.handle[1], w, h]
+            self.calc_handle(w, h)
         else:
             self.image = None
             self.rect = [0,0,size,size]
@@ -300,13 +305,9 @@ class Brush:
             self.bgcolor_orig = bgcolor
             self.__size = size
             self.aspect = 1.0
-            self.handle = [size//2, size//2]
-            self.handle_frac = [0.5, 0.5]
-            self.rect = [-self.handle[0], -self.handle[1],
-                         size, size]
+            self.calc_handle(size, size)
 
         self.cache = BrushCache()
-        self.handle_type = self.CENTER
         self.smear_stencil = None
         self.smear_image = None
         self.smear_count = 0
@@ -337,6 +338,23 @@ class Brush:
 
         self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
+
+    def get_wh(self):
+        if self.type == Brush.CUSTOM:
+            return self.image.get_size()
+        else:
+            ax = config.aspectX
+            ay = config.aspectY
+            if self.type == Brush.SQUARE:
+                return ((self.size+1)*ax, (self.size+1)*ay)
+            elif self.type == Brush.SPRAY:
+                return ((self.size*3*ax+1, self.size*3*ay+1))
+            elif self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+                if self.size == 1:
+                    return (1, 1)
+                else:
+                    return (self.size*2*ax, self.size*2*ay)
+
 
     def scale(self, image_in):
         size = self.__size
@@ -446,8 +464,9 @@ class Brush:
             image.fill(color)
             return image
         elif self.type == Brush.SPRAY:
-            image = pygame.Surface((self.size*3+1, self.size*3+1),0, config.pixel_canvas)
-            self.calc_handle(image.get_width(), image.get_height())
+            image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
+            w,h = image.get_size()
+            self.calc_handle(w,h)
             image.set_palette(config.pal)
             
             if color == 0:
@@ -470,7 +489,7 @@ class Brush:
                 old_state = random.getstate()
                 random.seed(self.size)
                 for i in range(0, self.size * 3):
-                    image.set_at(config.airbrush_coords(self.handle[0], self.handle[1], size=self.size*1.5), color)
+                    image.set_at(config.airbrush_coords(w//2, h//2, size=self.size*1.5), color)
                 random.setstate(old_state)
 
             return image
@@ -803,8 +822,9 @@ class FillMode:
     VERT_FIT = 7
     HORIZONTAL = 8
     HORIZ_FIT = 9
+    BOTH_FIT = 10
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f"]
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91"]
     NOBOUNDS = [65535,65535,-1,-1]
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
@@ -837,6 +857,7 @@ class PrimProps:
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     global ell_mat
     global ell_angle
+    global ell_coords
 
     ccoords = []
 
@@ -852,8 +873,9 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     #rotate ellipse if needed
     if angle != 0:
         #recalc matrix only if necessary
-        if angle != ell_angle:
+        if angle != ell_angle or coords != ell_coords:
             ell_angle = angle
+            ell_coords = coords
             q = angle * math.pi / 180.0
             trans1   = np.matrix([[  1,   0, 0],
                                   [  0,   1, 0],
@@ -1067,8 +1089,8 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
 
 
 def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
-    x,y = coordfrom
-    x2,y2 = coordto
+    x,y = int(coordfrom[0]), int(coordfrom[1])
+    x2,y2 = int(coordto[0]), int(coordto[1])
 
     cl = CoordList(1)
 
@@ -1381,6 +1403,21 @@ def hline_XOR(surf_array, y, xs1, xs2):
         surf_array[xs1:xs2,y] ^= 0x00ffffff
 
 def hline_SOLID(surf_array, color, y, xs1, xs2):
+    #don't draw if off screen
+    size = surf_array.shape
+    if y<0 or y>=size[1]:
+        return
+    if xs1<0 and xs2<0:
+        return
+    if xs1>size[0] and xs2>size[0]:
+        return
+
+    #clip to edges of screen
+    if xs1<0:
+        xs1=0
+    if xs2>size[0]-1:
+        xs2=size[0]-1
+
     if surf_array.dtype == np.uint8:
         #indexed color
         surf_array[xs1:xs2+1,y] = color
@@ -1470,18 +1507,30 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             #true color
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
+def hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    add_vline(y, xs1, xs2)
+
+def hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
 def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
 
-    #don't draw if off screen
     size = screen.get_size()
-    if y<0 or y>=size[1]:
-        return
-    if x1<0 and x2<0:
-        return
-    if x1>size[0] and x2>size[0]:
-        return
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #don't draw if off screen
+        if y<0 or y>=size[1]:
+            return
+        if x1<0 and x2<0:
+            return
+        if x1>size[0] and x2>size[0]:
+            return
 
     color = copy.copy(color_in)
 
@@ -1490,11 +1539,13 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
         x1,x2 = (x2,x1)
     xs1,xs2 = (x1,x2)
 
-    #clip to edges of screen
-    if xs1<0:
-        xs1=0
-    if xs2>size[0]-1:
-        xs2=size[0]-1
+    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
+    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+        #clip to edges of screen
+        if xs1<0:
+            xs1=0
+        if xs2>size[0]-1:
+            xs2=size[0]-1
 
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)
@@ -1510,9 +1561,9 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
-        if primprops.fillmode.predraw:
-            hline_SOLID(surf_array, color, y, xs1, xs2)
-        add_vline(y, xs1, xs2)
+        hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.BOTH_FIT:
+        hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value >= FillMode.VERTICAL:
         #get color range
         cyclemode = False
@@ -1573,6 +1624,109 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     #free array and unlock surface
     surf_array = None
 
+
+def drawhlines(screen, color, primprops=None, interrupt=False):
+    global hlines
+    if primprops == None:
+        primprops = config.primprops
+
+    if len(hlines) == 0:
+        return
+
+    if primprops.fillmode.value == FillMode.BOTH_FIT:
+        #Find color range
+        cyclemode = False
+        for crange in config.cranges:
+            if crange.is_active() and color >= crange.low and color <= crange.high:
+                cyclemode = True
+                arange = crange.get_range()
+                numcolors = len(arange)
+                cur_crange = crange
+                color = arange[0]
+        if not cyclemode:
+            return
+
+        #Find bounds of shape
+        hlines_min = np.amin(hlines, axis=0)
+        hlines_max = np.amax(hlines, axis=0)
+        xo = hlines_min[1] - 1
+        yo = hlines_min[0] - 1
+        w = hlines_max[2] - xo + 2
+        h = hlines_max[0] - yo + 2
+
+        #Create numpy array for shape
+        surf_array = np.zeros((w,h), dtype=int)
+
+        #Render shape into numpy array
+        for y,x1,x2 in hlines:
+            surf_array[x1-xo:x2-xo+1,y-yo] = 1
+        surf_trim = surf_array.copy()
+
+        #Build up array of number of pixels to the edge
+        while (np.count_nonzero(surf_trim) > 0):
+            #Create mask to cut away edges
+            tfarray = np.equal(surf_trim, 0)
+            surf_mask = np.zeros((w,h), dtype=int)
+            surf_mask[tfarray] = 1
+
+            #Trim edges of shape
+            surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
+            surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
+            surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
+            surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
+            tfarray = np.not_equal(surf_trim, 1)
+            surf_trim[tfarray] = 0
+
+            #Increment shape array pixel count from trimmed shape
+            surf_array += surf_trim
+
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        #Create mask of finished shape
+        tfmask = np.not_equal(surf_array, 0)
+
+        #Map counts to colors in the range
+        max_pixels = np.amax(surf_array)
+        if cur_crange.get_dir() == -1:
+            surf_array[tfmask] = max_pixels - surf_array[tfmask]
+        surf_array *= numcolors * 256   # multiply for more precision
+        surf_array //= max_pixels + 1
+        surf_array += cur_crange.low * 256
+
+        if primprops.fillmode.gradient_dither > 0:
+            #Random dither
+            dither_range = 32 * primprops.fillmode.gradient_dither
+            dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
+            surf_array += dither_array
+        elif primprops.fillmode.gradient_dither < 0:
+            dither_order4 = (FillMode.ORDER4 - 8) * 16
+            dither_array = np.tile(dither_order4, ((w+3)//4,(h+3)//4))
+            surf_array += dither_array[0:w,0:h]
+
+        #Force out of range colors back into range
+        tfarray = np.less(surf_array, cur_crange.low * 256)
+        surf_array[tfarray] = cur_crange.low * 256
+        tfarray = np.greater(surf_array, cur_crange.high * 256)
+        surf_array[tfarray] = cur_crange.high * 256
+
+        #Find safe BG color
+        bgcolor = 0
+        if cur_crange.low == 0:
+            bgcolor = cur_crange.high + 1
+
+        #Convert to image and blit to screen
+        shape_image = pygame.Surface((w, h),0,8)
+        shape_image.set_palette(config.pal)
+        shape_image.fill(bgcolor)
+        shape_image.set_colorkey(bgcolor)
+        surf_array2 = pygame.surfarray.pixels2d(shape_image)
+        surf_array //= 256
+        surf_array2[tfmask] = surf_array[tfmask]
+        surf_array2 = None
+        screen.blit(shape_image, (xo,yo))
 
 def drawvlines(screen, color, primprops=None, interrupt=False):
     global vlines
@@ -1855,6 +2009,12 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
+
+            # special case for horizontal line
+            if miny == maxy:
+                hline(screen, color, miny, minx, maxx)
+                config.try_recompose()
+
         end_shape(screen, color, interrupt=interrupt)
 
 

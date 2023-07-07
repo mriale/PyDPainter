@@ -143,9 +143,14 @@ class Menubar:
         self.title = ""
         self.title_extra = ""
         self.title_right = ""
+        self.indicators = {}
         self.menulevel = 0
         self.need_redraw = True
         self.fadesurf = None
+        self.hide_menus = False
+
+    def add_indicator(self, name, renderer):
+        self.indicators[name] = renderer
 
     def add_submenu(self, menug, menus):
         x,y,w,h = menug.rect
@@ -245,6 +250,20 @@ class Menubar:
                         rx += xdiff
                         g2.rect = (rx,ry,rw,rh)
 
+        #reposition submenus
+        xdiff = 0
+        for g in menug.menug_list:
+            if g.menubox != None:
+                xdiff = self.screen.get_width() - (g.menubox[0] + g.menubox[2] + 2)
+                if xdiff > 0:
+                    xdiff = 0
+                if xdiff != 0:
+                    g.menubox[0] += xdiff
+                    for g2 in g.menug_list:
+                        rx,ry,rw,rh = g2.rect
+                        rx += xdiff
+                        g2.rect = (rx,ry,rw,rh)
+
     def add_menu(self, menus):
         x,y,w,h = self.rect
         xo = 0
@@ -280,13 +299,21 @@ class Menubar:
         if self.menus_on:
             for mg in self.menug_list:
                 mg.draw(screen, self.font)
+            #redraw submenus over parent menu items
+            for g in self.menug_list:
+                if g.state == 2 and g.menubox != None:
+                    for g2 in g.menug_list:
+                        if g2.state == 2 and g2.menubox != None:
+                            g2.draw(screen, self.font)
         else:
             titlestring = self.title + " " + self.title_extra
             self.font.blitstring(screen, (xo+(self.font.xsize//2), yo+((h-self.font.ysize)//2)), titlestring, fgcolor, bgcolor)
             if len(self.title_right) > 0:
                 trw = self.font.xsize * (len(self.title_right) + 2)
                 self.font.blitstring(screen, (xo+w-(self.font.xsize//2)-trw, yo+((h-self.font.ysize)//2)), self.title_right, fgcolor, bgcolor)
-
+            for key in self.indicators:
+                renderer = self.indicators[key]
+                renderer(screen)
 
     def menu_id(self, id):
         notletter = re.compile('[^a-z]')
@@ -330,6 +357,13 @@ class Menubar:
         if self.visible and event.type == MOUSEBUTTONDOWN and event.button in [1,3]:
             if event.button == 3:
                 rightclick = True
+            if self.is_inside((x,y)):
+                self.menus_on = True
+                for mg in self.menug_list:
+                    if mg.pointin((x,y), mg.screenrect):
+                        mg.state = 2
+                    else:
+                        mg.state = 0
             for menug in self.menug_list:
                 if menug.pointin((x,y), menug.rect):
                     self.wait_for_mouseup[event.button] = True
@@ -373,7 +407,7 @@ class Menubar:
         elif event.type == MOUSEMOTION:
             if event.buttons == (0,0,0):
                 self.wait_for_mouseup = [False, False, False, False]
-            if self.is_inside((x,y)) and event.buttons == (0,0,0):
+            if not self.hide_menus and self.is_inside((x,y)) and event.buttons == (0,0,0):
                 self.menus_on = True
                 for mg in self.menug_list:
                     if mg.pointin((x,y), mg.screenrect):
@@ -381,16 +415,17 @@ class Menubar:
                     else:
                         mg.state = 0
             elif self.is_inside((x,y)) and True in self.wait_for_mouseup:
+                self.menus_on = True
                 for mg in self.menug_list:
                     if mg.pointin((x,y), mg.screenrect):
                         mg.state = 2
                     else:
                         mg.state = 0
             elif True in self.wait_for_mouseup:
+                inssm = False
                 for mg in self.menug_list:
                     if mg.state == 2:
                         for smg in mg.menug_list:
-                            inssm = False
                             if smg.state == 2:
                                 for ssmg in smg.menug_list:
                                     if ssmg.pointin((x,y), ssmg.screenrect):

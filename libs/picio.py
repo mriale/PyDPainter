@@ -10,8 +10,6 @@ import numpy as np
 
 from struct import pack, unpack
 
-from chunk import Chunk
-
 from colorrange import *
 from prim import *
 
@@ -42,6 +40,8 @@ def iff_type(filename):
             ilbm_header = iff_file.read(4)
             if ilbm_header == b'ILBM':
                 retval = "ILBM"
+            elif ilbm_header == b'PBM ':
+                retval = "PBM"
             elif ilbm_header == b'ANIM':
                 retval = "ANIM"
         iff_file.close()
@@ -115,8 +115,47 @@ def decode_ilbm_body(body_bytes, compression, nPlanes, surf_array):
 
     p2c(planes_in, surf_array)
 
+#read bytes into bitmap
+def decode_pbm_body(body_bytes, compression, nPlanes, surf_array):
+    w = len(surf_array)
+    h = len(surf_array[0])
+
+    if compression:
+        raw_array = bytearray(w*h)
+        byterun_decode(body_bytes, raw_array)
+        surf_array[:,:] = np.asarray(raw_array,dtype=np.uint8).reshape(h,w).transpose()
+    else:
+        surf_array[:,:] = np.frombuffer(body_bytes,dtype=np.uint8).reshape(h,w).transpose()
+
+class Chunk(object):
+    """This class implements IFF chunk reading"""
+    def __init__(self, iff_file):
+        self.iff_file = iff_file
+        self.name = iff_file.read(4)
+        if len(self.name) == 0:
+            raise EOFError
+        len_bytes = iff_file.read(4)
+        if len(len_bytes) == 0:
+            raise EOFError
+        len_tuple = unpack(">I", len_bytes)
+        self.length = len_tuple[0]
+
+    def getname(self):
+        return self.name
+
+    def read(self):
+        retval = self.iff_file.read(self.length)
+        if self.length & 1 == 1:
+            self.iff_file.seek(1, 1) #make sure word-aligned
+        return retval
+
+    def skip(self):
+        self.iff_file.seek(self.length, 1)
+        if self.length & 1 == 1:
+            self.iff_file.seek(1, 1) #make sure word-aligned
+
 #read in an IFF file
-def load_iff(filename, config):
+def load_iff(filename, config, ifftype):
     cranges = []
     pic = None
     display_mode = -1
@@ -130,7 +169,8 @@ def load_iff(filename, config):
                 #create color range from chunk
                 crng_bytes = chunk.read()
                 (pad, rate, flags, low, high) = unpack(">HHHBB", crng_bytes)
-                cranges.append(colorrange(rate,flags,low,high))
+                if len(cranges) < 6:
+                    cranges.append(colorrange(rate,flags,low,high))
             elif chunk.getname() == b'CCRT':
                 #Graphicraft color range
                 ccrt_bytes = chunk.read()
@@ -142,7 +182,7 @@ def load_iff(filename, config):
             elif chunk.getname() == b'CAMG':
                 #Amiga graphics mode
                 camg_bytes = chunk.read()
-                display_mode = unpack(">I", camg_bytes)[0] & config.OCS_MODES
+                display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
                     raise Exception("HAM mode not supported")
             elif chunk.getname() == b'BMHD':
@@ -165,9 +205,18 @@ def load_iff(filename, config):
             elif chunk.getname() == b'BODY':
                 #bitmap (interleaved)
                 body_bytes = chunk.read()
-                pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
-                surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
-                decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
+                if ifftype == "ILBM":
+                    pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
+                    surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
+                    decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
+                elif ifftype == "PBM":
+                    if w & 1:
+                        we = w + 1   # make sure width is even
+                    else:
+                        we = w       # width is already even
+                    pic = pygame.Surface((we, h),0, depth=8)
+                    surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
+                    decode_pbm_body(body_bytes, compression, nPlanes, surf_array)
                 surf_array = None
 
                 if display_mode > 0 and display_mode & config.MODE_EXTRA_HALFBRIGHT:
@@ -175,7 +224,6 @@ def load_iff(filename, config):
                         config.pal[i+32] = (config.pal[i][0]//2, config.pal[i][1]//2, config.pal[i][2]//2)
 
                 pic.set_palette(config.pal)
-                #pic = pygame.image.load(filename)
             else:
                 chunk.skip()
             chunk = Chunk(iff_file)
@@ -201,10 +249,29 @@ def load_iff(filename, config):
 
     return pic
 
-def load_pic(filename, status_func=None):
+def pal_power_2(palin):
+    ncol = len(palin)
+    #Copy palette to avoid tuple that we can't append to
+    pal = []
+    for color in palin:
+        r,g,b = color
+        pal.append((r,g,b))
+
+    #Get default palette to append to end
+    defpal = config.get_default_palette(256)
+
+    #Add colors to bring count up to a power of 2
+    while ncol < 2 or (math.ceil(math.log2(ncol)) != math.floor(math.log2(ncol))):
+        pal.append(defpal[len(pal)])
+        ncol += 1
+
+    return pal
+
+def load_pic(filename, config, status_func=None):
     ifftype = iff_type(filename)
-    if ifftype == "ILBM":
-        pic = load_iff(filename, config)
+    if ifftype in ["ILBM", "PBM"]:
+        pic = load_iff(filename, config, ifftype)
+        config.pal = pal_power_2(config.pal)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
@@ -212,23 +279,26 @@ def load_pic(filename, status_func=None):
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
-            if len(config.pal) < 256:
-                defaultpal = config.get_default_palette(256)
-                while len(config.pal) < 256:
-                    config.pal.append(defaultpal[len(config.pal)])
+            config.pal = pal_power_2(config.pal)
             config.color_depth = 256
             pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         else:
-            config.pal = pic.get_palette()
+            #Clone bitmap and blit back so colors can be added to palette
+            newpic = pygame.Surface(pic.get_size(), 0, pic)
+            config.pal = pal_power_2(pic.get_palette())
+            pic.set_palette(config.pal)
+            newpic.set_palette(config.pal)
+            newpic.blit(pic,(0,0))
+            pic = newpic
             config.color_depth = 256
             
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
         if iff_type(iffinfo_file) == "ILBM":
-            load_iff(iffinfo_file, config)
+            load_iff(iffinfo_file, config, "ILBM")
         else:
             config.display_mode = -1
 
-        config.pal = config.quantize_palette(pic.get_palette(), config.color_depth)
+        config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
 
         while len(cranges) < 6:
@@ -238,9 +308,12 @@ def load_pic(filename, status_func=None):
         pic = config.pixel_canvas
 
     #Guess display mode
-    if config.display_mode < 0:
+    if config.display_mode < 0 or config.display_info.get_id(config.display_mode) == None:
         config.color_depth = 256
-        if pic.get_width() > 320 or pic.get_height() > 200:
+        sm = config.display_info.match_resolution(pic.get_width(), pic.get_height())
+        if sm != None:
+            config.display_mode = sm.mode_id
+        elif pic.get_width() > 320 or pic.get_height() > 200:
             #Assume square pixel VGA
             config.display_mode = config.VGA_MONITOR_ID | config.MODE_HIRES | config.MODE_LACE
             config.scanlines = config.SCANLINES_OFF
@@ -342,10 +415,20 @@ def c2p(surf_array):
     return np.packbits(bits).reshape(h,8,w2b(w))[:,::-1,:]
 
 #save IFF file
-def save_iff(filename, config):
+def save_iff(filename, config, ifftype):
     nPlanes = int(math.log(len(config.pal),2))
     newfile = open(filename, 'wb')
-    newfile.write(b'FORM\0\0\0\0ILBM')
+    newfile.write(b'FORM\0\0\0\0')
+    if ifftype == "PBM":
+        newfile.write(b'PBM ')
+        nplanes = 8
+        pal = list(config.truepal)
+        defpal = config.get_default_palette(256)
+        while len(pal) < 256:
+            pal.append(defpal[len(pal)])
+    else:
+        newfile.write(b'ILBM')
+        pal = config.truepal
     
     write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
         config.pixel_width, config.pixel_height, \
@@ -360,7 +443,7 @@ def save_iff(filename, config):
         ))
 
     cmap_chunk = b''
-    for col in config.truepal:
+    for col in pal:
         cmap_chunk += pack(">BBB", col[0], col[1], col[2])
     write_chunk(newfile, b'CMAP', cmap_chunk)
 
@@ -372,16 +455,32 @@ def save_iff(filename, config):
     body = b''
     out_canvas = config.pixel_canvas
     w,h = out_canvas.get_size()
-    if w != w2b(w):
-        out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
-        out_canvas.set_palette(config.pal)
-        out_canvas.blit(config.pixel_canvas, (0,0))
-    surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
-    planes_out = c2p(surf_array)
-    #body = planes_out[:,:nPlanes,:].tobytes()
-    for y in range(0,len(planes_out)):
-        for p in range(0,nPlanes):
-            body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
+    if ifftype == "ILBM":
+        if w != w2b(w):   # make sure width is divisible by 16
+            out_canvas = pygame.Surface((w2b(w)*8, h),0, depth=8)
+            out_canvas.set_palette(config.pal)
+            out_canvas.blit(config.pixel_canvas, (0,0))
+        surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
+        planes_out = c2p(surf_array)
+
+        # write out bitplanes interleaved one line at a time
+        for y in range(0,len(planes_out)):
+            for p in range(0,nPlanes):
+                body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
+    elif ifftype == "PBM":
+        if w & 1:
+            we = w + 1   # make sure width is even
+            out_canvas = pygame.Surface((we, h),0, depth=8)
+            out_canvas.set_palette(config.pal)
+            out_canvas.blit(config.pixel_canvas, (0,0))
+        else:
+            we = w       # width is already even
+        surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
+        chunky_out = surf_array.transpose()
+
+        # write out chunky bitmap one line at a time
+        for y in range(0,len(chunky_out)):
+            body += byterun_encode(chunky_out[y,:].flatten()).tobytes()
 
     write_chunk(newfile, b'BODY', body)
 
@@ -398,7 +497,9 @@ def save_pic(filename, config, overwrite=True):
 
     if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
        (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
-        save_iff(filename, config)
+        save_iff(filename, config, "ILBM")
+    elif len(filename) > 4 and filename[-4:].lower() == ".lbm":
+        save_iff(filename, config, "PBM")
     else:
         pygame.image.save(config.pixel_canvas, filename)
 

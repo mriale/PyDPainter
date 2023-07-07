@@ -21,6 +21,7 @@ class MenuAction(Action):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
@@ -50,11 +51,14 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
             try:
-                config.pixel_canvas = load_pic(filename, status_func=load_progress)
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                config.bgcolor = 0
+                config.color = 1
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
@@ -69,26 +73,32 @@ class DoOpen(MenuAction):
 class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.clear_pixel_draw_canvas()
+        merge_config = copy.copy(config)
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, config)
+            save_pic(filename, merge_config)
             config.filename = filename
             config.modified_count = 0
+        config.doKeyAction()
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        merge_config = copy.copy(config)
+        merge_config.pixel_canvas = config.background.get_flattened()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            if not save_pic(filename, config, overwrite=False):
+            if not save_pic(filename, merge_config, overwrite=False):
                 answer = question_req(config.pixel_req_canvas,
                          "File Exists",
                          "Overwrite this file?",
                          ["Yes","No"])
                 if answer == 0:
-                    save_pic(filename, config, overwrite=True)
+                    save_pic(filename, merge_config, overwrite=True)
                 else:
                     return
             config.filename = filename
@@ -96,12 +106,16 @@ class DoSaveAs(MenuAction):
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
         config.save_undo()
         config.doKeyAction()
 
 class DoPictureFlipY(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
         config.save_undo()
         config.doKeyAction()
@@ -170,6 +184,8 @@ class DoPictureBG2FG(MenuAction):
 
 class DoPictureBGxFG(MenuAction):
     def selected(self, attrs):
+        config.stop_cycling()
+        config.stencil.enable = False
         #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -185,6 +201,7 @@ class DoPictureBGxFG(MenuAction):
 class DoPictureRemap(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.stencil.enable = False
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
@@ -195,12 +212,14 @@ class DoPictureRemap(MenuAction):
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
+        config.stencil.enable = False
         config.pixel_canvas, config.pixel_spare_canvas = config.pixel_spare_canvas, config.pixel_canvas
         config.filepath, config.spare_filepath = config.spare_filepath, config.filepath
         config.filename, config.spare_filename = config.spare_filename, config.filename
         config.modified_count, config.spare_modified_count = config.spare_modified_count, config.modified_count
         config.clear_undo()
         config.save_undo()
+        config.doKeyAction()
 
 class DoSpareCopy(MenuAction):
     def selected(self, attrs):
@@ -234,14 +253,18 @@ class DoMergeBack(MenuAction):
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         page_size_req(config.pixel_req_canvas)
 
 class DoShowPage(MenuAction):
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
         page_preview_req(config.pixel_req_canvas)
+        config.doKeyAction()
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
+        config.stencil.enable = False
         screen_format_req(config.pixel_req_canvas)
 
 class DoAbout(MenuAction):
@@ -259,7 +282,7 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
-                newimage = load_iff(filename, brush_config)
+                newimage = load_pic(filename, brush_config)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
@@ -294,7 +317,9 @@ class DoBrushSaveAs(MenuAction):
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
-            return
+            if not "image_backup" in dir(config.brush):
+                return
+            config.brush.type = config.brush.CUSTOM
         backup = config.brush.image_backup.copy()
         backup.set_palette(config.pal)
         surf_array = pygame.surfarray.pixels2d(backup)
@@ -410,6 +435,7 @@ class DoBrushOutline(MenuAction):
         #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
         newimage.set_palette(config.pal)
+        newimage.fill(config.brush.bgcolor)
         newimage.set_colorkey(config.brush.bgcolor)
 
         #create brush to add edges
@@ -578,6 +604,7 @@ class DoBrushShear(MenuAction):
                     shearimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
                     shearimage.set_palette(config.pal)
                     shearimage.set_colorkey(config.brush.bgcolor)
+                    shearimage.fill(config.brush.bgcolor)
                     clist = drawline(config.pixel_canvas, 1, (0,0), (xoffset,h), coordsonly=True)
                     if xoffset < 0:
                         imgXoffset = -xoffset
@@ -711,6 +738,7 @@ class DoBrushBendX(MenuAction):
                     bendimage = pygame.Surface((w+abs(xoffset), h),0, config.pixel_canvas)
                     bendimage.set_palette(config.pal)
                     bendimage.set_colorkey(config.brush.bgcolor)
+                    bendimage.fill(config.brush.bgcolor)
                     if mouseY-my < -h//2:
                         clist = drawcurve(config.pixel_canvas, 1, (mouseX-mx, 0), (0,h), ((mouseX-mx)//4,h//2), coordsonly=True, handlesymm=False)
                     elif mouseY-my > h//2:
@@ -784,6 +812,7 @@ class DoBrushBendY(MenuAction):
                     bendimage = pygame.Surface((w, h+abs(yoffset)),0, config.pixel_canvas)
                     bendimage.set_palette(config.pal)
                     bendimage.set_colorkey(config.brush.bgcolor)
+                    bendimage.fill(config.brush.bgcolor)
                     if mouseX-mx < -w//2:
                         clist = drawcurve(config.pixel_canvas, 1, (0, mouseY-my), (w,0), (w//2,(mouseY-my)//4), coordsonly=True, handlesymm=False)
                     elif mouseX-mx > w//2:
@@ -826,16 +855,12 @@ class DoBrushBendY(MenuAction):
 
 class DoBrushHandleCenter(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
         config.brush.handle_type = config.brush.CENTER
         config.brush.size = config.brush.size
         config.doKeyAction()
 
 class DoBrushHandleCorner(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
         if config.brush.handle_type >= config.brush.CORNER_UL and config.brush.handle_type < config.brush.CORNER_LL:
             config.brush.handle_type += 1
         else:
@@ -845,9 +870,6 @@ class DoBrushHandleCorner(MenuAction):
 
 class DoBrushHandlePlace(MenuAction):
     def selected(self, attrs):
-        if config.brush.type != Brush.CUSTOM:
-            return
-
         point_coords = config.get_mouse_pixel_pos(ignore_grid=True)
         config.recompose()
         point_placed = False
@@ -868,7 +890,7 @@ class DoBrushHandlePlace(MenuAction):
             elif event.type == MOUSEBUTTONUP:
                 point_placed = True
             config.clear_pixel_draw_canvas()
-            config.pixel_canvas.blit(config.brush.image, (point_coords[0]-config.brush.handle[0], point_coords[1]-config.brush.handle[1]))
+            config.brush.draw(config.pixel_canvas, config.color, point_coords)
             #current center
             drawline(config.pixel_canvas, 1,
                 (mouseX,0), (mouseX,config.pixel_canvas.get_height()),
@@ -881,7 +903,7 @@ class DoBrushHandlePlace(MenuAction):
 
         bxo = point_coords[0]-config.brush.handle[0]
         byo = point_coords[1]-config.brush.handle[1]
-        bw,bh = config.brush.image.get_size()
+        bw,bh = config.brush.get_wh()
 
         config.brush.handle_type = config.brush.PLACE
         config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
@@ -899,6 +921,83 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoStencilMake(MenuAction):
+    def selected(self, attrs):
+        stencil_req(config.pixel_req_canvas)
+        config.doKeyAction()
+
+class DoStencilRemake(MenuAction):
+    def selected(self, attrs):
+        config.stencil.remake(config.pixel_canvas)
+        config.doKeyAction()
+
+class DoStencilLockFG(MenuAction):
+    def selected(self, attrs):
+        config.stencil.lock_fg(config.pixel_canvas)
+        config.doKeyAction()
+
+class DoStencilReverse(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+            config.stencil.reverse()
+        config.doKeyAction()
+
+class DoStencilOnOff(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.enable:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+        config.stencil.enable = not config.stencil.enable
+        config.doKeyAction()
+
+class DoStencilFree(MenuAction):
+    def selected(self, attrs):
+        if config.stencil.image != None:
+            config.clear_pixel_draw_canvas()
+            config.stencil.draw(config.pixel_canvas)
+            config.save_undo()
+        config.stencil.free()
+        config.doKeyAction()
+
+class DoBackgroundFix(MenuAction):
+    def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
+        config.background.fix(config.pixel_canvas)
+        config.brush.pen_down = False
+        config.bgcolor = 0;
+        config.pixel_canvas.fill(config.bgcolor);
+        config.pixel_canvas.set_colorkey(config.bgcolor)
+        config.save_undo()
+        config.toolbar.tool_id("text").action.cleartext()
+        config.doKeyAction()
+
+class DoBackgroundOpen(MenuAction):
+    def selected(self, attrs):
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
+        filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            try:
+                config.background.open(filename)
+                config.bgcolor = 0;
+                config.pixel_canvas.set_colorkey(config.bgcolor)
+            except:
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+        config.doKeyAction()
+
+class DoBackgroundOnOff(MenuAction):
+    def selected(self, attrs):
+        config.background.enable = not config.background.enable
+        config.doKeyAction()
+
+class DoBackgroundFree(MenuAction):
+    def selected(self, attrs):
+        config.background.free()
+        config.doKeyAction()
+
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -907,12 +1006,45 @@ class DoPrefsCoords(MenuAction):
         config.coords_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsFlipCoords(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.coords_flip = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsAutoTransp(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
             return
         self.gadget.checked = not self.gadget.checked
         config.auto_transp_on = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsHideMenus(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.menubar.hide_menus = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsForce1To1Pixels(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.force_1_to_1_pixels = self.gadget.checked
+        if config.force_1_to_1_pixels:
+            config.set_aspect(0)
+            config.resize_display()
+            config.minitoolbar.tool_id("aspect").state = 0
+        config.doKeyAction()
+
+class DoPrefsSave(MenuAction):
+    def selected(self, attrs):
+        config.saveConfig()
         config.doKeyAction()
 
 def init_menubar(config_in):
@@ -968,8 +1100,8 @@ def init_menubar(config_in):
                 ["Stretch", "Z", DoBrushStretch],
                 ["Halve", "h", DoBrushHalve],
                 ["Double", "H", DoBrushDouble],
-                ["Double Horiz", " ", DoBrushDoubleHoriz],
-                ["Double Vert", " ", DoBrushDoubleVert],
+                ["Double Horiz", "X", DoBrushDoubleHoriz],
+                ["Double Vert", "Y", DoBrushDoubleVert],
                 ]],
             ["Flip", [
                 ["Horiz", "x", DoBrushFlipX],
@@ -1026,15 +1158,31 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Effect", [
-            ["!Stencil"],
-            ["!Background"],
+            ["Stencil", [
+                ["Make...", "~", DoStencilMake],
+                ["Remake", " ", DoStencilRemake],
+                ["Lock FG", " ", DoStencilLockFG],
+                ["Reverse", " ", DoStencilReverse],
+                ["On/Off", "`", DoStencilOnOff],
+                ["Free", " ", DoStencilFree],
+            ]],
+            ["Background", [
+                ["Fix", " ", DoBackgroundFix],
+                ["Open...", " ", DoBackgroundOpen],
+                ["On/Off", "ctrl-b", DoBackgroundOnOff],
+                ["Free", " ", DoBackgroundFree],
+            ]],
             ["!Perspective"],
         ]])
 
     menubar.add_menu(
         ["Prefs", [
             ["/Coords", "|", DoPrefsCoords],
+            ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            ["/Hide Menus", " ", DoPrefsHideMenus],
+            ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
+            [" Save Config", " ", DoPrefsSave],
         ]])
 
     return menubar

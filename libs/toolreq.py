@@ -383,9 +383,11 @@ def place_point(symm_center):
         drawline(config.pixel_canvas, 1,
             (0,mouseY), (config.pixel_canvas.get_width(),mouseY),
             xormode=True)
+        config.menubar.title_right = "%4d\x94%4d\x96" % (mouseX, config.ypos_display(mouseY))
         config.recompose()
         first_time = False
 
+    config.menubar.title_right = ""
     config.pixel_req_rect = pixel_req_rect_bak
     config.clear_pixel_draw_canvas()
     config.recompose()
@@ -592,7 +594,9 @@ def symmetry_point_req(screen):
 [Point ][ Tile ]
 [Cyclic][Mirror]
 Order:   ___
-        [Place ]
+X:_____  Y:_____
+[Center] [Center]
+     [Place]
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
@@ -607,18 +611,28 @@ Order:   ___
     orderl = req.gadget_id("0_2")
     orderg = req.gadget_id("9_2")
 
-    placeg = req.gadget_id("8_3")
+    centerxvalg = req.gadget_id("2_3")
+    centeryvalg = req.gadget_id("11_3")
+
+    centerxg = req.gadget_id("0_4")
+    centeryg = req.gadget_id("9_4")
+
+    placeg = req.gadget_id("5_5")
 
     orderg.value = str(config.symm_num)
     orderg.numonly = True
     pointg.state = 1
+    centerxvalg.value = str(config.symm_center[0])
+    centerxvalg.numonly = True
+    centeryvalg.value = str(config.ypos_display(config.symm_center[1]))
+    centeryvalg.numonly = True
 
     if config.symm_type == 0:
         cyclicg.state = 1
     elif config.symm_type == 1:
         mirrorg.state = 1
 
-    symm_center = config.symm_center
+    symm_center = list(config.symm_center)
 
     req.draw(screen)
     config.recompose()
@@ -636,7 +650,7 @@ Order:   ___
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.symm_mode = 0
                     config.symm_num = int(orderg.value)
-                    config.symm_center = symm_center
+                    config.symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -647,7 +661,21 @@ Order:   ___
                 elif ge.gadget == mirrorg:
                     config.symm_type = 1
                 elif ge.gadget == placeg:
-                    symm_center = place_point(symm_center)
+                    if not req.has_error():
+                        symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
+                    symm_center = list(place_point(symm_center))
+                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.need_redraw = True
+                    centeryvalg.value = str(config.ypos_display(symm_center[1]))
+                    centeryvalg.need_redraw = True
+                elif ge.gadget == centerxg:
+                    symm_center[0] = config.pixel_width // 2
+                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.need_redraw = True
+                elif ge.gadget == centeryg:
+                    symm_center[1] = config.pixel_height // 2
+                    centeryvalg.value = str(config.ypos_display(symm_center[1]))
+                    centeryvalg.need_redraw = True
 
         pointg.state = 1
 
@@ -792,18 +820,59 @@ class FillGadget(Gadget):
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
+prev_fillmode = None
+prev_color = -1
+prev_fill_image = None
+def draw_fill_indicator(screen):
+    global prev_fillmode
+    global prev_color
+    global prev_fill_image
+    need_redraw = True
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+
+    #check for change in fill mode
+    if prev_fillmode != None and \
+       prev_fillmode.value == config.fillmode.value and \
+       prev_fillmode.gradient_dither == config.fillmode.gradient_dither:
+        need_redraw = False
+    else:
+        prev_fillmode = copy.copy(config.fillmode)
+
+    #check for change in color range
+    if prev_color != config.color:
+        need_redraw = True
+        for crange in config.cranges:
+            if crange.is_active() and \
+               prev_color >= crange.low and prev_color <= crange.high and \
+               config.color >= crange.low and config.color <= crange.high:
+                need_redraw = False
+        prev_color = config.color
+
+    if prev_fill_image == None:
+        prev_fill_image = pygame.Surface((px*16,py*9), 0, 8)
+        prev_fill_image.set_palette(config.pal)
+        need_redraw = True
+
+    if need_redraw:
+        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
+
+    if config.fillmode.value != config.fillmode.SOLID:
+        prev_fill_image.set_palette(config.pal)
+        screen.blit(prev_fill_image, (px*180, py))
 
 def fill_req(screen):
     config.stop_cycling()
     req = str2req("Fill Type", """
-[Solid]      #########
-[Brush]      #########
-[Wrap]       #########
-[Pattern]    #########
-             #########
-             #########
-Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f]
-Dither:-------------00
+[Solid]     ###########
+[Brush]     ###########
+[Wrap]      ###########
+[Pattern]   ###########
+            ###########
+            ###########
+            ###########
+Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
+Dither:----------------00
 [Cancel][OK]
 """, "%#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
@@ -814,19 +883,19 @@ Dither:-------------00
         if g.label == str(config.fillmode):
             g.state = 1
 
-    ditherg = req.gadget_id("7_7")
+    ditherg = req.gadget_id("7_8")
     ditherg.maxvalue = 22
     ditherg.value = config.fillmode.gradient_dither + 1
     ditherg.need_redraw = True
 
-    dithervalg = req.gadget_id("20_7")
+    dithervalg = req.gadget_id("23_8")
     if ditherg.value > 0:
         dithervalg.label = "%2d" % (ditherg.value-1)
     else:
-        dithervalg.label = "\x90\x91"
+        dithervalg.label = "\x99\x9a"
     dithervalg.need_redraw = True
 
-    dithersampleg = req.gadget_id("13_0")
+    dithersampleg = req.gadget_id("12_0")
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.need_redraw = True
@@ -848,6 +917,7 @@ Dither:-------------00
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.fillmode.value = fillmode_value
                     config.fillmode.gradient_dither = ditherg.value - 1
+                    config.menubar.indicators["fillmode"] = draw_fill_indicator
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
@@ -859,7 +929,7 @@ Dither:-------------00
                 if ditherg.value > 0:
                     dithervalg.label = "%2d" % (ditherg.value-1)
                 else:
-                    dithervalg.label = "\x90\x91"
+                    dithervalg.label = "\x99\x9a"
                 dithervalg.need_redraw = True
                 dithersampleg.value = ditherg.value - 1
                 dithersampleg.need_redraw = True

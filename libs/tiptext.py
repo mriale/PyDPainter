@@ -46,6 +46,7 @@ tiptext["airbrush"] = [
 "Airbrush Tool",
 "Hold button to spray dots randomly around cursor.",
 lbf, rbb,
+"Hold [CTRL] key to slow down spray rate.",
 "Right-click tool to adjust spray size."]
 
 tiptext["rect"] = [
@@ -67,6 +68,7 @@ tiptext["ellipse"] = [
 outline + " [e]",
 filled + " [E]",
 dragshape,
+"Drag again to rotate.",
 lbf, rbb]
 
 tiptext["poly"] = [
@@ -117,7 +119,7 @@ tiptext["undo"] = [
 "Undo [u] / Redo [U] Tool",
 "Left-click tool to undo [u] last change to canvas.",
 "Right-click tool to redo [U] last change to canvas.",
-"There are 5 levels of undo/redo"]
+"There are multiple levels of undo/redo"]
 
 tiptext["clear"] = [
 "Clear Tool [K]",
@@ -151,5 +153,6 @@ tiptext["spray2"]    = ["Large spray brush"]
 tiptext["expand"]    = ["Expand or contract mini toolbar"]
 tiptext["help"]      = ["Toogle help bubbles on or off"]
 tiptext["scale"]     = ["Scale window to be larger or smaller"]
+tiptext["fullscreen"]= ["Toggle full-screen mode [F11]"]
 tiptext["scanlines"] = ["Toggle retro CRT scanline simulation"]
 tiptext["aspect"]    = ["Select whether pixels are square or rectangular"]
