@@ -80,9 +80,12 @@ class DoSave(MenuAction):
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, merge_config)
-            config.filename = filename
-            config.modified_count = 0
+            try:
+                save_pic(filename, merge_config)
+                config.filename = filename
+                config.modified_count = 0
+            except:
+                io_error_req("Save Error", "Unable to save image:\n%s", filename)
         config.doKeyAction()
 
 class DoSaveAs(MenuAction):
@@ -98,7 +101,11 @@ class DoSaveAs(MenuAction):
                          "Overwrite this file?",
                          ["Yes","No"])
                 if answer == 0:
-                    save_pic(filename, merge_config, overwrite=True)
+                    try:
+                        save_pic(filename, merge_config, overwrite=True)
+                    except:
+                        io_error_req("Save Error", "Unable to save image:\n%s", filename)
+                        return
                 else:
                     return
             config.filename = filename
@@ -293,7 +300,7 @@ class DoBrushOpen(MenuAction):
                 config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
             except:
-                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+                io_error_req("Load Error", "Unable to open brush:\n%s", filename)
         config.doKeyAction()
 
 class DoBrushSaveAs(MenuAction):
@@ -310,7 +317,11 @@ class DoBrushSaveAs(MenuAction):
                          "Overwrite this file?",
                          ["Yes","No"])
                 if answer == 0:
-                    save_pic(filename, brush_config, overwrite=True)
+                    try:
+                        save_pic(filename, brush_config, overwrite=True)
+                    except:
+                        io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+                        return
                 else:
                     return
 
