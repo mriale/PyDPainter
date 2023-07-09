@@ -54,5 +54,6 @@ class cursor:
 
         mouseX, mouseY = self.config.get_mouse_pointer_pos()
         centerX, centerY = self.center[self.shape]
+        self.cursor_images.set_colorkey(0, RLEACCEL)
         self.screen.blit(self.cursor_images, (mouseX-(centerX*self.scaleX), (mouseY-(centerY*self.scaleY//2))*2), (16*self.shape*self.scaleX,0,16*self.scaleX,self.cursor_images.get_height()))
 
