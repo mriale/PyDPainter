@@ -32,6 +32,7 @@ class cursor:
         self.config = config
         self.cursor_images = cursor_images
         self.cursor_images = pygame.transform.scale(self.cursor_images, (self.cursor_images.get_width() * scaleX, self.cursor_images.get_height() * scaleY))
+        self.cursor_images.set_colorkey(0)
         self.center = []
         self.center.append((7,7))
         self.center.append((1,1))
