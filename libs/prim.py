@@ -113,8 +113,17 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
 
     if config.symm_on:
         if config.symm_mode == 0:
-            c = config.symm_center
+            cx,cy = config.symm_center
+            w,h = (config.pixel_width, config.pixel_height)
+
+            if config.true_symmetry:
+                if cx == w // 2 and w % 2 == 0:
+                    cx -= 0.5
+                if cy == h // 2 and h % 2 == 0:
+                    cy -= 0.5
  
+            c = (cx,cy)
+
             if config.symm_num > 0:
                 if config.symm_type == 1:
                     x1 = (c[0]*2) - x

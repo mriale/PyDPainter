@@ -1053,6 +1053,14 @@ class DoPrefsForce1To1Pixels(MenuAction):
             config.minitoolbar.tool_id("aspect").state = 0
         config.doKeyAction()
 
+class DoPrefsTrueSymmetry(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.true_symmetry = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1193,6 +1201,7 @@ def init_menubar(config_in):
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
+            ["/True Symmetry", " ", DoPrefsTrueSymmetry],
             [" Save Config", " ", DoPrefsSave],
         ]])
 

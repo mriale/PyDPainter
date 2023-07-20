@@ -406,6 +406,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
+        self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.hide_menus = self.hide_menus
 
         self.clear_undo()
@@ -506,6 +507,7 @@ class pydpainter:
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
+            f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.close()
         except:
             pass
@@ -559,6 +561,8 @@ class pydpainter:
                         self.hide_menus = True if vars[1] == "True" else False
                     elif vars[0] == "force_1_to_1_pixels":
                         self.force_1_to_1_pixels = True if vars[1] == "True" else False
+                    elif vars[0] == "true_symmetry":
+                        self.true_symmetry = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -684,6 +688,7 @@ class pydpainter:
         self.auto_transp_on = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
+        self.true_symmetry = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
