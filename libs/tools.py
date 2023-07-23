@@ -1020,7 +1020,7 @@ class DoPolyFill(DoPoly):
         config.cycle_handled = True
 
     def drag(self, coords, buttons):
-        if buttons[0] or buttons[2]:
+        if (buttons[0] or buttons[2]) and len(self.polylist) > 1:
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=True, skiplast=True)
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
             self.last_coords = coords
@@ -1256,9 +1256,94 @@ class DoText(ToolSingleAction):
         self.text = ""
         self.box_on = False
 
-class DoBrush(ToolDragAction):
+class DoBrush(ToolSingleAction):
     """
-    Brush tool
+    Brush tool dispatcher
+    """
+    def __init__(self, id=None, gadget=None):
+        self.polylist = []
+        self.hidden = False
+        self.p1w,self.p1h = (2,2)
+        self.do_brush_rect = DoBrushRect(id=id, gadget=gadget)
+        self.do_brush_poly = DoBrushPoly(id=id, gadget=gadget)
+        super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
+
+    def draw_p1(self):
+        if len(self.polylist) == 0:
+            return
+        p1x,p1y = self.polylist[0]
+        w,h = (self.p1w,self.p1h)
+        drawrect(config.pixel_canvas, config.color, (p1x-w,p1y-h), (p1x+w,p1y+h), xormode=True, handlesymm=False)
+
+    def in_p1_rect(self, coords):
+        if len(self.polylist) == 0:
+            return False
+        p1x,p1y = self.polylist[0]
+        w,h = (self.p1w,self.p1h)
+        x,y = coords
+        return x >= p1x-w and x <= p1x+w and y >= p1y-h and y <= p1y+h
+
+    def selected(self, attrs):
+        config.brush.pen_down = False
+        if config.tool_selected == self.id:
+            config.subtool_selected = 0 if config.subtool_selected else 1
+        else:
+            config.subtool_selected = 0
+        config.tool_selected = self.id
+        self.gadget.state = config.subtool_selected + 1
+        self.gadget.need_redraw = True
+        self.p1 = config.get_mouse_pixel_pos()
+
+        self.do_brush_poly.polylist = []
+        self.do_brush_rect.last_coords = config.get_mouse_pixel_pos()
+        self.do_brush_poly.last_coords = config.get_mouse_pixel_pos()
+        self.do_brush_rect.hidden = False
+        self.do_brush_poly.hidden = False
+
+    def hide(self):
+        if config.subtool_selected:
+            self.do_brush_poly.hide()
+        else:
+            self.do_brush_rect.hide()
+
+    def move(self, coords):
+        if config.subtool_selected:
+            self.do_brush_poly.move(coords)
+        else:
+            self.do_brush_rect.move(coords)
+
+    def mousedown(self, coords, button):
+        if config.subtool_selected:
+            self.do_brush_poly.mousedown(coords, button)
+        else:
+            self.do_brush_rect.mousedown(coords, button)
+
+    def drag(self, coords, buttons):
+        if config.subtool_selected:
+            self.do_brush_poly.drag(coords, buttons)
+        else:
+            self.do_brush_rect.drag(coords, buttons)
+
+    def mouseup(self, coords, button):
+        if config.subtool_selected:
+            self.do_brush_poly.mouseup(coords, button)
+        else:
+            self.do_brush_rect.mouseup(coords, button)
+
+    def keydown(self, key, mod, unicode):
+        if key == K_ESCAPE:
+            config.clear_pixel_draw_canvas()
+            self.do_brush_poly.polylist = []
+            self.do_brush_rect.last_coords = config.get_mouse_pixel_pos()
+            self.do_brush_poly.last_coords = config.get_mouse_pixel_pos()
+            self.do_brush_rect.hidden = False
+            self.do_brush_poly.hidden = False
+            return True
+        return False
+
+class DoBrushRect(ToolDragAction):
+    """
+    Brush tool - rectangle
     """
     def drawbefore(self, coords):
         mouseX, mouseY = coords
@@ -1298,6 +1383,112 @@ class DoBrush(ToolDragAction):
             config.toolbar.tool_id("spray1").state = 0
             config.toolbar.tool_id("spray2").state = 0
             config.setDrawMode(DrawMode.MATTE)
+
+class DoBrushPoly(DoBrush):
+    """
+    Brush tool - filled
+    """
+    def __init__(self, id=None, gadget=None):
+        self.polylist = []
+        self.hidden = False
+        self.p1w,self.p1h = (2,2)
+        super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
+
+    def hide(self):
+        if self.hidden:
+            return
+        if len(self.polylist) > 0:
+            drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=False, skiplast=True)
+        else:
+            config.clear_pixel_draw_canvas()
+        self.hidden = True
+
+    def move(self, coords):
+        self.p1w,self.p1h = (2,2)
+        if len(self.polylist) > 0:
+            if self.hidden:
+                drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+            else:
+                drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=False, skiplast=True)
+                drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+        else:
+            config.clear_pixel_draw_canvas()
+            drawline_symm(config.pixel_canvas, config.color, coords, coords, xormode=1, handlesymm=False)
+        self.last_coords = coords
+        self.hidden = False
+
+    def mousedown(self, coords, button):
+        if button in [1,3]:
+            if len(self.polylist) == 0:
+                drawline_symm(config.pixel_canvas, config.color, self.last_coords, self.last_coords, xormode=1, handlesymm=False)
+                self.polylist.append(coords)
+                self.last_coords = coords
+                self.draw_p1()
+        self.hidden = False
+        config.cycle_handled = True
+
+    def drag(self, coords, buttons):
+        if (buttons[0] or buttons[2]) and len(self.polylist) > 1:
+            drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=False, skiplast=True)
+            drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+            self.last_coords = coords
+        self.hidden = False
+        config.cycle_handled = True
+
+    def mouseup(self, coords, button):
+        if button in [1,3]:
+            drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=False, skiplast=True)
+            if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                coords = self.polylist[0]
+            drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+            self.polylist.append(coords)
+            self.last_coords = coords
+            if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                if button == 1:
+                    config.clear_pixel_draw_canvas()
+                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
+                    self.polylist = []
+                    config.save_undo()
+                    cycle()
+                elif button == 3:
+                    config.clear_pixel_draw_canvas()
+                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False)
+                    self.polylist = []
+                    config.save_undo()
+
+                config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
+                config.toolbar.tool_id("circle1").state = 0
+                config.toolbar.tool_id("circle2").state = 0
+                config.toolbar.tool_id("circle3").state = 0
+                config.toolbar.tool_id("circle4").state = 0
+                config.toolbar.tool_id("square1").state = 0
+                config.toolbar.tool_id("square2").state = 0
+                config.toolbar.tool_id("square3").state = 0
+                config.toolbar.tool_id("square4").state = 0
+                config.toolbar.tool_id("spray1").state = 0
+                config.toolbar.tool_id("spray2").state = 0
+                config.setDrawMode(DrawMode.MATTE)
+            else:
+                if button == 1:
+                    #config.clear_pixel_draw_canvas()
+                    if len(self.polylist) > 0:
+                        drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+                    else:
+                        drawline_symm(config.pixel_canvas, config.color, coords, coords, xormode=1, handlesymm=False, skiplast=True)
+                    #config.save_undo()
+                    self.polylist.append(coords)
+                    self.last_coords = coords
+                elif button == 3:
+                    #config.clear_pixel_draw_canvas()
+                    if len(self.polylist) > 0:
+                        drawline_symm(config.pixel_canvas, config.bgcolor, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
+                    else:
+                        drawline_symm(config.pixel_canvas, config.bgcolor, coords, coords, xormode=1, handlesymm=False, skiplast=True)
+                    #config.save_undo()
+                    self.polylist.append(coords)
+                    self.last_coords = coords
+        self.hidden = False
 
 class DoGrid(ToolAction):
     """

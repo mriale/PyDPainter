@@ -7,6 +7,7 @@ from operator import itemgetter
 import os.path
 import random
 import copy
+import sys
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -273,13 +274,32 @@ class Brush:
     CORNER_LL = 4
     PLACE = 5
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None):
         self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
-            if coordfrom == None:
-                coordfrom = (0,0)
-            if coordto == None:
-                coordto = (screen.get_width()-1, screen.get_height()-1)
+            # Handle polygon brush
+            if polylist != None:
+                xmin = sys.maxsize
+                xmax = 0
+                ymin = sys.maxsize
+                ymax = 0
+                for x,y in polylist:
+                    if x > xmax:
+                        xmax = x
+                    if x < xmin:
+                        xmin = x
+                    if y > ymax:
+                        ymax = y
+                    if y < ymin:
+                        ymin = y
+                coordfrom = (xmin, ymin)
+                coordto = (xmax, ymax)
+            else:
+                # Rectangle brush
+                if coordfrom == None:
+                    coordfrom = (0,0)
+                if coordto == None:
+                    coordto = (screen.get_width()-1, screen.get_height()-1)
 
             x1,y1 = coordfrom
             x2,y2 = coordto
@@ -297,6 +317,22 @@ class Brush:
             self.image.set_palette(config.pal)
             self.image.blit(screen, (0,0), (x1,y1,w,h))
             self.image.set_colorkey(bgcolor)
+
+            # Handle polygon masking
+            if polylist != None:
+                pl = []
+                for x,y in polylist:
+                    pl.append((x-x1,y-y1))
+                # Append the bounding box to the polygon
+                lastx, lasty = pl[-1]
+                pl.append((0,0))
+                pl.append((w,0))
+                pl.append((w,h))
+                pl.append((0,h))
+                pl.append((0,0))
+                pl.append((lastx,lasty))
+                fillpoly(self.image, bgcolor, pl)
+
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
