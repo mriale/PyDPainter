@@ -7,7 +7,6 @@ from operator import itemgetter
 import os.path
 import random
 import copy
-import sys
 
 import contextlib
 with contextlib.redirect_stdout(None):
