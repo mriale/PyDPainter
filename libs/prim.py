@@ -277,23 +277,14 @@ class Brush:
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None):
         self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
-            # Handle polygon brush
+            # Get bounds of polygon brush
             if polylist != None:
-                xmin = sys.maxsize
-                xmax = 0
-                ymin = sys.maxsize
-                ymax = 0
-                for x,y in polylist:
-                    if x > xmax:
-                        xmax = x
-                    if x < xmin:
-                        xmin = x
-                    if y > ymax:
-                        ymax = y
-                    if y < ymin:
-                        ymin = y
-                coordfrom = (xmin, ymin)
-                coordto = (xmax, ymax)
+                minx = min(polylist,key=itemgetter(0))[0];
+                maxx = max(polylist,key=itemgetter(0))[0];
+                miny = min(polylist,key=itemgetter(1))[1];
+                maxy = max(polylist,key=itemgetter(1))[1];
+                coordfrom = (minx, miny)
+                coordto = (maxx, maxy)
             else:
                 # Rectangle brush
                 if coordfrom == None:
@@ -320,18 +311,24 @@ class Brush:
 
             # Handle polygon masking
             if polylist != None:
+                # Adjust polylist to brush coords
                 pl = []
                 for x,y in polylist:
                     pl.append((x-x1,y-y1))
-                # Append the bounding box to the polygon
-                lastx, lasty = pl[-1]
-                pl.append((0,0))
-                pl.append((w,0))
-                pl.append((w,h))
-                pl.append((0,h))
-                pl.append((0,0))
-                pl.append((lastx,lasty))
-                fillpoly(self.image, bgcolor, pl)
+
+                # Create image same size as brush and draw poly into it
+                polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
+                primprops = PrimProps()
+                fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+
+                # Create numpy mask out of poly and apply to brush
+                surf_array_poly = pygame.surfarray.pixels2d(polyimage)
+                poly_mask = np.where(surf_array_poly == 0)
+                surf_array_brush = pygame.surfarray.pixels2d(self.image)
+                surf_array_brush[poly_mask] = bgcolor
+                surf_array_brush = None
+                surf_array_poly = None
+                polyimage = None
 
             self.__type = type
             self.bgcolor = bgcolor
@@ -1993,10 +1990,13 @@ def floodfill(surface, fill_color, position):
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None):
     n = len(coords)
     if n == 0:
         return
+
+    if primprops == None:
+        primprops = config.primprops
 
     coords_symm = symm_coords_list(coords, handlesymm=handlesymm)
 
@@ -2050,14 +2050,14 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
             polyints.sort()
 
             for i in range(0, len(polyints), 2):
-                hline(screen, color, y, polyints[i], polyints[i+1])
+                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops)
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
-                hline(screen, color, miny, minx, maxx)
+                hline(screen, color, miny, minx, maxx, primprops=primprops)
                 config.try_recompose()
 
         end_shape(screen, color, interrupt=interrupt)
