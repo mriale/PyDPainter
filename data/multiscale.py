@@ -16,7 +16,7 @@ def refresh():
     global screen_set
     global screen
 
-    if True:
+    try:
         if filename == None:
             sx = 400
             sy = 100
@@ -80,8 +80,8 @@ def refresh():
 
         pygame.display.update()
 
-    #except:
-    #    pass
+    except:
+        pass
 
 def main():
     global filename
