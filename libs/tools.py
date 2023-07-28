@@ -17,6 +17,7 @@ config = None
 #  https://github.com/pygame/pygame/issues/3128
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
+DBL_CLICK = 500
 
 def cycle():
     if config.drawmode.value == DrawMode.CYCLE:
@@ -893,6 +894,7 @@ class DoPolyLine(DoPoly):
         self.polylist = []
         self.hidden = False
         self.p1w,self.p1h = (2,2)
+        self.click_ticks = [[0,0]] * 10
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def hide(self):
@@ -912,6 +914,7 @@ class DoPolyLine(DoPoly):
         self.hidden = False
 
     def mousedown(self, coords, button):
+        self.click_ticks[button] = [self.click_ticks[button][1], pygame.time.get_ticks()]
         if button in [1,3]:
             if len(self.polylist) == 0:
                 if button == 1:
@@ -958,7 +961,8 @@ class DoPolyLine(DoPoly):
                 config.save_undo()
                 self.polylist.append(coords)
                 self.last_coords = coords
-                if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                if (self.in_p1_rect(coords) and len(self.polylist) > 2) or \
+                    self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
             elif button == 3:
@@ -970,7 +974,8 @@ class DoPolyLine(DoPoly):
                 config.save_undo()
                 self.polylist.append(coords)
                 self.last_coords = coords
-                if self.in_p1_rect(coords) and len(self.polylist) > 2:
+                if (self.in_p1_rect(coords) and len(self.polylist) > 2) or \
+                    self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
             self.move(coords)
@@ -984,6 +989,7 @@ class DoPolyFill(DoPoly):
         self.polylist = []
         self.hidden = False
         self.p1w,self.p1h = (2,2)
+        self.click_ticks = [[0,0]] * 10
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def hide(self):
@@ -1010,6 +1016,7 @@ class DoPolyFill(DoPoly):
         self.hidden = False
 
     def mousedown(self, coords, button):
+        self.click_ticks[button] = [self.click_ticks[button][1], pygame.time.get_ticks()]
         if button in [1,3]:
             if len(self.polylist) == 0:
                 drawline_symm(config.pixel_canvas, config.color, self.last_coords, self.last_coords, xormode=1, handlesymm=True)
@@ -1035,7 +1042,8 @@ class DoPolyFill(DoPoly):
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
             self.polylist.append(coords)
             self.last_coords = coords
-            if self.in_p1_rect(coords) and len(self.polylist) > 2:
+            if (self.in_p1_rect(coords) and len(self.polylist) > 2) or \
+                self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                 if button == 1:
                     config.clear_pixel_draw_canvas()
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
@@ -1392,6 +1400,7 @@ class DoBrushPoly(DoBrush):
         self.polylist = []
         self.hidden = False
         self.p1w,self.p1h = (2,2)
+        self.click_ticks = [[0,0]] * 10
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def hide(self):
@@ -1418,6 +1427,7 @@ class DoBrushPoly(DoBrush):
         self.hidden = False
 
     def mousedown(self, coords, button):
+        self.click_ticks[button] = [self.click_ticks[button][1], pygame.time.get_ticks()]
         if button in [1,3]:
             if len(self.polylist) == 0:
                 drawline_symm(config.pixel_canvas, config.color, self.last_coords, self.last_coords, xormode=1, handlesymm=False)
@@ -1443,7 +1453,8 @@ class DoBrushPoly(DoBrush):
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=False, skiplast=True)
             self.polylist.append(coords)
             self.last_coords = coords
-            if self.in_p1_rect(coords) and len(self.polylist) > 2:
+            if (self.in_p1_rect(coords) and len(self.polylist) > 2) or \
+                self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                 if button == 1:
                     config.clear_pixel_draw_canvas()
                     config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
