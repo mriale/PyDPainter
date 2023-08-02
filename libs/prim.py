@@ -864,8 +864,11 @@ class FillMode:
     HORIZONTAL = 8
     HORIZ_FIT = 9
     BOTH_FIT = 10
+    ANTIALIAS = 11
+    SMOOTH = 12
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91"]
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
+                 "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
@@ -1558,6 +1561,12 @@ def hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2):
         hline_SOLID(surf_array, color, y, xs1, xs2)
     hlines.append([y, xs1, xs2])
 
+def hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2):
+    hlines.append([y, xs1, xs2])
+
+def hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2):
+    hlines.append([y, xs1, xs2])
+
 def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
@@ -1605,6 +1614,10 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BOTH_FIT:
         hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.ANTIALIAS:
+        hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.SMOOTH:
+        hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value >= FillMode.VERTICAL:
         #get color range
         cyclemode = False
@@ -1768,6 +1781,63 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         surf_array2[tfmask] = surf_array[tfmask]
         surf_array2 = None
         screen.blit(shape_image, (xo,yo))
+
+    if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+        #Find bounds of shape
+        hlines_min = np.amin(hlines, axis=0)
+        hlines_max = np.amax(hlines, axis=0)
+        xo = hlines_min[1] - 1
+        yo = hlines_min[0] - 1
+        w = hlines_max[2] - xo + 2
+        h = hlines_max[0] - yo + 2
+
+        #Create numpy array for shape
+        surf_array = np.zeros((w,h), dtype=int)
+
+        #Render shape into numpy mask
+        for y,x1,x2 in hlines:
+            surf_array[x1-xo:x2-xo+1,y-yo] = 1
+        tfmask = np.not_equal(surf_array, 1)
+        smoothed_image = None
+
+        #Grab pixel canvas under shape
+        new_image = pygame.Surface((w, h),0,8)
+        new_image.set_palette(config.pal)
+        new_image.blit(screen, (0,0), (xo,yo,w,h))
+
+        if primprops.fillmode.value == FillMode.ANTIALIAS:
+            #Scale image up using Scale2X
+            big_image = new_image.convert()
+            for i in range(3):
+                big_image = pygame.transform.scale2x(big_image)
+                #Interrupt if needed
+                if interrupt and config.has_event():
+                    return
+                config.try_recompose()
+
+            #Scale image down again and convert to 8-bit
+            smoothed_image = pygame.transform.smoothscale(big_image, (w,h))
+            i8 = convert8(smoothed_image, config.pal)
+
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        if primprops.fillmode.value == FillMode.SMOOTH:
+            smooth_image(new_image)
+            i8 = new_image
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        #Mask off shape and draw into screen
+        surf_array = pygame.surfarray.pixels2d(i8)
+        surf_array[tfmask] = 0
+        surf_array = None
+        i8.set_colorkey(0)
+        screen.blit(i8, (xo,yo))
 
 def drawvlines(screen, color, primprops=None, interrupt=False):
     global vlines

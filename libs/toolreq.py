@@ -813,6 +813,13 @@ class FillGadget(Gadget):
                     ch = rh//2
                     cx = rx + cw
                     cy = ry + ch
+                    if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+                        primprops2 = PrimProps()
+                        pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
+                        iw,ih = config.smooth_example_image.get_size()
+                        ix = rx + ((rw - iw) // 2)
+                        iy = ry + ((rh - ih) // 2)
+                        screen.blit(config.smooth_example_image, (ix,iy))
                     fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -855,6 +862,8 @@ def draw_fill_indicator(screen):
         need_redraw = True
 
     if need_redraw:
+        if config.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+            prev_fill_image.blit(config.smooth_example_image, (0,0))
         fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
 
     if config.fillmode.value != config.fillmode.SOLID:
@@ -868,8 +877,8 @@ def fill_req(screen):
 [Brush]     ###########
 [Wrap]      ###########
 [Pattern]   ###########
-            ###########
-            ###########
+[Antialias] ###########
+[Smooth]    ###########
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:----------------00
