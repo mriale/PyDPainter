@@ -814,12 +814,12 @@ class FillGadget(Gadget):
                     cx = rx + cw
                     cy = ry + ch
                     if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
-                        primprops2 = PrimProps()
                         pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
-                        iw,ih = config.smooth_example_image.get_size()
-                        ix = rx + ((rw - iw) // 2)
-                        iy = ry + ((rh - ih) // 2)
-                        screen.blit(config.smooth_example_image, (ix,iy))
+                        th = font.ysize
+                        tw = font.xsize * len(FillMode.LABEL_STR[primprops.fillmode.value])
+                        tx = rx + ((rw - tw) // 2)
+                        ty = ry + ((rh - th) // 2)
+                        font.blitstring(screen, (tx,ty), FillMode.LABEL_STR[primprops.fillmode.value], (0,0,0), (255,255,255))
                     fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -834,7 +834,17 @@ def draw_fill_indicator(screen):
     global prev_fillmode
     global prev_color
     global prev_fill_image
-    need_redraw = True
+
+    if screen == None:
+        #initialize
+        prev_fillmode = None
+        prev_color = -1
+        prev_fill_image = None
+        return
+
+    fillmode_changed = False
+    color_changed = False
+    image_changed = False
     px = config.font.xsize // 8
     py = config.font.ysize // 8
 
@@ -842,29 +852,30 @@ def draw_fill_indicator(screen):
     if prev_fillmode != None and \
        prev_fillmode.value == config.fillmode.value and \
        prev_fillmode.gradient_dither == config.fillmode.gradient_dither:
-        need_redraw = False
+        pass
     else:
         prev_fillmode = copy.copy(config.fillmode)
+        fillmode_changed = True
 
     #check for change in color range
     if prev_color != config.color:
-        need_redraw = True
+        color_changed = True
         for crange in config.cranges:
             if crange.is_active() and \
                prev_color >= crange.low and prev_color <= crange.high and \
                config.color >= crange.low and config.color <= crange.high:
-                need_redraw = False
+                color_changed = False
         prev_color = config.color
 
     if prev_fill_image == None:
         prev_fill_image = pygame.Surface((px*16,py*9), 0, 8)
         prev_fill_image.set_palette(config.pal)
-        need_redraw = True
+        image_changed = True
 
-    if need_redraw:
+    if fillmode_changed or color_changed or image_changed:
         if config.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
-            prev_fill_image.blit(config.smooth_example_image, (0,0))
-        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
+            config.font.blitstring(prev_fill_image, (0,0), FillMode.LABEL_STR[config.fillmode.value], (255,255,255))
+        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9), interrupt=False)
 
     if config.fillmode.value != config.fillmode.SOLID:
         prev_fill_image.set_palette(config.pal)
@@ -927,6 +938,7 @@ Dither:----------------00
                     config.fillmode.value = fillmode_value
                     config.fillmode.gradient_dither = ditherg.value - 1
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
+                    draw_fill_indicator(None)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
