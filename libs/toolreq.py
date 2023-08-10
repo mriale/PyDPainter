@@ -815,11 +815,14 @@ class FillGadget(Gadget):
                     cy = ry + ch
                     if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
                         pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
-                        th = font.ysize
-                        tw = font.xsize * len(FillMode.LABEL_STR[primprops.fillmode.value])
+                        iw,ih = config.smooth_example_image.get_size()
+                        ix = rx + ((rw - iw) // 2)
+                        iy = ry + ((rh - ih) // 2)
+                        screen.blit(config.smooth_example_image, (ix,iy))
+                        tw = font.xsize * len(str(primprops.fillmode))
                         tx = rx + ((rw - tw) // 2)
-                        ty = ry + ((rh - th) // 2)
-                        font.blitstring(screen, (tx,ty), FillMode.LABEL_STR[primprops.fillmode.value], (0,0,0), (255,255,255))
+                        ty = iy + ih
+                        font.blitstring(screen, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
                     fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -874,7 +877,12 @@ def draw_fill_indicator(screen):
 
     if fillmode_changed or color_changed or image_changed:
         if config.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
-            config.font.blitstring(prev_fill_image, (0,0), FillMode.LABEL_STR[config.fillmode.value], (255,255,255))
+            if config.fillmode.value == FillMode.ANTIALIAS:
+                ind_text = "AA"
+            else:
+                ind_text = str(config.fillmode).upper()
+
+            config.font.blitstring(prev_fill_image, (0,0), ind_text, (255,255,255))
         fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9), interrupt=False)
 
     if config.fillmode.value != config.fillmode.SOLID:

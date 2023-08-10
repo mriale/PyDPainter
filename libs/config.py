@@ -390,6 +390,7 @@ class pydpainter:
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
+        self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
         for i in range(0, self.screen_height*2, 2):
