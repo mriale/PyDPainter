@@ -238,7 +238,6 @@ def load_iff(filename, config, ifftype):
         cranges.append(colorrange(0,1,0,0))
 
     config.cranges = cranges
-    config.loadpal = list(config.pal)
 
     #crop image to actual bitmap size
     if w != w2b(w)*8:
@@ -319,6 +318,8 @@ def load_pic(filename, config, status_func=None):
             config.scanlines = config.SCANLINES_OFF
         else:
             config.display_mode = config.NTSC_MONITOR_ID # Low Res 320x200
+
+    config.loadpal = list(config.pal)
 
     return pic
 
