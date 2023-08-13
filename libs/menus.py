@@ -1161,7 +1161,7 @@ def init_menubar(config_in):
             ["/Blend", "F6", DoMode],
             ["/Cycle", "F7", DoMode],
             ["/Smooth","F8", DoMode],
-            ["/Tint"],
+            ["/Tint", " ", DoMode],
             ["!/HBrite"],
         ]])
 

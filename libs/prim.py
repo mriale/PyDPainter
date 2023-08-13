@@ -7,6 +7,7 @@ from operator import itemgetter
 import os.path
 import random
 import copy
+import colorsys
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -248,6 +249,16 @@ def smooth_image(img):
     i8 = convert8(i24, config.pal)
     img.blit(i8, (-1,-1))
 
+def tint_image(img, tint_trans):
+    # Tint the image based on the tint translation array
+    ia = pygame.surfarray.pixels2d(img)
+
+    # Use transformation matrix to tint colors
+    ia[:] = tint_trans[ia[:]]
+
+    ia = None
+    return img
+
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
     def __init__(self):
@@ -359,6 +370,7 @@ class Brush:
         self.cycle_trans = np.arange(0,255, dtype=np.uint8)
         self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
+        self.tint_trans = np.empty((256), dtype=np.uint8)
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -549,7 +561,7 @@ class Brush:
 
         #handle pen state
         if self.pen_down == False:
-            if drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
+            if drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
                 self.cache.image[256] = None
                 self.prev_x = None
                 self.prev_y = None
@@ -558,7 +570,7 @@ class Brush:
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and color == self.bgcolor:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
@@ -574,7 +586,7 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
-        elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
+        elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
             if self.cache.image[256] == None:
                 self.cache.image[256] = self.render_image(config.color)
                 self.smear_image = None
@@ -631,6 +643,32 @@ class Brush:
                         for ci in range(0,256):
                             for cj in range(0,256):
                                 self.blend_trans[ci,cj] = (ci + cj) // 2
+                elif drawmode == DrawMode.TINT:
+                    #set up tint translation matrix
+                    self.tint_trans[:] = np.arange(0,256, dtype=np.uint8)
+                    #get HSV of current color
+                    r,g,b = config.pal[config.color]
+                    ch,cs,cv = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+                    i=0
+                    for r,g,b in config.pal:
+                        h,s,v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+                        # To tint, keep value but replace hue and saturation
+                        tr,tg,tb = colorsys.hsv_to_rgb(ch, cs, v)
+                        tr = int(round(tr * 255.0))
+                        tg = int(round(tg * 255.0))
+                        tb = int(round(tb * 255.0))
+                        # Search for nearest color
+                        j=0
+                        closest=0
+                        closest_mag=255*255 + 255*255 + 255*255
+                        for sr,sg,sb in config.pal:
+                            smag = (sr-tr)*(sr-tr) + (sg-tg)*(sg-tg) + (sb-tb)*(sb-tb)
+                            if smag < closest_mag:
+                                closest = j
+                                closest_mag = smag
+                            j += 1
+                        self.tint_trans[i] = closest
+                        i += 1
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -732,6 +770,22 @@ class Brush:
                     self.smear_image.blit(self.smear_stencil, (0,0))
 
                     #Blit smoothed image
+                    screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
+                elif drawmode == DrawMode.TINT:
+                    #Allocate smooth image if needed
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+
+                    #Get canvas into smear image
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+
+                    #Tint image
+                    self.smear_image = tint_image(self.smear_image, self.tint_trans)
+                    self.smear_image.blit(self.smear_stencil, (0,0))
+
+                    #Blit tinted image
                     screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
