@@ -10,8 +10,8 @@ import numpy as np
 
 from struct import pack, unpack
 
-from colorrange import *
-from prim import *
+from libs.colorrange import *
+from libs.prim import *
 
 import contextlib
 with contextlib.redirect_stdout(None):

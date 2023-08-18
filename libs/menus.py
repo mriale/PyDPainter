@@ -6,10 +6,10 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-from menubar import *
-from menureq import *
-from gadget import *
-from picio import *
+from libs.menubar import *
+from libs.menureq import *
+from libs.gadget import *
+from libs.picio import *
 
 config = None
 

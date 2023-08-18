@@ -25,8 +25,8 @@ import re
 import pygame
 from pygame.locals import *
 
-import pixelfont
-from pixelfont import *
+import libs.pixelfont
+from libs.pixelfont import *
 
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128

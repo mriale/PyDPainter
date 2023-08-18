@@ -8,15 +8,15 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-import pixelfont
-from pixelfont import PixelFont
+import libs.pixelfont
+from libs.pixelfont import PixelFont
 
-import gadget
-from gadget import *
-from hotkey import *
+import libs.gadget
+from libs.gadget import *
+from libs.hotkey import *
 
-from palreq import *
-from menureq import *
+from libs.palreq import *
+from libs.menureq import *
 
 class MenuItem(Gadget):
     """This class abstracts a menu item associated with a menubar"""

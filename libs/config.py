@@ -8,21 +8,21 @@ Implement the global area of PyDPainter
 import sys, math, os.path, random, colorsys, platform, re, datetime
 import argparse
 
-from colorrange import *
-from cursor import *
-from displayinfo import *
-from toolbar import *
-from prim import *
-from palreq import *
-from picio import *
-from stencil import *
-from background import *
-from tools import *
-from minitools import *
-from menubar import *
-from menus import *
-from version import *
-from zoom import *
+from libs.colorrange import *
+from libs.cursor import *
+from libs.displayinfo import *
+from libs.toolbar import *
+from libs.prim import *
+from libs.palreq import *
+from libs.picio import *
+from libs.stencil import *
+from libs.background import *
+from libs.tools import *
+from libs.minitools import *
+from libs.menubar import *
+from libs.menus import *
+from libs.version import *
+from libs.zoom import *
 
 import numpy as np
 
