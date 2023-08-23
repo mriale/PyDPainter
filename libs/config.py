@@ -402,8 +402,9 @@ class pydpainter:
         self.background.clear()
 
         # set prefs
-        self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
-        self.menubar.menu_id("prefs").menu_id("flipcoords").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("flip").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("1based").checked = self.coords_1based
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
@@ -505,6 +506,7 @@ class pydpainter:
             f.write("scanlines=%d\n" % (self.scanlines))
             f.write("coords_on=%s\n" % (self.coords_on))
             f.write("coords_flip=%s\n" % (self.coords_flip))
+            f.write("coords_1based=%s\n" % (self.coords_1based))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
@@ -556,6 +558,8 @@ class pydpainter:
                         self.coords_on = True if vars[1] == "True" else False
                     elif vars[0] == "coords_flip":
                         self.coords_flip = True if vars[1] == "True" else False
+                    elif vars[0] == "coords_1based":
+                        self.coords_1based = True if vars[1] == "True" else False
                     elif vars[0] == "auto_transp_on":
                         self.auto_transp_on = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
@@ -686,6 +690,7 @@ class pydpainter:
         self.airbrush_size = 10
         self.coords_on = False
         self.coords_flip = False
+        self.coords_1based = False
         self.auto_transp_on = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
@@ -1286,11 +1291,43 @@ class pydpainter:
         config.clear_undo()
         config.save_undo()
 
+    def xpos_display(self, x):
+        if config.coords_1based:
+            x = x + 1
+        return x
+
     def ypos_display(self, y):
+        if not config.coords_flip:
+            y = config.pixel_height - y - 1
+        if config.coords_1based:
+            y = y + 1
+        return y
+
+    def xpos_undisplay(self, x):
+        if config.coords_1based:
+            x = x - 1
+        return x
+
+    def ypos_undisplay(self, y):
+        if config.coords_1based:
+            y = y - 1
+        if not config.coords_flip:
+            y = config.pixel_height - y - 1
+        return y
+
+    def xypos_display(self, coords):
+        x,y = coords
+        x = config.xpos_display(x)
+        y = config.ypos_display(y)
+        return (x,y)
+
+    def xypos_string(self, coords):
+        x,y = config.xypos_display(coords)
         if config.coords_flip:
-            return y
+            str = "%4d\x94%4d\x96" % ((x, y))
         else:
-            return config.pixel_height - y - 1
+            str = "%4d\x94%4d\x95" % ((x, y))
+        return str
 
     def run(self):
         """
@@ -1603,15 +1640,9 @@ class pydpainter:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
                     if config.p1 != None and True in self.get_mouse_pressed():
-                        if config.coords_flip:
-                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx-config.p1[0], cy-config.p1[1])
-                        else:
-                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx-config.p1[0], config.p1[1]-cy)
+                        config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
                     else:
-                        if config.coords_flip:
-                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx, cy)
-                        else:
-                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                        config.menubar.title_right = config.xypos_string((cx, cy))
                         config.p1 = None
                 else:
                     config.menubar.title_right = ""

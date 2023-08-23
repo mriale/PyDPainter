@@ -383,7 +383,7 @@ def place_point(symm_center):
         drawline(config.pixel_canvas, 1,
             (0,mouseY), (config.pixel_canvas.get_width(),mouseY),
             xormode=True)
-        config.menubar.title_right = "%4d\x94%4d\x96" % (mouseX, config.ypos_display(mouseY))
+        config.menubar.title_right = config.xypos_string((mouseX,mouseY))
         config.recompose()
         first_time = False
 
@@ -622,7 +622,7 @@ X:_____  Y:_____
     orderg.value = str(config.symm_num)
     orderg.numonly = True
     pointg.state = 1
-    centerxvalg.value = str(config.symm_center[0])
+    centerxvalg.value = str(config.xpos_display(config.symm_center[0]))
     centerxvalg.numonly = True
     centeryvalg.value = str(config.ypos_display(config.symm_center[1]))
     centeryvalg.numonly = True
@@ -650,7 +650,7 @@ X:_____  Y:_____
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.symm_mode = 0
                     config.symm_num = int(orderg.value)
-                    config.symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
+                    config.symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -662,15 +662,15 @@ X:_____  Y:_____
                     config.symm_type = 1
                 elif ge.gadget == placeg:
                     if not req.has_error():
-                        symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
+                        symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
                     symm_center = list(place_point(symm_center))
-                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.value = str(config.xpos_display(symm_center[0]))
                     centerxvalg.need_redraw = True
                     centeryvalg.value = str(config.ypos_display(symm_center[1]))
                     centeryvalg.need_redraw = True
                 elif ge.gadget == centerxg:
                     symm_center[0] = config.pixel_width // 2
-                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.value = str(config.xpos_display(symm_center[0]))
                     centerxvalg.need_redraw = True
                 elif ge.gadget == centeryg:
                     symm_center[1] = config.pixel_height // 2
