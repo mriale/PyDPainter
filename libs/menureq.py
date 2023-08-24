@@ -958,52 +958,6 @@ for more details.    ############
 
     return
 
-def question_req(screen, title, text, buttons):
-    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
-    all_text = dummy_text + "\n"
-    for button_text in buttons:
-        all_text += "[" + button_text + "]"
-
-    req = str2req(title, all_text, "",
-          mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
-
-    #Replace dummy text with actual text
-    textlines = text.splitlines()
-    textrow = 0
-    for textline in textlines:
-        labelg = req.gadget_id("0_%d" % (textrow))
-        labelg.label = textline
-        textrow += 1
-
-    req.center(screen)
-    config.pixel_req_rect = req.get_screen_rect()
-    req.draw(screen)
-    config.recompose()
-
-    button_clicked = -1
-    running = 1
-    while running:
-        event = pygame.event.wait()
-        gevents = req.process_event(screen, event)
-
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
-            running = 0 
-
-        for ge in gevents:
-            if ge.gadget.type == Gadget.TYPE_BOOL:
-                button_clicked = buttons.index(ge.gadget.label)
-                running = 0 
-
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
-            req.draw(screen)
-            config.recompose()
-
-    config.pixel_req_rect = None
-    config.recompose()
-
-    return button_clicked
-
-
 class PPprogress(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         self.pic = imgload('logo.png')
@@ -1320,7 +1274,7 @@ def stencil_req(screen):
 
     return
 
-def question_req(screen, title, text, buttons):
+def question_req(screen, title, text, buttons, hotkeys=[]):
     dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
     all_text = dummy_text + "\n"
     for button_text in buttons:
@@ -1348,8 +1302,14 @@ def question_req(screen, title, text, buttons):
         event = pygame.event.wait()
         gevents = req.process_event(screen, event)
 
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
+        if event.type == KEYDOWN and event.key in hotkeys:
+            button_clicked = hotkeys.index(event.key)
             running = 0 
+        elif event.type == KEYDOWN:
+            for bstr in buttons:
+                if bstr[0].lower() == event.unicode.lower():
+                    button_clicked = buttons.index(bstr)
+                    running = 0
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:

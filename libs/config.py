@@ -1680,6 +1680,7 @@ class pydpainter:
                 answer = question_req(config.pixel_req_canvas,
                          "Unsaved Changes",
                          "Are you sure you want\nto quit PyDPainter?",
-                         ["Yes","No"])
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
                 if answer == 1:
                     config.running = True

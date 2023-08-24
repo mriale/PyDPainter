@@ -34,7 +34,8 @@ def io_error_req(title, message, filename, linelen=33):
     dummy = question_req(config.pixel_req_canvas,
              title,
              message % (short_file),
-             ["OK"])
+             ["OK"],
+             [K_RETURN])
 
 
 prev_time = 0
@@ -99,7 +100,8 @@ class DoSaveAs(MenuAction):
                 answer = question_req(config.pixel_req_canvas,
                          "File Exists",
                          "Overwrite this file?",
-                         ["Yes","No"])
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
                 if answer == 0:
                     try:
                         save_pic(filename, merge_config, overwrite=True)
@@ -110,6 +112,45 @@ class DoSaveAs(MenuAction):
                     return
             config.filename = filename
             config.modified_count = 0
+
+class DoRevert(MenuAction):
+    def selected(self, attrs):
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = config.filename
+        if filename != "":
+            if config.modified_count >= 1:
+                linelen = 33
+                if len(filename) > linelen:
+                    short_file = "..." + filename[-(linelen-3):]
+                else:
+                    short_file = filename
+                answer = question_req(config.pixel_req_canvas,
+                         "Unsaved Changes",
+                         "Are you sure you want to revert\nto file:\n"+short_file,
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
+                if answer == 1:
+                    return
+            else:
+                return
+
+            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            try:
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                config.bgcolor = 0
+                config.color = 1
+                close_progress_req(progress_req)
+                config.truepal = list(config.pal)
+                config.pal = config.unique_palette(config.pal)
+                config.initialize_surfaces()
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
+                config.modified_count = 0
+            except:
+                close_progress_req(progress_req)
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):
@@ -315,7 +356,8 @@ class DoBrushSaveAs(MenuAction):
                 answer = question_req(config.pixel_req_canvas,
                          "File Exists",
                          "Overwrite this file?",
-                         ["Yes","No"])
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
                 if answer == 0:
                     try:
                         save_pic(filename, brush_config, overwrite=True)
@@ -1090,6 +1132,7 @@ def init_menubar(config_in):
             ["Open...", "ctrl-o", DoOpen],
             ["Save", "ctrl-s", DoSave],
             ["Save as...", "ctrl-S", DoSaveAs],
+            ["Revert...", "F12", DoRevert],
             ["Print...", "ctrl-p"],
             ["---"],
             ["Flip", [
