@@ -1132,7 +1132,7 @@ def init_menubar(config_in):
             ["Open...", "ctrl-o", DoOpen],
             ["Save", "ctrl-s", DoSave],
             ["Save as...", "ctrl-S", DoSaveAs],
-            ["Revert...", "F12", DoRevert],
+            ["Revert...", "ctrl-alt-z", DoRevert],
             ["Print...", "ctrl-p"],
             ["---"],
             ["Flip", [
