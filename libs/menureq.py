@@ -226,8 +226,6 @@ File:___________________%s
     #File type
     if has_type:
         file_typeg = req.gadget_id("24_11")
-        if filename == "":
-            file_typeg.enabled = False
     else:
         # Create dummy gadget
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
@@ -264,9 +262,16 @@ File:___________________%s
                 elif ge.gadget == file_typeg:
                     picki = pick_file_type(screen, req, file_typeg, ext)
                     if picki >=0 and picki < len(filetype_list):
-                        filename = re.sub(r"\.[^.]+$", "."+filetype_list[picki][0].lower(), filename)
+                        filename = file_nameg.value
+                        if filename != "":
+                            if filename.find(".") >= 0:
+                                filename = re.sub(r"\.[^.]*$", "."+filetype_list[picki][0].lower(), filename)
+                            else:
+                                filename += "." + filetype_list[picki][0].lower()
                         file_nameg.value = filename
                         file_nameg.need_redraw = True
+                        ext, file_typeg.label = get_type(filename)
+                        file_typeg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
                     filepath = file_pathg.value
@@ -277,6 +282,8 @@ File:___________________%s
                     list_sliderg.need_redraw = True
                 if ge.type == ge.TYPE_GADGETUP and event.type == KEYDOWN and event.key == K_RETURN:
                     string_enter = True
+                ext, file_typeg.label = get_type(file_nameg.value)
+                file_typeg.need_redraw = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
@@ -293,13 +300,11 @@ File:___________________%s
                     file_pathg.value = filepath
                     file_pathg.need_redraw = True
                     list_sliderg.need_redraw = True
-                    file_typeg.enabled = False
                     file_typeg.need_redraw = True
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
                     ext, file_typeg.label = get_type(filename)
-                    file_typeg.enabled = True
                     file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
@@ -316,11 +321,9 @@ File:___________________%s
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
                         ext, file_typeg.label = get_type("")
-                        file_typeg.enabled = False
                     else:
                         file_nameg.value = filename
                         ext, file_typeg.label = get_type(filename)
-                        file_typeg.enabled = True
 
                     file_nameg.need_redraw = True
                     file_typeg.need_redraw = True
