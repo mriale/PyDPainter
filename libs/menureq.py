@@ -325,6 +325,7 @@ File:___________________%s
                         file_nameg.value = filename
                         ext, file_typeg.label = get_type(filename)
 
+                    file_nameg.state = 0
                     file_nameg.need_redraw = True
                     file_typeg.need_redraw = True
                 elif event.key == K_RETURN and list_itemsg.items[0][0] != "<" and not string_enter:
