@@ -14,7 +14,7 @@ We had a grey texture by default. Let's change it for more eye-catching and expl
 - Click a color to select it (a white frame is around it). Then change the color. I advise you to use the H S V sliders, it's more graphical. H is HUE, the hue. S is the SATURATION in color. A saturation at 0 (bottom) is always white. The V (VALUE) is more or less dark. At the bottom it is therefore absolute black. If your Value is 0, the saturation is useless. Hue allows you to change the color along the rainbow. The bar ends and starts with red. Later, the programs will visualize this as a color circle, which is more meaningful. But at that time, we had some colors for the interface. Please note that the PyDPainter interface is not affected by your change of colors in the Palette. This is a luxury, it was not the case on a real Amiga.
 - I advise you to copy an orange in the middle. And a brown in place of the darkest gray in the cycle. Use the COPY function for this. Then, with the SPREAD function, create some shading between your colors. Do not hesitate to have well marked colors. Finish your gradient, not with a bright yellow (saturated in S), but with a bucket of yellow tending towards white, thus slightly desaturated. Try to get that visual impression of fire, or of looking at a shot of the surface of the sun. See image for reference.
 
-![palette](palette.png)
+![palette](palette.jpg)
 
 ## Let's use this texture to fill shapes and have fun!
 - `b` for brush. `F10` key to show/hide the interface if needed.
