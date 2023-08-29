@@ -13,18 +13,25 @@ The Mode menu contains options for different brush modes.
 - [Tint](#tint)
 - [Hbrite](#hbrite)
 
-_Note: With the exception of **Shade Mode**, the right mouse button always paint using current background color (black by default) in Color Mode. So use left button to use theses Mode._
+_Note: With the exception of **Shade Mode**, the right mouse button always
+paints using current background color (black by default) in Color Mode. So use
+the left button with these Modes._
 
-To help you visualize the action of all these modes, we've used all or part of this image in our graphic examples:  
+To help you visualize the action of all these modes, we've used all or part of
+this image in our graphic examples:  
 
 ![](grid-test.png)  
 
-_For examples, we use the first column (star, target, text, asteroid) as custom brushes._
+_For examples, we use the first column (star, target, text, asteroid) as custom
+brushes._
 
 ## Matte
-Uses a custom brush in its original form. Those areas of the brush
-matching the background color in effect when the brush was first
-created are transparent. _note: black by default_. This is the default mode activated when you create a custom brush using the Brush Selector. Now you can draw using this brush in all drawing tools.  
+
+Uses a custom brush in its original form. Those areas of the brush matching the
+background color in effect when the brush was first created are transparent.
+_note: black by default_. This is the default mode activated when you create a
+custom brush using the Brush Selector. Now you can draw using this brush in all
+drawing tools.  
 
 ![](matte-examples.png)
   
@@ -33,12 +40,16 @@ created are transparent. _note: black by default_. This is the default mode acti
 Key: `F1`
 
 ## Color
+
 Keeps the shape of the brush, but fills it with the current foreground color.
-Those areas of the brush matching the background color in effect when
-the brush was created remain transparent.
+Those areas of the brush matching the background color in effect when the brush
+was created remain transparent.  All brush colors are replaced by the selected
+foreground color (in this case red).
+
 ![](color-examples.png)  
 
-All brush colors are replaced by the selected foreground color (in this case red).
+Use this mode as a monochrome ink pad, allowing you to create shadow effects,
+offset outlines or color stacking.
 
 Key: `F2`
 
@@ -51,12 +62,15 @@ Key: `F3`
 
 ## Smear
 
-You can smear any colors on the page by dragging a brush over them. This is like smearing a wet watercolor with your fingers, so the bigger the brush, the more pronounced the effect. __Smear__ uses only the colors under the brush, and does not add any new colors.
-Current brush color is irrelevant, but shape is.
+You can smear any colors on the page by dragging a brush over them. This is
+like smearing a wet watercolor with your fingers, so the bigger the brush, the
+more pronounced the effect. __Smear__ uses only the colors under the brush, and
+does not add any new colors.  Current brush color is irrelevant, but shape is.
 
 ![](smear-examples.png)  
 
-Try this with differents shapes and tool to disintegrate, burst, add noise to an overly picture-perfect sketch.
+Try this with differents shapes and tool to disintegrate, burst, add noise to
+an overly picture-perfect sketch.
 
 Key: `F4`
 
