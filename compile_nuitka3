@@ -1,0 +1,1 @@
+nuitka3 --follow-imports --include-data-dir=data=data --standalone PyDPainter.py
