@@ -44,7 +44,7 @@ Key: `F1`
 Keeps the shape of the brush, but fills it with the current foreground color.
 Those areas of the brush matching the background color in effect when the brush
 was created remain transparent.  All brush colors are replaced by the selected
-foreground color (in this case red).
+foreground color.
 
 ![](color-examples.png)  
 
