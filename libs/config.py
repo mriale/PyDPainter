@@ -1587,10 +1587,6 @@ class pydpainter:
                     mouseX, mouseY = self.get_mouse_pixel_pos(e, ignore_grid=True)
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
-                elif e.key == K_F9:
-                    if config.menubar.visible:
-                        config.menubar.visible = False
-                        config.menubar.visible = True
                 elif e.key == K_F10:
                     if config.toolbar.visible:
                         config.toolbar.visible = False
