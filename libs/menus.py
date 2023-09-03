@@ -96,20 +96,20 @@ class DoSaveAs(MenuAction):
         merge_config.pixel_canvas = config.background.get_flattened()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            if not save_pic(filename, merge_config, overwrite=False):
-                answer = question_req(config.pixel_req_canvas,
-                         "File Exists",
-                         "Overwrite this file?",
-                         ["Yes","No"],
-                         [K_RETURN, K_ESCAPE])
-                if answer == 0:
-                    try:
-                        save_pic(filename, merge_config, overwrite=True)
-                    except:
-                        io_error_req("Save Error", "Unable to save image:\n%s", filename)
+            try:
+                if not save_pic(filename, merge_config, overwrite=False):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                            save_pic(filename, merge_config, overwrite=True)
+                    else:
                         return
-                else:
-                    return
+            except:
+                io_error_req("Save Error", "Unable to save image:\n%s", filename)
+                return
             config.filename = filename
             config.modified_count = 0
 
