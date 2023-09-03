@@ -92,7 +92,7 @@ def pick_file_type(screen, req, file_typeg, ext):
         else:
             gevents = req.process_event(screen, event)
 
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
+        if event.type == KEYDOWN:
             running = 0
 
         req.draw(screen)
@@ -274,8 +274,8 @@ File:___________________%s
                                 filename += "." + filetype_list[picki][0].lower()
                         file_nameg.value = filename
                         file_nameg.need_redraw = True
-                        ext, file_typeg.label = get_type(filename)
-                        file_typeg.need_redraw = True
+                    ext, file_typeg.label = get_type(filename)
+                    file_typeg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
                     filepath = file_pathg.value
