@@ -104,7 +104,7 @@ class DoSaveAs(MenuAction):
                              ["Yes","No"],
                              [K_RETURN, K_ESCAPE])
                     if answer == 0:
-                            save_pic(filename, merge_config, overwrite=True)
+                        save_pic(filename, merge_config, overwrite=True)
                     else:
                         return
             except:
@@ -352,20 +352,20 @@ class DoBrushSaveAs(MenuAction):
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
-            if not save_pic(filename, brush_config, overwrite=False):
-                answer = question_req(config.pixel_req_canvas,
-                         "File Exists",
-                         "Overwrite this file?",
-                         ["Yes","No"],
-                         [K_RETURN, K_ESCAPE])
-                if answer == 0:
-                    try:
-                        save_pic(filename, brush_config, overwrite=True)
-                    except:
-                        io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+            try:
+                if not save_pic(filename, brush_config, overwrite=False):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                            save_pic(filename, brush_config, overwrite=True)
+                    else:
                         return
-                else:
-                    return
+            except:
+                io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+                return
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
