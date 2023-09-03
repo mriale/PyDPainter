@@ -1007,7 +1007,7 @@ class pydpainter:
                 config.cursor.shape = config.cursor.CROSS
 
     def redraw_window_title(self):
-        new_window_title = "PyDPainter - "
+        new_window_title = f"PyDPainter {config.version} - "
         if config.filename == "":
             new_window_title += "Untitled" 
         else:
