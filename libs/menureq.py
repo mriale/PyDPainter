@@ -230,6 +230,10 @@ File:___________________%s
         # Create dummy gadget
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
 
+    #Initialize file type
+    ext, file_typeg.label = get_type(filename)
+    file_typeg.need_redraw = True
+
     #take care of non-square pixels
     fontmult = 1
     if config.aspectX != config.aspectY:
