@@ -5,17 +5,17 @@ import os.path
 
 import contextlib
 with contextlib.redirect_stdout(None):
-    import pygame, pygame.freetype
+    import pygame
     from pygame.locals import *
 
-import pixelfont
-from pixelfont import PixelFont
+import libs.pixelfont
+from libs.pixelfont import PixelFont
 
-import gadget
-from gadget import *
+import libs.gadget
+from libs.gadget import *
 
-from palreq import *
-from toolreq import *
+from libs.palreq import *
+from libs.toolreq import *
 
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
@@ -52,22 +52,22 @@ class ToolGadget(Gadget):
         """
         if self.toolbar.tip_font_size != pygame.display.get_surface().get_height()//50:
             self.toolbar.tip_font_size = pygame.display.get_surface().get_height()//50
-            self.toolbar.tip_title_font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), self.toolbar.tip_font_size, bold=True)
-            self.toolbar.tip_font = pygame.freetype.SysFont(pygame.freetype.get_default_font(), self.toolbar.tip_font_size)
+            self.toolbar.tip_title_font = pygame.font.Font(os.path.join('data', 'FreeSansBold.ttf'), self.toolbar.tip_font_size)
+            self.toolbar.tip_font = pygame.font.Font(os.path.join('data', 'FreeSans.ttf'), self.toolbar.tip_font_size)
         title_font = self.toolbar.tip_title_font
         font = self.toolbar.tip_font
         if self.action != None and "get_tip" in dir(self.action):
             tip = self.action.get_tip()
             if tip != None:
                 #size box
-                wrect = title_font.get_rect("W")
-                lineheight = title_font.get_rect("Wg")[1] + wrect.height // 2
-                rect = title_font.get_rect(tip[0])
-                w = rect.width + wrect.width + 1
-                h = rect.height + wrect.height + 1
+                wrect = title_font.size("W")
+                lineheight = title_font.get_linesize()
+                rect = title_font.size(tip[0])
+                w = rect[0] + wrect[0] + 1
+                h = rect[1] + wrect[1] + 1
                 for line in tip[1:]:
-                    rect = font.get_rect(line)
-                    w = max(w, rect.width + wrect.width + 1)
+                    rect = font.size(line)
+                    w = max(w, rect[0] + wrect[0] + 1)
                     h += lineheight
 
                 #box around text
@@ -76,15 +76,15 @@ class ToolGadget(Gadget):
                 if quadrant == 0: #right
                     #tail
                     tx = w-2
-                    th = wrect.height
+                    th = wrect[1]
                     ty = (h - th) // 2
-                    tw = wrect.width
+                    tw = wrect[0]
                     triangle = [(tx,ty), (tx+tw, ty+(th//2)), (tx,ty+th)]
-                    w += wrect.width
+                    w += wrect[0]
                 elif quadrant in [0,2]: #right or left
-                    w += wrect.width
+                    w += wrect[0]
                 elif quadrant in [1,3]: #bottom or top
-                    h += wrect.height
+                    h += wrect[1]
 
                 #draw box
                 tip_canvas = pygame.Surface((w,h),SRCALPHA)
@@ -96,15 +96,17 @@ class ToolGadget(Gadget):
                 pygame.draw.lines(tip_canvas, (0,0,0), False, triangle, 2)
 
                 #draw text
-                xo = wrect.width // 2
-                yo = wrect.height // 2
+                xo = wrect[0] // 2
+                yo = wrect[1] // 2
                 line_count=0
                 for line in tip:
                     line_count += 1
                     if line_count == 1:
-                        rect = title_font.render_to(tip_canvas, (xo,yo), line, fgcolor=(0,0,0), bgcolor=(255,255,0))
+                        timg = title_font.render(line, True, (0,0,0), (255,255,0))
                     else:
-                        rect = font.render_to(tip_canvas, (xo,yo), line, fgcolor=(0,0,0), bgcolor=(255,255,0))
+                        timg = font.render(line, True, (0,0,0), (255,255,0))
+                    rect = timg.get_size()
+                    tip_canvas.blit(timg, (xo,yo))
                     yo += lineheight
 
                 self.toolbar.tip_canvas = tip_canvas

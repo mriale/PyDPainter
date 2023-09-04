@@ -8,21 +8,21 @@ Implement the global area of PyDPainter
 import sys, math, os.path, random, colorsys, platform, re, datetime
 import argparse
 
-from colorrange import *
-from cursor import *
-from displayinfo import *
-from toolbar import *
-from prim import *
-from palreq import *
-from picio import *
-from stencil import *
-from background import *
-from tools import *
-from minitools import *
-from menubar import *
-from menus import *
-from version import *
-from zoom import *
+from libs.colorrange import *
+from libs.cursor import *
+from libs.displayinfo import *
+from libs.toolbar import *
+from libs.prim import *
+from libs.palreq import *
+from libs.picio import *
+from libs.stencil import *
+from libs.background import *
+from libs.tools import *
+from libs.minitools import *
+from libs.menubar import *
+from libs.menus import *
+from libs.version import *
+from libs.zoom import *
 
 import numpy as np
 
@@ -390,6 +390,7 @@ class pydpainter:
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
+        self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
         for i in range(0, self.screen_height*2, 2):
@@ -401,11 +402,13 @@ class pydpainter:
         self.background.clear()
 
         # set prefs
-        self.menubar.menu_id("prefs").menu_id("coords").checked = self.coords_on
-        self.menubar.menu_id("prefs").menu_id("flipcoords").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("flip").checked = self.coords_flip
+        self.menubar.menu_id("prefs").menu_id("coords").menu_id("1based").checked = self.coords_1based
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
+        self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.hide_menus = self.hide_menus
 
         self.clear_undo()
@@ -503,9 +506,11 @@ class pydpainter:
             f.write("scanlines=%d\n" % (self.scanlines))
             f.write("coords_on=%s\n" % (self.coords_on))
             f.write("coords_flip=%s\n" % (self.coords_flip))
+            f.write("coords_1based=%s\n" % (self.coords_1based))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
+            f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.close()
         except:
             pass
@@ -553,12 +558,16 @@ class pydpainter:
                         self.coords_on = True if vars[1] == "True" else False
                     elif vars[0] == "coords_flip":
                         self.coords_flip = True if vars[1] == "True" else False
+                    elif vars[0] == "coords_1based":
+                        self.coords_1based = True if vars[1] == "True" else False
                     elif vars[0] == "auto_transp_on":
                         self.auto_transp_on = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
                         self.hide_menus = True if vars[1] == "True" else False
                     elif vars[0] == "force_1_to_1_pixels":
                         self.force_1_to_1_pixels = True if vars[1] == "True" else False
+                    elif vars[0] == "true_symmetry":
+                        self.true_symmetry = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -681,9 +690,11 @@ class pydpainter:
         self.airbrush_size = 10
         self.coords_on = False
         self.coords_flip = False
+        self.coords_1based = False
         self.auto_transp_on = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
+        self.true_symmetry = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
@@ -996,7 +1007,7 @@ class pydpainter:
                 config.cursor.shape = config.cursor.CROSS
 
     def redraw_window_title(self):
-        new_window_title = "PyDPainter - "
+        new_window_title = f"PyDPainter {config.version} - "
         if config.filename == "":
             new_window_title += "Untitled" 
         else:
@@ -1280,11 +1291,43 @@ class pydpainter:
         config.clear_undo()
         config.save_undo()
 
+    def xpos_display(self, x):
+        if config.coords_1based:
+            x = x + 1
+        return x
+
     def ypos_display(self, y):
+        if not config.coords_flip:
+            y = config.pixel_height - y - 1
+        if config.coords_1based:
+            y = y + 1
+        return y
+
+    def xpos_undisplay(self, x):
+        if config.coords_1based:
+            x = x - 1
+        return x
+
+    def ypos_undisplay(self, y):
+        if config.coords_1based:
+            y = y - 1
+        if not config.coords_flip:
+            y = config.pixel_height - y - 1
+        return y
+
+    def xypos_display(self, coords):
+        x,y = coords
+        x = config.xpos_display(x)
+        y = config.ypos_display(y)
+        return (x,y)
+
+    def xypos_string(self, coords):
+        x,y = config.xypos_display(coords)
         if config.coords_flip:
-            return y
+            str = "%4d\x94%4d\x96" % ((x, y))
         else:
-            return config.pixel_height - y - 1
+            str = "%4d\x94%4d\x95" % ((x, y))
+        return str
 
     def run(self):
         """
@@ -1544,10 +1587,6 @@ class pydpainter:
                     mouseX, mouseY = self.get_mouse_pixel_pos(e, ignore_grid=True)
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
-                elif e.key == K_F9:
-                    if config.menubar.visible:
-                        config.menubar.visible = False
-                        config.menubar.visible = True
                 elif e.key == K_F10:
                     if config.toolbar.visible:
                         config.toolbar.visible = False
@@ -1597,15 +1636,9 @@ class pydpainter:
                 if config.coords_on:
                     cx,cy = self.get_mouse_pixel_pos(e)
                     if config.p1 != None and True in self.get_mouse_pressed():
-                        if config.coords_flip:
-                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx-config.p1[0], cy-config.p1[1])
-                        else:
-                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx-config.p1[0], config.p1[1]-cy)
+                        config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
                     else:
-                        if config.coords_flip:
-                            config.menubar.title_right = "%4d\x94%4d\x96" % (cx, cy)
-                        else:
-                            config.menubar.title_right = "%4d\x94%4d\x95" % (cx, config.pixel_height - cy - 1)
+                        config.menubar.title_right = config.xypos_string((cx, cy))
                         config.p1 = None
                 else:
                     config.menubar.title_right = ""
@@ -1643,6 +1676,7 @@ class pydpainter:
                 answer = question_req(config.pixel_req_canvas,
                          "Unsaved Changes",
                          "Are you sure you want\nto quit PyDPainter?",
-                         ["Yes","No"])
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
                 if answer == 1:
                     config.running = True

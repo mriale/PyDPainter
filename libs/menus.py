@@ -6,10 +6,10 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-from menubar import *
-from menureq import *
-from gadget import *
-from picio import *
+from libs.menubar import *
+from libs.menureq import *
+from libs.gadget import *
+from libs.picio import *
 
 config = None
 
@@ -34,7 +34,8 @@ def io_error_req(title, message, filename, linelen=33):
     dummy = question_req(config.pixel_req_canvas,
              title,
              message % (short_file),
-             ["OK"])
+             ["OK"],
+             [K_RETURN])
 
 
 prev_time = 0
@@ -80,9 +81,12 @@ class DoSave(MenuAction):
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            save_pic(filename, merge_config)
-            config.filename = filename
-            config.modified_count = 0
+            try:
+                save_pic(filename, merge_config)
+                config.filename = filename
+                config.modified_count = 0
+            except:
+                io_error_req("Save Error", "Unable to save image:\n%s", filename)
         config.doKeyAction()
 
 class DoSaveAs(MenuAction):
@@ -92,17 +96,61 @@ class DoSaveAs(MenuAction):
         merge_config.pixel_canvas = config.background.get_flattened()
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
         if filename != (()) and filename != "":
-            if not save_pic(filename, merge_config, overwrite=False):
-                answer = question_req(config.pixel_req_canvas,
-                         "File Exists",
-                         "Overwrite this file?",
-                         ["Yes","No"])
-                if answer == 0:
-                    save_pic(filename, merge_config, overwrite=True)
-                else:
-                    return
+            try:
+                if not save_pic(filename, merge_config, overwrite=False):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                        save_pic(filename, merge_config, overwrite=True)
+                    else:
+                        return
+            except:
+                io_error_req("Save Error", "Unable to save image:\n%s", filename)
+                return
             config.filename = filename
             config.modified_count = 0
+
+class DoRevert(MenuAction):
+    def selected(self, attrs):
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = config.filename
+        if filename != "":
+            if config.modified_count >= 1:
+                linelen = 33
+                if len(filename) > linelen:
+                    short_file = "..." + filename[-(linelen-3):]
+                else:
+                    short_file = filename
+                answer = question_req(config.pixel_req_canvas,
+                         "Unsaved Changes",
+                         "Are you sure you want to revert\nto file:\n"+short_file,
+                         ["Yes","No"],
+                         [K_RETURN, K_ESCAPE])
+                if answer == 1:
+                    return
+            else:
+                return
+
+            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            try:
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                config.bgcolor = 0
+                config.color = 1
+                close_progress_req(progress_req)
+                config.truepal = list(config.pal)
+                config.pal = config.unique_palette(config.pal)
+                config.initialize_surfaces()
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
+                config.modified_count = 0
+            except:
+                close_progress_req(progress_req)
+                io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoPictureFlipX(MenuAction):
     def selected(self, attrs):
@@ -293,7 +341,7 @@ class DoBrushOpen(MenuAction):
                 config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
             except:
-                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+                io_error_req("Load Error", "Unable to open brush:\n%s", filename)
         config.doKeyAction()
 
 class DoBrushSaveAs(MenuAction):
@@ -304,15 +352,20 @@ class DoBrushSaveAs(MenuAction):
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
-            if not save_pic(filename, brush_config, overwrite=False):
-                answer = question_req(config.pixel_req_canvas,
-                         "File Exists",
-                         "Overwrite this file?",
-                         ["Yes","No"])
-                if answer == 0:
-                    save_pic(filename, brush_config, overwrite=True)
-                else:
-                    return
+            try:
+                if not save_pic(filename, brush_config, overwrite=False):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                            save_pic(filename, brush_config, overwrite=True)
+                    else:
+                        return
+            except:
+                io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+                return
 
 class DoBrushRestore(MenuAction):
     def selected(self, attrs):
@@ -1014,6 +1067,14 @@ class DoPrefsFlipCoords(MenuAction):
         config.coords_flip = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefs1BasedCoords(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.coords_1based = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsAutoTransp(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1042,6 +1103,14 @@ class DoPrefsForce1To1Pixels(MenuAction):
             config.minitoolbar.tool_id("aspect").state = 0
         config.doKeyAction()
 
+class DoPrefsTrueSymmetry(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.true_symmetry = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1063,6 +1132,7 @@ def init_menubar(config_in):
             ["Open...", "ctrl-o", DoOpen],
             ["Save", "ctrl-s", DoSave],
             ["Save as...", "ctrl-S", DoSaveAs],
+            ["Revert...", "ctrl-alt-z", DoRevert],
             ["Print...", "ctrl-p"],
             ["---"],
             ["Flip", [
@@ -1142,7 +1212,7 @@ def init_menubar(config_in):
             ["/Blend", "F6", DoMode],
             ["/Cycle", "F7", DoMode],
             ["/Smooth","F8", DoMode],
-            ["/Tint"],
+            ["/Tint", "F9", DoMode],
             ["!/HBrite"],
         ]])
 
@@ -1177,11 +1247,15 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Prefs", [
-            ["/Coords", "|", DoPrefsCoords],
-            ["/Flip Coords", " ", DoPrefsFlipCoords],
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
+            ["/True Symmetry", " ", DoPrefsTrueSymmetry],
+            ["/Coords", [
+                ["/Show", "|", DoPrefsCoords],
+                ["/Flip", " ", DoPrefsFlipCoords],
+                ["/1-Based", " ", DoPrefs1BasedCoords],
+            ]],
             [" Save Config", " ", DoPrefsSave],
         ]])
 

@@ -7,6 +7,7 @@ from operator import itemgetter
 import os.path
 import random
 import copy
+import colorsys
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -113,8 +114,17 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
 
     if config.symm_on:
         if config.symm_mode == 0:
-            c = config.symm_center
+            cx,cy = config.symm_center
+            w,h = (config.pixel_width, config.pixel_height)
+
+            if config.true_symmetry:
+                if cx == w // 2 and w % 2 == 0:
+                    cx -= 0.5
+                if cy == h // 2 and h % 2 == 0:
+                    cy -= 0.5
  
+            c = (cx,cy)
+
             if config.symm_num > 0:
                 if config.symm_type == 1:
                     x1 = (c[0]*2) - x
@@ -239,6 +249,16 @@ def smooth_image(img):
     i8 = convert8(i24, config.pal)
     img.blit(i8, (-1,-1))
 
+def tint_image(img, tint_trans):
+    # Tint the image based on the tint translation array
+    ia = pygame.surfarray.pixels2d(img)
+
+    # Use transformation matrix to tint colors
+    ia[:] = tint_trans[ia[:]]
+
+    ia = None
+    return img
+
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
     def __init__(self):
@@ -264,13 +284,23 @@ class Brush:
     CORNER_LL = 4
     PLACE = 5
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None):
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None):
         self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
-            if coordfrom == None:
-                coordfrom = (0,0)
-            if coordto == None:
-                coordto = (screen.get_width()-1, screen.get_height()-1)
+            # Get bounds of polygon brush
+            if polylist != None:
+                minx = min(polylist,key=itemgetter(0))[0];
+                maxx = max(polylist,key=itemgetter(0))[0];
+                miny = min(polylist,key=itemgetter(1))[1];
+                maxy = max(polylist,key=itemgetter(1))[1];
+                coordfrom = (minx, miny)
+                coordto = (maxx, maxy)
+            else:
+                # Rectangle brush
+                if coordfrom == None:
+                    coordfrom = (0,0)
+                if coordto == None:
+                    coordto = (screen.get_width()-1, screen.get_height()-1)
 
             x1,y1 = coordfrom
             x2,y2 = coordto
@@ -288,6 +318,28 @@ class Brush:
             self.image.set_palette(config.pal)
             self.image.blit(screen, (0,0), (x1,y1,w,h))
             self.image.set_colorkey(bgcolor)
+
+            # Handle polygon masking
+            if polylist != None:
+                # Adjust polylist to brush coords
+                pl = []
+                for x,y in polylist:
+                    pl.append((x-x1,y-y1))
+
+                # Create image same size as brush and draw poly into it
+                polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
+                primprops = PrimProps()
+                fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+
+                # Create numpy mask out of poly and apply to brush
+                surf_array_poly = pygame.surfarray.pixels2d(polyimage)
+                poly_mask = np.where(surf_array_poly == 0)
+                surf_array_brush = pygame.surfarray.pixels2d(self.image)
+                surf_array_brush[poly_mask] = bgcolor
+                surf_array_brush = None
+                surf_array_poly = None
+                polyimage = None
+
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
@@ -318,6 +370,7 @@ class Brush:
         self.cycle_trans = np.arange(0,255, dtype=np.uint8)
         self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
+        self.tint_trans = np.empty((256), dtype=np.uint8)
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -508,7 +561,7 @@ class Brush:
 
         #handle pen state
         if self.pen_down == False:
-            if drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
+            if drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
                 self.cache.image[256] = None
                 self.prev_x = None
                 self.prev_y = None
@@ -517,7 +570,7 @@ class Brush:
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and color == self.bgcolor:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
@@ -533,7 +586,7 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
-        elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH):
+        elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
             if self.cache.image[256] == None:
                 self.cache.image[256] = self.render_image(config.color)
                 self.smear_image = None
@@ -590,6 +643,32 @@ class Brush:
                         for ci in range(0,256):
                             for cj in range(0,256):
                                 self.blend_trans[ci,cj] = (ci + cj) // 2
+                elif drawmode == DrawMode.TINT:
+                    #set up tint translation matrix
+                    self.tint_trans[:] = np.arange(0,256, dtype=np.uint8)
+                    #get HSV of current color
+                    r,g,b = config.pal[config.color]
+                    ch,cs,cv = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+                    i=0
+                    for r,g,b in config.pal:
+                        h,s,v = colorsys.rgb_to_hsv(r/255.0, g/255.0, b/255.0)
+                        # To tint, keep value but replace hue and saturation
+                        tr,tg,tb = colorsys.hsv_to_rgb(ch, cs, v)
+                        tr = int(round(tr * 255.0))
+                        tg = int(round(tg * 255.0))
+                        tb = int(round(tb * 255.0))
+                        # Search for nearest color
+                        j=0
+                        closest=0
+                        closest_mag=255*255 + 255*255 + 255*255
+                        for sr,sg,sb in config.pal:
+                            smag = (sr-tr)*(sr-tr) + (sg-tg)*(sg-tg) + (sb-tb)*(sb-tb)
+                            if smag < closest_mag:
+                                closest = j
+                                closest_mag = smag
+                            j += 1
+                        self.tint_trans[i] = closest
+                        i += 1
 
             image = self.cache.image[256]
             self.calc_handle(image.get_width(), image.get_height())
@@ -691,6 +770,22 @@ class Brush:
                     self.smear_image.blit(self.smear_stencil, (0,0))
 
                     #Blit smoothed image
+                    screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
+                elif drawmode == DrawMode.TINT:
+                    #Allocate smooth image if needed
+                    if self.smear_image == None:
+                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image.set_palette(config.pal)
+                        self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
+
+                    #Get canvas into smear image
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+
+                    #Tint image
+                    self.smear_image = tint_image(self.smear_image, self.tint_trans)
+                    self.smear_image.blit(self.smear_stencil, (0,0))
+
+                    #Blit tinted image
                     screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
@@ -823,8 +918,11 @@ class FillMode:
     HORIZONTAL = 8
     HORIZ_FIT = 9
     BOTH_FIT = 10
+    ANTIALIAS = 11
+    SMOOTH = 12
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91"]
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
+                 "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
@@ -1517,6 +1615,12 @@ def hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2):
         hline_SOLID(surf_array, color, y, xs1, xs2)
     hlines.append([y, xs1, xs2])
 
+def hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2):
+    hlines.append([y, xs1, xs2])
+
+def hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2):
+    hlines.append([y, xs1, xs2])
+
 def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
     if primprops == None:
         primprops = config.primprops
@@ -1564,6 +1668,10 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BOTH_FIT:
         hline_BOTH_FIT(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.ANTIALIAS:
+        hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.SMOOTH:
+        hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value >= FillMode.VERTICAL:
         #get color range
         cyclemode = False
@@ -1727,6 +1835,63 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         surf_array2[tfmask] = surf_array[tfmask]
         surf_array2 = None
         screen.blit(shape_image, (xo,yo))
+
+    if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+        #Find bounds of shape
+        hlines_min = np.amin(hlines, axis=0)
+        hlines_max = np.amax(hlines, axis=0)
+        xo = hlines_min[1] - 1
+        yo = hlines_min[0] - 1
+        w = hlines_max[2] - xo + 2
+        h = hlines_max[0] - yo + 2
+
+        #Create numpy array for shape
+        surf_array = np.zeros((w,h), dtype=int)
+
+        #Render shape into numpy mask
+        for y,x1,x2 in hlines:
+            surf_array[x1-xo:x2-xo+1,y-yo] = 1
+        tfmask = np.not_equal(surf_array, 1)
+        smoothed_image = None
+
+        #Grab pixel canvas under shape
+        new_image = pygame.Surface((w, h),0,8)
+        new_image.set_palette(config.pal)
+        new_image.blit(screen, (0,0), (xo,yo,w,h))
+
+        if primprops.fillmode.value == FillMode.ANTIALIAS:
+            #Scale image up using Scale2X
+            big_image = new_image.convert()
+            for i in range(3):
+                big_image = pygame.transform.scale2x(big_image)
+                #Interrupt if needed
+                if interrupt and config.has_event():
+                    return
+                config.try_recompose()
+
+            #Scale image down again and convert to 8-bit
+            smoothed_image = pygame.transform.smoothscale(big_image, (w,h))
+            i8 = convert8(smoothed_image, config.pal)
+
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        if primprops.fillmode.value == FillMode.SMOOTH:
+            smooth_image(new_image)
+            i8 = new_image
+            #Interrupt if needed
+            if interrupt and config.has_event():
+                return
+            config.try_recompose()
+
+        #Mask off shape and draw into screen
+        surf_array = pygame.surfarray.pixels2d(i8)
+        surf_array[tfmask] = 0
+        surf_array = None
+        i8.set_colorkey(0)
+        screen.blit(i8, (xo,yo))
 
 def drawvlines(screen, color, primprops=None, interrupt=False):
     global vlines
@@ -1948,10 +2113,13 @@ def floodfill(surface, fill_color, position):
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None):
     n = len(coords)
     if n == 0:
         return
+
+    if primprops == None:
+        primprops = config.primprops
 
     coords_symm = symm_coords_list(coords, handlesymm=handlesymm)
 
@@ -2005,14 +2173,14 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False):
             polyints.sort()
 
             for i in range(0, len(polyints), 2):
-                hline(screen, color, y, polyints[i], polyints[i+1])
+                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops)
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
-                hline(screen, color, miny, minx, maxx)
+                hline(screen, color, miny, minx, maxx, primprops=primprops)
                 config.try_recompose()
 
         end_shape(screen, color, interrupt=interrupt)

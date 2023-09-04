@@ -10,7 +10,7 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-import gadget
+import libs.gadget as gadget
 
 class PixelFont(object):
 

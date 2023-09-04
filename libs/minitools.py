@@ -6,10 +6,10 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-from toolbar import *
-from toolreq import *
-from gadget import *
-from tiptext import *
+from libs.toolbar import *
+from libs.toolreq import *
+from libs.gadget import *
+from libs.tiptext import *
 
 config = None
 

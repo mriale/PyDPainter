@@ -3,8 +3,8 @@
 
 import os.path, colorsys
 
-import gadget
-from gadget import *
+import libs.gadget
+from libs.gadget import *
 
 import contextlib
 with contextlib.redirect_stdout(None):

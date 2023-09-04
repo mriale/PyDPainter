@@ -4,10 +4,10 @@
 import os.path, colorsys
 import numpy as np
 
-import gadget
-from gadget import *
+import libs.gadget
+from libs.gadget import *
 
-from prim import *
+from libs.prim import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -383,7 +383,7 @@ def place_point(symm_center):
         drawline(config.pixel_canvas, 1,
             (0,mouseY), (config.pixel_canvas.get_width(),mouseY),
             xormode=True)
-        config.menubar.title_right = "%4d\x94%4d\x96" % (mouseX, config.ypos_display(mouseY))
+        config.menubar.title_right = config.xypos_string((mouseX,mouseY))
         config.recompose()
         first_time = False
 
@@ -622,7 +622,7 @@ X:_____  Y:_____
     orderg.value = str(config.symm_num)
     orderg.numonly = True
     pointg.state = 1
-    centerxvalg.value = str(config.symm_center[0])
+    centerxvalg.value = str(config.xpos_display(config.symm_center[0]))
     centerxvalg.numonly = True
     centeryvalg.value = str(config.ypos_display(config.symm_center[1]))
     centeryvalg.numonly = True
@@ -650,7 +650,7 @@ X:_____  Y:_____
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.symm_mode = 0
                     config.symm_num = int(orderg.value)
-                    config.symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
+                    config.symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -662,15 +662,15 @@ X:_____  Y:_____
                     config.symm_type = 1
                 elif ge.gadget == placeg:
                     if not req.has_error():
-                        symm_center = [int(centerxvalg.value), config.ypos_display(int(centeryvalg.value))]
+                        symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
                     symm_center = list(place_point(symm_center))
-                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.value = str(config.xpos_display(symm_center[0]))
                     centerxvalg.need_redraw = True
                     centeryvalg.value = str(config.ypos_display(symm_center[1]))
                     centeryvalg.need_redraw = True
                 elif ge.gadget == centerxg:
                     symm_center[0] = config.pixel_width // 2
-                    centerxvalg.value = str(symm_center[0])
+                    centerxvalg.value = str(config.xpos_display(symm_center[0]))
                     centerxvalg.need_redraw = True
                 elif ge.gadget == centeryg:
                     symm_center[1] = config.pixel_height // 2
@@ -813,6 +813,16 @@ class FillGadget(Gadget):
                     ch = rh//2
                     cx = rx + cw
                     cy = ry + ch
+                    if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+                        pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
+                        iw,ih = config.smooth_example_image.get_size()
+                        ix = rx + ((rw - iw) // 2)
+                        iy = ry + ((rh - ih) // 2)
+                        screen.blit(config.smooth_example_image, (ix,iy))
+                        tw = font.xsize * len(str(primprops.fillmode))
+                        tx = rx + ((rw - tw) // 2)
+                        ty = iy + ih
+                        font.blitstring(screen, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
                     fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -827,7 +837,17 @@ def draw_fill_indicator(screen):
     global prev_fillmode
     global prev_color
     global prev_fill_image
-    need_redraw = True
+
+    if screen == None:
+        #initialize
+        prev_fillmode = None
+        prev_color = -1
+        prev_fill_image = None
+        return
+
+    fillmode_changed = False
+    color_changed = False
+    image_changed = False
     px = config.font.xsize // 8
     py = config.font.ysize // 8
 
@@ -835,27 +855,35 @@ def draw_fill_indicator(screen):
     if prev_fillmode != None and \
        prev_fillmode.value == config.fillmode.value and \
        prev_fillmode.gradient_dither == config.fillmode.gradient_dither:
-        need_redraw = False
+        pass
     else:
         prev_fillmode = copy.copy(config.fillmode)
+        fillmode_changed = True
 
     #check for change in color range
     if prev_color != config.color:
-        need_redraw = True
+        color_changed = True
         for crange in config.cranges:
             if crange.is_active() and \
                prev_color >= crange.low and prev_color <= crange.high and \
                config.color >= crange.low and config.color <= crange.high:
-                need_redraw = False
+                color_changed = False
         prev_color = config.color
 
     if prev_fill_image == None:
         prev_fill_image = pygame.Surface((px*16,py*9), 0, 8)
         prev_fill_image.set_palette(config.pal)
-        need_redraw = True
+        image_changed = True
 
-    if need_redraw:
-        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9))
+    if fillmode_changed or color_changed or image_changed:
+        if config.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
+            if config.fillmode.value == FillMode.ANTIALIAS:
+                ind_text = "AA"
+            else:
+                ind_text = str(config.fillmode).upper()
+
+            config.font.blitstring(prev_fill_image, (0,0), ind_text, (255,255,255))
+        fillrect(prev_fill_image, config.color, (0,0), (px*16, py*9), interrupt=False)
 
     if config.fillmode.value != config.fillmode.SOLID:
         prev_fill_image.set_palette(config.pal)
@@ -868,8 +896,8 @@ def fill_req(screen):
 [Brush]     ###########
 [Wrap]      ###########
 [Pattern]   ###########
-            ###########
-            ###########
+[Antialias] ###########
+[Smooth]    ###########
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:----------------00
@@ -918,6 +946,7 @@ Dither:----------------00
                     config.fillmode.value = fillmode_value
                     config.fillmode.gradient_dither = ditherg.value - 1
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
+                    draw_fill_indicator(None)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0

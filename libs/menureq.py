@@ -3,10 +3,10 @@
 
 import os.path, colorsys
 
-import gadget
-from gadget import *
+import libs.gadget
+from libs.gadget import *
 
-from prim import *
+from libs.prim import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -92,7 +92,7 @@ def pick_file_type(screen, req, file_typeg, ext):
         else:
             gevents = req.process_event(screen, event)
 
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
+        if event.type == KEYDOWN:
             running = 0
 
         req.draw(screen)
@@ -226,11 +226,13 @@ File:___________________%s
     #File type
     if has_type:
         file_typeg = req.gadget_id("24_11")
-        if filename == "":
-            file_typeg.enabled = False
     else:
         # Create dummy gadget
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
+
+    #Initialize file type
+    ext, file_typeg.label = get_type(filename)
+    file_typeg.need_redraw = True
 
     #take care of non-square pixels
     fontmult = 1
@@ -264,9 +266,16 @@ File:___________________%s
                 elif ge.gadget == file_typeg:
                     picki = pick_file_type(screen, req, file_typeg, ext)
                     if picki >=0 and picki < len(filetype_list):
-                        filename = re.sub(r"\.[^.]+$", "."+filetype_list[picki][0].lower(), filename)
+                        filename = file_nameg.value
+                        if filename != "":
+                            if filename.find(".") >= 0:
+                                filename = re.sub(r"\.[^.]*$", "."+filetype_list[picki][0].lower(), filename)
+                            else:
+                                filename += "." + filetype_list[picki][0].lower()
                         file_nameg.value = filename
                         file_nameg.need_redraw = True
+                    ext, file_typeg.label = get_type(filename)
+                    file_typeg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
                     filepath = file_pathg.value
@@ -277,6 +286,8 @@ File:___________________%s
                     list_sliderg.need_redraw = True
                 if ge.type == ge.TYPE_GADGETUP and event.type == KEYDOWN and event.key == K_RETURN:
                     string_enter = True
+                ext, file_typeg.label = get_type(file_nameg.value)
+                file_typeg.need_redraw = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
@@ -293,13 +304,11 @@ File:___________________%s
                     file_pathg.value = filepath
                     file_pathg.need_redraw = True
                     list_sliderg.need_redraw = True
-                    file_typeg.enabled = False
                     file_typeg.need_redraw = True
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
                     ext, file_typeg.label = get_type(filename)
-                    file_typeg.enabled = True
                     file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
@@ -316,12 +325,11 @@ File:___________________%s
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
                         ext, file_typeg.label = get_type("")
-                        file_typeg.enabled = False
                     else:
                         file_nameg.value = filename
                         ext, file_typeg.label = get_type(filename)
-                        file_typeg.enabled = True
 
+                    file_nameg.state = 0
                     file_nameg.need_redraw = True
                     file_typeg.need_redraw = True
                 elif event.key == K_RETURN and list_itemsg.items[0][0] != "<" and not string_enter:
@@ -958,52 +966,6 @@ for more details.    ############
 
     return
 
-def question_req(screen, title, text, buttons):
-    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
-    all_text = dummy_text + "\n"
-    for button_text in buttons:
-        all_text += "[" + button_text + "]"
-
-    req = str2req(title, all_text, "",
-          mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
-
-    #Replace dummy text with actual text
-    textlines = text.splitlines()
-    textrow = 0
-    for textline in textlines:
-        labelg = req.gadget_id("0_%d" % (textrow))
-        labelg.label = textline
-        textrow += 1
-
-    req.center(screen)
-    config.pixel_req_rect = req.get_screen_rect()
-    req.draw(screen)
-    config.recompose()
-
-    button_clicked = -1
-    running = 1
-    while running:
-        event = pygame.event.wait()
-        gevents = req.process_event(screen, event)
-
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
-            running = 0 
-
-        for ge in gevents:
-            if ge.gadget.type == Gadget.TYPE_BOOL:
-                button_clicked = buttons.index(ge.gadget.label)
-                running = 0 
-
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
-            req.draw(screen)
-            config.recompose()
-
-    config.pixel_req_rect = None
-    config.recompose()
-
-    return button_clicked
-
-
 class PPprogress(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
         self.pic = imgload('logo.png')
@@ -1320,7 +1282,7 @@ def stencil_req(screen):
 
     return
 
-def question_req(screen, title, text, buttons):
+def question_req(screen, title, text, buttons, hotkeys=[]):
     dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
     all_text = dummy_text + "\n"
     for button_text in buttons:
@@ -1348,8 +1310,14 @@ def question_req(screen, title, text, buttons):
         event = pygame.event.wait()
         gevents = req.process_event(screen, event)
 
-        if event.type == KEYDOWN and event.key == K_ESCAPE:
+        if event.type == KEYDOWN and event.key in hotkeys:
+            button_clicked = hotkeys.index(event.key)
             running = 0 
+        elif event.type == KEYDOWN:
+            for bstr in buttons:
+                if bstr[0].lower() == event.unicode.lower():
+                    button_clicked = buttons.index(bstr)
+                    running = 0
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
