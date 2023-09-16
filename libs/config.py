@@ -21,6 +21,7 @@ from libs.tools import *
 from libs.minitools import *
 from libs.menubar import *
 from libs.menus import *
+from libs.perspective import *
 from libs.version import *
 from libs.zoom import *
 
@@ -160,6 +161,7 @@ class pydpainter:
         background_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
+        perspective_set_config(self)
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
@@ -400,6 +402,8 @@ class pydpainter:
         self.set_all_palettes(self.pal)
         self.stencil.clear()
         self.background.clear()
+
+        self.perspective = Perspective()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
@@ -1518,7 +1522,11 @@ class pydpainter:
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.unicode == ".":
+                if e.mod & KMOD_CTRL:
+                    if e.key == K_RETURN:
+                        config.perspective.do_mode()
+                        gotkey = True
+                elif e.unicode == ".":
                     gotkey = True
                 elif e.unicode == "+" or e.unicode == "=":
                     gotkey = True
