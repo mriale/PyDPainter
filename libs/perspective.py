@@ -119,11 +119,22 @@ class Perspective:
         print("perspective mode")
         running = 1
         delta = 0.05
+        update_cursor = True
 
         while running:
-            self.draw_cursor()
+            if update_cursor:
+                self.screen2world = self.calc_screen2world()
+                self.world2screen = self.calc_world2screen()
+                self.draw_cursor()
+                update_cursor = False
+
             event = pygame.event.wait()
+            if event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                continue
+
             if event.type == KEYDOWN:
+                update_cursor = True
                 if event.key == K_ESCAPE:
                     running = 0
                 elif event.key == K_KP0 or \
@@ -158,7 +169,9 @@ class Perspective:
                 elif event.key == K_KP3 or \
                      (event.mod & KMOD_CTRL and event.key == K_3):
                     self.rotate[2] = 0
-                self.screen2world = self.calc_screen2world()
-                self.world2screen = self.calc_world2screen()
-
+                else:
+                    update_cursor = False
+            elif event.type == MOUSEMOTION:
+                self.xypos = config.get_mouse_pixel_pos(event)
+                update_cursor = True
 
