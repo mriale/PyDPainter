@@ -118,6 +118,7 @@ class Perspective:
     def do_mode(self):
         print("perspective mode")
         running = 1
+        delta = 0.05
 
         while running:
             self.draw_cursor()
@@ -125,24 +126,39 @@ class Perspective:
             if event.type == KEYDOWN:
                 if event.key == K_ESCAPE:
                     running = 0
-                elif event.key == K_0:
+                elif event.key == K_KP0 or \
+                     (event.mod & KMOD_CTRL and event.key == K_0):
                     self.rotate[0] = 0
                     self.rotate[1] = 0
                     self.rotate[2] = 0
-                elif event.key == K_1:
-                    self.rotate[0] += .05
-                elif event.key == K_2:
-                    self.rotate[0] -= .05
-                elif event.key == K_3:
-                    self.rotate[1] += .05
-                elif event.key == K_4:
-                    self.rotate[1] -= .05
-                elif event.key == K_5:
-                    self.rotate[2] += .05
-                elif event.key == K_6:
-                    self.rotate[2] -= .05
+                elif event.key == K_KP7 or \
+                     (event.mod & KMOD_CTRL and event.key == K_7):
+                    self.rotate[0] += delta
+                elif event.key == K_KP8 or \
+                     (event.mod & KMOD_CTRL and event.key == K_8):
+                    self.rotate[0] -= delta
+                elif event.key == K_KP9 or \
+                     (event.mod & KMOD_CTRL and event.key == K_9):
+                    self.rotate[0] = 0
+                elif event.key == K_KP4 or \
+                     (event.mod & KMOD_CTRL and event.key == K_4):
+                    self.rotate[1] += delta
+                elif event.key == K_KP5 or \
+                     (event.mod & KMOD_CTRL and event.key == K_5):
+                    self.rotate[1] -= delta
+                elif event.key == K_KP6 or \
+                     (event.mod & KMOD_CTRL and event.key == K_6):
+                    self.rotate[1] = 0
+                elif event.key == K_KP1 or \
+                     (event.mod & KMOD_CTRL and event.key == K_1):
+                    self.rotate[2] += delta
+                elif event.key == K_KP2 or \
+                     (event.mod & KMOD_CTRL and event.key == K_2):
+                    self.rotate[2] -= delta
+                elif event.key == K_KP3 or \
+                     (event.mod & KMOD_CTRL and event.key == K_3):
+                    self.rotate[2] = 0
                 self.screen2world = self.calc_screen2world()
                 self.world2screen = self.calc_world2screen()
-
 
 

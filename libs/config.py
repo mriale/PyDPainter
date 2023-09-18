@@ -1526,6 +1526,9 @@ class pydpainter:
                     if e.key == K_RETURN:
                         config.perspective.do_mode()
                         gotkey = True
+                elif e.key == K_KP_ENTER:
+                    config.perspective.do_mode()
+                    gotkey = True
                 elif e.unicode == ".":
                     gotkey = True
                 elif e.unicode == "+" or e.unicode == "=":
