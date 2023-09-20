@@ -23,15 +23,15 @@ class Perspective:
         self.center = [160,100,0]
         self.xypos  = [160,100]
         self.xysize = [40,40]
+        self.dist = 100
+        self.maxdist = 500
+        self.mindist = max(self.xysize)
         self.screen2world = self.calc_screen2world()
         self.world2screen = self.calc_world2screen()
 
     def calc_screen2world(self):
         c = self.center
         q = self.rotate
-        n = 1
-        f = 2
-        d = 1.2
         #recalculate matrix
         trans1   = np.matrix([[    1,     0,     0, 0],
                               [    0,     1,     0, 0],
@@ -58,9 +58,6 @@ class Perspective:
     def calc_world2screen(self):
         c = self.center
         q = self.rotate
-        n = 1
-        f = 2
-        d = 1.2
         #recalculate matrix
         scale2   = np.matrix([[config.aspectX, 0, 0, 0],
                               [0, -config.aspectY, 0, 0],
@@ -79,7 +76,7 @@ class Perspective:
         return (v[0,0], v[0,1])
 
     def project(self, v):
-        d = 100
+        d = self.dist
         vx = v[0,0] / ((v[0,2]+d)/d)
         vy = v[0,1] / ((v[0,2]+d)/d)
         return np.matrix([vx,vy,0,1])
@@ -119,7 +116,9 @@ class Perspective:
         print("perspective mode")
         running = 1
         delta = 0.05
+        distdelta = 10
         update_cursor = True
+        self.xypos = config.get_mouse_pixel_pos()
 
         while running:
             if update_cursor:
@@ -135,13 +134,16 @@ class Perspective:
 
             if event.type == KEYDOWN:
                 update_cursor = True
-                if event.key == K_ESCAPE:
+                if event.key == K_ESCAPE or \
+                     event.key == K_KP_ENTER or \
+                     (event.mod &KMOD_CTRL and event.key == K_RETURN):
                     running = 0
                 elif event.key == K_KP0 or \
                      (event.mod & KMOD_CTRL and event.key == K_0):
                     self.rotate[0] = 0
                     self.rotate[1] = 0
                     self.rotate[2] = 0
+                    self.dist = 100
                 elif event.key == K_KP7 or \
                      (event.mod & KMOD_CTRL and event.key == K_7):
                     self.rotate[0] += delta
@@ -169,6 +171,14 @@ class Perspective:
                 elif event.key == K_KP3 or \
                      (event.mod & KMOD_CTRL and event.key == K_3):
                     self.rotate[2] = 0
+                elif event.unicode == '>':
+                    if self.dist < self.maxdist:
+                        self.dist += distdelta
+                        print(self.dist)
+                elif event.unicode == '<':
+                    if self.dist-distdelta > self.mindist:
+                        self.dist -= distdelta
+                        print(self.dist)
                 else:
                     update_cursor = False
             elif event.type == MOUSEMOTION:
