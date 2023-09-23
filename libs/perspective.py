@@ -21,7 +21,7 @@ class Perspective:
     def __init__(self):
         self.rotate = [0,0,0]
         self.center = [160,100,0]
-        self.xypos  = [160,100]
+        self.pos = [160,100,0]
         self.xysize = [40,40]
         self.dist = 100
         self.maxdist = 500
@@ -69,56 +69,83 @@ class Perspective:
                               [ c[0],  c[1],  c[2], 1]])
         return scale2 @ trans2
 
-    def xy2vector(self, coord):
-        return np.matrix([coord[0],coord[1],0,1])
-
-    def vector2xy(self, v):
-        return (v[0,0], v[0,1])
-
     def project(self, v):
         d = self.dist
-        vx = v[0,0] / ((v[0,2]+d)/d)
-        vy = v[0,1] / ((v[0,2]+d)/d)
-        return np.matrix([vx,vy,0,1])
+        v2 = np.copy(v)
+        v2[:,0] /= (v2[:,2]+d)/d
+        v2[:,1] /= (v2[:,2]+d)/d
+        return v2
 
     def draw_cursor(self):
         # Calculate perspective of points of rectangle
         w, h = self.xysize
         w2 = w / 2
         h2 = h / 2
-        cx, cy = self.xypos
-        p1 = self.xy2vector((cx-w2, cy-h2)) @ self.screen2world
-        p1 = self.project(p1) @ self.world2screen
-        p2 = self.xy2vector((cx+w2, cy-h2)) @ self.screen2world
-        p2 = self.project(p2) @ self.world2screen
-        p3 = self.xy2vector((cx+w2, cy+h2)) @ self.screen2world
-        p3 = self.project(p3) @ self.world2screen
-        p4 = self.xy2vector((cx-w2, cy+h2)) @ self.screen2world
-        p4 = self.project(p4) @ self.world2screen
+        cx, cy, cz = self.pos
 
-        # Draw lines for rectangle
-        """
-        print(p1.astype(int))
-        print(p2.astype(int))
-        print(p3.astype(int))
-        print(p4.astype(int))
-        """
+        points = np.matrix( [
+                #bounding box
+                [cx-w2, cy-h2, cz, 1],
+                [cx+w2, cy-h2, cz, 1],
+                [cx+w2, cy+h2, cz, 1],
+                [cx-w2, cy+h2, cz, 1],
+                #grid
+                [cx, cy-h2, cz, 1],
+                [cx, cy+h2, cz, 1],
+                [cx-w2, cy, cz, 1],
+                [cx+w2, cy, cz, 1],
+                #Y
+                [cx-w/8, cy-h2+h/16, cz, 1],
+                [cx+w/8, cy-h2+h/16, cz, 1],
+                [cx, cy-h/4, cz, 1],
+                [cx, cy-h/8, cz, 1],
+                #X
+                [cx+w2-w/16, cy-h/8, cz, 1],
+                [cx+w2-w/4, cy-h/8, cz, 1],
+                [cx+w2-w/16, cy+h/8, cz, 1],
+                [cx+w2-w/4, cy+h/8, cz, 1],
+                ])
+
+        lines = np.matrix( [
+            #bounding box
+            [0,1],
+            [1,2],
+            [2,3],
+            [3,0],
+            #grid
+            [4,5],
+            [6,7],
+            #Y
+            [8,10],
+            [9,10],
+            [10,11],
+            #X
+            [12,15],
+            [13,14],
+            ])
+
+        # Transform points
+        points = points @ self.screen2world
+        points = self.project(points) @ self.world2screen
+
         screen = config.pixel_canvas
         color = 1
         config.clear_pixel_draw_canvas()
-        drawline(screen, color, self.vector2xy(p1), self.vector2xy(p2))
-        drawline(screen, color, self.vector2xy(p2), self.vector2xy(p3))
-        drawline(screen, color, self.vector2xy(p3), self.vector2xy(p4))
-        drawline(screen, color, self.vector2xy(p4), self.vector2xy(p1))
+
+        # Draw lines for 3D cursor
+        for i in range(lines.shape[0]):
+            drawline(screen, color, (points[lines[i,0],0],points[lines[i,0],1]), (points[lines[i,1],0],points[lines[i,1],1]),xormode=1, handlesymm=False)
+
         config.recompose()
 
     def do_mode(self):
-        print("perspective mode")
         running = 1
         delta = 0.05
         distdelta = 10
         update_cursor = True
-        self.xypos = config.get_mouse_pixel_pos()
+        x,y = config.get_mouse_pixel_pos()
+        self.pos[0] = x
+        self.pos[1] = y
 
         while running:
             if update_cursor:
@@ -179,9 +206,15 @@ class Perspective:
                     if self.dist-distdelta > self.mindist:
                         self.dist -= distdelta
                         print(self.dist)
+                elif event.unicode == ';':
+                    self.pos[2] += 2
+                elif event.unicode == '\'':
+                    self.pos[2] -= 2
                 else:
                     update_cursor = False
             elif event.type == MOUSEMOTION:
-                self.xypos = config.get_mouse_pixel_pos(event)
+                x,y = config.get_mouse_pixel_pos(event)
+                self.pos[0] = x
+                self.pos[1] = y
                 update_cursor = True
 
