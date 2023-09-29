@@ -390,11 +390,10 @@ Speed---------___^^
                         if color == config.bgcolor and config.background.enable:
                             config.pal[from_color] = tuple(config.background.image.get_at((x1,y1)))[0:3]
                             config.pal = config.quantize_palette(config.pal, config.color_depth)
-                            config.set_all_palettes(config.pal)
-                            color = from_color
                         else:
                             config.pal[from_color] = config.pal[color]
-                            color = from_color
+                        color = from_color
+                        config.set_all_palettes(config.pal)
                         config.cursor.shape = config.cursor.NORMAL
                     palg.value = color
                     palg.need_redraw = True
