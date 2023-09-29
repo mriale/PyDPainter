@@ -984,6 +984,13 @@ class pydpainter:
             mouseX = (mouseX - go[0] + (gs[0]//2)) // gs[0] * gs[0] + go[0]
             mouseY = (mouseY - go[1] + (gs[1]//2)) // gs[1] * gs[1] + go[1]
 
+        #make sure coords are inside canvas
+        pixel_size = config.pixel_canvas.get_size()
+        mouseX = max(0, mouseX)
+        mouseX = min(pixel_size[0]-1, mouseX)
+        mouseY = max(0, mouseY)
+        mouseY = min(pixel_size[1]-1, mouseY)
+
         return((mouseX, mouseY))
 
     def has_event(self, timeout=16):
