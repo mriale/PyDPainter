@@ -938,6 +938,12 @@ class pydpainter:
                     mouseY = 0
                 else:
                     mouseY = (((mouseY - y0) * zoom_height) // yh) + zy0
+
+            #make sure coords don't go off page
+            mouseX = max(mouseX,0)
+            mouseY = max(mouseY,0)
+            mouseX = min(mouseX,self.pixel_width-1)
+            mouseY = min(mouseY,self.pixel_height-1)
         else:
             self.zoom.mousedown_side = 0
             #Don't apply page offset to reqestors
@@ -979,13 +985,6 @@ class pydpainter:
             gs = self.grid_size
             mouseX = (mouseX - go[0] + (gs[0]//2)) // gs[0] * gs[0] + go[0]
             mouseY = (mouseY - go[1] + (gs[1]//2)) // gs[1] * gs[1] + go[1]
-
-        #make sure coords are inside canvas
-        pixel_size = config.pixel_canvas.get_size()
-        mouseX = max(0, mouseX)
-        mouseX = min(pixel_size[0]-1, mouseX)
-        mouseY = max(0, mouseY)
-        mouseY = min(pixel_size[1]-1, mouseY)
 
         return((mouseX, mouseY))
 
