@@ -938,6 +938,12 @@ class pydpainter:
                     mouseY = 0
                 else:
                     mouseY = (((mouseY - y0) * zoom_height) // yh) + zy0
+
+            #make sure coords don't go off page
+            mouseX = max(mouseX,0)
+            mouseY = max(mouseY,0)
+            mouseX = min(mouseX,self.pixel_width-1)
+            mouseY = min(mouseY,self.pixel_height-1)
         else:
             self.zoom.mousedown_side = 0
             #Don't apply page offset to reqestors
