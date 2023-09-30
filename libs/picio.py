@@ -274,7 +274,7 @@ def load_pic(filename, config, status_func=None):
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif ifftype != "NONE":
-        cranges = []
+        config.cranges = []
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
             config.pal = get_truecolor_palette(pic.convert(), 256)
@@ -300,9 +300,8 @@ def load_pic(filename, config, status_func=None):
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
 
-        while len(cranges) < 6:
-            cranges.append(colorrange(0,1,0,0))
-        config.cranges = cranges
+        while len(config.cranges) < 6:
+            config.cranges.append(colorrange(0,1,0,0))
     else:
         pic = config.pixel_canvas
 

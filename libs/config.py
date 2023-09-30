@@ -181,17 +181,6 @@ class pydpainter:
         self.dinfo = pygame.display.Info()
         self.initialize()
 
-        #load picture if specified from command line
-        if config.args.filename:
-            filename = config.args.filename
-            config.pixel_canvas = load_pic(filename, config)
-            config.truepal = list(config.pal)
-            config.pal = config.unique_palette(config.pal)
-            config.initialize_surfaces()
-            config.filepath = os.path.dirname(filename)
-            config.filename = filename
-            config.modified_count = 0
-
         #load picture if recovered
         if do_recover != "":
             filename = os.path.join(do_recover, "recover.bmp")
@@ -199,7 +188,17 @@ class pydpainter:
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
             config.initialize_surfaces()
+            config.modified_count = 0
+
+        #load picture if specified from command line
+        elif config.args.filename:
+            filename = config.args.filename
+            config.pixel_canvas = load_pic(filename, config)
+            config.truepal = list(config.pal)
+            config.pal = config.unique_palette(config.pal)
+            config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
+            config.filename = filename
             config.modified_count = 0
 
     def closest_scale4(self,maxnum,num):

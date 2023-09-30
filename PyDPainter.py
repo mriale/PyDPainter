@@ -5,7 +5,7 @@ PyDPainter.py
 Build a usable pixel art paint program in pygame
 """
 
-import sys, math, os, random, colorsys, traceback, datetime
+import sys, math, os, random, colorsys, traceback, datetime, platform
 
 try:
     import contextlib
@@ -67,6 +67,8 @@ def write_recover():
     pygame.image.save(config.pixel_canvas, "recover.bmp")
     pygame.image.save(config.pixel_canvas, "recover.png")
     save_iffinfo("recover.bmp")
+    with open("platform.txt", "w") as f:
+        f.write(str(platform.uname()))
 
 def recover_file(dir_name):
     global do_recover
@@ -93,11 +95,13 @@ def check_recover():
             import tkinter as tk
             root = tk.Tk()
             root.title("Recovery")
-            message = tk.Label(root, text="PyDPainter Recovery\nRecover from:")
+            heading = tk.Label(root, text="PyDPainter Recovery", font="Helvetica 16 bold")
+            heading.pack()
+            message = tk.Label(root, text="Recover from:")
             message.pack()
             buttons = []
             pics = []
-            for dir_name in dir_list:
+            for dir_name in sorted(dir_list):
                 pics.append(tk.PhotoImage(file=os.path.join(recover_path, dir_name, "recover.png")).subsample(4, 4))
                 buttons.append(tk.Button(root, text=dir_name, image=pics[-1], compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
 
