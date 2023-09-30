@@ -5,7 +5,7 @@ PyDPainter.py
 Build a usable pixel art paint program in pygame
 """
 
-import sys, math, os, random, colorsys
+import sys, math, os, random, colorsys, traceback, datetime
 
 try:
     import contextlib
@@ -46,10 +46,74 @@ os.chdir(os.path.realpath(os.path.dirname(__file__)))
 import libs.pixelfont
 from libs.pixelfont import PixelFont
 
+from libs.picio import *
+
 from operator import itemgetter
 
 from libs.config import *
 
+root = None
+do_recover = ""
+
+def write_recover():
+    now = datetime.datetime.now()
+    datestr = now.strftime('%Y-%m-%d_%H%M%S')
+    recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover", datestr)
+    os.makedirs(recover_path, exist_ok=True)
+    os.chdir(recover_path)
+    with open("stackdump.txt", "w") as f:
+        f.write(traceback.format_exc())
+    print(traceback.format_exc())
+    pygame.image.save(config.pixel_canvas, "recover.bmp")
+    pygame.image.save(config.pixel_canvas, "recover.png")
+    save_iffinfo("recover.bmp")
+
+def recover_file(dir_name):
+    global do_recover
+    recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover", dir_name)
+    do_recover = recover_path
+    root.destroy()
+
+def remove_files():
+    from tkinter.messagebox import askyesno
+    import shutil
+    answer = askyesno(title='Remove Recovery Files?',
+                    message='Are you sure that you want to remove all PyDPainter recovery files?')
+    if answer:
+        recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover")
+        shutil.rmtree(recover_path)
+        root.destroy()
+
+def check_recover():
+    global root
+    recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover")
+    if os.path.exists(recover_path):
+        dir_list = os.listdir(recover_path)
+        if len(dir_list) >= 1:
+            import tkinter as tk
+            root = tk.Tk()
+            root.title("Recovery")
+            message = tk.Label(root, text="PyDPainter Recovery\nRecover from:")
+            message.pack()
+            buttons = []
+            pics = []
+            for dir_name in dir_list:
+                pics.append(tk.PhotoImage(file=os.path.join(recover_path, dir_name, "recover.png")).subsample(4, 4))
+                buttons.append(tk.Button(root, text=dir_name, image=pics[-1], compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
+
+            buttons.append(tk.Button(root, text="Delete all", command=remove_files))
+            buttons.append(tk.Button(root, text="Continue without recovering", command=root.destroy))
+
+            for b in buttons:
+                b.pack()
+
+            # keep the window displaying
+            root.mainloop()
+
 if __name__ == "__main__":
-    config = pydpainter()
-    config.run()
+    check_recover()
+    config = pydpainter(do_recover)
+    try:
+        config.run()
+    except Exception:
+        write_recover()

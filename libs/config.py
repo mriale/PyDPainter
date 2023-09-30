@@ -149,7 +149,7 @@ def drop_load_progress(percent):
 
 class pydpainter:
 
-    def __init__(self):
+    def __init__(self, do_recover):
         global config
         config = self
         prim_set_config(self)
@@ -190,6 +190,16 @@ class pydpainter:
             config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
             config.filename = filename
+            config.modified_count = 0
+
+        #load picture if recovered
+        if do_recover != "":
+            filename = os.path.join(do_recover, "recover.bmp")
+            config.pixel_canvas = load_pic(filename, config)
+            config.truepal = list(config.pal)
+            config.pal = config.unique_palette(config.pal)
+            config.initialize_surfaces()
+            config.filepath = os.path.dirname(filename)
             config.modified_count = 0
 
     def closest_scale4(self,maxnum,num):
@@ -1626,6 +1636,8 @@ class pydpainter:
                 elif e.unicode == chr(178): #AZERTY backtick key
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
+                elif e.unicode == "\"":
+                    dummy = 1 / 0
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
