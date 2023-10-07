@@ -138,14 +138,31 @@ class Perspective:
 
         config.recompose()
 
+
+    def cursor2pos(self, coords):
+        # Convert screen coords into position of 3D cursor
+        x,y = coords
+        z = 0
+        p = np.matrix([[x, y, z, 1.0]])
+        # Take mouse coords and convert to world coords
+        p = p @ np.linalg.inv(self.world2screen)
+        # Unproject the world coords
+        d = self.dist
+        p2 = np.copy(p)
+        p2[:,0] *= (p2[:,2]+d)/d
+        p2[:,1] *= (p2[:,2]+d)/d
+        p2[:,2] *= (p2[:,2]+d)/d
+        p2 = p2 @ np.linalg.inv(self.screen2world)
+        return [p2[0,0], p2[0,1], p2[0,2]]
+
     def do_mode(self):
         running = 1
         delta = 0.05
         distdelta = 10
         update_cursor = True
         x,y = config.get_mouse_pixel_pos()
-        self.pos[0] = x
-        self.pos[1] = y
+        self.center[0] = x
+        self.center[1] = y
 
         while running:
             if update_cursor:
@@ -207,14 +224,20 @@ class Perspective:
                         self.dist -= distdelta
                         print(self.dist)
                 elif event.unicode == ';':
-                    self.pos[2] += 2
+                    self.center[2] += 2
                 elif event.unicode == '\'':
-                    self.pos[2] -= 2
+                    self.center[2] -= 2
                 else:
                     update_cursor = False
             elif event.type == MOUSEMOTION:
-                x,y = config.get_mouse_pixel_pos(event)
-                self.pos[0] = x
-                self.pos[1] = y
+                self.pos = self.cursor2pos(config.get_mouse_pixel_pos(event))
                 update_cursor = True
 
+            if event.type == KEYDOWN and update_cursor:
+                self.pos = self.cursor2pos(config.get_mouse_pixel_pos(event))
+                update_cursor = True
+                """
+                x,y = config.get_mouse_pixel_pos(event)
+                self.center[0] = x
+                self.center[1] = y
+                """
