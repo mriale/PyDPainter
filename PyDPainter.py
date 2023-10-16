@@ -64,8 +64,8 @@ def write_recover():
     with open("stackdump.txt", "w") as f:
         f.write(traceback.format_exc())
     print(traceback.format_exc())
-    pygame.image.save(config.pixel_canvas, "recover.bmp")
-    pygame.image.save(config.pixel_canvas, "recover.png")
+    pygame.image.save(config.undo_image[config.undo_index], "recover.bmp")
+    pygame.image.save(config.undo_image[config.undo_index], "recover.png")
     save_iffinfo("recover.bmp")
     with open("platform.txt", "w") as f:
         f.write(str(platform.uname()))
