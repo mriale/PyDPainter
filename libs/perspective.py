@@ -156,6 +156,9 @@ class Perspective:
         return [p2[0,0], p2[0,1], p2[0,2]]
 
     def do_mode(self):
+        #Disable perspective for now
+        return
+
         running = 1
         delta = 0.05
         distdelta = 10
