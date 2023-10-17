@@ -125,7 +125,7 @@ class Animation:
 
     def handle_events(self, event):
         if event.type == KEYDOWN:
-            if event.mod == KMOD_NONE:
+            if not event.mod & KMOD_SHIFT and not event.mod & KMOD_CTRL:
                 if event.key == K_1:
                     self.prev_frame()
                 elif event.key == K_2:
