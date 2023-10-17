@@ -22,6 +22,7 @@ from libs.minitools import *
 from libs.menubar import *
 from libs.menus import *
 from libs.perspective import *
+from libs.animation import *
 from libs.version import *
 from libs.zoom import *
 
@@ -162,6 +163,7 @@ class pydpainter:
         colorrange_set_config(self)
         version_set_config(self)
         perspective_set_config(self)
+        animation_set_config(self)
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
@@ -413,6 +415,8 @@ class pydpainter:
         self.background.clear()
 
         self.perspective = Perspective()
+
+        self.anim = Animation()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
@@ -1656,6 +1660,9 @@ class pydpainter:
                 if e.key in [K_LALT, K_RALT, K_LMETA, K_RMETA] and config.meta_alt != 0:
                     curr_action.mouseup(self.get_mouse_pixel_pos(e), config.meta_alt)
                     config.get_mouse_pressed(e)
+
+            #Process events for animation
+            config.anim.handle_events(e)
 
             #No toolbar event so process event as action on selected tool
             if curr_action != None and len(te_list) == 0 and \

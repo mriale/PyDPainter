@@ -974,6 +974,26 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoAnimFrameAdd(MenuAction):
+    def selected(self, attrs):
+        config.anim.add_frame()
+
+class DoAnimFrameSetNumber(MenuAction):
+    def selected(self, attrs):
+        config.anim.num_frames_req(config.pixel_req_canvas)
+
+class DoAnimFrameCopyAll(MenuAction):
+    def selected(self, attrs):
+        config.anim.copy_frame_to_all()
+
+class DoAnimFrameDelete(MenuAction):
+    def selected(self, attrs):
+        config.anim.delete_frame()
+
+class DoAnimFrameDeleteAll(MenuAction):
+    def selected(self, attrs):
+        config.anim.delete_all_frames()
+
 class DoStencilMake(MenuAction):
     def selected(self, attrs):
         stencil_req(config.pixel_req_canvas)
@@ -1218,12 +1238,18 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Anim", [
-            ["!Open..."],
-            ["!Save..."],
-            ["!Move..."],
-            ["!Frames"],
-            ["!Control"],
-            ["!Anim Brush"],
+            ["Open..."],
+            ["Save..."],
+            ["Move..."],
+            ["Frames", [
+                ["Add Frame", " ", DoAnimFrameAdd],
+                ["Set #...", " ", DoAnimFrameSetNumber],
+                ["Copy to All", " ", DoAnimFrameCopyAll],
+                ["Delete Frame", " ", DoAnimFrameDelete],
+                ["Delete All", " ", DoAnimFrameDeleteAll],
+            ]],
+            ["Control"],
+            ["Anim Brush"],
         ]])
 
     menubar.add_menu(
