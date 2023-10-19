@@ -195,13 +195,15 @@ class pydpainter:
         #load picture if specified from command line
         elif config.args.filename:
             filename = config.args.filename
-            config.pixel_canvas = load_pic(filename, config)
+            config.pixel_canvas = load_pic(filename, config, cmd_load=True)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
             config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
             config.filename = filename
             config.modified_count = 0
+            if config.anim.num_frames > 1:
+                config.anim.show_curr_frame()
 
     def closest_scale4(self,maxnum,num):
         if num >= maxnum:
@@ -415,8 +417,6 @@ class pydpainter:
         self.background.clear()
 
         self.perspective = Perspective()
-
-        self.anim = Animation()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
@@ -727,6 +727,7 @@ class pydpainter:
 
         self.stencil = Stencil()
         self.background = Background()
+        self.anim = Animation()
 
         self.cycling = False
         self.cycle_handled = False
@@ -1403,9 +1404,9 @@ class pydpainter:
                 if filename != (()) and filename != "":
                     global progress_req
                     config.stencil.enable = False
-                    progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+                    progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
                     try:
-                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
+                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress, cmd_load=True)
                         close_progress_req(progress_req)
                         config.truepal = list(config.pal)
                         config.pal = config.unique_palette(config.pal)
@@ -1413,6 +1414,8 @@ class pydpainter:
                         config.filepath = os.path.dirname(filename)
                         config.filename = filename
                         config.modified_count = 0
+                        if config.anim.num_frames > 1:
+                            config.anim.show_curr_frame()
                     except:
                         close_progress_req(progress_req)
                         io_error_req("Load Error", "Unable to open image:\n%s", filename)

@@ -10,12 +10,36 @@ import libs.gadget
 from libs.gadget import *
 
 from libs.prim import *
+from libs.menureq import *
+from libs.picio import *
 
 config = None
 
 def animation_set_config(config_in):
     global config
     config = config_in
+
+def io_error_anim_req(title, message, filename, linelen=33):
+    if len(filename) > linelen:
+        short_file = "..." + filename[-(linelen-3):]
+    else:
+        short_file = filename
+    dummy = question_req(config.pixel_req_canvas,
+             title,
+             message % (short_file),
+             ["OK"],
+             [K_RETURN])
+
+prev_time = 0
+progress_req = None
+def load_progress_anim(percent):
+    global prev_time
+
+    curr_time = pygame.time.get_ticks()
+    if curr_time - prev_time > 33:
+        prev_time = curr_time
+        update_progress_req(progress_req, config.pixel_req_canvas, percent)
+
 
 class Animation:
     def __init__(self):
@@ -27,11 +51,16 @@ class Animation:
 
     def save_curr_frame(self):
         self.frame[self.curr_frame-1] = config.undo_image[config.undo_index].copy()
+        if config.cycling:
+            self.frame[self.curr_frame-1].set_palette(config.backuppal)
 
     def show_curr_frame(self):
+        if self.curr_frame > self.num_frames:
+            self.curr_frame = self.num_frames
         if self.frame[self.curr_frame-1] == None:
             config.pixel_canvas.fill(config.bgcolor);
         else:
+            self.frame[self.curr_frame-1].set_palette(config.pal)
             config.pixel_canvas.blit(self.frame[self.curr_frame-1], (0,0))
 
         if self.num_frames > 1:
@@ -57,16 +86,18 @@ class Animation:
             self.show_curr_frame()
 
     def prev_frame(self):
-        if self.curr_frame > 1:
-            self.save_curr_frame()
-            self.curr_frame -= 1
-            self.show_curr_frame()
+        self.save_curr_frame()
+        self.curr_frame -= 1
+        if self.curr_frame < 1:
+            self.curr_frame = self.num_frames
+        self.show_curr_frame()
 
     def next_frame(self):
-        if self.curr_frame < self.num_frames:
-            self.save_curr_frame()
-            self.curr_frame += 1
-            self.show_curr_frame()
+        self.save_curr_frame()
+        self.curr_frame += 1
+        if self.curr_frame > self.num_frames:
+            self.curr_frame = 1
+        self.show_curr_frame()
 
     def add_frame(self):
         self.save_curr_frame()
@@ -122,6 +153,32 @@ class Animation:
 
     def remember_frame(self):
         return
+
+    def open_file(self):
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
+            try:
+                config.pixel_canvas = load_pic(filename, config, status_func=load_progress_anim, is_anim=True)
+                config.bgcolor = 0
+                config.color = 1
+                close_progress_req(progress_req)
+                config.truepal = list(config.pal)
+                config.pal = config.unique_palette(config.pal)
+                config.initialize_surfaces()
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
+                config.modified_count = 0
+                config.anim.show_curr_frame()
+            except:
+                close_progress_req(progress_req)
+                io_error_anim_req("Load Error", "Unable to open anim:\n%s", filename)
+
+    def save_file(self):
+        io_error_anim_req("Not Implemented", "Saving ANIM files\nis not implemented yet.%s", "")
 
     def handle_events(self, event):
         if event.type == KEYDOWN:

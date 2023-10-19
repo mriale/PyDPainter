@@ -248,6 +248,222 @@ def load_iff(filename, config, ifftype):
 
     return pic
 
+#read in FORM header
+def read_form(file):
+    form_length = 0
+    form_id = file.read(4)
+    if len(form_id) == 0:
+        raise EOFError
+    if form_id == b'FORM':
+        len_bytes = file.read(4)
+        if len(len_bytes) == 0:
+            raise EOFError
+        len_tuple = unpack(">I", len_bytes)
+        form_length = len_tuple[0]
+        form_name = file.read(4)
+        if len(form_name) == 0:
+            raise EOFError
+
+    return (str(form_name), form_length)
+
+#read in an IFF ANIM file
+def load_anim(filename, config, ifftype, status_func=None):
+    cranges = []
+    pic = None
+    display_mode = -1
+
+    #initialize anim header
+    anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
+
+    try:
+        filesize = os.path.getsize(filename)
+        iff_file = open(filename,'rb')
+        iff_file.seek(12)
+        form_name, form_len = read_form(iff_file)
+        chunk = Chunk(iff_file)
+
+        while chunk:
+            #print(form_name + ": " + chunk.getname().decode(encoding='utf-8'))
+            if chunk.getname() == b'FORM':
+                iff_file.seek(-8,1) # seek before FORM header
+                form_name, form_len = read_form(iff_file)
+            elif chunk.getname() == b'CRNG':
+                #create color range from chunk
+                crng_bytes = chunk.read()
+                (pad, rate, flags, low, high) = unpack(">HHHBB", crng_bytes)
+                if len(cranges) < 6:
+                    cranges.append(colorrange(rate,flags,low,high))
+            elif chunk.getname() == b'CCRT':
+                #Graphicraft color range
+                ccrt_bytes = chunk.read()
+                (dir, low, high, sec, micro, pad) = unpack(">hBBiih", ccrt_bytes)
+                flags = 1
+                if dir > 0:
+                    flags |= 2
+                cranges.append(colorrange(273067//(micro//1000+sec*1000),flags,low,high))
+            elif chunk.getname() == b'CAMG':
+                #Amiga graphics mode
+                camg_bytes = chunk.read()
+                display_mode = unpack(">I", camg_bytes)[0]
+                if display_mode & config.MODE_HAM:
+                    raise Exception("HAM mode not supported")
+            elif chunk.getname() == b'BMHD':
+                #bitmap header
+                bmhd_bytes = chunk.read()
+                (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
+                config.pal = config.pal[0:1<<nPlanes]
+                if nPlanes <= 6:
+                    config.color_depth = 16
+                else:
+                    config.color_depth = 256
+            elif chunk.getname() == b'CMAP':
+                #color map header
+                cmap_bytes = chunk.read()
+                ncol = len(cmap_bytes)//3
+                while len(config.pal) < ncol:
+                    config.pal.append((0,0,0))
+                for i in range(ncol):
+                    config.pal[i] = unpack(">BBB", cmap_bytes[i*3:(i+1)*3])
+            elif chunk.getname() == b'BODY':
+                #bitmap (interleaved)
+                body_bytes = chunk.read()
+                if ifftype == "ANIM":
+                    pic = pygame.Surface((w2b(w)*8, h),0, depth=8)
+                    surf_array = pygame.surfarray.pixels2d(pic)  # Create an array from the surface.
+                    decode_ilbm_body(body_bytes, compression, nPlanes, surf_array)
+                    surf_array = None
+                if display_mode > 0 and display_mode & config.MODE_EXTRA_HALFBRIGHT:
+                    for i in range(32):
+                        config.pal[i+32] = (config.pal[i][0]//2, config.pal[i][1]//2, config.pal[i][2]//2)
+
+                pic.set_palette(config.pal)
+                config.anim.curr_frame = 1
+                config.anim.num_frames = 1
+                config.anim.frame = [None]
+                config.anim.frame_delay = [0]
+            elif chunk.getname() == b'ANHD':
+                #animation header
+                anhd_bytes = chunk.read()
+                (anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b) = unpack(">BBHHhhLLBBLQQ", anhd_bytes)
+                #print(f"{anim_mode=}")
+            elif chunk.getname() == b'DLTA':
+                #Read in column pointers
+                dlta_bytes = chunk.read()
+                (p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15) = unpack(">LLLLLLLLLLLLLLLL", dlta_bytes[:64])
+                pdelta = (p0,p1,p2,p3,p4,p5,p6,p7,p8,p9,p10,p11,p12,p13,p14,p15)
+                #print(pdelta)
+                if anim_mode == 5:
+                    if config.anim.num_frames == 1:
+                        config.anim.frame[0] = pic
+                        config.anim.frame.append(pic.copy())
+                    else:
+                        if anim_interleave == 0:
+                            bframes = 2
+                        else:
+                            bframes = anim_interleave
+                        config.anim.frame.append(config.anim.frame[config.anim.num_frames-bframes].copy())
+                    if anim_reltime == 0:
+                        anim_reltime = 1
+                    config.anim.frame_delay.append(60/anim_reltime)
+                    config.anim.num_frames += 1
+
+                    #convert working frame to planes
+                    surf_array = pygame.surfarray.pixels2d(config.anim.frame[-1])
+                    #Convert image to height x depth x width array
+                    planes = c2p(surf_array)
+                    #print(f"{planes.shape=}")
+                    ph, pd, pw = planes.shape
+
+                    #print(f"{config.anim.num_frames=}")
+                    for pli in range(len(pdelta)-1):
+                        if pli > 7:
+                            break
+                        if pdelta[pli] == 0:
+                            continue
+                        #print(f"{pli=}")
+                        p = pdelta[pli]
+                        pn = pdelta[pli+1]
+                        if pn == 0:
+                            pn = len(dlta_bytes)
+                        colno = 0
+                        while p < pn and p < len(dlta_bytes) and colno < pw:
+                            opcount = dlta_bytes[p]
+                            #print(f"{colno=} {opcount=}")
+                            p += 1
+                            pp = 0
+                            while opcount:
+                                #Unique
+                                if dlta_bytes[p] & 0x80:
+                                    count = dlta_bytes[p] & 0x7f
+                                    p+=1
+                                    if p >= len(dlta_bytes):
+                                        break
+                                    if p+count >= len(dlta_bytes):
+                                        count = len(dlta_bytes)-p
+                                    #print(f"{p:5d}: {pp:5d} uniq {count=} {dlta_bytes[p:p+count]=}")
+                                    planes[pp:pp+count, pli, colno] = list(dlta_bytes[p:p+count])
+                                    p += count
+                                    pp += count
+                                #Skip
+                                elif dlta_bytes[p] != 0:
+                                    count = dlta_bytes[p]
+                                    #print(f"{p:5d}: {pp:5d} skip {count=}")
+                                    pp += count
+                                    p+=1
+                                #Same
+                                else:
+                                    p+=1
+                                    if p >= len(dlta_bytes):
+                                        break
+                                    count = dlta_bytes[p]
+                                    p+=1
+                                    if p >= len(dlta_bytes):
+                                        break
+                                    value = dlta_bytes[p]
+                                    #print(f"{p:5d}: {pp:5d} same {count=} {value=}")
+                                    planes[pp:pp+count, pli, colno] = value
+                                    pp += count
+                                    p+=1
+                                opcount -= 1
+                            colno += 1
+
+                    #Turn array back into image
+                    p2c(planes, surf_array)
+                    surf_array = None
+                if status_func != None:
+                    status_func(iff_file.tell() / filesize)
+            else:
+                chunk.skip()
+            chunk = Chunk(iff_file)
+    except EOFError:
+        pass
+
+    if display_mode >= 0 and display_mode & config.MONITOR_ID_MASK == 0:
+        display_mode |= config.NTSC_MONITOR_ID
+    config.display_mode = display_mode
+
+    while len(cranges) < 6:
+        cranges.append(colorrange(0,1,0,0))
+
+    config.cranges = cranges
+
+    #trim final 2 frames of looping animation
+    if config.anim.num_frames > 3:
+        del config.anim.frame[-1]
+        del config.anim.frame[-1]
+        del config.anim.frame_delay[-1]
+        del config.anim.frame_delay[-1]
+        config.anim.num_frames -= 2
+
+    #crop image to actual bitmap size
+    if w != w2b(w)*8:
+        newpic = pygame.Surface((w, h), 0, pic)
+        newpic.set_palette(config.pal)
+        newpic.blit(pic, (0,0))
+        pic = newpic
+
+    return pic
+
 def pal_power_2(palin):
     ncol = len(palin)
     #Copy palette to avoid tuple that we can't append to
@@ -266,10 +482,17 @@ def pal_power_2(palin):
 
     return pal
 
-def load_pic(filename, config, status_func=None):
+def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
     ifftype = iff_type(filename)
+    if not cmd_load and ((is_anim and ifftype != "ANIM") or (not is_anim and ifftype == "ANIM")):
+        raise Exception("Load error")
     if ifftype in ["ILBM", "PBM"]:
         pic = load_iff(filename, config, ifftype)
+        config.pal = pal_power_2(config.pal)
+        config.pal = config.quantize_palette(config.pal, config.color_depth)
+        pic.set_palette(config.pal)
+    elif ifftype == "ANIM":
+        pic = load_anim(filename, config, ifftype, status_func=status_func)
         config.pal = pal_power_2(config.pal)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)

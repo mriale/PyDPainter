@@ -55,7 +55,7 @@ class DoOpen(MenuAction):
         config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 config.bgcolor = 0
@@ -136,7 +136,7 @@ class DoRevert(MenuAction):
             else:
                 return
 
-            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 config.bgcolor = 0
@@ -974,6 +974,14 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
+class DoAnimOpen(MenuAction):
+    def selected(self, attrs):
+        config.anim.open_file()
+
+class DoAnimSave(MenuAction):
+    def selected(self, attrs):
+        config.anim.save_file()
+
 class DoAnimFrameAdd(MenuAction):
     def selected(self, attrs):
         config.anim.add_frame()
@@ -1238,8 +1246,8 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Anim", [
-            ["Open..."],
-            ["Save..."],
+            ["Open...", " ", DoAnimOpen],
+            ["Save...", " ", DoAnimSave],
             ["Move..."],
             ["Frames", [
                 ["Add Frame", " ", DoAnimFrameAdd],
