@@ -12,6 +12,7 @@ from struct import pack, unpack
 
 from libs.colorrange import *
 from libs.prim import *
+from libs.animation import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -339,8 +340,7 @@ def load_anim(filename, config, ifftype, status_func=None):
                 pic.set_palette(config.pal)
                 config.anim.curr_frame = 1
                 config.anim.num_frames = 1
-                config.anim.frame = [None]
-                config.anim.frame_delay = [0]
+                config.anim.frame = [Frame(pic, pal=config.pal)]
             elif chunk.getname() == b'ANHD':
                 #animation header
                 anhd_bytes = chunk.read()
@@ -354,8 +354,7 @@ def load_anim(filename, config, ifftype, status_func=None):
                 #print(pdelta)
                 if anim_mode == 5:
                     if config.anim.num_frames == 1:
-                        config.anim.frame[0] = pic
-                        config.anim.frame.append(pic.copy())
+                        config.anim.frame.append(Frame(pic.copy()))
                     else:
                         if anim_interleave == 0:
                             bframes = 2
@@ -364,11 +363,12 @@ def load_anim(filename, config, ifftype, status_func=None):
                         config.anim.frame.append(config.anim.frame[config.anim.num_frames-bframes].copy())
                     if anim_reltime == 0:
                         anim_reltime = 1
-                    config.anim.frame_delay.append(60/anim_reltime)
+                    config.anim.frame[-1].delay = 60/anim_reltime
+                    config.anim.frame[-1].pal = list(config.pal)
                     config.anim.num_frames += 1
 
                     #convert working frame to planes
-                    surf_array = pygame.surfarray.pixels2d(config.anim.frame[-1])
+                    surf_array = pygame.surfarray.pixels2d(config.anim.frame[-1].image)
                     #Convert image to height x depth x width array
                     planes = c2p(surf_array)
                     #print(f"{planes.shape=}")
@@ -451,8 +451,6 @@ def load_anim(filename, config, ifftype, status_func=None):
     if config.anim.num_frames > 3:
         del config.anim.frame[-1]
         del config.anim.frame[-1]
-        del config.anim.frame_delay[-1]
-        del config.anim.frame_delay[-1]
         config.anim.num_frames -= 2
 
     #crop image to actual bitmap size

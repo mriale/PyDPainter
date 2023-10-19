@@ -40,28 +40,45 @@ def load_progress_anim(percent):
         prev_time = curr_time
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
+class Frame:
+    def __init__(self, image=None, delay=0, pal=None):
+        self.image = image
+        self.delay = delay
+        if pal == None:
+            self.pal = list(config.pal)
+        else:
+            self.pal = list(pal)
+
+    def copy(self):
+        image = None
+        if self.image != None:
+            image = self.image.copy()
+
+        return Frame(image, self.delay, self.pal)
 
 class Animation:
     def __init__(self):
         self.num_frames = 1
         self.curr_frame = 1
         self.frame_rate = 30
-        self.frame = [None]
-        self.frame_delay = [0]
+        self.frame = [Frame()]
 
     def save_curr_frame(self):
-        self.frame[self.curr_frame-1] = config.undo_image[config.undo_index].copy()
+        self.frame[self.curr_frame-1].image = config.undo_image[config.undo_index].copy()
         if config.cycling:
-            self.frame[self.curr_frame-1].set_palette(config.backuppal)
+            self.frame[self.curr_frame-1].image.set_palette(config.backuppal)
 
     def show_curr_frame(self):
         if self.curr_frame > self.num_frames:
             self.curr_frame = self.num_frames
-        if self.frame[self.curr_frame-1] == None:
+        if self.frame[self.curr_frame-1].image == None:
             config.pixel_canvas.fill(config.bgcolor);
         else:
-            self.frame[self.curr_frame-1].set_palette(config.pal)
-            config.pixel_canvas.blit(self.frame[self.curr_frame-1], (0,0))
+            self.frame[self.curr_frame-1].image.set_palette(self.frame[self.curr_frame-1].pal)
+            config.set_all_palettes(self.frame[self.curr_frame-1].pal)
+            config.pal = self.frame[self.curr_frame-1].pal
+            #self.frame[self.curr_frame-1].image.set_palette(config.pal)
+            config.pixel_canvas.blit(self.frame[self.curr_frame-1].image, (0,0))
 
         if self.num_frames > 1:
             config.menubar.title = f"{self.curr_frame}/{self.num_frames}" + (" " * 10)
@@ -102,7 +119,6 @@ class Animation:
     def add_frame(self):
         self.save_curr_frame()
         self.frame.insert(self.curr_frame, self.frame[self.curr_frame-1].copy())
-        self.frame_delay.insert(self.curr_frame, self.frame_delay[self.curr_frame-1])
         self.num_frames += 1
         self.next_frame()
 
@@ -110,7 +126,6 @@ class Animation:
         if self.num_frames > 1:
             self.save_curr_frame()
             del self.frame[self.curr_frame-1]
-            del self.frame_delay[self.curr_frame-1]
             self.num_frames -= 1
             if self.curr_frame > self.num_frames:
                 self.curr_frame = self.num_frames
@@ -119,10 +134,8 @@ class Animation:
     def copy_frame_to_all(self):
         self.save_curr_frame()
         frame = self.frame[self.curr_frame-1]
-        delay = self.frame_delay[self.curr_frame-1]
         for i in range(self.num_frames):
             self.frame[i] = frame
-            self.frame_delay[i] = delay
         self.show_curr_frame()
 
     def delete_all_frames(self):
@@ -133,12 +146,10 @@ class Animation:
         if count > self.num_frames:
             while self.num_frames < count:
                 self.frame.insert(self.curr_frame, self.frame[self.curr_frame-1].copy())
-                self.frame_delay.insert(self.curr_frame, self.frame_delay[self.curr_frame-1])
                 self.num_frames += 1
         elif count < self.num_frames:
             while self.num_frames > count:
                 del self.frame[self.curr_frame-1]
-                del self.frame_delay[self.curr_frame-1]
                 self.num_frames -= 1
                 if self.curr_frame > self.num_frames:
                     self.curr_frame = self.num_frames
@@ -162,7 +173,7 @@ class Animation:
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
-                config.pixel_canvas = load_pic(filename, config, status_func=load_progress_anim, is_anim=True)
+                config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, is_anim=True)
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
