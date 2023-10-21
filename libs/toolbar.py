@@ -59,6 +59,9 @@ class ToolGadget(Gadget):
         if self.action != None and "get_tip" in dir(self.action):
             tip = self.action.get_tip()
             if tip != None:
+                if len(tip) == 0:
+                    self.toolbar.tip_canvas = None
+                    return
                 #size box
                 wrect = title_font.size("W")
                 lineheight = title_font.get_linesize()
@@ -240,7 +243,7 @@ class Toolbar:
             for toolg in group_list:
                 toolg.group_list = group_list
 
-    def draw(self, screen=None, offset=(0,0)):
+    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         if screen == None:
             screen = self.screen
 
@@ -253,9 +256,9 @@ class Toolbar:
         for toolg in self.tools:
             if isinstance(toolg, ToolGadget) and toolg.tool_type != ToolGadget.TT_CUSTOM:
                 if toolg.state != 0:
-                    toolg.draw(screen, None, offset=offset)
+                    toolg.draw(screen, font, offset=offset)
             else:
-                toolg.draw(screen, None, offset=offset)
+                toolg.draw(screen, font, offset=offset, fgcolor=fgcolor, bgcolor=bgcolor, hcolor=hcolor)
 
     def tool_id(self, id):
         for g in self.tools:
@@ -352,8 +355,10 @@ class Toolbar:
             if event.type == MOUSEBUTTONUP:
                 self.wait_for_mouseup[event.button] = False
             for toolg in self.tools:
-                if toolg.tool_type == ToolGadget.TT_SINGLE and toolg.state > 0:
+                if isinstance(toolg, ToolGadget) and toolg.tool_type == ToolGadget.TT_SINGLE and toolg.state > 0:
                     toolg.state = 0
+                else:
+                    ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
         elif event.type == KEYDOWN and \
              (event.unicode in self.hotkey_map or \
               event.key in self.hotkey_map):
@@ -371,6 +376,10 @@ class Toolbar:
             if True in self.wait_for_mouseup and \
                event.buttons == (0,0,0):
                 self.wait_for_mouseup = [False, False, False, False]
+            elif True in self.wait_for_mouseup:
+                for toolg in self.get_tools_by_coords(x,y):
+                    if not isinstance(toolg, ToolGadget):
+                        ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
             tip_on = False
             for toolg in self.get_tools_by_coords(x,y):
                 if toolg.pointin((x,y), toolg.rect) and "render_tip" in dir(toolg):

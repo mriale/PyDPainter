@@ -62,6 +62,8 @@ class Animation:
         self.curr_frame = 1
         self.frame_rate = 30
         self.frame = [Frame()]
+        self.repeat = False
+        self.frame_bookmark = -1
 
     def save_curr_frame(self):
         self.frame[self.curr_frame-1].image = config.undo_image[config.undo_index].copy()
@@ -80,11 +82,19 @@ class Animation:
             #self.frame[self.curr_frame-1].image.set_palette(config.pal)
             config.pixel_canvas.blit(self.frame[self.curr_frame-1].image, (0,0))
 
+        """
         if self.num_frames > 1:
             config.menubar.title = f"{self.curr_frame}/{self.num_frames}" + (" " * 10)
             config.menubar.title = config.menubar.title[:10]
         else:
             config.menubar.title = "PyDPainter"
+        """
+
+        framestr = f"{self.curr_frame}/{self.num_frames}"
+        framestr = ((9-len(framestr)) * " ") + framestr[-9:9]
+        config.animtoolbar.tool_id("framecount").label = framestr
+        config.animtoolbar.tool_id("frameslider").maxvalue = self.num_frames
+        config.animtoolbar.tool_id("frameslider").value = self.curr_frame-1
 
         config.clear_undo()
         config.save_undo()
@@ -157,13 +167,16 @@ class Animation:
         self.show_curr_frame()
 
     def ask_frame(self):
-        return
+        self.ask_frame_req(config.pixel_req_canvas)
 
     def play(self):
         return
 
     def remember_frame(self):
-        return
+        if self.frame_bookmark > 0:
+            self.save_curr_frame()
+            self.curr_frame = self.frame_bookmark
+            self.show_curr_frame()
 
     def open_file(self):
         global progress_req
@@ -228,6 +241,32 @@ class Animation:
                 elif event.key == K_8:
                     pass #animbrush last
 
+    def process_animtoolbar_events(self, mta_list, event):
+        for ge in mta_list:
+            if ge.gadget.id == "frameslider":
+                self.save_curr_frame()
+                self.curr_frame = ge.gadget.value + 1
+                self.show_curr_frame()
+            elif ge.gadget.id == "framecount":
+                if ge.type == ge.TYPE_GADGETDOWN:
+                    self.ask_frame()
+            elif ge.gadget.id == "prev":
+                pygame.time.set_timer(config.TOOLEVENT, 500)
+                self.repeat = True
+            elif ge.gadget.id == "next":
+                pygame.time.set_timer(config.TOOLEVENT, 500)
+                self.repeat = True
+        if len(mta_list) == 0 and pygame.event.event_name(event.type) == "UserEvent":
+            if config.animtoolbar.tool_id("prev").state == 1:
+                self.prev_frame()
+                pygame.time.set_timer(config.TOOLEVENT, 50)
+            elif config.animtoolbar.tool_id("next").state == 1:
+                self.next_frame()
+                pygame.time.set_timer(config.TOOLEVENT, 50)
+            elif self.repeat:
+                pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
+                self.repeat = False
+
     def num_frames_req(self, screen):
         req = str2req("Set Frame Count", """
 
@@ -258,6 +297,52 @@ class Animation:
                     if ge.gadget.label == "OK" and not req.has_error():
                         if int(countg.value) >= 1:
                             self.set_frame_count(int(countg.value))
+                            running = 0
+                    elif ge.gadget.label == "Cancel":
+                        running = 0 
+
+            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+                req.draw(screen)
+                config.recompose()
+
+        config.pixel_req_rect = None
+        config.recompose()
+
+        return
+
+    def ask_frame_req(self, screen):
+        req = str2req("Go To Frame", """
+
+   Frame: ____@@@@
+
+[Cancel][OK]
+""", "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+        req.center(screen)
+        config.pixel_req_rect = req.get_screen_rect()
+
+        frameg = req.gadget_id("10_1")
+        frameg.numonly = True
+        frameg.value = str(self.curr_frame)
+
+        req.draw(screen)
+        config.recompose()
+
+        running = 1
+        while running:
+            event = pygame.event.wait()
+            gevents = req.process_event(screen, event)
+
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                running = 0 
+
+            for ge in gevents:
+                if ge.gadget.type == Gadget.TYPE_BOOL:
+                    if ge.gadget.label == "OK" and not req.has_error():
+                        if int(frameg.value) >= 1:
+                            self.save_curr_frame()
+                            self.curr_frame = int(frameg.value)
+                            self.frame_bookmark = self.curr_frame
+                            self.show_curr_frame()
                             running = 0
                     elif ge.gadget.label == "Cancel":
                         running = 0 
