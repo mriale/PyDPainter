@@ -862,15 +862,21 @@ class pydpainter:
             img.set_palette(pal)
 
     def set_screen_offset(self, x, y):
-        # calculate offsets for toolbar and menubar if visible
+        # calculate offsets for toolbars and menubar if visible
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
+        tw = 0
+        mh = 0
+        atbh = 0
+
         if config.toolbar.visible:
             tw = config.toolbar.rect[2]
-        else:
-            tw = 0
+
         if config.menubar.visible:
             mh = config.menubar.rect[3]
-        else:
-            mh = 0
+
+        if config.animtoolbar.visible:
+            atbh = config.animtoolbar.rect[3] + 3*scaleY
 
         # Center canvas if smaller than the screen
         if self.pixel_width < self.screen_width - tw:
@@ -884,9 +890,9 @@ class pydpainter:
                 self.screen_offset_x = self.screen_width - self.pixel_width - tw
             elif x > 0:
                 self.screen_offset_x = 0
-        if self.pixel_height >= self.screen_height - mh:
-            if y < self.screen_height - self.pixel_height:
-                self.screen_offset_y = self.screen_height - self.pixel_height
+        if self.pixel_height >= self.screen_height - mh - atbh:
+            if y < self.screen_height - self.pixel_height - atbh:
+                self.screen_offset_y = self.screen_height - self.pixel_height - atbh
             elif y > mh:
                 self.screen_offset_y = mh
 
@@ -1058,6 +1064,9 @@ class pydpainter:
 
         config.stencil.draw(config.pixel_canvas)
 
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
+
         screen_rgb = None
         if self.zoom.on:
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
@@ -1067,11 +1076,15 @@ class pydpainter:
             zoom_height = self.screen_height // self.zoom.factor
 
             menu_bar_height = 0
+            atbh = 0
             if self.toolbar.visible:
                 zoom_width -= self.toolbar.rect[2] // self.zoom.factor
             if self.menubar.visible:
                 zoom_height -= self.menubar.rect[3] // self.zoom.factor
                 menu_bar_height = self.menubar.rect[3]
+            if self.animtoolbar.visible:
+                atbh = self.animtoolbar.rect[3] + 3*scaleY
+                zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
             self.zoom.xoffset = zxc - (w//2)
             self.zoom.yoffset = zyc - ((self.screen_height-menu_bar_height) // 2)
@@ -1083,8 +1096,8 @@ class pydpainter:
 
             if self.zoom.yoffset < -menu_bar_height:
                 self.zoom.yoffset = -menu_bar_height
-            elif self.zoom.yoffset > self.pixel_height - self.screen_height:
-                self.zoom.yoffset = self.pixel_height - self.screen_height
+            elif self.zoom.yoffset > self.pixel_height - self.screen_height + atbh:
+                self.zoom.yoffset = self.pixel_height - self.screen_height + atbh
 
             zx0 = zxc-(zoom_width//2)
             zy0 = zyc-(zoom_height//2)
@@ -1161,20 +1174,7 @@ class pydpainter:
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #blit animtoolbar layer
-        if self.anim.num_frames == 1:
-            self.animtoolbar.visible = False
-        else:
-            self.animtoolbar.visible = True
-        if self.menubar.visible and self.animtoolbar.visible:
-            atbh = self.menubar.rect[3]
-            atby = self.screen_height - atbh
-            atbw = self.screen_width - self.toolbar.rect[2]
-            atbslx = 80
-            pygame.draw.rect(screen_rgb, (0,0,0), (0,atby-1,atbw,1))
-            pygame.draw.rect(screen_rgb, (255,255,255), (0,atby,atbw,atbh))
-            self.animtoolbar.tool_id("frameslider").need_redraw = True
-            self.animtoolbar.tool_id("framecount").need_redraw = True
-            self.animtoolbar.draw(screen_rgb, font=config.font, offset=(0,atby), bgcolor=(255,255,255))
+        draw_animtoolbar(screen_rgb)
 
         #scale image double height
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
@@ -1232,6 +1232,7 @@ class pydpainter:
            self.menubar.visible and \
            config.help_on:
             tx = self.animtoolbar.tip_x
+            atby = config.screen_height - config.menubar.rect[3]
             ty = atby + self.animtoolbar.tip_y
             t_size = self.animtoolbar.tip_canvas.get_size()
             sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
@@ -1666,9 +1667,11 @@ class pydpainter:
                     if config.toolbar.visible:
                         config.toolbar.visible = False
                         config.menubar.visible = False
+                        config.animtoolbar.visible = False
                     else:
                         config.toolbar.visible = True
                         config.menubar.visible = True
+                        config.animtoolbar.visible = True
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
                     config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
