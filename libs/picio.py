@@ -13,6 +13,7 @@ from struct import pack, unpack
 from libs.colorrange import *
 from libs.prim import *
 from libs.animation import *
+from libs.gifparser import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -30,22 +31,24 @@ def w2b(w):
     return (w+15)//16*2
 
 #check to see if a file is an IFF file
-def iff_type(filename):
+def pic_type(filename):
     retval = ""
 
     try:
-        iff_file = open(filename,'rb')
-        header = iff_file.read(4)
+        pic_file = open(filename,'rb')
+        header = pic_file.read(4)
         if header == b'FORM':
-            iff_file.seek(8)
-            ilbm_header = iff_file.read(4)
+            pic_file.seek(8)
+            ilbm_header = pic_file.read(4)
             if ilbm_header == b'ILBM':
                 retval = "ILBM"
             elif ilbm_header == b'PBM ':
                 retval = "PBM"
             elif ilbm_header == b'ANIM':
                 retval = "ANIM"
-        iff_file.close()
+        elif header == b'GIF8':
+            retval = "GIF"
+        pic_file.close()
     except:
         retval = "NONE"
 
@@ -481,20 +484,66 @@ def pal_power_2(palin):
     return pal
 
 def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
-    ifftype = iff_type(filename)
-    if not cmd_load and ((is_anim and ifftype != "ANIM") or (not is_anim and ifftype == "ANIM")):
+    pictype = pic_type(filename)
+    if not cmd_load and ((is_anim and pictype != "ANIM") or (not is_anim and pictype == "ANIM")):
         raise Exception("Load error")
-    if ifftype in ["ILBM", "PBM"]:
-        pic = load_iff(filename, config, ifftype)
+    if pictype in ["ILBM", "PBM"]:
+        pic = load_iff(filename, config, pictype)
         config.pal = pal_power_2(config.pal)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
-    elif ifftype == "ANIM":
-        pic = load_anim(filename, config, ifftype, status_func=status_func)
+    elif pictype == "ANIM":
+        pic = load_anim(filename, config, pictype, status_func=status_func)
         config.pal = pal_power_2(config.pal)
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
-    elif ifftype != "NONE":
+    elif pictype == "GIF":
+        gif = GIFParser(filename)
+        w = gif.header["width"]
+        h = gif.header["height"]
+        pic = pygame.Surface((w,h), 0, depth=8)
+        config.pal = pal_power_2(gif.global_palette)
+        pic.set_palette(config.pal)
+        surf_array = pygame.surfarray.pixels2d(pic)
+        surf_array[:] = gif.frames[0]["image_data"][:]
+        surf_array = None
+        config.color_depth = len(config.pal)
+        config.anim.frame = [Frame(pic, pal=config.pal)]
+        for i in range(1,len(gif.frames)):
+            dx = gif.frames[i]["image_left_position"]
+            dy = gif.frames[i]["image_top_position"]
+            dw = gif.frames[i]["image_width"]
+            dh = gif.frames[i]["image_height"]
+            dm = gif.frames[i]["disposal_method"]
+            is_trans = gif.frames[i]["transparency"]
+            trans_color = gif.frames[i]["transparent_color_index"]
+
+            diffpic = pygame.Surface((dw,dh), 0, depth=8)
+            if gif.frames[i]["local_palette"] != None:
+                pal = gif.frames[i]["local_palette"]
+            else:
+                pal = gif.global_palette
+            diffpic.set_palette(pal)
+            surf_array = pygame.surfarray.pixels2d(diffpic)
+            surf_array[:] = gif.frames[i]["image_data"][:]
+            surf_array = None
+
+            if dm:
+                # Don't overlay previous frame
+                framepic = diffpic
+            else:
+                # Overlay previous frame
+                framepic = pygame.Surface((w,h), 0, depth=8)
+                framepic.set_palette(pal)
+                framepic.blit(config.anim.frame[i-1].image, (0,0))
+                if is_trans:
+                    diffpic.set_colorkey(trans_color)
+                framepic.blit(diffpic, (dx,dy))
+            config.anim.frame.append(Frame(framepic, pal=pal))
+        config.anim.curr_frame = 1
+        config.anim.num_frames = len(gif.frames)
+        config.display_mode = -1
+    elif pictype != "NONE":
         config.cranges = []
         pic = pygame.image.load(filename)
         if pic.get_bitsize() > 8:
@@ -513,7 +562,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
             config.color_depth = 256
             
         iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
-        if iff_type(iffinfo_file) == "ILBM":
+        if pic_type(iffinfo_file) == "ILBM":
             load_iff(iffinfo_file, config, "ILBM")
         else:
             config.display_mode = -1

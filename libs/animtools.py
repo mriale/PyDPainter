@@ -130,7 +130,7 @@ def init_animtoolbar(config_in):
     gx,gy,gw,gh = minitoolbar.tools[-1].rect
     gx += gw + scaleX*4
     gw = mt_width - gx - scaleX*4
-    gh = scaleX * 11
+    gh = scaleY * 11
     sliderg = Gadget(Gadget.TYPE_PROP, "-", (gx,gy,gw,gh), maxvalue=100, id="frameslider")
     minitoolbar.tools.append(sliderg)
     minitoolbar.add_coords(sliderg)
