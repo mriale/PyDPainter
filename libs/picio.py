@@ -502,7 +502,10 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         w = gif.header["width"]
         h = gif.header["height"]
         pic = pygame.Surface((w,h), 0, depth=8)
-        config.pal = pal_power_2(gif.global_palette)
+        if gif.global_palette != None:
+            config.pal = gif.global_palette
+        else:
+            config.pal = gif.frames[0]["local_palette"]
         pic.set_palette(config.pal)
         surf_array = pygame.surfarray.pixels2d(pic)
         surf_array[:] = gif.frames[0]["image_data"][:]
