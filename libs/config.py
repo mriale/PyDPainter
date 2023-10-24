@@ -881,8 +881,8 @@ class pydpainter:
         # Center canvas if smaller than the screen
         if self.pixel_width < self.screen_width - tw:
             self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
-        if self.pixel_height < self.screen_height - mh:
-            self.screen_offset_y = (self.screen_height - self.pixel_height - mh) // 2
+        if self.pixel_height < self.screen_height - mh - atbh:
+            self.screen_offset_y = (self.screen_height - self.pixel_height - mh - atbh) // 2
 
         # Restrict scrolling offset to edges of screen
         if self.pixel_width >= self.screen_width - tw:

@@ -498,7 +498,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif pictype == "GIF":
-        gif = GIFParser(filename)
+        gif = GIFParser(filename, status_func=status_func)
         w = gif.header["width"]
         h = gif.header["height"]
         pic = pygame.Surface((w,h), 0, depth=8)

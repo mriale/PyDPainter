@@ -20,8 +20,9 @@ class LzwEntry:
         self.len = len
 
 class GIFParser:
-    def __init__(self, filename):
+    def __init__(self, filename, status_func=None):
         self.file = open(filename, "rb")
+        self.status_func = status_func
         self.header = self.read_header()
         #print(f"{self.header=}")
         self.global_palette = None
@@ -256,6 +257,8 @@ class GIFParser:
             #print(f"{len(pic_data)=}")
             #print(f"{pic_data=}")
             frames.append(data_blocks | descriptor | {"image_data": pic_data})
+            if self.status_func != None:
+                self.status_func(self.file.tell() / os.fstat(self.file.fileno()).st_size)
 
         return frames
 
