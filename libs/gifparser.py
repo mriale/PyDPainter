@@ -36,7 +36,7 @@ class GIFParser:
         header = self.file.read(13)
         flags = header[10]
         global_color = (flags & 0x80) >> 7
-        num_colors = 1 << (((flags & 0x70) >> 4) + 1)
+        num_colors = 1 << ((flags & 0x07) + 1)
         return {
             "signature": header[0:3],
             "version": header[3:6],
@@ -106,6 +106,10 @@ class GIFParser:
         pal = None
         if local_color:
             pal = self.read_palette(num_colors)
+            if self.global_palette != None and num_colors < len(self.global_palette):
+                pal.extend([[0,0,0]] * (len(self.global_palette) - num_colors))
+            elif self.global_palette != None and num_colors > len(self.global_palette):
+                pal = pal[:len(self.global_palette)]
         return {
             "image_left_position": struct.unpack("<H", descriptor[0:2])[0],
             "image_top_position": struct.unpack("<H", descriptor[2:4])[0],
@@ -118,9 +122,9 @@ class GIFParser:
 
 # GIF decoding routine from:
 #  https://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art011
-    def decode_lzw_data(self, input_data):
+    def decode_lzw_data(self, input_data, key_size):
         input = list(input_data)
-        code_length = 8
+        code_length = key_size
         input_length = len(input_data)
         out = []
 
@@ -228,7 +232,7 @@ class GIFParser:
                 break
             #print(descriptor)
 
-            chunk_type = int(self.file.read(1)[0])
+            key_size = int(self.file.read(1)[0])
             chunk_len = int(self.file.read(1)[0])
 
             lzw_data = b""
@@ -237,10 +241,17 @@ class GIFParser:
                 lzw_data += self.file.read(chunk_len)
                 chunk_len = int(self.file.read(1)[0])
 
-            pic_data = np.asarray(list(self.decode_lzw_data(lzw_data)))
+            pic_data = np.asarray(list(self.decode_lzw_data(lzw_data, key_size)))
             width = descriptor["image_width"]
             height = descriptor["image_height"]
             pic_data = np.reshape(pic_data, (height, width)).transpose()
+            if descriptor["interlace_flag"]:
+                pic_out = pic_data.copy()
+                pic_out[:,0:height:8] = pic_data[:,0:((height-1)//8)+1]
+                pic_out[:,4:height:8] = pic_data[:,((height-1)//8)+1:((height-1)//4)+1]
+                pic_out[:,2:height:4] = pic_data[:,((height-1)//4)+1:((height-1)//2)+1]
+                pic_out[:,1:height:2] = pic_data[:,((height-1)//2)+1:height]
+                pic_data = pic_out
 
             #print(f"{len(pic_data)=}")
             #print(f"{pic_data=}")

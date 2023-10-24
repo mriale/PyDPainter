@@ -528,10 +528,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
             surf_array[:] = gif.frames[i]["image_data"][:]
             surf_array = None
 
-            if dm:
-                # Don't overlay previous frame
-                framepic = diffpic
-            else:
+            if dm in [0,1]:
                 # Overlay previous frame
                 framepic = pygame.Surface((w,h), 0, depth=8)
                 framepic.set_palette(pal)
@@ -539,6 +536,25 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
                 if is_trans:
                     diffpic.set_colorkey(trans_color)
                 framepic.blit(diffpic, (dx,dy))
+            elif dm == 2:
+                # Set to BG color
+                framepic = pygame.Surface((w,h), 0, depth=8)
+                framepic.set_palette(pal)
+                framepic.fill(gif.header["background_color_index"])
+                if is_trans:
+                    diffpic.set_colorkey(trans_color)
+                framepic.blit(diffpic, (dx,dy))
+            elif dm == 3:
+                # Overlay first frame
+                framepic = pygame.Surface((w,h), 0, depth=8)
+                framepic.set_palette(pal)
+                framepic.blit(config.anim.frame[0].image, (0,0))
+                if is_trans:
+                    diffpic.set_colorkey(trans_color)
+                framepic.blit(diffpic, (dx,dy))
+            else:
+                # Don't overlay previous frame
+                framepic = diffpic
             config.anim.frame.append(Frame(framepic, pal=pal))
         config.anim.curr_frame = 1
         config.anim.num_frames = len(gif.frames)
