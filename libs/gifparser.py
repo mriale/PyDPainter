@@ -60,40 +60,45 @@ class GIFParser:
     def read_data_blocks(self):
         blocks = {}
         block_id = int(self.file.read(1)[0])
-        #print(f"{hex(block_id)=}")
         while block_id != TRAILER:
+            #print(f"{hex(block_id)=} {self.file.tell()=}")
             if block_id == EXTENSION_INTRODUCER:
                 ext = self.read_extension()
                 if len(ext) > 0:
                     blocks |= ext
             elif block_id == IMAGE_DESCRIPTOR:
                 break
+
             block_id = int(self.file.read(1)[0])
         return blocks
 
     def read_extension(self):
         blocks = {}
         ext_id = int(self.file.read(1)[0])
-        while ext_id != 0:
-            #print(f"{ext_id=}")
-            if ext_id == GRAPHIC_CONTROL:
-                chunk_len = int(self.file.read(1)[0])
-                chunk = self.file.read(chunk_len)
-                flags = chunk[0]
-                disposal_method = (flags & 0x1C) >> 2
-                transparency = flags & 0x1
-                blocks |= {
-                    "disposal_method": int(disposal_method),
-                    "transparency": int(transparency),
-                    "delay_time": struct.unpack("<H", chunk[1:3])[0],
-                    "transparent_color_index": int(chunk[3]),
-                }
-            #ignore chunk
-            else:
-                chunk_len = int(self.file.read(1)[0])
-                self.file.seek(chunk_len, 1)
+        #print(f"{hex(ext_id)=} {self.file.tell()=}")
 
-            ext_id = int(self.file.read(1)[0])
+        if ext_id == GRAPHIC_CONTROL:
+            chunk_len = int(self.file.read(1)[0])
+            chunk = self.file.read(chunk_len)
+            flags = chunk[0]
+            disposal_method = (flags & 0x1C) >> 2
+            transparency = flags & 0x1
+            blocks |= {
+                "disposal_method": int(disposal_method),
+                "transparency": int(transparency),
+                "delay_time": struct.unpack("<H", chunk[1:3])[0],
+                "transparent_color_index": int(chunk[3]),
+            }
+        #ignore other extensions
+        else:
+            chunk_len = int(self.file.read(1)[0])
+            chunk = self.file.read(chunk_len)
+
+        #read and discard all data after block
+        chunk_len = int(self.file.read(1)[0])
+        while (chunk_len):
+            chunk = self.file.read(chunk_len)
+            chunk_len = int(self.file.read(1)[0])
 
         #print(blocks)
         return blocks
@@ -220,6 +225,7 @@ class GIFParser:
         frames = []
 
         while self.file.tell() < os.fstat(self.file.fileno()).st_size:
+            #print(f"frame={len(frames)+1}")
             data_blocks = self.read_data_blocks()
             #print(f"{data_blocks=}")
 
