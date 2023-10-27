@@ -55,9 +55,9 @@ class DoLast(AnimToolAction):
     def selected(self, attrs):
         config.anim.last_frame()
 
-class DoAnimBlank(AnimToolAction):
+class DoPaletteKey(AnimToolAction):
     """
-    Do nothing
+    Do palette key frame
     """
     def selected(self, attrs):
         pass
@@ -102,10 +102,10 @@ def init_animtoolbar(config_in):
     minitoolbar.add_grid((0,0,w,10*scaleY), numtools, 1, attr_list=[
         ["first",       ToolGadget.TT_SINGLE, "", DoFirst],
         ["prev",        ToolGadget.TT_SINGLE, "", DoPrev],
-        ["play",        ToolGadget.TT_SINGLE, "", DoPlay],
+        ["play",        ToolGadget.TT_TOGGLE, "", DoPlay],
         ["next",        ToolGadget.TT_SINGLE, "", DoNext],
         ["last",        ToolGadget.TT_SINGLE, "", DoLast],
-        ["animblank",   ToolGadget.TT_SINGLE, "", DoAnimBlank],
+        ["palettekey",  ToolGadget.TT_SINGLE, "", DoPaletteKey],
         ["addframe",    ToolGadget.TT_SINGLE, "", DoAddFrame],
         ["deleteframe", ToolGadget.TT_SINGLE, "", DoDeleteFrame]
     ])
@@ -155,5 +155,11 @@ def draw_animtoolbar(screen_rgb):
         pygame.draw.rect(screen_rgb, (160,160,160), (0,atby,atbw,atbh))
         config.animtoolbar.tool_id("frameslider").need_redraw = True
         config.animtoolbar.tool_id("framecount").need_redraw = True
+
+        if config.anim.curr_frame > 1:
+            if config.anim.frame[config.anim.curr_frame-1].pal == config.anim.frame[config.anim.curr_frame-2].pal:
+                config.animtoolbar.tool_id("palettekey").state = 1
+                config.animtoolbar.tool_id("palettekey").need_redraw = True
+        
         config.animtoolbar.draw(screen_rgb, font=config.font, offset=(0,atby))
 

@@ -91,7 +91,7 @@ class Animation:
         """
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
-        framestr = ((9-len(framestr)) * " ") + framestr[-9:9]
+        framestr = ((9-len(framestr)) * " ") + framestr
         config.animtoolbar.tool_id("framecount").label = framestr
         config.animtoolbar.tool_id("frameslider").maxvalue = self.num_frames
         config.animtoolbar.tool_id("frameslider").value = self.curr_frame-1

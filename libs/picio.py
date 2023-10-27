@@ -485,7 +485,7 @@ def pal_power_2(palin):
 
 def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
     pictype = pic_type(filename)
-    if not cmd_load and ((is_anim and pictype != "ANIM") or (not is_anim and pictype == "ANIM")):
+    if not cmd_load and ((is_anim and not pictype in ["ANIM", "GIF"]) or (not is_anim and pictype == "ANIM")):
         raise Exception("Load error")
     if pictype in ["ILBM", "PBM"]:
         pic = load_iff(filename, config, pictype)
@@ -562,6 +562,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         config.anim.curr_frame = 1
         config.anim.num_frames = len(gif.frames)
         config.display_mode = -1
+        config.cranges = 6 * [colorrange(0,1,0,0)]
     elif pictype != "NONE":
         config.cranges = []
         pic = pygame.image.load(filename)
