@@ -275,6 +275,7 @@ def load_anim(filename, config, ifftype, status_func=None):
     cranges = []
     pic = None
     display_mode = -1
+    num_CMAP = 0
 
     #initialize anim header
     anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
@@ -322,6 +323,7 @@ def load_anim(filename, config, ifftype, status_func=None):
                     config.color_depth = 256
             elif chunk.getname() == b'CMAP':
                 #color map header
+                num_CMAP += 1
                 cmap_bytes = chunk.read()
                 ncol = len(cmap_bytes)//3
                 while len(config.pal) < ncol:
@@ -456,6 +458,8 @@ def load_anim(filename, config, ifftype, status_func=None):
         del config.anim.frame[-1]
         config.anim.num_frames -= 2
 
+    config.anim.global_palette = (num_CMAP == 1)
+
     #crop image to actual bitmap size
     if w != w2b(w)*8:
         newpic = pygame.Surface((w, h), 0, pic)
@@ -498,6 +502,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         config.pal = config.quantize_palette(config.pal, config.color_depth)
         pic.set_palette(config.pal)
     elif pictype == "GIF":
+        num_CMAP = 0
         gif = GIFParser(filename, status_func=status_func)
         w = gif.header["width"]
         h = gif.header["height"]
@@ -524,6 +529,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
             diffpic = pygame.Surface((dw,dh), 0, depth=8)
             if gif.frames[i]["local_palette"] != None:
                 pal = gif.frames[i]["local_palette"]
+                num_CMAP += 1
             else:
                 pal = gif.global_palette
             diffpic.set_palette(pal)
@@ -563,6 +569,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         config.anim.num_frames = len(gif.frames)
         config.display_mode = -1
         config.cranges = 6 * [colorrange(0,1,0,0)]
+        config.anim.global_palette = (num_CMAP <= 1)
     elif pictype != "NONE":
         config.cranges = []
         pic = pygame.image.load(filename)

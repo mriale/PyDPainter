@@ -156,10 +156,16 @@ def draw_animtoolbar(screen_rgb):
         config.animtoolbar.tool_id("frameslider").need_redraw = True
         config.animtoolbar.tool_id("framecount").need_redraw = True
 
-        if config.anim.curr_frame > 1:
+        if config.anim.global_palette:
+            config.animtoolbar.tool_id("palettekey").state = 0
+        elif config.anim.curr_frame > 1:
             if config.anim.frame[config.anim.curr_frame-1].pal == config.anim.frame[config.anim.curr_frame-2].pal:
                 config.animtoolbar.tool_id("palettekey").state = 1
-                config.animtoolbar.tool_id("palettekey").need_redraw = True
+            else:
+                config.animtoolbar.tool_id("palettekey").state = 2
+        else:
+            config.animtoolbar.tool_id("palettekey").state = 2
         
+        config.animtoolbar.tool_id("palettekey").need_redraw = True
         config.animtoolbar.draw(screen_rgb, font=config.font, offset=(0,atby))
 

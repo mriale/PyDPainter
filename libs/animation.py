@@ -64,6 +64,7 @@ class Animation:
         self.frame = [Frame()]
         self.repeat = False
         self.frame_bookmark = -1
+        self.global_palette = True
 
     def save_curr_frame(self):
         self.frame[self.curr_frame-1].image = config.undo_image[config.undo_index].copy()
