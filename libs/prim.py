@@ -2202,7 +2202,13 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
                 lastcoord = coord
 
-def convert8(pixel_canvas_rgb, pal, is_bgr=False, status_func=None):
+def convert8(pixel_canvas_rgb, pal, status_func=None):
+    #Decide whether pic is RGB or BGR
+    if pixel_canvas_rgb.get_shifts()[0] == 0:
+        is_bgr = True
+    else:
+        is_bgr = False
+
     #Create color map for all 16 million colors
     cmap = np.zeros(0x1000000, dtype="uint8")
 

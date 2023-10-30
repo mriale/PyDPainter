@@ -188,7 +188,8 @@ def load_iff(filename, config, ifftype):
                 camg_bytes = chunk.read()
                 display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
-                    raise Exception("HAM mode not supported")
+                    iff_file.close()
+                    return load_pygame_pic(filename, config)
             elif chunk.getname() == b'BMHD':
                 #bitmap header
                 bmhd_bytes = chunk.read()
@@ -196,6 +197,9 @@ def load_iff(filename, config, ifftype):
                 config.pal = config.pal[0:1<<nPlanes]
                 if nPlanes <= 6:
                     config.color_depth = 16
+                elif nPlanes > 8:
+                    iff_file.close()
+                    return load_pygame_pic(filename, config)
                 else:
                     config.color_depth = 256
             elif chunk.getname() == b'CMAP':
@@ -487,6 +491,40 @@ def pal_power_2(palin):
 
     return pal
 
+def load_pygame_pic(filename, config, status_func=None):
+    config.cranges = []
+    pic = pygame.image.load(filename)
+    if pic.get_bitsize() > 8:
+        config.pal = get_truecolor_palette(pic.convert(), 256)
+        config.pal = pal_power_2(config.pal)
+        config.color_depth = 256
+        #pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
+        pic = convert8(pic, config.pal, status_func=status_func)
+    else:
+        #Clone bitmap and blit back so colors can be added to palette
+        newpic = pygame.Surface(pic.get_size(), 0, pic)
+        config.pal = pal_power_2(pic.get_palette())
+        pic.set_palette(config.pal)
+        newpic.set_palette(config.pal)
+        newpic.blit(pic,(0,0))
+        pic = newpic
+        config.color_depth = 256
+        
+    iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
+    if pic_type(iffinfo_file) == "ILBM":
+        load_iff(iffinfo_file, config, "ILBM")
+    else:
+        config.display_mode = -1
+
+    config.pal = config.quantize_palette(config.pal, config.color_depth)
+    pic.set_palette(config.pal)
+
+    while len(config.cranges) < 6:
+        config.cranges.append(colorrange(0,1,0,0))
+
+    return pic
+
+
 def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
     pictype = pic_type(filename)
     if not cmd_load and ((is_anim and not pictype in ["ANIM", "GIF"]) or (not is_anim and pictype == "ANIM")):
@@ -571,34 +609,7 @@ def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
         config.cranges = 6 * [colorrange(0,1,0,0)]
         config.anim.global_palette = (num_CMAP <= 1)
     elif pictype != "NONE":
-        config.cranges = []
-        pic = pygame.image.load(filename)
-        if pic.get_bitsize() > 8:
-            config.pal = get_truecolor_palette(pic.convert(), 256)
-            config.pal = pal_power_2(config.pal)
-            config.color_depth = 256
-            pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
-        else:
-            #Clone bitmap and blit back so colors can be added to palette
-            newpic = pygame.Surface(pic.get_size(), 0, pic)
-            config.pal = pal_power_2(pic.get_palette())
-            pic.set_palette(config.pal)
-            newpic.set_palette(config.pal)
-            newpic.blit(pic,(0,0))
-            pic = newpic
-            config.color_depth = 256
-            
-        iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
-        if pic_type(iffinfo_file) == "ILBM":
-            load_iff(iffinfo_file, config, "ILBM")
-        else:
-            config.display_mode = -1
-
-        config.pal = config.quantize_palette(config.pal, config.color_depth)
-        pic.set_palette(config.pal)
-
-        while len(config.cranges) < 6:
-            config.cranges.append(colorrange(0,1,0,0))
+        pic = load_pygame_pic(filename, config, status_func=status_func)
     else:
         pic = config.pixel_canvas
 
