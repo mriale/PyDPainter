@@ -439,7 +439,7 @@ class pydpainter:
 
 
     def get_default_palette(self, numcols=32):
-        if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+        if numcols == 64 and config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
             newpal = [
                 (0,0,0), (238,204,170), (255,0,0), (204,0,0), (170,0,0), (0,221,0),
                 (0,170,0), (0,136,0), (0,0,255), (0,0,204), (0,0,170), (255,255,68),
@@ -860,6 +860,20 @@ class pydpainter:
 
         for img in config.undo_image:
             img.set_palette(pal)
+
+        # Set colors for animation frames
+        if config.anim.global_palette:
+            for frame in config.anim.frame:
+                frame.pal = pal_in
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+        else:
+            from_key, to_key = config.anim.pal_key_range()
+            for frame in config.anim.frame[from_key-1:to_key]:
+                frame.pal = pal_in
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible

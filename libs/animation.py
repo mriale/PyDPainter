@@ -41,9 +41,10 @@ def load_progress_anim(percent):
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
 class Frame:
-    def __init__(self, image=None, delay=0, pal=None):
+    def __init__(self, image=None, delay=0, pal=None, is_pal_key = False):
         self.image = image
         self.delay = delay
+        self.is_pal_key = is_pal_key
         if pal == None:
             self.pal = list(config.pal)
         else:
@@ -179,11 +180,30 @@ class Animation:
             self.curr_frame = self.frame_bookmark
             self.show_curr_frame()
 
+    def pal_key_range(self, frameno=-1):
+        if frameno < 1:
+            frameno = self.curr_frame
+        from_key = 1
+        to_key = 1
+        if frameno > 0 and frameno <= len(self.frame):
+            if self.frame[frameno-1].is_pal_key:
+                from_key = frameno
+            else:
+                from_key = frameno
+                while from_key > 1 and not self.frame[from_key-1].is_pal_key:
+                    from_key -= 1
+            to_key = frameno + 1
+            while to_key <= len(self.frame) and not self.frame[to_key-1].is_pal_key:
+                to_key += 1
+            to_key -= 1
+            to_key = min(to_key, len(self.frame))
+        return [from_key, to_key]
+
     def open_file(self):
         global progress_req
         config.stop_cycling()
         config.stencil.enable = False
-        filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:

@@ -189,7 +189,12 @@ def load_iff(filename, config, ifftype):
                 display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
                     iff_file.close()
-                    return load_pygame_pic(filename, config)
+                    pic = load_pygame_pic(filename, config)
+                    display_mode &= ~config.MODE_HAM
+                    if display_mode >= 0 and display_mode & config.MONITOR_ID_MASK == 0:
+                        display_mode |= config.NTSC_MONITOR_ID
+                    config.display_mode = display_mode
+                    return pic
             elif chunk.getname() == b'BMHD':
                 #bitmap header
                 bmhd_bytes = chunk.read()
@@ -280,6 +285,7 @@ def load_anim(filename, config, ifftype, status_func=None):
     pic = None
     display_mode = -1
     num_CMAP = 0
+    is_pal_key = False
 
     #initialize anim header
     anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
@@ -328,6 +334,7 @@ def load_anim(filename, config, ifftype, status_func=None):
             elif chunk.getname() == b'CMAP':
                 #color map header
                 num_CMAP += 1
+                is_pal_key = True
                 cmap_bytes = chunk.read()
                 ncol = len(cmap_bytes)//3
                 while len(config.pal) < ncol:
@@ -349,7 +356,8 @@ def load_anim(filename, config, ifftype, status_func=None):
                 pic.set_palette(config.pal)
                 config.anim.curr_frame = 1
                 config.anim.num_frames = 1
-                config.anim.frame = [Frame(pic, pal=config.pal)]
+                config.anim.frame = [Frame(pic, pal=config.pal, is_pal_key=True)]
+                is_pal_key = False
             elif chunk.getname() == b'ANHD':
                 #animation header
                 anhd_bytes = chunk.read()
@@ -374,7 +382,9 @@ def load_anim(filename, config, ifftype, status_func=None):
                         anim_reltime = 1
                     config.anim.frame[-1].delay = 60/anim_reltime
                     config.anim.frame[-1].pal = list(config.pal)
+                    config.anim.frame[-1].is_pal_key = is_pal_key
                     config.anim.num_frames += 1
+                    is_pal_key = False
 
                     #convert working frame to planes
                     surf_array = pygame.surfarray.pixels2d(config.anim.frame[-1].image)
@@ -463,6 +473,7 @@ def load_anim(filename, config, ifftype, status_func=None):
         config.anim.num_frames -= 2
 
     config.anim.global_palette = (num_CMAP == 1)
+    config.pal = config.anim.frame[0].pal
 
     #crop image to actual bitmap size
     if w != w2b(w)*8:
@@ -498,7 +509,6 @@ def load_pygame_pic(filename, config, status_func=None):
         config.pal = get_truecolor_palette(pic.convert(), 256)
         config.pal = pal_power_2(config.pal)
         config.color_depth = 256
-        #pic = convert8(pic, config.pal, is_bgr=True, status_func=status_func)
         pic = convert8(pic, config.pal, status_func=status_func)
     else:
         #Clone bitmap and blit back so colors can be added to palette
@@ -525,93 +535,131 @@ def load_pygame_pic(filename, config, status_func=None):
     return pic
 
 
-def load_pic(filename, config, status_func=None, is_anim=False, cmd_load=False):
+def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False):
+    filename = filename_in
+    pic = config.pixel_canvas
+
+    #Check for series of numbered files
+    seq_matches = re.findall(r'[^0-9]([0-9]{3,})\.[a-zA-z]+$', filename)
+
+    frameno = -1
     pictype = pic_type(filename)
-    if not cmd_load and ((is_anim and not pictype in ["ANIM", "GIF"]) or (not is_anim and pictype == "ANIM")):
+    if len(seq_matches) == 1 and is_anim and pictype != "NONE":
+        frameno = int(seq_matches[0])
+    elif not cmd_load and ((is_anim and not pictype in ["ANIM", "GIF"]) or (not is_anim and pictype == "ANIM")):
         raise Exception("Load error")
-    if pictype in ["ILBM", "PBM"]:
-        pic = load_iff(filename, config, pictype)
-        config.pal = pal_power_2(config.pal)
-        config.pal = config.quantize_palette(config.pal, config.color_depth)
-        pic.set_palette(config.pal)
-    elif pictype == "ANIM":
-        pic = load_anim(filename, config, pictype, status_func=status_func)
-        config.pal = pal_power_2(config.pal)
-        config.pal = config.quantize_palette(config.pal, config.color_depth)
-        pic.set_palette(config.pal)
-    elif pictype == "GIF":
-        num_CMAP = 0
-        gif = GIFParser(filename, status_func=status_func)
-        w = gif.header["width"]
-        h = gif.header["height"]
-        pic = pygame.Surface((w,h), 0, depth=8)
-        if gif.global_palette != None:
-            config.pal = gif.global_palette
-        else:
-            config.pal = gif.frames[0]["local_palette"]
-        pic.set_palette(config.pal)
-        surf_array = pygame.surfarray.pixels2d(pic)
-        surf_array[:] = gif.frames[0]["image_data"][:]
-        surf_array = None
-        config.color_depth = len(config.pal)
-        config.anim.frame = [Frame(pic, pal=config.pal)]
-        for i in range(1,len(gif.frames)):
-            dx = gif.frames[i]["image_left_position"]
-            dy = gif.frames[i]["image_top_position"]
-            dw = gif.frames[i]["image_width"]
-            dh = gif.frames[i]["image_height"]
-            dm = gif.frames[i]["disposal_method"]
-            is_trans = gif.frames[i]["transparency"]
-            trans_color = gif.frames[i]["transparent_color_index"]
 
-            diffpic = pygame.Surface((dw,dh), 0, depth=8)
-            if gif.frames[i]["local_palette"] != None:
-                pal = gif.frames[i]["local_palette"]
-                num_CMAP += 1
+    while pictype != "NONE":
+        if pictype in ["ILBM", "PBM"]:
+            pic = load_iff(filename, config, pictype)
+            config.pal = pal_power_2(config.pal)
+            config.pal = config.quantize_palette(config.pal, config.color_depth)
+            pic.set_palette(config.pal)
+        elif pictype == "ANIM":
+            pic = load_anim(filename, config, pictype, status_func=status_func)
+            config.pal = pal_power_2(config.pal)
+            config.pal = config.quantize_palette(config.pal, config.color_depth)
+            pic.set_palette(config.pal)
+        elif pictype == "GIF":
+            num_CMAP = 0
+            gif = GIFParser(filename, status_func=status_func)
+            w = gif.header["width"]
+            h = gif.header["height"]
+            pic = pygame.Surface((w,h), 0, depth=8)
+            if gif.global_palette != None:
+                config.pal = gif.global_palette
             else:
-                pal = gif.global_palette
-            diffpic.set_palette(pal)
-            surf_array = pygame.surfarray.pixels2d(diffpic)
-            surf_array[:] = gif.frames[i]["image_data"][:]
+                config.pal = gif.frames[0]["local_palette"]
+            pic.set_palette(config.pal)
+            surf_array = pygame.surfarray.pixels2d(pic)
+            surf_array[:] = gif.frames[0]["image_data"][:]
             surf_array = None
+            config.color_depth = len(config.pal)
+            if len(gif.frames) > 1:
+                config.anim.frame = [Frame(pic, pal=config.pal, is_pal_key=True)]
+            for i in range(1,len(gif.frames)):
+                dx = gif.frames[i]["image_left_position"]
+                dy = gif.frames[i]["image_top_position"]
+                dw = gif.frames[i]["image_width"]
+                dh = gif.frames[i]["image_height"]
+                dm = gif.frames[i]["disposal_method"]
+                is_trans = gif.frames[i]["transparency"]
+                trans_color = gif.frames[i]["transparent_color_index"]
 
-            if dm in [0,1]:
-                # Overlay previous frame
-                framepic = pygame.Surface((w,h), 0, depth=8)
-                framepic.set_palette(pal)
-                framepic.blit(config.anim.frame[i-1].image, (0,0))
-                if is_trans:
-                    diffpic.set_colorkey(trans_color)
-                framepic.blit(diffpic, (dx,dy))
-            elif dm == 2:
-                # Set to BG color
-                framepic = pygame.Surface((w,h), 0, depth=8)
-                framepic.set_palette(pal)
-                framepic.fill(gif.header["background_color_index"])
-                if is_trans:
-                    diffpic.set_colorkey(trans_color)
-                framepic.blit(diffpic, (dx,dy))
-            elif dm == 3:
-                # Overlay first frame
-                framepic = pygame.Surface((w,h), 0, depth=8)
-                framepic.set_palette(pal)
-                framepic.blit(config.anim.frame[0].image, (0,0))
-                if is_trans:
-                    diffpic.set_colorkey(trans_color)
-                framepic.blit(diffpic, (dx,dy))
+                diffpic = pygame.Surface((dw,dh), 0, depth=8)
+                if gif.frames[i]["local_palette"] != None:
+                    pal = gif.frames[i]["local_palette"]
+                    num_CMAP += 1
+                else:
+                    pal = gif.global_palette
+                diffpic.set_palette(pal)
+                surf_array = pygame.surfarray.pixels2d(diffpic)
+                surf_array[:] = gif.frames[i]["image_data"][:]
+                surf_array = None
+
+                if dm in [0,1]:
+                    # Overlay previous frame
+                    framepic = pygame.Surface((w,h), 0, depth=8)
+                    framepic.set_palette(pal)
+                    framepic.blit(config.anim.frame[i-1].image, (0,0))
+                    if is_trans:
+                        diffpic.set_colorkey(trans_color)
+                    framepic.blit(diffpic, (dx,dy))
+                elif dm == 2:
+                    # Set to BG color
+                    framepic = pygame.Surface((w,h), 0, depth=8)
+                    framepic.set_palette(pal)
+                    framepic.fill(gif.header["background_color_index"])
+                    if is_trans:
+                        diffpic.set_colorkey(trans_color)
+                    framepic.blit(diffpic, (dx,dy))
+                elif dm == 3:
+                    # Overlay first frame
+                    framepic = pygame.Surface((w,h), 0, depth=8)
+                    framepic.set_palette(pal)
+                    framepic.blit(config.anim.frame[0].image, (0,0))
+                    if is_trans:
+                        diffpic.set_colorkey(trans_color)
+                    framepic.blit(diffpic, (dx,dy))
+                else:
+                    # Don't overlay previous frame
+                    framepic = diffpic
+                config.anim.frame.append(Frame(framepic, pal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
+            if len(gif.frames) > 1:
+                config.anim.curr_frame = 1
+                config.anim.num_frames = len(gif.frames)
+                config.anim.global_palette = (num_CMAP <= 1)
+            config.display_mode = -1
+            config.cranges = 6 * [colorrange(0,1,0,0)]
+        elif pictype != "NONE":
+            pic = load_pygame_pic(filename, config, status_func=status_func)
+
+        if frameno >= 0:
+            if config.anim.num_frames == 1:
+                config.anim.frame = [Frame(pic, is_pal_key=True)]
             else:
-                # Don't overlay previous frame
-                framepic = diffpic
-            config.anim.frame.append(Frame(framepic, pal=pal))
+                is_pal_key = True
+                config.anim.frame.append(Frame(pic))
+                if config.anim.frame[-1].pal == config.anim.frame[-2].pal:
+                    is_pal_key = False
+                config.anim.frame[-1].is_pal_key = is_pal_key
+
+            frameno += 1
+            config.anim.num_frames += 1
+            filename = filename_in.replace(seq_matches[0], (len(seq_matches[0]) - len(str(frameno))) * "0" + str(frameno))
+            pictype = pic_type(filename)
+        else:
+            pictype = "NONE"
+
+    if frameno >= 0:
         config.anim.curr_frame = 1
-        config.anim.num_frames = len(gif.frames)
-        config.display_mode = -1
-        config.cranges = 6 * [colorrange(0,1,0,0)]
-        config.anim.global_palette = (num_CMAP <= 1)
-    elif pictype != "NONE":
-        pic = load_pygame_pic(filename, config, status_func=status_func)
-    else:
-        pic = config.pixel_canvas
+        config.anim.num_frames = len(config.anim.frame)
+        pic = config.anim.frame[0].image
+        config.pal = config.anim.frame[0].pal
+        if config.anim.pal_key_range(1) == [1,config.anim.num_frames]:
+            config.anim.global_palette = True
+        else:
+            config.anim.global_palette = False
 
     #Guess display mode
     if config.display_mode < 0 or config.display_info.get_id(config.display_mode) == None:

@@ -13,12 +13,22 @@ from libs.tiptext import *
 
 config = None
 
+palette_key_labels = ["Global (same for all)", "None ({}-{})", "Local ({}-{})"]
+
 class AnimToolAction(Action):
     def get_tip(self):
         if self.gadget.id in tiptext:
-            return tiptext[self.gadget.id]
+            if self.gadget.id == "palettekey":
+                state = config.animtoolbar.tool_id("palettekey").state
+                line2 = palette_key_labels[state]
+                pal_key_range = config.anim.pal_key_range(config.anim.curr_frame)
+                if state >= 1:
+                    line2 = palette_key_labels[state].format(pal_key_range[0], pal_key_range[1])
+                return [tiptext["palettekey"][0], line2]
+            else:
+                return tiptext[self.gadget.id]
         else:
-            return [self.gadget.id]
+            return []
 
 class DoFirst(AnimToolAction):
     """

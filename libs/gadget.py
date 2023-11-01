@@ -368,7 +368,9 @@ class Gadget(object):
                 pygame.draw.rect(screen, hcolor, (x+xo,y+yo, w-px, py), 0)
                 pygame.draw.rect(screen, hcolor, (x+xo,y+yo, px, h), 0)
         elif self.type == Gadget.TYPE_PROP:
-            propo = (w-self.fontx-px) * self.value // (self.maxvalue-1) + px
+            propo = px
+            if self.maxvalue-1 != 0:
+                propo = (w-self.fontx-px) * self.value // (self.maxvalue-1) + px
             self.screenrect2 = (x+xo+propo, y+yo, self.fontx, h)
             diamond = ((propo+x+xo+(self.fontx//2)-px, y+yo+py+py+py),
                        (propo+x+xo+(self.fontx)-(3*px), y+yo+(self.fonth//2)+py),
@@ -384,7 +386,9 @@ class Gadget(object):
                 pygame.draw.polygon(screen, bgcolor, diamond, 0)
                 pygame.draw.line(screen, hcolor, diamond[3], diamond[0])
         elif self.type == Gadget.TYPE_PROP_VERT:
-            propo = (h-self.fonth) * (self.maxvalue-1-self.value) // (self.maxvalue-1)
+            propo = 0
+            if self.maxvalue-1 != 0:
+                propo = (h-self.fonth) * (self.maxvalue-1-self.value) // (self.maxvalue-1)
             diamond = ((x+xo+(self.fontx//2)-px,y+yo+py+py+propo),
                        (x+xo+w-(3*px), y+yo+(self.fonth//2)+propo),
                        (x+xo+(self.fontx//2)-px,y+yo+self.fonth-py-py+propo),
