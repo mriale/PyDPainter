@@ -25,6 +25,7 @@ class DoNew(MenuAction):
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
+            config.anim.__init__()
 
 def io_error_req(title, message, filename, linelen=33):
     if len(filename) > linelen:
