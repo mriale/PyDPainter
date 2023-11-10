@@ -26,6 +26,8 @@ https://ko-fi.com/mriale
 
 Facebook group: [PyDPainter](https://www.facebook.com/groups/583338860398152/?ref=share)
 
+Mastodon: [@PyDPainter@mastodon.social](https://mastodon.social/@PyDPainter)
+
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
 Documentation: [Table of Contents](docs/TOC.md)
