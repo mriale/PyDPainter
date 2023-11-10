@@ -502,18 +502,24 @@ def pal_power_2(palin):
 
     return pal
 
-def load_pygame_pic(filename, config, status_func=None):
+def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     config.cranges = []
     pic = pygame.image.load(filename)
     if pic.get_bitsize() > 8:
-        config.pal = get_truecolor_palette(pic.convert(), 256)
-        config.pal = pal_power_2(config.pal)
+        if force_pal != None:
+            config.pal = list(force_pal)
+        else:
+            config.pal = get_truecolor_palette(pic.convert(), 256)
+            config.pal = pal_power_2(config.pal)
         config.color_depth = 256
         pic = convert8(pic, config.pal, status_func=status_func)
     else:
         #Clone bitmap and blit back so colors can be added to palette
         newpic = pygame.Surface(pic.get_size(), 0, pic)
-        config.pal = pal_power_2(pic.get_palette())
+        if force_pal != None:
+            config.pal = list(force_pal)
+        else:
+            config.pal = pal_power_2(pic.get_palette())
         pic.set_palette(config.pal)
         newpic.set_palette(config.pal)
         newpic.blit(pic,(0,0))
@@ -535,7 +541,7 @@ def load_pygame_pic(filename, config, status_func=None):
     return pic
 
 
-def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False):
+def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False):
     filename = filename_in
     pic = config.pixel_canvas
 
@@ -543,9 +549,34 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
     seq_matches = re.findall(r'[^0-9]([0-9]{3,})\.[a-zA-z]+$', filename)
 
     frameno = -1
+    firstframe = -1
+    maxframe = -1
+    global_palette = None
     pictype = pic_type(filename)
-    if len(seq_matches) == 1 and is_anim and pictype != "NONE":
-        frameno = int(seq_matches[0])
+    if import_frames:
+        if len(seq_matches) == 1 and import_frames and pictype != "NONE":
+            frameno = int(seq_matches[0])
+            firstframe = frameno
+            maxframe = firstframe+1
+            #Find number of frames
+            while os.path.exists(filename_in.replace(seq_matches[0], (len(seq_matches[0]) - len(str(maxframe))) * "0" + str(maxframe))):
+                maxframe += 1
+            maxframe -= 1
+
+            #Ask whether to use a global palette or a local one
+            palette_type = config.anim.ask_global_palette(maxframe-firstframe+1)
+            if palette_type == 0: # global palette
+                # grab global palette from a frame 1/3 of the way through the sequence
+                palframe = ((maxframe - firstframe) // 3) + firstframe
+                palfilename = filename_in.replace(seq_matches[0], (len(seq_matches[0]) - len(str(palframe))) * "0" + str(palframe))
+                pic = load_pygame_pic(palfilename, config)
+                global_palette = list(config.pal)
+            elif palette_type == 1: # local palette
+                pass
+            else: # cancel
+                return config.pixel_canvas
+        else:
+            raise Exception("Load error")
     elif not cmd_load and ((is_anim and not pictype in ["ANIM", "GIF"]) or (not is_anim and pictype == "ANIM")):
         raise Exception("Load error")
 
@@ -632,7 +663,9 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.display_mode = -1
             config.cranges = 6 * [colorrange(0,1,0,0)]
         elif pictype != "NONE":
-            pic = load_pygame_pic(filename, config, status_func=status_func)
+            pic = load_pygame_pic(filename, config, force_pal=global_palette)
+            if status_func != None:
+                status_func(frameno / maxframe)
 
         if frameno >= 0:
             if config.anim.num_frames == 1:

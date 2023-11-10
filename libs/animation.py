@@ -199,6 +199,27 @@ class Animation:
             to_key = min(to_key, len(self.frame))
         return [from_key, to_key]
 
+    def ask_global_palette(self, numframes):
+        # save previous requestor
+        prr = config.pixel_req_rect
+        prc = config.pixel_req_canvas.copy()
+        oldcursor = config.cursor.shape
+        config.cursor.shape = config.cursor.NORMAL
+
+        retval = question_req(config.pixel_req_canvas,
+                 "Import frames into anim",
+                 "About to import %d frames.\nPalette type:" % (numframes),
+                 ["Global", "Local", "Cancel"],
+                 [K_g, K_l, K_RETURN])
+
+        # restore previous requestor
+        config.pixel_req_rect = prr
+        config.pixel_req_canvas = prc
+        config.cursor.shape = oldcursor
+
+        return retval
+
+
     def open_file(self):
         global progress_req
         config.stop_cycling()
@@ -221,6 +242,29 @@ class Animation:
             except:
                 close_progress_req(progress_req)
                 io_error_anim_req("Load Error", "Unable to open anim:\n%s", filename)
+
+    def import_frames(self):
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
+            try:
+                config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, import_frames=True)
+                config.bgcolor = 0
+                config.color = 1
+                close_progress_req(progress_req)
+                config.truepal = list(config.pal)
+                config.pal = config.unique_palette(config.pal)
+                config.initialize_surfaces()
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
+                config.modified_count = 0
+                config.anim.show_curr_frame()
+            except:
+                close_progress_req(progress_req)
+                io_error_anim_req("Load Error", "Unable to import frames:\n%s", filename)
 
     def save_file(self):
         io_error_anim_req("Not Implemented", "Saving ANIM files\nis not implemented yet.%s", "")
