@@ -2,6 +2,8 @@
 
 A usable pixel art program written in Python
 
+![screenshot](pydpainter-screenshot.png)
+
 ## About
 
 PyDPainter, pronounced "Pied Painter" (like Pied Piper), is an attempt to create a usable pixel art program in Python using PyGame.
@@ -31,5 +33,3 @@ Mastodon: [@PyDPainter@mastodon.social](https://mastodon.social/@PyDPainter)
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
 Documentation: [Table of Contents](docs/TOC.md)
-
-![screenshot](pydpainter-screenshot.png)
