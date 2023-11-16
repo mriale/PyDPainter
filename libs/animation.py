@@ -41,21 +41,35 @@ def load_progress_anim(percent):
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
 class Frame:
-    def __init__(self, image=None, delay=0, pal=None, is_pal_key = False):
+    def __init__(self, image=None, delay=0, pal=None, truepal=None, is_pal_key = False):
         self.image = image
         self.delay = delay
         self.is_pal_key = is_pal_key
+
         if pal == None:
-            self.pal = list(config.pal)
+            if truepal == None:
+                self.pal = list(config.pal)
+                self.truepal = list(config.truepal)
+            else:
+                self.truepal = list(config.truepal)
+                self.pal = config.unique_palette(self.truepal)
         else:
-            self.pal = list(pal)
+            if truepal == None:
+                self.pal = list(pal)
+                self.truepal = list(pal)
+            else:
+                self.pal = config.unique_palette(pal)
+                self.truepal = list(truepal)
+
+        self.loadpal = config.loadpal
+        self.backuppal = self.pal
 
     def copy(self):
         image = None
         if self.image != None:
             image = self.image.copy()
 
-        return Frame(image, self.delay, self.pal)
+        return Frame(image, self.delay, self.pal, self.truepal)
 
 class Animation:
     def __init__(self):
