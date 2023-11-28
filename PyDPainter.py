@@ -5,6 +5,7 @@ PyDPainter.py
 Build a usable pixel art paint program in pygame
 """
 
+import asyncio
 import sys, math, os, random, colorsys
 
 try:
@@ -52,4 +53,4 @@ from libs.config import *
 
 if __name__ == "__main__":
     config = pydpainter()
-    config.run()
+    asyncio.run(config.run())

@@ -5,6 +5,7 @@ config.py
 Implement the global area of PyDPainter
 """
 
+import asyncio
 import sys, math, os.path, random, colorsys, platform, re, datetime
 import argparse
 
@@ -1335,7 +1336,7 @@ class pydpainter:
             str = "%4d\x94%4d\x95" % ((x, y))
         return str
 
-    def run(self):
+    async def run(self):
         """
         This method is the main application loop.
         """
@@ -1676,7 +1677,10 @@ class pydpainter:
                 cycle()
             self.cycle_handled = False
 
+            print("before recompose()")
             self.recompose()
+            await asyncio.sleep(0)
+            print("after sleep()")
             
             if not config.running and config.modified_count >= 1:
                 answer = question_req(config.pixel_req_canvas,
