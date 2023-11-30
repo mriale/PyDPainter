@@ -1357,7 +1357,9 @@ class pydpainter:
 
         #main loop
         while config.running:
-            e = pygame.event.wait()
+            e = pygame.event.wait(16)
+            if e == pygame.NOEVENT:
+                continue
 
             if e.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
@@ -1677,10 +1679,8 @@ class pydpainter:
                 cycle()
             self.cycle_handled = False
 
-            print("before recompose()")
             self.recompose()
             await asyncio.sleep(0)
-            print("after sleep()")
             
             if not config.running and config.modified_count >= 1:
                 answer = question_req(config.pixel_req_canvas,
