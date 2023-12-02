@@ -153,8 +153,6 @@ def draw_animtoolbar(screen_rgb):
 
     if config.anim.num_frames == 1:
         config.animtoolbar.visible = False
-    elif config.menubar.visible:
-        config.animtoolbar.visible = True
     if config.menubar.visible and config.animtoolbar.visible:
         atbh = config.menubar.rect[3]
         atby = config.screen_height - atbh

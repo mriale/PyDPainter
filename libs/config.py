@@ -769,6 +769,9 @@ class pydpainter:
         self.suppress_redraw = False
         self.running = True
 
+        self.tool_visibility_state = 1
+        self.tool_visibility_state_max = 3
+
         self.wait_for_mouseup = [False, False]
 
         reinit = self.readConfig()
@@ -874,6 +877,26 @@ class pydpainter:
                 if frame.image != None:
                     frame.image.set_palette(pal)
 
+    def calc_tool_visibility_state(self):
+        config.tool_visibility_state = config.tool_visibility_state % config.tool_visibility_state_max
+        if config.anim.num_frames == 1 and config.tool_visibility_state == 2:
+            config.tool_visibility_state = 0
+
+        if self.tool_visibility_state == 0:
+            config.toolbar.visible = False
+            config.menubar.visible = False
+            config.animtoolbar.visible = False
+        elif self.tool_visibility_state == 1:
+            config.toolbar.visible = True
+            config.menubar.visible = True
+            config.animtoolbar.visible = True
+            config.menubar.title = "PyDPainter"
+        elif self.tool_visibility_state == 2:
+            config.toolbar.visible = True
+            config.menubar.visible = True
+            config.animtoolbar.visible = False
+            title = f"{config.anim.curr_frame}/{config.anim.num_frames}" + (" " * 10)
+            config.menubar.title = title[:10]
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible
@@ -1069,6 +1092,8 @@ class pydpainter:
             pygame.display.set_caption(config.window_title)
 
     def recompose(self):
+        self.calc_tool_visibility_state()
+
         if self.cycling:
             for crange in config.cranges:
                 crange.apply_to_pal(self.pal)
@@ -1678,14 +1703,7 @@ class pydpainter:
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
                 elif e.key == K_F10:
-                    if config.toolbar.visible:
-                        config.toolbar.visible = False
-                        config.menubar.visible = False
-                        config.animtoolbar.visible = False
-                    else:
-                        config.toolbar.visible = True
-                        config.menubar.visible = True
-                        config.animtoolbar.visible = True
+                    self.tool_visibility_state += 1
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
                     config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0

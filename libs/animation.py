@@ -85,6 +85,9 @@ class Animation:
         self.frame[self.curr_frame-1].image = config.undo_image[config.undo_index].copy()
         if config.cycling:
             self.frame[self.curr_frame-1].image.set_palette(config.backuppal)
+        self.frame[self.curr_frame-1].pal = config.pal
+        self.frame[self.curr_frame-1].truepal = config.truepal
+        self.frame[self.curr_frame-1].loadpal = config.loadpal
 
     def show_curr_frame(self):
         if self.curr_frame > self.num_frames:
@@ -95,16 +98,10 @@ class Animation:
             self.frame[self.curr_frame-1].image.set_palette(self.frame[self.curr_frame-1].pal)
             config.set_all_palettes(self.frame[self.curr_frame-1].pal)
             config.pal = self.frame[self.curr_frame-1].pal
+            config.truepal = self.frame[self.curr_frame-1].truepal
+            config.loadpal = self.frame[self.curr_frame-1].loadpal
             #self.frame[self.curr_frame-1].image.set_palette(config.pal)
             config.pixel_canvas.blit(self.frame[self.curr_frame-1].image, (0,0))
-
-        """
-        if self.num_frames > 1:
-            config.menubar.title = f"{self.curr_frame}/{self.num_frames}" + (" " * 10)
-            config.menubar.title = config.menubar.title[:10]
-        else:
-            config.menubar.title = "PyDPainter"
-        """
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr
