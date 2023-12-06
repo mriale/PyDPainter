@@ -47,22 +47,17 @@ class Frame:
         self.is_pal_key = is_pal_key
 
         if pal == None:
-            if truepal == None:
-                self.pal = list(config.pal)
-                self.truepal = list(config.truepal)
-            else:
-                self.truepal = list(config.truepal)
-                self.pal = config.unique_palette(self.truepal)
+            self.pal = list(config.pal)
         else:
-            if truepal == None:
-                self.pal = list(pal)
-                self.truepal = list(pal)
-            else:
-                self.pal = config.unique_palette(pal)
-                self.truepal = list(truepal)
+            self.pal = list(pal)
 
-        self.loadpal = config.loadpal
-        self.backuppal = self.pal
+        if truepal == None:
+            self.truepal = list(config.truepal)
+        else:
+            self.truepal = list(truepal)
+
+        self.loadpal = list(config.loadpal)
+        self.backuppal = list(self.pal)
 
     def copy(self):
         image = None
@@ -82,26 +77,27 @@ class Animation:
         self.global_palette = True
 
     def save_curr_frame(self):
-        self.frame[self.curr_frame-1].image = config.undo_image[config.undo_index].copy()
-        if config.cycling:
-            self.frame[self.curr_frame-1].image.set_palette(config.backuppal)
-        self.frame[self.curr_frame-1].pal = config.pal
-        self.frame[self.curr_frame-1].truepal = config.truepal
-        self.frame[self.curr_frame-1].loadpal = config.loadpal
+        f = self.curr_frame-1
+        self.frame[f].image = config.undo_image[config.undo_index].copy()
+        self.frame[f].pal = list(config.pal)
+        self.frame[f].truepal = list(config.truepal)
+        self.frame[f].loadpal = list(config.loadpal)
+        self.frame[f].backuppal = list(config.backuppal)
 
     def show_curr_frame(self):
+        f = self.curr_frame-1
         if self.curr_frame > self.num_frames:
             self.curr_frame = self.num_frames
-        if self.frame[self.curr_frame-1].image == None:
+        if self.frame[f].image == None:
             config.pixel_canvas.fill(config.bgcolor);
         else:
-            self.frame[self.curr_frame-1].image.set_palette(self.frame[self.curr_frame-1].pal)
-            config.set_all_palettes(self.frame[self.curr_frame-1].pal)
-            config.pal = self.frame[self.curr_frame-1].pal
-            config.truepal = self.frame[self.curr_frame-1].truepal
-            config.loadpal = self.frame[self.curr_frame-1].loadpal
-            #self.frame[self.curr_frame-1].image.set_palette(config.pal)
-            config.pixel_canvas.blit(self.frame[self.curr_frame-1].image, (0,0))
+            self.frame[f].image.set_palette(self.frame[f].pal)
+            config.set_all_palettes(self.frame[f].pal)
+            config.pal = list(self.frame[f].pal)
+            config.truepal = list(self.frame[f].truepal)
+            config.loadpal = list(self.frame[f].loadpal)
+            config.backuppal = list(self.frame[f].backuppal)
+            config.pixel_canvas.blit(self.frame[f].image, (0,0))
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr

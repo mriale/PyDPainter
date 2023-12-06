@@ -341,6 +341,9 @@ def load_anim(filename, config, ifftype, status_func=None):
                     config.pal.append((0,0,0))
                 for i in range(ncol):
                     config.pal[i] = unpack(">BBB", cmap_bytes[i*3:(i+1)*3])
+                config.truepal = list(config.pal)
+                config.pal = config.unique_palette(config.pal)
+                config.loadpal = list(config.pal)
             elif chunk.getname() == b'BODY':
                 #bitmap (interleaved)
                 body_bytes = chunk.read()
@@ -382,6 +385,9 @@ def load_anim(filename, config, ifftype, status_func=None):
                         anim_reltime = 1
                     config.anim.frame[-1].delay = 60/anim_reltime
                     config.anim.frame[-1].pal = list(config.pal)
+                    config.anim.frame[-1].truepal = list(config.truepal)
+                    config.anim.frame[-1].loadpal = list(config.loadpal)
+                    config.anim.frame[-1].backuppal = list(config.backuppal)
                     config.anim.frame[-1].is_pal_key = is_pal_key
                     config.anim.num_frames += 1
                     is_pal_key = False
@@ -601,6 +607,9 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 config.pal = gif.global_palette
             else:
                 config.pal = gif.frames[0]["local_palette"]
+            config.loadpal = list(config.pal)
+            config.truepal = list(config.pal)
+            config.backuppal = list(config.pal)
             pic.set_palette(config.pal)
             surf_array = pygame.surfarray.pixels2d(pic)
             surf_array[:] = gif.frames[0]["image_data"][:]
@@ -655,7 +664,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 else:
                     # Don't overlay previous frame
                     framepic = diffpic
-                config.anim.frame.append(Frame(framepic, pal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
+                config.anim.frame.append(Frame(framepic, pal=pal, truepal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
             if len(gif.frames) > 1:
                 config.anim.curr_frame = 1
                 config.anim.num_frames = len(gif.frames)
