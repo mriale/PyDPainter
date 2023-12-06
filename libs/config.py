@@ -1467,9 +1467,10 @@ class pydpainter:
                 config.running = False
 
             if e.type == VIDEORESIZE:
-                config.scale = config.closest_scale((e.w, e.h))
-                config.resize_display(False)
-                self.recompose()
+                if not config.fullscreen:
+                    config.scale = config.closest_scale((e.w, e.h))
+                    config.resize_display(False)
+                    self.recompose()
                 continue
 
             #Load in droppped file
