@@ -1357,6 +1357,8 @@ class pydpainter:
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
 
     def start_cycling(self):
+        if config.anim.num_frames > 1 and config.anim.global_palette == False:
+            return
         if not self.cycling:
             self.backuppal = list(self.pal)
             self.cycling = True
