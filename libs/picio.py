@@ -604,12 +604,14 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             h = gif.header["height"]
             pic = pygame.Surface((w,h), 0, depth=8)
             if gif.global_palette != None:
-                config.pal = gif.global_palette
+                pal = gif.global_palette
             else:
-                config.pal = gif.frames[0]["local_palette"]
-            config.loadpal = list(config.pal)
-            config.truepal = list(config.pal)
-            config.backuppal = list(config.pal)
+                pal = gif.frames[0]["local_palette"]
+            upal = config.unique_palette(pal)
+            config.pal = list(upal)
+            config.loadpal = list(upal)
+            config.truepal = list(pal)
+            config.backuppal = list(upal)
             pic.set_palette(config.pal)
             surf_array = pygame.surfarray.pixels2d(pic)
             surf_array[:] = gif.frames[0]["image_data"][:]
@@ -664,7 +666,8 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 else:
                     # Don't overlay previous frame
                     framepic = diffpic
-                config.anim.frame.append(Frame(framepic, pal=pal, truepal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
+                upal = config.unique_palette(pal)
+                config.anim.frame.append(Frame(framepic, pal=upal, truepal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
             if len(gif.frames) > 1:
                 config.anim.curr_frame = 1
                 config.anim.num_frames = len(gif.frames)
