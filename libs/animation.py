@@ -70,8 +70,12 @@ class Animation:
     def __init__(self):
         self.num_frames = 1
         self.curr_frame = 1
-        self.frame_rate = 30
+        self.frame_rate = 10
         self.frame = [Frame()]
+        self.playing = False
+        self.play_loop=False
+        self.play_ping_pong=False
+        self.play_reverse=False
         self.repeat = False
         self.frame_bookmark = -1
         self.global_palette = True
@@ -85,9 +89,9 @@ class Animation:
         self.frame[f].backuppal = list(config.backuppal)
 
     def show_curr_frame(self):
-        f = self.curr_frame-1
         if self.curr_frame > self.num_frames:
             self.curr_frame = self.num_frames
+        f = self.curr_frame-1
         if self.frame[f].image == None:
             config.pixel_canvas.fill(config.bgcolor);
         else:
@@ -178,8 +182,17 @@ class Animation:
     def ask_frame(self):
         self.ask_frame_req(config.pixel_req_canvas)
 
-    def play(self):
-        return
+    def play(self, loop=False, ping_pong=False, reverse=False, stop=False):
+        #print(f"play({loop=}, {ping_pong=}, {reverse=}, {stop=})")
+        if stop:
+            self.playing = False
+        else:
+            self.play_loop=loop
+            self.play_ping_pong=ping_pong
+            self.play_reverse=reverse
+            self.playing = True
+            config.animtoolbar.tool_id("play").state = 1
+            pygame.time.set_timer(config.TOOLEVENT, 1000//self.frame_rate)
 
     def remember_frame(self):
         if self.frame_bookmark > 0:
@@ -328,13 +341,16 @@ class Animation:
             elif ge.gadget.id == "next":
                 pygame.time.set_timer(config.TOOLEVENT, 500)
                 self.repeat = True
-        if len(mta_list) == 0 and pygame.event.event_name(event.type) == "UserEvent":
+        if len(mta_list) == 0 and event.type == config.TOOLEVENT:
             if config.animtoolbar.tool_id("prev").state == 1:
                 self.prev_frame()
                 pygame.time.set_timer(config.TOOLEVENT, 50)
             elif config.animtoolbar.tool_id("next").state == 1:
                 self.next_frame()
                 pygame.time.set_timer(config.TOOLEVENT, 50)
+            elif config.animtoolbar.tool_id("play").state == 1:
+                self.next_frame()
+                pygame.time.set_timer(config.TOOLEVENT, 1000//self.frame_rate)
             elif self.repeat:
                 pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
                 self.repeat = False

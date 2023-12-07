@@ -49,7 +49,9 @@ class DoPlay(AnimToolAction):
     Play animation
     """
     def selected(self, attrs):
-        config.anim.play()
+        config.anim.play(loop=True)
+    def deselected(self, attrs):
+        config.anim.play(stop=True)
 
 class DoNext(AnimToolAction):
     """
