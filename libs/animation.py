@@ -41,9 +41,13 @@ def load_progress_anim(percent):
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
 class Frame:
-    def __init__(self, image=None, delay=0, pal=None, truepal=None, is_pal_key = False):
+    def __init__(self, image=None, delay=3, pal=None, truepal=None, is_pal_key = False):
         self.image = image
-        self.delay = delay
+        if delay < 1:
+            self.delay = 3
+        else:
+            self.delay = delay
+
         self.is_pal_key = is_pal_key
 
         if pal == None:
@@ -76,6 +80,7 @@ class Animation:
         self.play_loop=False
         self.play_ping_pong=False
         self.play_reverse=False
+        self.currdir = 0
         self.repeat = False
         self.frame_bookmark = -1
         self.global_palette = True
@@ -186,12 +191,18 @@ class Animation:
         #print(f"play({loop=}, {ping_pong=}, {reverse=}, {stop=})")
         if stop:
             self.playing = False
+            config.animtoolbar.tool_id("play").state = 0
+            config.animtoolbar.tool_id("play").redraw = True
         else:
             self.play_loop=loop
             self.play_ping_pong=ping_pong
             self.play_reverse=reverse
             self.playing = True
+            self.currdir = 1
+            if self.play_reverse:
+                self.currdir = -1
             config.animtoolbar.tool_id("play").state = 1
+            config.animtoolbar.tool_id("play").redraw = True
             pygame.time.set_timer(config.TOOLEVENT, 1000//self.frame_rate)
 
     def remember_frame(self):
@@ -308,6 +319,8 @@ class Animation:
                     pass #animbrush prev
                 elif event.key == K_8:
                     pass #animbrush next
+                elif self.playing and (event.key == K_ESCAPE or event.key == K_SPACE):
+                    self.play(stop=True)
             elif event.mod & KMOD_SHIFT and not event.mod & KMOD_CTRL:
                 if event.key == K_1:
                     self.first_frame()
@@ -325,6 +338,22 @@ class Animation:
                     pass #animbrush first
                 elif event.key == K_8:
                     pass #animbrush last
+        elif event.type == config.TOOLEVENT:
+            if self.playing:
+                if self.currdir > 0:
+                    self.next_frame()
+                elif self.currdir < 0:
+                    self.prev_frame()
+                if self.play_ping_pong:
+                    if (self.currdir > 0 and self.curr_frame == self.num_frames) or \
+                       (self.currdir < 0 and self.curr_frame == 1):
+                        self.currdir = -self.currdir
+                if not self.play_ping_pong and not self.play_loop and (\
+                   (not self.play_reverse and self.curr_frame == self.num_frames) or \
+                   (self.play_reverse and self.curr_frame == 1)):
+                    self.play(stop=True)
+                else:
+                    pygame.time.set_timer(config.TOOLEVENT, config.anim.frame[self.curr_frame-1].delay * 1000 // 60)
 
     def process_animtoolbar_events(self, mta_list, event):
         for ge in mta_list:
@@ -341,6 +370,12 @@ class Animation:
             elif ge.gadget.id == "next":
                 pygame.time.set_timer(config.TOOLEVENT, 500)
                 self.repeat = True
+            elif ge.gadget.id == "play":
+                if ge.gadget.state == 0:
+                    self.playing = False
+                else:
+                    self.playing = True
+                    pygame.time.set_timer(config.TOOLEVENT, config.anim.frame[self.curr_frame-1].delay * 1000 // 60)
         if len(mta_list) == 0 and event.type == config.TOOLEVENT:
             if config.animtoolbar.tool_id("prev").state == 1:
                 self.prev_frame()
@@ -348,9 +383,6 @@ class Animation:
             elif config.animtoolbar.tool_id("next").state == 1:
                 self.next_frame()
                 pygame.time.set_timer(config.TOOLEVENT, 50)
-            elif config.animtoolbar.tool_id("play").state == 1:
-                self.next_frame()
-                pygame.time.set_timer(config.TOOLEVENT, 1000//self.frame_rate)
             elif self.repeat:
                 pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
                 self.repeat = False
