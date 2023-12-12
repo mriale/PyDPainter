@@ -321,6 +321,10 @@ class Animation:
                     pass #animbrush next
                 elif self.playing and (event.key == K_ESCAPE or event.key == K_SPACE):
                     self.play(stop=True)
+                elif event.key == K_PAGEUP:
+                    self.prev_frame()
+                elif event.key == K_PAGEDOWN:
+                    self.next_frame()
             elif event.mod & KMOD_SHIFT and not event.mod & KMOD_CTRL:
                 if event.key == K_1:
                     self.first_frame()
@@ -338,6 +342,11 @@ class Animation:
                     pass #animbrush first
                 elif event.key == K_8:
                     pass #animbrush last
+            elif not event.mod & KMOD_SHIFT and event.mod & KMOD_CTRL:
+                if event.key == K_HOME:
+                    self.first_frame()
+                elif event.key == K_END:
+                    self.last_frame()
         elif event.type == config.TOOLEVENT:
             if self.playing:
                 if self.currdir > 0:
