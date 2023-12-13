@@ -1279,7 +1279,7 @@ class pydpainter:
             self.screen.blit(self.minitoolbar.tip_canvas, (sx,sy))
 
         #blit animtoolbar tooltip layer
-        if self.menubar.visible and self.animtoolbar.visible and \
+        if self.animtoolbar.visible and \
            not self.animtoolbar.wait_for_tip and \
            self.animtoolbar.tip_canvas != None and \
            self.menubar.visible and \
@@ -1569,7 +1569,7 @@ class pydpainter:
                     me_list = self.menubar.process_event(self.screen, e, self.get_mouse_pointer_pos)
 
             #Get animtoolbar events if any
-            if self.menubar.visible:
+            if self.animtoolbar.visible:
                 mta_list = self.animtoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
                 config.anim.process_animtoolbar_events(mta_list, e)
             else:
