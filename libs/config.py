@@ -883,21 +883,34 @@ class pydpainter:
         if config.anim.num_frames == 1 and config.tool_visibility_state == 2:
             config.tool_visibility_state = 0
 
-        if self.tool_visibility_state == 0:
-            config.toolbar.visible = False
-            config.menubar.visible = False
-            config.animtoolbar.visible = False
-        elif self.tool_visibility_state == 1:
-            config.toolbar.visible = True
-            config.menubar.visible = True
-            config.animtoolbar.visible = True
-            config.menubar.title = "PyDPainter"
-        elif self.tool_visibility_state == 2:
-            config.toolbar.visible = True
-            config.menubar.visible = True
-            config.animtoolbar.visible = False
-            title = f"{config.anim.curr_frame}/{config.anim.num_frames}" + (" " * 10)
-            config.menubar.title = title[:10]
+        if config.anim.playing:
+            if config.tool_visibility_state == 2:
+                config.tool_visibility_state = 0
+            if self.tool_visibility_state == 0:
+                config.toolbar.visible = False
+                config.menubar.visible = False
+                config.animtoolbar.visible = False
+            elif self.tool_visibility_state == 1:
+                config.toolbar.visible = False
+                config.menubar.visible = False
+                config.animtoolbar.visible = True
+                config.menubar.title = "PyDPainter"
+        else:
+            if self.tool_visibility_state == 0:
+                config.toolbar.visible = False
+                config.menubar.visible = False
+                config.animtoolbar.visible = False
+            elif self.tool_visibility_state == 1:
+                config.toolbar.visible = True
+                config.menubar.visible = True
+                config.animtoolbar.visible = True
+                config.menubar.title = "PyDPainter"
+            elif self.tool_visibility_state == 2:
+                config.toolbar.visible = True
+                config.menubar.visible = True
+                config.animtoolbar.visible = False
+                title = f"{config.anim.curr_frame}/{config.anim.num_frames}" + (" " * 10)
+                config.menubar.title = title[:10]
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible

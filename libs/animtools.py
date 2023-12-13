@@ -155,10 +155,13 @@ def draw_animtoolbar(screen_rgb):
 
     if config.anim.num_frames == 1:
         config.animtoolbar.visible = False
-    if config.menubar.visible and config.animtoolbar.visible:
+    if config.animtoolbar.visible:
         atbh = config.menubar.rect[3]
         atby = config.screen_height - atbh
-        atbw = config.screen_width - config.toolbar.rect[2]
+        if config.toolbar.visible:
+            atbw = config.screen_width - config.toolbar.rect[2]
+        else:
+            atbw = config.screen_width
         atbslx = 80
         pygame.draw.rect(screen_rgb, (0,0,0), (0,atby-2*scaleY,atbw,scaleY))
         pygame.draw.rect(screen_rgb, (255,255,255), (0,atby-scaleY,atbw,scaleY))
