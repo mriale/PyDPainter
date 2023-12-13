@@ -119,18 +119,24 @@ class Animation:
         config.doKeyAction()
 
     def first_frame(self):
+        if self.num_frames == 1:
+            return
         if self.curr_frame != 1:
             self.save_curr_frame()
             self.curr_frame = 1
             self.show_curr_frame()
 
     def last_frame(self):
+        if self.num_frames == 1:
+            return
         if self.curr_frame != self.num_frames:
             self.save_curr_frame()
             self.curr_frame = self.num_frames
             self.show_curr_frame()
 
     def prev_frame(self):
+        if self.num_frames == 1:
+            return
         self.save_curr_frame()
         self.curr_frame -= 1
         if self.curr_frame < 1:
@@ -138,6 +144,8 @@ class Animation:
         self.show_curr_frame()
 
     def next_frame(self):
+        if self.num_frames == 1:
+            return
         self.save_curr_frame()
         self.curr_frame += 1
         if self.curr_frame > self.num_frames:
@@ -189,6 +197,8 @@ class Animation:
 
     def play(self, loop=False, ping_pong=False, reverse=False, stop=False):
         #print(f"play({loop=}, {ping_pong=}, {reverse=}, {stop=})")
+        if self.num_frames == 1:
+            return
         if stop:
             self.playing = False
             config.animtoolbar.tool_id("play").state = 0
@@ -203,6 +213,7 @@ class Animation:
                 self.currdir = -1
             config.animtoolbar.tool_id("play").state = 1
             config.animtoolbar.tool_id("play").redraw = True
+            config.menubar.title_right = ""  # get rid of coords
             pygame.time.set_timer(config.TOOLEVENT, 1000//self.frame_rate)
 
     def remember_frame(self):
@@ -374,11 +385,17 @@ class Animation:
                 if ge.type == ge.TYPE_GADGETDOWN:
                     self.ask_frame()
             elif ge.gadget.id == "prev":
-                pygame.time.set_timer(config.TOOLEVENT, 500)
-                self.repeat = True
+                if self.playing:
+                    self.currdir = -1
+                else:
+                    pygame.time.set_timer(config.TOOLEVENT, 500)
+                    self.repeat = True
             elif ge.gadget.id == "next":
-                pygame.time.set_timer(config.TOOLEVENT, 500)
-                self.repeat = True
+                if self.playing:
+                    self.currdir = 1
+                else:
+                    pygame.time.set_timer(config.TOOLEVENT, 500)
+                    self.repeat = True
             elif ge.gadget.id == "play":
                 if ge.gadget.state == 0:
                     self.playing = False

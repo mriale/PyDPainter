@@ -803,12 +803,13 @@ class pydpainter:
         return buttons
 
     def doKeyAction(self, curr_action=None):
-        if curr_action == None:
-            curr_action = config.toolbar.tool_id(config.tool_selected).action
-        if self.get_mouse_pressed() == (0,0,0):
-            curr_action.move(config.get_mouse_pixel_pos())
-        else:
-            curr_action.drag(config.get_mouse_pixel_pos(), self.get_mouse_pressed())
+        if not config.anim.playing:
+            if curr_action == None:
+                curr_action = config.toolbar.tool_id(config.tool_selected).action
+            if self.get_mouse_pressed() == (0,0,0):
+                curr_action.move(config.get_mouse_pixel_pos())
+            else:
+                curr_action.drag(config.get_mouse_pixel_pos(), self.get_mouse_pressed())
 
     def getPalNtscDefault(self):
         display_mode = self.PAL_MONITOR_ID
@@ -1529,16 +1530,17 @@ class pydpainter:
                 else:
                     pygame.mouse.set_visible(False)
 
-            #Get toolbar events if any and set current action to tool selected
-            te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
-            if len(te_list) > 0:
-                self.cycle_handled = True
-            curr_action = None
-            if config.zoom.box_on:
-                curr_action = config.toolbar.tool_id("magnify").action
-            elif config.toolbar.tool_id(config.tool_selected) != None and \
-               config.toolbar.tool_id(config.tool_selected).action != None:
-                curr_action = config.toolbar.tool_id(config.tool_selected).action
+            if not config.anim.playing:
+                #Get toolbar events if any and set current action to tool selected
+                te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+                if len(te_list) > 0:
+                    self.cycle_handled = True
+                curr_action = None
+                if config.zoom.box_on:
+                    curr_action = config.toolbar.tool_id("magnify").action
+                elif config.toolbar.tool_id(config.tool_selected) != None and \
+                   config.toolbar.tool_id(config.tool_selected).action != None:
+                    curr_action = config.toolbar.tool_id(config.tool_selected).action
 
             #Get minitoolbar events if any
             if self.menubar.visible:
@@ -1546,11 +1548,12 @@ class pydpainter:
             else:
                 mte_list = []
 
-            #Get menubar events if any
-            if len(mte_list) > 0:
-                me_list = []
-            else:
-                me_list = self.menubar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+            if not config.anim.playing:
+                #Get menubar events if any
+                if len(mte_list) > 0:
+                    me_list = []
+                else:
+                    me_list = self.menubar.process_event(self.screen, e, self.get_mouse_pointer_pos)
 
             #Get animtoolbar events if any
             if self.menubar.visible:
@@ -1580,21 +1583,22 @@ class pydpainter:
                 self.cursor.shape = self.cursor.CROSS
                 hide_draw_tool = False
 
-            #Do move action for toolbar events
-            if curr_action != None and not hide_draw_tool:
-                for te in te_list:
-                    #print(te)
-                    if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
-                       te.gadget.tool_type == ToolGadget.TT_GROUP:
-                        if e.type == KEYDOWN:
-                            if self.get_mouse_pressed() == (0,0,0):
-                                curr_action.move(self.get_mouse_pixel_pos(e))
+            if not config.anim.playing:
+                #Do move action for toolbar events
+                if curr_action != None and not hide_draw_tool:
+                    for te in te_list:
+                        #print(te)
+                        if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
+                           te.gadget.tool_type == ToolGadget.TT_GROUP:
+                            if e.type == KEYDOWN:
+                                if self.get_mouse_pressed() == (0,0,0):
+                                    curr_action.move(self.get_mouse_pixel_pos(e))
+                                else:
+                                    curr_action.drag(self.get_mouse_pixel_pos(e), self.get_mouse_pressed())
                             else:
-                                curr_action.drag(self.get_mouse_pixel_pos(e), self.get_mouse_pressed())
-                        else:
-                            curr_action.move(self.get_mouse_pixel_pos(e))
-            elif curr_action != None and hide_draw_tool:
-                curr_action.hide()
+                                curr_action.move(self.get_mouse_pixel_pos(e))
+                elif curr_action != None and hide_draw_tool:
+                    curr_action.hide()
 
             #process middle mouse button for pan
             if not config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button == 2:
@@ -1745,41 +1749,42 @@ class pydpainter:
             #Process events for animation
             config.anim.handle_events(e)
 
-            #No toolbar event so process event as action on selected tool
-            if curr_action != None and len(te_list) == 0 and \
-               len(mte_list) == 0 and len(me_list) == 0 and \
-               len(mta_list) == 0 and \
-               not wait_for_mouseup_gui and not hide_draw_tool:
-                if config.coords_on:
-                    cx,cy = self.get_mouse_pixel_pos(e)
-                    if config.p1 != None and True in self.get_mouse_pressed():
-                        config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
+            if not config.anim.playing:
+                #No toolbar event so process event as action on selected tool
+                if curr_action != None and len(te_list) == 0 and \
+                   len(mte_list) == 0 and len(me_list) == 0 and \
+                   len(mta_list) == 0 and \
+                   not wait_for_mouseup_gui and not hide_draw_tool:
+                    if config.coords_on:
+                        cx,cy = self.get_mouse_pixel_pos(e)
+                        if config.p1 != None and True in self.get_mouse_pressed():
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
+                        else:
+                            config.menubar.title_right = config.xypos_string((cx, cy))
+                            config.p1 = None
                     else:
-                        config.menubar.title_right = config.xypos_string((cx, cy))
-                        config.p1 = None
-                else:
-                    config.menubar.title_right = ""
-                if e.type == MOUSEMOTION:
-                    mbuttons = self.get_mouse_pressed(e)
-                    if mbuttons == (0,0,0):
-                        curr_action.move(self.get_mouse_pixel_pos(e))
-                    else:
-                        curr_action.drag(self.get_mouse_pixel_pos(e), mbuttons)
-                elif e.type == MOUSEBUTTONDOWN and buttons[0] != buttons[2]:
-                    zoom_region = config.zoom.region(e.pos)
-                    config.wait_for_mouseup[zoom_region] = True
-                    curr_action.mousedown(self.get_mouse_pixel_pos(e), e.button)
-                elif e.type == MOUSEBUTTONUP and buttons[0] == buttons[2]:
-                    if last_wait_for_mouseup_gui:
-                        curr_action.move(self.get_mouse_pixel_pos(e))
-                    else:
-                        curr_action.mouseup(self.get_mouse_pixel_pos(e), e.button)
-                        config.wait_for_mouseup = [False] * len(config.wait_for_mouseup)
-                elif e.type == self.TOOLEVENT:
-                    if buttons[0] or buttons[2]:
-                        curr_action.drag(self.get_mouse_pixel_pos(e), buttons)
-                    else:
-                        curr_action.move(self.get_mouse_pixel_pos(e))
+                        config.menubar.title_right = ""
+                    if e.type == MOUSEMOTION:
+                        mbuttons = self.get_mouse_pressed(e)
+                        if mbuttons == (0,0,0):
+                            curr_action.move(self.get_mouse_pixel_pos(e))
+                        else:
+                            curr_action.drag(self.get_mouse_pixel_pos(e), mbuttons)
+                    elif e.type == MOUSEBUTTONDOWN and buttons[0] != buttons[2]:
+                        zoom_region = config.zoom.region(e.pos)
+                        config.wait_for_mouseup[zoom_region] = True
+                        curr_action.mousedown(self.get_mouse_pixel_pos(e), e.button)
+                    elif e.type == MOUSEBUTTONUP and buttons[0] == buttons[2]:
+                        if last_wait_for_mouseup_gui:
+                            curr_action.move(self.get_mouse_pixel_pos(e))
+                        else:
+                            curr_action.mouseup(self.get_mouse_pixel_pos(e), e.button)
+                            config.wait_for_mouseup = [False] * len(config.wait_for_mouseup)
+                    elif e.type == self.TOOLEVENT:
+                        if buttons[0] or buttons[2]:
+                            curr_action.drag(self.get_mouse_pixel_pos(e), buttons)
+                        else:
+                            curr_action.move(self.get_mouse_pixel_pos(e))
 
             last_wait_for_mouseup_gui = wait_for_mouseup_gui
 
