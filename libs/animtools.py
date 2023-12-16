@@ -72,7 +72,7 @@ class DoPaletteKey(AnimToolAction):
     Do palette key frame
     """
     def selected(self, attrs):
-        pass
+        config.anim.pal_keyframe_list()
 
 class DoAddFrame(AnimToolAction):
     """

@@ -40,6 +40,47 @@ def load_progress_anim(percent):
         prev_time = curr_time
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
+#Draw palettes with list
+class PalKeyListGadget(ListGadget):
+    def drawPalKey(self, screen, pal, prect):
+        x,y,w,h = prect
+        colorw = w / len(pal)
+        pali = 0
+        cx = x
+        while x < x+w and pali < len(pal):
+            pygame.draw.rect(screen, pal[pali], (int(cx), y, max(1,math.ceil(colorw)), h))
+            pali += 1
+            cx += colorw
+    
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        need_redraw = self.need_redraw
+        super(PalKeyListGadget, self).draw(screen, font, offset, fgcolor, bgcolor, hcolor)
+        x,y,w,h = self.rect
+        xo, yo = offset
+        px = font.xsize//8
+        py = font.ysize//8
+        self.fontx = font.xsize
+        self.fonty = int(font.ysize * 1.5)
+        self.fonth = font.ysize
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not need_redraw:
+                return
+
+            #List text
+            if self.label == "#":
+                screen.set_clip(self.screenrect)
+                topi = self.top_item
+                numlines = self.numlines
+                xo += font.xsize * 6
+                for i in range(topi, topi+numlines):
+                    if i < len(self.items):
+                        pal = config.anim.frame[int(self.items[i])-1].pal
+                        self.drawPalKey(screen, pal, (x+xo+2*px, y+yo+2*py+(i-topi)*font.ysize, w-offset[0]-x-12*px, font.ysize))
+                screen.set_clip(None)
+
+        
+
 class Frame:
     def __init__(self, image=None, delay=3, pal=None, truepal=None, is_pal_key = False):
         self.image = image
@@ -194,6 +235,9 @@ class Animation:
 
     def ask_frame(self):
         self.ask_frame_req(config.pixel_req_canvas)
+
+    def pal_keyframe_list(self):
+        self.pal_keyframe_list_req(config.pixel_req_canvas)
 
     def play(self, loop=False, ping_pong=False, reverse=False, stop=False):
         #print(f"play({loop=}, {ping_pong=}, {reverse=}, {stop=})")
@@ -492,6 +536,88 @@ class Animation:
                             running = 0
                     elif ge.gadget.label == "Cancel":
                         running = 0 
+
+            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+                req.draw(screen)
+                config.recompose()
+
+        config.pixel_req_rect = None
+        config.recompose()
+
+        return
+
+    def pal_keyframe_list_req(self, screen):
+        req = str2req("Color Keyframes", """
+Frame Colors
+############################^^
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################@@
+############################^^
+Keyframe:[Create][Remove]
+[Cancel][OK]
+""", "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PalKeyListGadget, font=config.font)
+        req.center(screen)
+        config.pixel_req_rect = req.get_screen_rect()
+
+        #get palette keyframes
+        palkeyframes = []
+        for i in range(0,config.anim.num_frames):
+            if config.anim.frame[i].is_pal_key:
+                palkeyframes.append("%5d" % (i+1))
+
+        #list items
+        list_itemsg = req.gadget_id("0_1")
+        list_itemsg.items = palkeyframes
+        list_itemsg.top_item = 0
+        list_itemsg.value = list_itemsg.top_item
+
+        #list up/down arrows
+        list_upg = req.gadget_id("28_1")
+        list_upg.value = -1
+        list_downg = req.gadget_id("28_10")
+        list_downg.value = 1
+
+        #list slider
+        list_sliderg = req.gadget_id("28_2")
+        list_sliderg.value = list_itemsg.top_item
+
+        #all list item gadgets
+        listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
+        list_itemsg.listgadgets = listg_list
+        list_upg.listgadgets = listg_list
+        list_downg.listgadgets = listg_list
+        list_sliderg.listgadgets = listg_list
+
+        req.draw(screen)
+        config.recompose()
+
+        running = 1
+        while running:
+            event = pygame.event.wait()
+            gevents = req.process_event(screen, event)
+
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                running = 0
+
+            for ge in gevents:
+                if ge.gadget.type == Gadget.TYPE_BOOL:
+                    if ge.gadget.label == "OK" and not req.has_error():
+                        """
+                        if int(frameg.value) >= 1:
+                            self.save_curr_frame()
+                            self.curr_frame = int(frameg.value)
+                            self.frame_bookmark = self.curr_frame
+                            self.show_curr_frame()
+                        """
+                        running = 0
+                    elif ge.gadget.label == "Cancel":
+                        running = 0
 
             if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
