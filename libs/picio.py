@@ -618,7 +618,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             surf_array = None
             config.color_depth = len(config.pal)
             if len(gif.frames) > 1:
-                config.anim.frame = [Frame(pic, delay=gif.frames[0]["delay_time"], pal=config.pal, is_pal_key=True)]
+                config.anim.frame = [Frame(pic, delay=gif.frames[0]["delay_time"]*60//100, pal=config.pal, is_pal_key=True)]
             for i in range(1,len(gif.frames)):
                 dx = gif.frames[i]["image_left_position"]
                 dy = gif.frames[i]["image_top_position"]
@@ -666,7 +666,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 else:
                     # Don't overlay previous frame
                     framepic = diffpic
-                delay = gif.frames[i]["delay_time"]
+                delay = gif.frames[i]["delay_time"]*60//100
                 upal = config.unique_palette(pal)
                 config.anim.frame.append(Frame(framepic, delay=delay, pal=upal, truepal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
             if len(gif.frames) > 1:
