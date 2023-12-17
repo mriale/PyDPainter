@@ -1135,7 +1135,7 @@ class pydpainter:
             if self.menubar.visible:
                 zoom_height -= self.menubar.rect[3] // self.zoom.factor
                 menu_bar_height = self.menubar.rect[3]
-            if self.animtoolbar.visible:
+            if self.animtoolbar.visible and self.anim.curr_frame > 1:
                 atbh = self.animtoolbar.rect[3] + 3*scaleY
                 zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
