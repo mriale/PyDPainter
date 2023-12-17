@@ -1135,7 +1135,7 @@ class pydpainter:
             if self.menubar.visible:
                 zoom_height -= self.menubar.rect[3] // self.zoom.factor
                 menu_bar_height = self.menubar.rect[3]
-            if self.animtoolbar.visible and self.anim.curr_frame > 1:
+            if self.animtoolbar.visible and self.anim.num_frames > 1:
                 atbh = self.animtoolbar.rect[3] + 3*scaleY
                 zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
@@ -1625,7 +1625,7 @@ class pydpainter:
                 (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
-            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5]:
+            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)):
                 if e.button == 2: #middle drag
                     zoom_drag = self.get_mouse_pixel_pos(e)
                 elif e.button == 4: #scroll up

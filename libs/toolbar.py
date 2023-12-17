@@ -359,6 +359,10 @@ class Toolbar:
                     toolg.state = 0
                 else:
                     ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
+        elif self.visible and event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
+            for toolg in self.get_tools_by_coords(x,y):
+                if toolg.pointin((x,y), toolg.rect):
+                    ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
         elif event.type == KEYDOWN and \
              (event.unicode in self.hotkey_map or \
               event.key in self.hotkey_map):

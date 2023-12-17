@@ -481,15 +481,27 @@ class Gadget(object):
                         g.state = 1
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
                 #handle scroll up
-                elif event.type == MOUSEBUTTONDOWN and event.button == 4:
-                    if g.type == Gadget.TYPE_PROP or g.type == Gadget.TYPE_PROP_VERT:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
+                     g.type == Gadget.TYPE_PROP_VERT:
+                        if g.value < g.maxvalue-1:
+                            g.need_redraw = True
+                            g.value += 1
+                            ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
+                     g.type == Gadget.TYPE_PROP:
                         if g.value < g.maxvalue-1:
                             g.need_redraw = True
                             g.value += 1
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 #handle scroll down
-                elif event.type == MOUSEBUTTONDOWN and event.button == 5:
-                    if g.type == Gadget.TYPE_PROP or g.type == Gadget.TYPE_PROP_VERT:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
+                     g.type == Gadget.TYPE_PROP_VERT:
+                        if g.value > 0:
+                            g.need_redraw = True
+                            g.value -= 1
+                            ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
+                     g.type == Gadget.TYPE_PROP:
                         if g.value > 0:
                             g.need_redraw = True
                             g.value -= 1
