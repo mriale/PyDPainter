@@ -277,6 +277,7 @@ class Gadget(object):
         self.fonty = fonty
         self.fonth = int(fonty / 1.5)
         self.error = False
+        self.scrolldelta = 1
         self.need_redraw = True
         if value == None:
             if type == self.TYPE_PROP or type == self.TYPE_PROP_VERT:
@@ -482,29 +483,19 @@ class Gadget(object):
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
                 #handle scroll up
                 elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
-                     g.type == Gadget.TYPE_PROP_VERT:
-                        if g.value < g.maxvalue-1:
+                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                        if g.value + self.scrolldelta <= g.maxvalue-1 and \
+                           g.value + self.scrolldelta >= 0:
                             g.need_redraw = True
-                            g.value += 1
-                            ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
-                elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
-                     g.type == Gadget.TYPE_PROP:
-                        if g.value < g.maxvalue-1:
-                            g.need_redraw = True
-                            g.value += 1
+                            g.value += self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 #handle scroll down
                 elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
-                     g.type == Gadget.TYPE_PROP_VERT:
-                        if g.value > 0:
+                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                        if g.value - self.scrolldelta <= g.maxvalue-1 and \
+                           g.value - self.scrolldelta >= 0:
                             g.need_redraw = True
-                            g.value -= 1
-                            ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
-                elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
-                     g.type == Gadget.TYPE_PROP:
-                        if g.value > 0:
-                            g.need_redraw = True
-                            g.value -= 1
+                            g.value -= self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
 
         #selected
