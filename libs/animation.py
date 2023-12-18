@@ -42,6 +42,18 @@ def load_progress_anim(percent):
 
 #Draw palettes with list
 class PalKeyListGadget(ListGadget):
+    def drawGhost(self, screen, bgcolor, rect):
+        x,y,w,h = rect
+        fadesurf = pygame.Surface((w,h), SRCALPHA)
+        fadesurf.fill((bgcolor[0],bgcolor[1],bgcolor[2],76))
+        for i in range(0, w, 2):
+            for j in range(0, h+1, 4):
+                pygame.draw.rect(fadesurf, (bgcolor[0],bgcolor[1],bgcolor[2],180), (i,j,1,1), 0)
+        for i in range(1, w, 2):
+            for j in range(2, h+1, 4):
+                pygame.draw.rect(fadesurf, (bgcolor[0],bgcolor[1],bgcolor[2],180), (i,j,1,1), 0)
+        screen.blit(fadesurf, (x,y), (0,0,w,h))
+
     def drawPalKey(self, screen, pal, prect):
         x,y,w,h = prect
         colorw = w / len(pal)
@@ -75,8 +87,12 @@ class PalKeyListGadget(ListGadget):
                 xo += font.xsize * 6
                 for i in range(topi, topi+numlines):
                     if i < len(self.items):
-                        pal = config.anim.frame[int(self.items[i])-1].pal
+                        framei = int(self.items[i])-1
+                        pal = config.anim.frame[framei].pal
+                        is_pal_key = config.anim.frame[framei].is_pal_key
                         self.drawPalKey(screen, pal, (x+xo+2*px, y+yo+2*py+(i-topi)*font.ysize, w-offset[0]-x-12*px, font.ysize))
+                        if not is_pal_key:
+                            self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
                 screen.set_clip(None)
 
         
@@ -559,23 +575,30 @@ Frame Colors
 ############################@@
 ############################@@
 ############################^^
-Keyframe:[Create][Remove]
+[Copy][Paste][Delete]
 [Cancel][OK]
 """, "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PalKeyListGadget, font=config.font)
         req.center(screen)
         config.pixel_req_rect = req.get_screen_rect()
 
         #get palette keyframes
+        curr_pal_range = self.pal_key_range()
+        curr_pal_index = 0
         palkeyframes = []
         for i in range(0,config.anim.num_frames):
             if config.anim.frame[i].is_pal_key:
                 palkeyframes.append("%5d" % (i+1))
+                if i+1 == self.curr_frame:
+                    curr_pal_index = len(palkeyframes)-1
+            elif i+1 == self.curr_frame:
+                palkeyframes.append("%5d" % (i+1))
+                curr_pal_index = len(palkeyframes)-1
 
         #list items
         list_itemsg = req.gadget_id("0_1")
         list_itemsg.items = palkeyframes
         list_itemsg.top_item = 0
-        list_itemsg.value = list_itemsg.top_item
+        list_itemsg.value = curr_pal_index
 
         #list up/down arrows
         list_upg = req.gadget_id("28_1")
