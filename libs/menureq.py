@@ -747,10 +747,8 @@ Resize: [Yes~No]
 
     pageg = [standardg, fullpageg, overscang]
 
-    if config.display_mode & config.PAL_MONITOR_ID == config.PAL_MONITOR_ID:
-        page_size = [[320,256],[320,435],[368,283]]
-    else:
-        page_size = [[320,200],[320,340],[362,241]]
+    sm = config.display_info.get_id(config.display_mode)
+    page_size = [[sm.x,sm.y],[sm.x,int(sm.y*1.7)],[sm.max_x,sm.max_y]]
 
     widthg.value = str(config.pixel_width)
     widthg.numonly = True
@@ -817,7 +815,7 @@ Resize: [Yes~No]
             config.recompose()
 
     config.pixel_req_rect = None
-    config.recompose()
+    config.initialize_surfaces()
 
     return
 
