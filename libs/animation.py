@@ -85,12 +85,13 @@ class PalKeyListGadget(ListGadget):
                 topi = self.top_item
                 numlines = self.numlines
                 xo += font.xsize * 6
+                wp = w-font.xsize * 6
                 for i in range(topi, topi+numlines):
                     if i < len(self.items):
                         framei = int(self.items[i])-1
                         pal = config.anim.frame[framei].pal
                         is_pal_key = config.anim.frame[framei].is_pal_key
-                        self.drawPalKey(screen, pal, (x+xo+2*px, y+yo+2*py+(i-topi)*font.ysize, w-offset[0]-x-12*px, font.ysize))
+                        self.drawPalKey(screen, pal, (x+xo+2*px, y+yo+2*py+(i-topi)*font.ysize, wp-4*px, font.ysize))
                         if not is_pal_key:
                             self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
                 screen.set_clip(None)
@@ -132,7 +133,7 @@ class Animation:
         self.num_frames = 1
         self.curr_frame = 1
         self.frame_rate = 10
-        self.frame = [Frame()]
+        self.frame = [Frame(is_pal_key=True)]
         self.playing = False
         self.play_loop=False
         self.play_ping_pong=False
