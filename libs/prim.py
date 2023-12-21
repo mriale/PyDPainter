@@ -2031,6 +2031,7 @@ def floodfill(surface, fill_color, position):
         sl = {}
         config.fillmode.bounds = copy.copy(FillMode.NOBOUNDS)
         if onscreen((x,y)):
+            surface_bak = surface.copy()
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
             maxx, maxy = config.pixel_width, config.pixel_height
             current_color = surf_array[x,y]
@@ -2105,6 +2106,8 @@ def floodfill(surface, fill_color, position):
 
             start_shape()
             if config.fillmode.value != FillMode.SOLID:
+                #Restore pre-filled state
+                surface.blit(surface_bak, (0,0))
                 for y in sorted (sl.keys()):
                     #draw scanline fragments
                     for frag in sl[y]:
