@@ -89,8 +89,8 @@ class PalKeyListGadget(ListGadget):
                 for i in range(topi, topi+numlines):
                     if i < len(self.items):
                         framei = int(self.items[i])-1
-                        pal = config.anim.frame[framei].pal
-                        is_pal_key = config.anim.frame[framei].is_pal_key
+                        pal = self.frame_work[framei].pal
+                        is_pal_key = self.frame_work[framei].is_pal_key
                         self.drawPalKey(screen, pal, (x+xo+2*px, y+yo+2*py+(i-topi)*font.ysize, wp-4*px, font.ysize))
                         if not is_pal_key:
                             self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
@@ -563,6 +563,27 @@ class Animation:
 
         return
 
+    def get_pal_keys(self, list_itemsg, animframe):
+        curr_pal_index = 0
+        palkeyframes = []
+        frame_work = []
+        for i in range(0,config.anim.num_frames):
+            f = animframe[i]
+            frame_work.append(Frame(None, pal=f.pal, truepal=f.truepal, is_pal_key=f.is_pal_key))
+            if f.is_pal_key:
+                palkeyframes.append("%5d" % (i+1))
+                if i+1 == self.curr_frame:
+                    curr_pal_index = len(palkeyframes)-1
+            elif i+1 == self.curr_frame:
+                palkeyframes.append("%5d" % (i+1))
+                curr_pal_index = len(palkeyframes)-1
+        list_itemsg.items = palkeyframes
+        list_itemsg.top_item = 0
+        list_itemsg.value = curr_pal_index
+        list_itemsg.frame_work = frame_work
+        list_itemsg.need_redraw = True
+
+
     def pal_keyframe_list_req(self, screen):
         req = str2req("Color Keyframes", """
 Frame Colors
@@ -576,30 +597,19 @@ Frame Colors
 ############################@@
 ############################@@
 ############################^^
-[Copy][Paste][Delete]
-[Cancel][OK]
+[Copy][Delete]       [Remap]
+[Cancel][Undo][OK]
 """, "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PalKeyListGadget, font=config.font)
         req.center(screen)
         config.pixel_req_rect = req.get_screen_rect()
 
-        #get palette keyframes
-        curr_pal_range = self.pal_key_range()
-        curr_pal_index = 0
-        palkeyframes = []
-        for i in range(0,config.anim.num_frames):
-            if config.anim.frame[i].is_pal_key:
-                palkeyframes.append("%5d" % (i+1))
-                if i+1 == self.curr_frame:
-                    curr_pal_index = len(palkeyframes)-1
-            elif i+1 == self.curr_frame:
-                palkeyframes.append("%5d" % (i+1))
-                curr_pal_index = len(palkeyframes)-1
+        MODE_NORMAL = 0
+        MODE_COPY = 1
+        mode = MODE_NORMAL
 
         #list items
         list_itemsg = req.gadget_id("0_1")
-        list_itemsg.items = palkeyframes
-        list_itemsg.top_item = 0
-        list_itemsg.value = curr_pal_index
+        self.get_pal_keys(list_itemsg, config.anim.frame)
 
         #list up/down arrows
         list_upg = req.gadget_id("28_1")
@@ -618,9 +628,15 @@ Frame Colors
         list_downg.listgadgets = listg_list
         list_sliderg.listgadgets = listg_list
 
+        #remap toggle
+        remapg = req.gadget_id("21_11")
+        remap = True
+        remapg.state = 1
+
         req.draw(screen)
         config.recompose()
 
+        copy_from_framei = 0
         running = 1
         while running:
             event = pygame.event.wait()
@@ -630,25 +646,97 @@ Frame Colors
                 running = 0
 
             for ge in gevents:
+                if ge.gadget == list_itemsg:
+                    if mode == MODE_COPY:
+                        mode = MODE_NORMAL
+                        listi = list_itemsg.value
+                        framei = int(list_itemsg.items[listi])-1
+                        frame_work = list_itemsg.frame_work
+                        if framei != copy_from_framei:
+                            #Copy palette from previously selected palette
+                            pal = frame_work[copy_from_framei].pal
+                            truepal = frame_work[copy_from_framei].truepal
+                            i = framei
+                            frame_work[i].is_pal_key = True
+                            frame_work[i].pal = list(pal)
+                            frame_work[i].truepal = list(truepal)
+                            i += 1
+                            while i < len(frame_work) and \
+                              not frame_work[i].is_pal_key:
+                                frame_work[i].pal = list(pal)
+                                frame_work[i].truepal = list(truepal)
+                                i += 1
+                            #Refresh list
+                            self.get_pal_keys(list_itemsg, list_itemsg.frame_work)
+
                 if ge.gadget.type == Gadget.TYPE_BOOL:
-                    if ge.gadget.label == "OK" and not req.has_error():
-                        """
-                        if int(frameg.value) >= 1:
-                            self.save_curr_frame()
-                            self.curr_frame = int(frameg.value)
-                            self.frame_bookmark = self.curr_frame
-                            self.show_curr_frame()
-                        """
+                    listi = list_itemsg.value
+                    framei = int(list_itemsg.items[listi])-1
+                    frame_work = list_itemsg.frame_work
+
+                    if ge.gadget.label == "OK":
+                        num_key_frames = 0
+                        #copy frame_work palettes into frame
+                        for i in range(0,config.anim.num_frames):
+                            fw = frame_work[i]
+                            af = config.anim.frame[i]
+                            if fw.is_pal_key:
+                                num_key_frames += 1
+                            if remap and fw.pal != af.pal:
+                                af.image.set_palette(af.pal)
+                                af.image = convert8(af.image.convert(), fw.pal)
+                            else:
+                                af.image.set_palette(fw.pal)
+                            af.pal = fw.pal
+                            af.truepal = fw.truepal
+                            af.is_pal_key = fw.is_pal_key
+                        if num_key_frames == 1:
+                            config.anim.global_palette = True
+                        else:
+                            config.anim.global_palette = False
                         running = 0
                     elif ge.gadget.label == "Cancel":
                         running = 0
+                    elif ge.gadget.label == "Undo":
+                        self.get_pal_keys(list_itemsg, config.anim.frame)
+                    elif ge.gadget.label == "Remap":
+                        remap = (remap+1) % 2
+                    elif ge.gadget.label == "Copy":
+                        mode = MODE_COPY
+                        copy_from_framei = int(list_itemsg.items[listi])-1
+                    elif ge.gadget.label == "Delete":
+                        if list_itemsg.value != 0 and \
+                           frame_work[framei].is_pal_key:
+                            #Copy palette from previous key palette
+                            frame_work[framei].is_pal_key = False
+                            pal = frame_work[framei-1].pal
+                            truepal = frame_work[framei-1].truepal
+                            i = framei
+                            while i < len(frame_work) and \
+                              not frame_work[i].is_pal_key:
+                                frame_work[i].pal = list(pal)
+                                frame_work[i].truepal = list(truepal)
+                                i += 1
+                            #Manipulate list
+                            list_itemsg.items.pop(listi)
+                            if listi >= len(list_itemsg.items):
+                                list_itemsg.value -= 1
+                            list_itemsg.need_redraw = True
+
+            if mode == MODE_NORMAL:
+                config.cursor.shape = config.cursor.NORMAL
+            elif mode == MODE_COPY:
+                config.cursor.shape = config.cursor.NORMALTO
+
+            if remap:
+                remapg.state = 1
 
             if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
                 config.recompose()
 
         config.pixel_req_rect = None
-        config.recompose()
+        self.show_curr_frame()
 
         return
 

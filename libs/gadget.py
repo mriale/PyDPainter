@@ -732,6 +732,7 @@ class ListGadget(Gadget):
                             item = 0
                         g.value = item
                         g.need_redraw = True
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                     #List slider
                     elif g.label == "@":
                         #drag slider

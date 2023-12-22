@@ -173,10 +173,10 @@ def draw_animtoolbar(screen_rgb):
         if config.anim.global_palette:
             config.animtoolbar.tool_id("palettekey").state = 0
         elif config.anim.curr_frame > 1:
-            if config.anim.frame[config.anim.curr_frame-1].pal == config.anim.frame[config.anim.curr_frame-2].pal:
-                config.animtoolbar.tool_id("palettekey").state = 1
-            else:
+            if config.anim.frame[config.anim.curr_frame-1].is_pal_key:
                 config.animtoolbar.tool_id("palettekey").state = 2
+            else:
+                config.animtoolbar.tool_id("palettekey").state = 1
         else:
             config.animtoolbar.tool_id("palettekey").state = 2
         
