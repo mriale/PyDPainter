@@ -682,7 +682,10 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
 
         if frameno >= 0:
             if config.anim.num_frames == 1:
-                delay = gif.frames[0]["delay_time"]
+                if pictype == "GIF":
+                    delay = gif.frames[0]["delay_time"]
+                else:
+                    delay = 4
                 config.anim.frame = [Frame(pic, delay=delay, is_pal_key=True)]
             else:
                 is_pal_key = True
