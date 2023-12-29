@@ -166,6 +166,56 @@ class PPtypelist(Gadget):
                     g.need_redraw = True
         return ge
 
+def ask_dir_req(screen):
+    # save previous requestor
+    prr = config.pixel_req_rect
+    prc = config.pixel_req_canvas.copy()
+    oldcursor = config.cursor.shape
+    config.cursor.shape = config.cursor.NORMAL
+    retval = ""
+
+    req = str2req("Create Directory", """
+
+Dir Name: ______________________
+
+[Cancel][OK]
+""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    dirnameg = req.gadget_id("10_1")
+    dirnameg.value = ""
+    dirnameg.maxvalue = 255
+
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = pygame.event.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK" and not req.has_error():
+                    retval = dirnameg.value
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0 
+
+        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    # restore previous requestor
+    config.pixel_req_rect = prr
+    config.pixel_req_canvas.blit(prc, (0,0))
+    config.cursor.shape = oldcursor
+
+    return retval
 
 def file_req(screen, title, action_label, filepath, filename, has_type=False):
     req = str2req(title, """
@@ -181,7 +231,7 @@ Path:_________________________
 ############################@@
 ############################^^
 File:___________________%s
-[%s][Cancel]
+[%s][Cancel]  [Make Dir]
 """%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -263,6 +313,18 @@ File:___________________%s
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget.label == "Make Dir":
+                    newdir = ask_dir_req(screen)
+                    if newdir != "":
+                        newdirpath = os.path.join(filepath, newdir)
+                        try:
+                            os.mkdir(newdirpath)
+                            list_itemsg.items = get_dir(filepath)
+                            list_itemsg.need_redraw = True
+                            list_sliderg.need_redraw = True
+                        except:
+                            libs.menus.io_error_req("Directory Error", "Unable to create directory:\n%s", newdirpath)
+                            running = 0
                 elif ge.gadget == file_typeg:
                     picki = pick_file_type(screen, req, file_typeg, ext)
                     if picki >=0 and picki < len(filetype_list):

@@ -511,6 +511,8 @@ def pal_power_2(palin):
 def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     config.cranges = []
     pic = pygame.image.load(filename)
+    if force_pal != None:
+        pic = pic.convert() #convert to high color to change palette
     if pic.get_bitsize() > 8:
         if force_pal != None:
             config.pal = list(force_pal)
@@ -587,7 +589,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
         raise Exception("Load error")
 
     while pictype != "NONE":
-        if pictype in ["ILBM", "PBM"]:
+        if pictype in ["ILBM", "PBM"] and not import_frames:
             pic = load_iff(filename, config, pictype)
             config.pal = pal_power_2(config.pal)
             config.pal = config.quantize_palette(config.pal, config.color_depth)

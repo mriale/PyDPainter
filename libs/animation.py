@@ -151,7 +151,7 @@ class Animation:
         self.frame[f].loadpal = list(config.loadpal)
         self.frame[f].backuppal = list(config.backuppal)
 
-    def show_curr_frame(self):
+    def show_curr_frame(self, doAction=True):
         if self.curr_frame > self.num_frames:
             self.curr_frame = self.num_frames
         f = self.curr_frame-1
@@ -174,7 +174,8 @@ class Animation:
 
         config.clear_undo()
         config.save_undo()
-        config.doKeyAction()
+        if doAction:
+            config.doKeyAction()
 
     def first_frame(self):
         if self.num_frames == 1:
@@ -313,7 +314,7 @@ class Animation:
                  "Import frames into anim",
                  "About to import %d frames.\nPalette type:" % (numframes),
                  ["Global", "Local", "Cancel"],
-                 [K_g, K_l, K_RETURN])
+                 [K_g, K_l, K_ESCAPE])
 
         # restore previous requestor
         config.pixel_req_rect = prr
@@ -368,6 +369,32 @@ class Animation:
             except:
                 close_progress_req(progress_req)
                 io_error_anim_req("Load Error", "Unable to import frames:\n%s", filename)
+
+    def export_frames(self):
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, has_type=True)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
+            matches = re.fullmatch(r"^(.*?)([0-9]*)\.([^.]+)$", filename)
+            file_root = matches[1]
+            file_ext = matches[3]
+
+            self.first_frame()
+            self.show_curr_frame(doAction=False)
+            for i in range(0, self.num_frames):
+                try:
+                    load_progress_anim(self.curr_frame / self.num_frames)
+                    frame_filename = file_root + ("%04d"%i) + "." + file_ext
+                    libs.picio.save_pic(frame_filename, config)
+                    self.next_frame()
+                    self.show_curr_frame(doAction=False)
+                except:
+                    close_progress_req(progress_req)
+                    io_error_anim_req("Load Error", "Unable to save frame:\n%s", frame_filename)
+
+            close_progress_req(progress_req)
 
     def save_file(self):
         io_error_anim_req("Not Implemented", "Saving ANIM files\nis not implemented yet.%s", "")

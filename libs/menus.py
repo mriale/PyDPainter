@@ -987,6 +987,10 @@ class DoAnimFrameImport(MenuAction):
     def selected(self, attrs):
         config.anim.import_frames()
 
+class DoAnimFrameExport(MenuAction):
+    def selected(self, attrs):
+        config.anim.export_frames()
+
 class DoAnimFrameAdd(MenuAction):
     def selected(self, attrs):
         config.anim.add_frame()
@@ -1256,6 +1260,7 @@ def init_menubar(config_in):
             ["Move..."],
             ["Frames", [
                 ["Import...", " ", DoAnimFrameImport],
+                ["Export...", " ", DoAnimFrameExport],
                 ["Add Frame", " ", DoAnimFrameAdd],
                 ["Set #...", " ", DoAnimFrameSetNumber],
                 ["Copy to All", " ", DoAnimFrameCopyAll],
