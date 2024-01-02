@@ -112,7 +112,7 @@ class GIFWriter:
 
         # Initialize first 256 entries with their own values
         for i in range(256):
-            dictionary[i] = struct.pack("B", i)
+            dictionary[struct.pack("B", i)] = i
 
         out += self.write_bits(256, code_length) # clear code
 
@@ -120,10 +120,11 @@ class GIFWriter:
         while buflen > 0:
             # Find the longest match in the dictionary
             longest_match = b''
-            for key, value in dictionary.items():
-                if inp.startswith(value) and len(value) > len(longest_match):
-                    longest_match = value
-                    code = key
+            i = 1
+            while i <= len(inp) and inp[0:i] in dictionary:
+                longest_match = inp[0:i]
+                code = dictionary[inp[0:i]]
+                i += 1
 
             # Write the code to output
             out += self.write_bits(code, code_length)
@@ -138,7 +139,7 @@ class GIFWriter:
 
             if len(inp) > 0:
                 # Add the longest match plus the next character to the dictionary
-                dictionary[dictionary_ind] = longest_match + struct.pack("B", inp[0])
+                dictionary[longest_match + struct.pack("B", inp[0])] = dictionary_ind
                 dictionary_ind += 1
 
             # Reset dictionary if necessary
@@ -146,7 +147,7 @@ class GIFWriter:
                 out += self.write_bits(256, code_length) # clear code
                 dictionary = {}
                 for i in range(256):
-                    dictionary[i] = struct.pack("B", i)
+                    dictionary[struct.pack("B", i)] = i
                 dictionary_ind = 258
                 code_length = 9
 
