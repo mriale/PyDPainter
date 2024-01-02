@@ -14,6 +14,7 @@ from libs.colorrange import *
 from libs.prim import *
 from libs.animation import *
 from libs.gifparser import *
+from libs.gifwriter import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -894,6 +895,25 @@ def save_iff(filename, config, ifftype):
 
     close_iff(newfile)
 
+
+def save_gif(filename, config):
+    header = {
+        "width": config.pixel_width,
+        "height": config.pixel_height,
+        "global_num_colors": len(config.pal),
+        "global_color_table": int(config.anim.global_palette),
+    }
+    surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+    frames = [{"local_palette": config.pal,
+               "image_data": surf_array,
+    }]
+    pal = None
+    if config.anim.global_palette:
+        pal = config.truepal
+    gif = GIFWriter(filename, header, pal, frames)
+    gif.write_frame(0)
+    surf_array = None
+
 #save picture
 def save_pic(filename, config, overwrite=True):
     if '.' not in filename:
@@ -908,6 +928,8 @@ def save_pic(filename, config, overwrite=True):
         save_iff(filename, config, "ILBM")
     elif len(filename) > 4 and filename[-4:].lower() == ".lbm":
         save_iff(filename, config, "PBM")
+    elif len(filename) > 4 and filename[-4:].lower() == ".gif":
+        save_gif(filename, config)
     else:
         pygame.image.save(config.pixel_canvas, filename)
 
