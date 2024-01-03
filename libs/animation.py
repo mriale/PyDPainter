@@ -397,7 +397,36 @@ class Animation:
             close_progress_req(progress_req)
 
     def save_file(self):
-        io_error_anim_req("Not Implemented", "Saving ANIM files\nis not implemented yet.%s", "")
+        global progress_req
+        config.stop_cycling()
+        config.stencil.enable = False
+        filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
+            if True: #try:
+                if not libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=False):
+                    close_progress_req(progress_req)
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                        progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
+                        libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=True)
+                    else:
+                        return
+
+                close_progress_req(progress_req)
+                config.filepath = os.path.dirname(filename)
+                config.filename = filename
+                config.modified_count = 0
+                config.anim.show_curr_frame()
+            """
+            except:
+                close_progress_req(progress_req)
+                io_error_anim_req("Load Error", "Unable to save anim:\n%s", filename)
+            """
 
     def handle_events(self, event):
         if event.type == KEYDOWN:

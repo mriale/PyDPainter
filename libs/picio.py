@@ -901,17 +901,14 @@ def save_gif(filename, config):
         "width": config.pixel_width,
         "height": config.pixel_height,
         "global_num_colors": len(config.pal),
-        "global_color_table": int(config.anim.global_palette),
+        "global_color_table": 1,
     }
     surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
-    frames = [{"local_palette": config.pal,
-               "image_data": surf_array,
-    }]
-    pal = None
-    if config.anim.global_palette:
-        pal = config.truepal
-    gif = GIFWriter(filename, header, pal, frames)
-    gif.write_frame(0)
+    frame = {"local_palette": None,
+             "image_data": surf_array,
+    }
+    gif = GIFWriter(filename, header, config.truepal)
+    gif.write_frame(frame)
     surf_array = None
 
 #save picture
@@ -932,5 +929,53 @@ def save_pic(filename, config, overwrite=True):
         save_gif(filename, config)
     else:
         pygame.image.save(config.pixel_canvas, filename)
+
+    return True
+
+
+def save_iff_anim(filename, config, status_func=None):
+    pass
+
+def save_gif_anim(filename, config, status_func=None):
+    header = {
+        "width": config.pixel_width,
+        "height": config.pixel_height,
+        "global_num_colors": len(config.pal),
+        "global_color_table": int(config.anim.global_palette),
+    }
+    pal = None
+    if config.anim.global_palette:
+        pal = config.truepal
+    gif = GIFWriter(filename, header, pal)
+
+    for i in range(config.anim.num_frames):
+        if config.anim.global_palette:
+            localpal = None
+        else:
+            localpal = config.anim.frame[i].truepal
+        surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].image).copy()
+        frame = {"local_palette": localpal,
+                 "image_data": surf_array,
+                 "delay_time": 100 * config.anim.frame[i].delay // 60,
+        }
+        gif.write_frame(frame)
+        surf_array = None
+        if status_func:
+            status_func(i / config.anim.num_frames)
+
+def save_anim(filename, config, status_func=None, overwrite=True):
+    if '.' not in filename:
+        filename += ".anim"
+
+    # Check if file exists
+    if overwrite == False and os.path.isfile(filename):
+        return False
+
+    if (len(filename) > 5 and filename[-5:].lower() == ".anim"):
+        save_iff_anim(filename, config, status_func=status_func)
+    elif len(filename) > 4 and filename[-4:].lower() == ".gif":
+        save_gif_anim(filename, config, status_func=status_func)
+    else:
+        raise Exception("Unrecognized anim format")
 
     return True

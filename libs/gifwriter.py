@@ -21,20 +21,23 @@ class LzwEntry:
         self.len = len
 
 class GIFWriter:
-    def __init__(self, filename, header, global_palette, frames, status_func=None):
+    def __init__(self, filename, header, global_palette, status_func=None):
         self.file = open(filename, "wb")
         self.status_func = status_func
         self.header = header
+        self.frame = None
         self.global_palette = global_palette
-        self.frames = frames
-        self.frameno = 0
         #print(f"{self.header=}")
         self.write_header()
         if self.header["global_color_table"]:
             self.write_palette(self.global_palette)
-        #self.frames = self.get_frames()
-        #print(f"{len(self.frames)=}")
-        #print(f"{self.frames=}")
+        #print(f"{len(self.frame)=}")
+        #print(f"{self.frame=}")
+        self.first_frame = True
+
+    def __del__(self):
+        self.file.write(struct.pack("B", TRAILER)) # End of file
+        self.file.close()
 
     def write_header(self):
         header = b"GIF89a"
@@ -52,14 +55,36 @@ class GIFWriter:
         for rgb in pal:
             self.file.write(struct.pack("BBB", rgb[0], rgb[1], rgb[2]))
 
-    def write_extension(self):
-        self.file.write(struct.pack("BB", EXTENSION_INTRODUCER, GRAPHIC_CONTROL))
+    def write_extensions(self):
+        if self.first_frame:
+            self.file.write(struct.pack("B", EXTENSION_INTRODUCER))
+            self.file.write(struct.pack("B", APPLICATION_EXTENSION))
+            self.file.write(struct.pack("B", 11)) # 11 bytes app name
+            self.file.write(b'NETSCAPE2.0') # app name for compatibility
+            self.file.write(struct.pack("B", 3)) # 3 bytes to follow
+            self.file.write(struct.pack("B", 1)) # index of sub-block
+            self.file.write(struct.pack("<H", 0)) # repeat counter (infinite)
+            self.file.write(b"\x00") # End of blocks
+            self.first_frame = False
+
+        self.file.write(struct.pack("B", EXTENSION_INTRODUCER))
+        self.file.write(struct.pack("B", GRAPHIC_CONTROL))
         self.file.write(b"\x04") # 4 bytes to follow
-        flags = 0x00;
+        flags = 0x00
+        if "disposal_method" in self.frame:
+            flags |= self.frame["disposal_method"] << 2
+        if "transparency" in self.frame:
+            flags |= self.frame["transparency"]
+        delay_time = 100*4//60
+        if "delay_time" in self.frame:
+            delay_time = self.frame["delay_time"]
+        tcolor_i = 0
+        if "transparent_color_index" in self.frame:
+            tcolor_i = self.frame["transparent_color_index"]
         self.file.write(struct.pack("B", flags))
-        self.file.write(struct.pack("<H", int(100*4/60))) # Delay time
-        self.file.write(b"\x00") # Transparent color index
-        self.file.write(b"\x00") # End of block
+        self.file.write(struct.pack("<H", delay_time)) # Delay time
+        self.file.write((struct.pack("B", tcolor_i))) # Transparent color index
+        self.file.write(b"\x00") # End of blocks
 
     def write_image_descriptor(self):
         self.file.write(struct.pack("B", IMAGE_DESCRIPTOR))
@@ -68,7 +93,7 @@ class GIFWriter:
         if self.header["global_color_table"]:
             pal = None
         else:
-            pal = self.frames[self.frameno]["local_palette"]
+            pal = self.frame["local_palette"]
         flags = 0
         if pal != None:
             flags |= (int(math.log(len(pal),2)) - 1)
@@ -156,7 +181,7 @@ class GIFWriter:
         return out
 
     def write_image(self):
-        pic_data = np.copy(self.frames[self.frameno]["image_data"])
+        pic_data = np.copy(self.frame["image_data"])
         pic_bytes = bytes(pic_data.transpose().flatten())
         lzw_data = self.encode_lzw_data(pic_bytes)
         self.file.write(struct.pack("B", 8)) # LZW starting code size
@@ -175,12 +200,11 @@ class GIFWriter:
             self.file.write(struct.pack("B", data_left))
             self.file.write(lzw_data[-data_left:])
         self.file.write(struct.pack("B", 0)) # End of blocks
-        self.file.write(struct.pack("B", TRAILER)) # End of file
             
 
-    def write_frame(self, frameno):
-        self.frameno = frameno
-        self.write_extension()
+    def write_frame(self, frame):
+        self.frame = frame
+        self.write_extensions()
         self.write_image_descriptor()
         self.write_image()
 
