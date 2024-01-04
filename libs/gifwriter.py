@@ -183,7 +183,10 @@ class GIFWriter:
     def write_image(self):
         pic_data = np.copy(self.frame["image_data"])
         pic_bytes = bytes(pic_data.transpose().flatten())
-        lzw_data = self.encode_lzw_data(pic_bytes)
+        if "image_data_lzh" in self.frame and self.frame["image_data_lzh"]:
+            lzw_data = self.frame["image_data_lzh"]
+        else:
+            lzw_data = self.encode_lzw_data(pic_bytes)
         self.file.write(struct.pack("B", 8)) # LZW starting code size
 
         # Write out image data blocks

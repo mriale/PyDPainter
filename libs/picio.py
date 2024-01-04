@@ -954,9 +954,43 @@ def save_gif_anim(filename, config, status_func=None):
         else:
             localpal = config.anim.frame[i].truepal
         surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].image).copy()
+        disposal_method = 0
+        transparency = 0
+        transparent_color_index = 0
+        image_data_lzh = None
+        # frame compression using differences
+        if i > 0 and not config.anim.frame[i].is_pal_key:
+            # Do difference from previous frame
+            prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].image).copy()
+            surf_diff = np.equal(prev_array, surf_array)
+
+            # Find background color not in the difference
+            all_256 = np.arange(256, dtype=np.uint8)
+            surf_unique = np.unique(surf_array[surf_diff])
+            surf_notin = np.setdiff1d(all_256, surf_unique, assume_unique=True)
+            if len(surf_notin) > 0:
+                bgcolor = surf_notin[0]
+                surf_diff_array = surf_array.copy()
+                surf_diff_array[surf_diff] = bgcolor
+                # try compressing diff and overwrite to see which is smaller
+                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
+                surf_lzw = gif.encode_lzw_data(bytes(surf_array.transpose().flatten()))
+                
+                if len(surf_diff_lzw) < len(surf_lzw):
+                    image_data_lzh = surf_diff_lzw
+                    disposal_method = 1
+                    transparency = 1
+                    transparent_color_index = bgcolor
+                else:
+                    image_data_lzh = surf_lzw
+
         frame = {"local_palette": localpal,
                  "image_data": surf_array,
+                 "image_data_lzh": image_data_lzh,
                  "delay_time": 100 * config.anim.frame[i].delay // 60,
+                 "disposal_method": disposal_method,
+                 "transparency": transparency,
+                 "transparent_color_index": transparent_color_index,
         }
         gif.write_frame(frame)
         surf_array = None
