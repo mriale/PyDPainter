@@ -1506,6 +1506,8 @@ class pydpainter:
                     progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
                     try:
                         config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress, cmd_load=True)
+                        config.bgcolor = 0
+                        config.color = 1
                         close_progress_req(progress_req)
                         config.truepal = list(config.pal)
                         config.pal = config.unique_palette(config.pal)
