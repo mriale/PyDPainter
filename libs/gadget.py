@@ -416,12 +416,14 @@ class Gadget(object):
                 else:
                     c = " "
                 font.blitstring(screen, (x+xo+px+((self.pos-self.scrollpos)*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
-            if self.numonly and not re.fullmatch('^-?\d*\.?\d+$', self.value):
-                #numeric error
+            if self.numonly:
+                if not re.fullmatch('^-?\d*\.?\d+$', self.value):
+                    #numeric error
+                    self.error = True
+                else:
+                    self.error = False
+            if self.error:
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
-                self.error = True
-            else:
-                self.error = False
         elif self.type == Gadget.TYPE_LABEL:
             font.blitstring(screen, (x+xo,y+yo+2), self.label, fgcolor, bgcolor)
         if not self.enabled:

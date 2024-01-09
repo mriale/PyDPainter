@@ -324,6 +324,9 @@ class Animation:
         return retval
 
 
+    def ask_apply_multi(self):
+        return self.ask_apply_multi_req(config.pixel_req_canvas)
+
     def open_file(self):
         global progress_req
         config.stop_cycling()
@@ -796,4 +799,82 @@ Frame Colors
 
         return
 
+    def get_list_from_range(self, str):
+        result = []
+        try:
+            #Parse string for ranges
+            for part in str.split(','):
+                if '-' in part:
+                    a, b = part.split('-')
+                    a, b = int(a), int(b)
+                    result.extend(range(a, b + 1))
+                else:
+                    a = int(part)
+                    result.append(a)
+            #Make list unique
+            result = sorted(set(result))
+            #Get rid of frames ouside animation
+            for i in result:
+                if i not in range(1,self.num_frames+1):
+                    result.remove(i)
+        except:
+            result = []
 
+        return result
+
+    def ask_apply_multi_req(self, screen):
+        req = str2req("Apply to Multiple Frames", """
+
+[All Frames] [Current Frame]
+
+Frames: ___________________
+
+[Cancel][OK]
+""", "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+        req.center(screen)
+        config.pixel_req_rect = req.get_screen_rect()
+
+        frameg = req.gadget_id("8_3")
+        frameg.value = "1-" + str(self.num_frames)
+
+        req.draw(screen)
+        config.recompose()
+
+        running = 1
+        result = []
+        while running:
+            event = pygame.event.wait()
+            gevents = req.process_event(screen, event)
+
+            if event.type == KEYDOWN and event.key == K_ESCAPE:
+                running = 0 
+
+            for ge in gevents:
+                if ge.gadget.type == Gadget.TYPE_BOOL:
+                    if ge.gadget.label == "All Frames":
+                        frameg.value = "1-" + str(self.num_frames)
+                        frameg.need_redraw = True
+                    elif ge.gadget.label == "Current Frame":
+                        frameg.value = str(self.curr_frame)
+                        frameg.need_redraw = True
+                    elif ge.gadget.label == "OK" and not req.has_error():
+                        result = self.get_list_from_range(frameg.value)
+                        running = 0
+                    elif ge.gadget.label == "Cancel":
+                        running = 0 
+                elif ge.gadget.type == Gadget.TYPE_STRING:
+                    if len(self.get_list_from_range(frameg.value)) == 0:
+                        frameg.error = True
+                        frameg.need_redraw = True
+                    elif frameg.error:
+                        frameg.error = False
+                        frameg.need_redraw = True
+
+            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+                req.draw(screen)
+                config.recompose()
+
+        config.pixel_req_rect = None
+        config.recompose()
+
+        return result

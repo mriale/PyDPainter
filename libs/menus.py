@@ -19,6 +19,25 @@ class MenuAction(Action):
            config.toolbar.tool_id(config.tool_selected).action != None:
             config.toolbar.tool_id(config.tool_selected).action.hide()
 
+class MenuActionMulti(MenuAction):
+    def selected(self, attrs):
+        if config.anim.num_frames > 1:
+            frame_range = config.anim.ask_apply_multi()
+            curr_frame_bak = config.anim.curr_frame
+            for frame_no in frame_range:
+                config.anim.save_curr_frame()
+                config.anim.curr_frame = frame_no
+                config.anim.show_curr_frame(doAction=False)
+                self.selectedMulti(attrs)
+                config.save_undo()
+            config.anim.save_curr_frame()
+            config.anim.curr_frame = curr_frame_bak
+            config.anim.show_curr_frame(doAction=False)
+        else:
+            self.selectedMulti(attrs)
+        config.save_undo()
+        config.doKeyAction()
+
 class DoNew(MenuAction):
     def selected(self, attrs):
         config.stencil.enable = False
@@ -153,26 +172,24 @@ class DoRevert(MenuAction):
                 close_progress_req(progress_req)
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
-class DoPictureFlipX(MenuAction):
-    def selected(self, attrs):
+class DoPictureFlipX(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureFlipY(MenuAction):
-    def selected(self, attrs):
+class DoPictureFlipY(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
-        config.save_undo()
-        config.doKeyAction()
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
         self.toolHide()
         palette_req(config.pixel_req_canvas)
+        config.save_undo()
+        config.doKeyAction()
 
 def resizePalette(origpal, numcol):
     if len(origpal) < numcol:
@@ -219,8 +236,10 @@ class DoCycle(MenuAction):
         else:
             config.start_cycling()
 
-class DoPictureBG2FG(MenuAction):
-    def selected(self, attrs):
+class DoPictureBG2FG(MenuActionMulti):
+    def selectedMulti(self, attrs):
+        config.stop_cycling()
+        config.stencil.enable = False
         #replace FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -228,11 +247,9 @@ class DoPictureBG2FG(MenuAction):
         tfarray = np.equal(surf_array, bgcolor)
         surf_array[tfarray] = color
         surf_array = None
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureBGxFG(MenuAction):
-    def selected(self, attrs):
+class DoPictureBGxFG(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
         #swap FG color with BG color
@@ -244,19 +261,15 @@ class DoPictureBGxFG(MenuAction):
         surf_array[bgarray] = color
         surf_array[fgarray] = bgcolor
         surf_array = None
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureRemap(MenuAction):
-    def selected(self, attrs):
+class DoPictureRemap(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
         config.clear_undo()
-        config.save_undo()
-        config.doKeyAction()
 
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
@@ -277,17 +290,15 @@ class DoSpareCopy(MenuAction):
         config.clear_undo()
         config.save_undo()
 
-class DoMergeFront(MenuAction):
-    def selected(self, attrs):
+class DoMergeFront(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.pixel_spare_canvas.set_colorkey(config.bgcolor)
         config.pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
         config.pixel_spare_canvas.set_colorkey(None)
-        config.clear_undo()
-        config.save_undo()
 
-class DoMergeBack(MenuAction):
-    def selected(self, attrs):
+class DoMergeBack(MenuActionMulti):
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
         newimage.set_palette(config.pal)
@@ -297,8 +308,6 @@ class DoMergeBack(MenuAction):
         config.pixel_canvas.set_colorkey(None)
         config.pixel_canvas.blit(newimage, (0,0))
         newimage = None
-        config.clear_undo()
-        config.save_undo()
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
