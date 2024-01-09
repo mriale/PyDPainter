@@ -799,6 +799,9 @@ Frame Colors
 
         return
 
+    def in_anim_range(self, frame):
+        return frame in range(1,self.num_frames+1)
+
     def get_list_from_range(self, str):
         result = []
         try:
@@ -807,16 +810,18 @@ Frame Colors
                 if '-' in part:
                     a, b = part.split('-')
                     a, b = int(a), int(b)
-                    result.extend(range(a, b + 1))
+                    if self.in_anim_range(a) and self.in_anim_range(b):
+                        result.extend(range(a, b + 1))
+                    else:
+                        return []
                 else:
                     a = int(part)
-                    result.append(a)
+                    if self.in_anim_range(a):
+                        result.append(a)
+                    else:
+                        return []
             #Make list unique
             result = sorted(set(result))
-            #Get rid of frames ouside animation
-            for i in result:
-                if i not in range(1,self.num_frames+1):
-                    result.remove(i)
         except:
             result = []
 
