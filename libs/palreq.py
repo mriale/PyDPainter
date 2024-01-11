@@ -597,6 +597,6 @@ Speed---------___^^
 
     config.truepal = list(config.pal)
     config.pal = config.unique_palette(config.pal)
-    config.set_all_palettes(config.pal)
+    config.set_all_palettes(config.pal, config.truepal)
 
 

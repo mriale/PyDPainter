@@ -854,7 +854,7 @@ class pydpainter:
     def unique_palette(self, pal):
         return unique_palette(pal)
 
-    def set_all_palettes(config, pal_in):
+    def set_all_palettes(config, pal_in, truepal=None):
         if len(pal_in) == 256:
             pal = pal_in
         else:
@@ -877,12 +877,16 @@ class pydpainter:
         if config.anim.global_palette:
             for frame in config.anim.frame:
                 frame.pal = pal_in
+                if truepal != None:
+                    frame.truepal = truepal
                 if frame.image != None:
                     frame.image.set_palette(pal)
         else:
             from_key, to_key = config.anim.pal_key_range()
             for frame in config.anim.frame[from_key-1:to_key]:
                 frame.pal = pal_in
+                if truepal != None:
+                    frame.truepal = truepal
                 if frame.image != None:
                     frame.image.set_palette(pal)
 

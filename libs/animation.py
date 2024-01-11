@@ -119,7 +119,6 @@ class Frame:
             self.truepal = list(truepal)
 
         self.loadpal = list(config.loadpal)
-        self.backuppal = list(self.pal)
 
     def copy(self):
         image = None
@@ -149,7 +148,6 @@ class Animation:
         self.frame[f].pal = list(config.pal)
         self.frame[f].truepal = list(config.truepal)
         self.frame[f].loadpal = list(config.loadpal)
-        self.frame[f].backuppal = list(config.backuppal)
 
     def show_curr_frame(self, doAction=True):
         if self.curr_frame > self.num_frames:
@@ -163,7 +161,6 @@ class Animation:
             config.pal = list(self.frame[f].pal)
             config.truepal = list(self.frame[f].truepal)
             config.loadpal = list(self.frame[f].loadpal)
-            config.backuppal = list(self.frame[f].backuppal)
             config.pixel_canvas.blit(self.frame[f].image, (0,0))
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
