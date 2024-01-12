@@ -321,8 +321,8 @@ class Animation:
         return retval
 
 
-    def ask_apply_multi(self):
-        return self.ask_apply_multi_req(config.pixel_req_canvas)
+    def ask_apply_multi(self, name):
+        return self.ask_apply_multi_req(config.pixel_req_canvas, name)
 
     def open_file(self):
         global progress_req
@@ -824,15 +824,15 @@ Frame Colors
 
         return result
 
-    def ask_apply_multi_req(self, screen):
+    def ask_apply_multi_req(self, screen, name):
         req = str2req("Apply to Multiple Frames", """
-
+%s
 [All Frames] [Current Frame]
 
 Frames: ___________________
 
 [Cancel][OK]
-""", "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+"""%(name), "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
         req.center(screen)
         config.pixel_req_rect = req.get_screen_rect()
 

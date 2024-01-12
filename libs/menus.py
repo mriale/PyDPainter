@@ -20,9 +20,12 @@ class MenuAction(Action):
             config.toolbar.tool_id(config.tool_selected).action.hide()
 
 class MenuActionMulti(MenuAction):
+    def get_name(self):
+        return ""
+
     def selected(self, attrs):
         if config.anim.num_frames > 1:
-            frame_range = config.anim.ask_apply_multi()
+            frame_range = config.anim.ask_apply_multi(self.get_name())
             curr_frame_bak = config.anim.curr_frame
             for frame_no in frame_range:
                 config.anim.save_curr_frame()
@@ -173,12 +176,18 @@ class DoRevert(MenuAction):
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
 class DoPictureFlipX(MenuActionMulti):
+    def get_name(self):
+        return "Flip Horizontally"
+
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
 
 class DoPictureFlipY(MenuActionMulti):
+    def get_name(self):
+        return "Flip Vertically"
+
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
@@ -237,6 +246,9 @@ class DoCycle(MenuAction):
             config.start_cycling()
 
 class DoPictureBG2FG(MenuActionMulti):
+    def get_name(self):
+        return "Copy BG to FG"
+
     def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
@@ -249,6 +261,9 @@ class DoPictureBG2FG(MenuActionMulti):
         surf_array = None
 
 class DoPictureBGxFG(MenuActionMulti):
+    def get_name(self):
+        return "Swap BG and FG"
+
     def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
@@ -263,6 +278,9 @@ class DoPictureBGxFG(MenuActionMulti):
         surf_array = None
 
 class DoPictureRemap(MenuActionMulti):
+    def get_name(self):
+        return "Remap Palette"
+
     def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
@@ -291,6 +309,9 @@ class DoSpareCopy(MenuAction):
         config.save_undo()
 
 class DoMergeFront(MenuActionMulti):
+    def get_name(self):
+        return "Merge Spare in Front"
+
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.pixel_spare_canvas.set_colorkey(config.bgcolor)
@@ -298,6 +319,9 @@ class DoMergeFront(MenuActionMulti):
         config.pixel_spare_canvas.set_colorkey(None)
 
 class DoMergeBack(MenuActionMulti):
+    def get_name(self):
+        return "Merge Spare in Back"
+
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
