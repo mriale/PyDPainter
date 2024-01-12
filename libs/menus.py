@@ -219,24 +219,24 @@ class DoPictureBrushPalette(MenuAction):
             truepal = resizePalette(config.brush.pal, config.NUM_COLORS)
             pal = config.quantize_palette(truepal, config.color_depth)
             config.pal = list(pal)
-            config.set_all_palettes(pal)
             config.truepal = list(truepal)
+            config.set_all_palettes(pal, config.truepal)
 
 class DoPictureRestorePalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         pal = resizePalette(config.loadpal, config.NUM_COLORS)
         config.pal = list(pal)
-        config.set_all_palettes(pal)
         config.truepal = list(pal)
+        config.set_all_palettes(pal, config.truepal)
 
 class DoPictureDefaultPalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         pal = config.get_default_palette(config.NUM_COLORS)
         config.pal = list(pal)
-        config.set_all_palettes(pal)
         config.truepal = list(pal)
+        config.set_all_palettes(pal, config.truepal)
 
 class DoCycle(MenuAction):
     def selected(self, attrs):
