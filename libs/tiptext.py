@@ -159,5 +159,5 @@ tiptext["scanlines"] = ["Toggle retro CRT scanline simulation"]
 tiptext["aspect"]    = ["Select whether pixels are square or rectangular"]
 
 tiptext["palettekey"] = ["Palette key frame","Global/Local/None"]
-tiptext["addframe"]  = ["Add Frame"]
-tiptext["deleteframe"] = ["Delete Frame"]
+tiptext["addframe"]  = ["Add Frames"]
+tiptext["deleteframe"] = ["Delete Frames"]
