@@ -221,7 +221,7 @@ class Animation:
 
     def delete_frame(self):
         config.animtoolbar.tool_id("deleteframe").state = 0
-        answer = self.num_req(config.pixel_req_canvas, "Add Frames", "Count", 1)
+        answer = self.num_req(config.pixel_req_canvas, "Delete Frames", "Count", 1)
         if answer != None:
             for i in range(answer):
                 if self.num_frames > 1:
