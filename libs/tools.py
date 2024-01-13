@@ -1618,7 +1618,7 @@ class DoClear(ToolActionMulti):
     Clear screen to background color
     """
     def get_name(self):
-        return "Clear Screen"
+        return "Clear Canvas"
 
     def selectedMulti(self, attrs):
         config.brush.pen_down = False
