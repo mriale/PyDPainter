@@ -209,19 +209,29 @@ class Animation:
         self.show_curr_frame()
 
     def add_frame(self):
-        self.save_curr_frame()
-        self.frame.insert(self.curr_frame, self.frame[self.curr_frame-1].copy())
-        self.num_frames += 1
-        self.next_frame()
+        config.animtoolbar.tool_id("addframe").state = 0
+        answer = self.num_req(config.pixel_req_canvas, "Add Frames", "Count", 1)
+        if answer != None:
+            for i in range(answer):
+                self.save_curr_frame()
+                self.frame.insert(self.curr_frame, self.frame[self.curr_frame-1].copy())
+                self.num_frames += 1
+                self.next_frame()
+
 
     def delete_frame(self):
-        if self.num_frames > 1:
-            self.save_curr_frame()
-            del self.frame[self.curr_frame-1]
-            self.num_frames -= 1
-            if self.curr_frame > self.num_frames:
-                self.curr_frame = self.num_frames
-            self.show_curr_frame()
+        config.animtoolbar.tool_id("deleteframe").state = 0
+        answer = self.num_req(config.pixel_req_canvas, "Add Frames", "Count", 1)
+        if answer != None:
+            for i in range(answer):
+                if self.num_frames > 1:
+                    self.save_curr_frame()
+                    del self.frame[self.curr_frame-1]
+                    self.num_frames -= 1
+                    if self.curr_frame > self.num_frames:
+                        self.curr_frame = self.num_frames
+                    self.show_curr_frame()
+
 
     def copy_frame_to_all(self):
         self.save_curr_frame()

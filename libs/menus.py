@@ -1294,9 +1294,9 @@ def init_menubar(config_in):
             ["Frames", [
                 ["Import...", " ", DoAnimFrameImport],
                 ["Export...", " ", DoAnimFrameExport],
-                ["Add Frame", " ", DoAnimFrameAdd],
                 ["Set #...", " ", DoAnimFrameSetNumber],
                 ["Copy to All", " ", DoAnimFrameCopyAll],
+                ["Add Frame", " ", DoAnimFrameAdd],
                 ["Delete Frame", " ", DoAnimFrameDelete],
                 ["Delete All", " ", DoAnimFrameDeleteAll],
             ]],
