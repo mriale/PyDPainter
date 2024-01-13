@@ -36,6 +36,28 @@ class ToolAction(Action):
         else:
             return [self.gadget.id]
 
+class ToolActionMulti(ToolAction):
+    def get_name(self):
+        return ""
+
+    def selected(self, attrs):
+        if config.anim.num_frames > 1:
+            frame_range = config.anim.ask_apply_multi(self.get_name())
+            curr_frame_bak = config.anim.curr_frame
+            for frame_no in frame_range:
+                config.anim.save_curr_frame()
+                config.anim.curr_frame = frame_no
+                config.anim.show_curr_frame(doAction=False)
+                self.selectedMulti(attrs)
+                config.save_undo()
+            config.anim.save_curr_frame()
+            config.anim.curr_frame = curr_frame_bak
+            config.anim.show_curr_frame(doAction=False)
+        else:
+            self.selectedMulti(attrs)
+        config.save_undo()
+        config.doKeyAction()
+
 class ToolSingleAction(ToolAction):
     pass
 
@@ -1591,14 +1613,16 @@ class DoUndo(ToolAction):
         else:
             config.undo()
 
-class DoClear(ToolAction):
+class DoClear(ToolActionMulti):
     """
     Clear screen to background color
     """
-    def selected(self, attrs):
+    def get_name(self):
+        return "Clear Screen"
+
+    def selectedMulti(self, attrs):
         config.brush.pen_down = False
         config.pixel_canvas.fill(config.bgcolor);
-        config.save_undo()
         config.toolbar.tool_id("text").action.cleartext()
 
 class DoSwatch(ToolAction):
