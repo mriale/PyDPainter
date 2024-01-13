@@ -530,36 +530,46 @@ class Animation:
                 pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
                 self.repeat = False
 
-    def num_frames_req(self, screen):
-        req = str2req("Set Frame Count", """
+    def num_req(self, screen, title, prompt, default_num=""):
+        req = str2req(title, """
 
-   Count: ____@@@@
+   %s: _____@@@
 
 [Cancel][OK]
-""", "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+"""%(prompt), "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
         req.center(screen)
         config.pixel_req_rect = req.get_screen_rect()
 
-        countg = req.gadget_id("10_1")
-        countg.numonly = True
-        countg.value = str(self.num_frames)
+        colno = len(prompt) + 5
+        numg = req.gadget_id(str(colno)+"_1")
+        numg.numonly = True
+        numg.value = str(default_num)
+        numg.state = 1
+        numg.pos = len(numg.value)
 
         req.draw(screen)
         config.recompose()
 
         running = 1
+        retval = None
         while running:
             event = pygame.event.wait()
             gevents = req.process_event(screen, event)
 
-            if event.type == KEYDOWN and event.key == K_ESCAPE:
-                running = 0 
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    running = 0 
+                elif event.key == K_RETURN:
+                    if not req.has_error():
+                        if int(numg.value) >= 1:
+                            retval = int(numg.value)
+                            running = 0
 
             for ge in gevents:
                 if ge.gadget.type == Gadget.TYPE_BOOL:
                     if ge.gadget.label == "OK" and not req.has_error():
-                        if int(countg.value) >= 1:
-                            self.set_frame_count(int(countg.value))
+                        if int(numg.value) >= 1:
+                            retval = int(numg.value)
                             running = 0
                     elif ge.gadget.label == "Cancel":
                         running = 0 
@@ -570,52 +580,23 @@ class Animation:
 
         config.pixel_req_rect = None
         config.recompose()
+
+        return retval
+
+    def num_frames_req(self, screen):
+        answer = self.num_req(screen, "Set Frame Count", "Count", self.num_frames)
+        if answer != None:
+            self.set_frame_count(answer)
 
         return
 
     def ask_frame_req(self, screen):
-        req = str2req("Go To Frame", """
-
-   Frame: ____@@@@
-
-[Cancel][OK]
-""", "@", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
-        req.center(screen)
-        config.pixel_req_rect = req.get_screen_rect()
-
-        frameg = req.gadget_id("10_1")
-        frameg.numonly = True
-        frameg.value = str(self.curr_frame)
-
-        req.draw(screen)
-        config.recompose()
-
-        running = 1
-        while running:
-            event = pygame.event.wait()
-            gevents = req.process_event(screen, event)
-
-            if event.type == KEYDOWN and event.key == K_ESCAPE:
-                running = 0 
-
-            for ge in gevents:
-                if ge.gadget.type == Gadget.TYPE_BOOL:
-                    if ge.gadget.label == "OK" and not req.has_error():
-                        if int(frameg.value) >= 1:
-                            self.save_curr_frame()
-                            self.curr_frame = int(frameg.value)
-                            self.frame_bookmark = self.curr_frame
-                            self.show_curr_frame()
-                            running = 0
-                    elif ge.gadget.label == "Cancel":
-                        running = 0 
-
-            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
-                req.draw(screen)
-                config.recompose()
-
-        config.pixel_req_rect = None
-        config.recompose()
+        answer = self.num_req(screen, "Go To Frame", "Frame", self.curr_frame)
+        if answer != None:
+            self.save_curr_frame()
+            self.curr_frame = answer
+            self.frame_bookmark = self.curr_frame
+            self.show_curr_frame()
 
         return
 
