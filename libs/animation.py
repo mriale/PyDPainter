@@ -930,7 +930,7 @@ FPS 1/60s Range
 ###################@@ Delay:_____
 ###################@@ [All Frames]
 ###################@@ [This Frame]
-###################@@ ____________
+###################@@ ___________
 ###################@@
 ###################@@ [Update]
 ###################@@
@@ -982,6 +982,7 @@ FPS 1/60s Range
         #Frame Range
         frangeg = req.gadget_id("22_6")
         frangeg.value = items[2]
+        frangeg.maxvalue = 20
         frangeg.need_redraw = True
 
         req.draw(screen)
