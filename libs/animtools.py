@@ -74,12 +74,12 @@ class DoPaletteKey(AnimToolAction):
     def selected(self, attrs):
         config.anim.pal_keyframe_list()
 
-class DoAddFrame(AnimToolAction):
+class DoFPS(AnimToolAction):
     """
-    Add animation frame
+    Do frames per second requestor
     """
     def selected(self, attrs):
-        config.anim.add_frame()
+        config.anim.fps_list()
 
 class DoAddFrame(AnimToolAction):
     """
@@ -103,7 +103,7 @@ def init_animtoolbar(config_in):
     scaleY = config.fonty // 12
     scaledown = 4 // min(scaleX,scaleY)
     minitools_image = imgload('animtools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
-    numtools=8
+    numtools=9
     numsubtools=3
     h = minitools_image.get_height()//numsubtools
     w = minitools_image.get_width()
@@ -118,6 +118,7 @@ def init_animtoolbar(config_in):
         ["next",        ToolGadget.TT_SINGLE, "", DoNext],
         ["last",        ToolGadget.TT_SINGLE, "", DoLast],
         ["palettekey",  ToolGadget.TT_SINGLE, "", DoPaletteKey],
+        ["fps",         ToolGadget.TT_SINGLE, "", DoFPS],
         ["addframe",    ToolGadget.TT_SINGLE, "", DoAddFrame],
         ["deleteframe", ToolGadget.TT_SINGLE, "", DoDeleteFrame]
     ])
@@ -127,6 +128,8 @@ def init_animtoolbar(config_in):
     minitoolbar.tool_id("play").has_subtool = False
     minitoolbar.tool_id("next").has_subtool = False
     minitoolbar.tool_id("last").has_subtool = False
+    minitoolbar.tool_id("palettekey").has_subtool = False
+    minitoolbar.tool_id("fps").has_subtool = False
     minitoolbar.tool_id("addframe").has_subtool = False
     minitoolbar.tool_id("deleteframe").has_subtool = False
 

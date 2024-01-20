@@ -96,7 +96,7 @@ class PalKeyListGadget(ListGadget):
                             self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
                 screen.set_clip(None)
 
-        
+
 
 class Frame:
     def __init__(self, image=None, delay=3, pal=None, truepal=None, is_pal_key = False):
@@ -263,6 +263,9 @@ class Animation:
 
     def pal_keyframe_list(self):
         self.pal_keyframe_list_req(config.pixel_req_canvas)
+
+    def fps_list(self):
+        self.fps_list_req(config.pixel_req_canvas)
 
     def play(self, loop=False, ping_pong=False, reverse=False, stop=False):
         #print(f"play({loop=}, {ping_pong=}, {reverse=}, {stop=})")
@@ -871,3 +874,191 @@ Frames: ___________________
         config.recompose()
 
         return result
+
+
+    def format_fps(self, delay):
+        fps_str = "  0"
+        if delay > 60:
+            fps_str = ("%1.2f" % (60 / delay))[-3:]
+        elif delay != 0:
+            fps_str = "%3d" % (60 // delay)
+        return fps_str
+
+    def format_delay(self, delay):
+        delay_str = "%4d" % delay
+        return delay_str
+
+    def format_range(self, low, high):
+        if low == high:
+            range_str = "%4d" % (low)
+        else:
+            range_str = "%4d-%d" % (low, high)
+        range_str = range_str + " "*9
+        range_str = range_str[:9]
+        return range_str
+
+    def get_fps_list(self, list_itemsg, delay_list):
+        fps_list = []
+        starti = 1
+        last_delay = delay_list[0]
+        for i in range(len(delay_list)):
+            if delay_list[i] != last_delay:
+                fps_str = self.format_fps(last_delay)
+                delay_str = self.format_delay(last_delay)
+                range_str = self.format_range(starti, i)
+                fps_list.append("%s %s %s" % (fps_str, delay_str, range_str))
+                starti = i+1
+                last_delay = delay_list[i]
+
+        if starti <= config.anim.num_frames:
+            i = config.anim.num_frames
+            fps_str = self.format_fps(delay_list[i-1])
+            delay_str = self.format_delay(delay_list[i-1])
+            range_str = self.format_range(starti, i)
+            fps_list.append("%s %s %s" % (fps_str, delay_str, range_str))
+
+        list_itemsg.items = fps_list
+        list_itemsg.top_item = 0
+        list_itemsg.value = 0
+        list_itemsg.need_redraw = True
+
+    def fps_list_req(self, screen):
+        req = str2req("Set Animation Rate", """
+    Delay Frame
+FPS 1/60s Range
+###################^^ FPS:_____
+###################@@ Delay:_____
+###################@@ [All Frames]
+###################@@ [This Frame]
+###################@@ ____________
+###################@@
+###################@@ [Update]
+###################@@
+###################@@
+###################^^
+[Cancel][Undo][OK]
+""", "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+        req.center(screen)
+        config.pixel_req_rect = req.get_screen_rect()
+
+        #list items
+        list_itemsg = req.gadget_id("0_2")
+        delay_list = []
+        for i in range(config.anim.num_frames):
+            delay_list.append(config.anim.frame[i].delay)
+        self.get_fps_list(list_itemsg, delay_list)
+
+        #list up/down arrows
+        list_upg = req.gadget_id("19_2")
+        list_upg.value = -1
+        list_downg = req.gadget_id("19_11")
+        list_downg.value = 1
+
+        #list slider
+        list_sliderg = req.gadget_id("19_3")
+        list_sliderg.value = list_itemsg.top_item
+
+        #all list item gadgets
+        listg_list = [list_itemsg, list_upg, list_downg, list_sliderg]
+        list_itemsg.listgadgets = listg_list
+        list_upg.listgadgets = listg_list
+        list_downg.listgadgets = listg_list
+        list_sliderg.listgadgets = listg_list
+
+        items = list_itemsg.items[0].split()
+
+        #Frames Per Second
+        fpsg = req.gadget_id("26_2")
+        fpsg.value = items[0]
+        fpsg.numonly = True
+        fpsg.need_redraw = True
+
+        #Delay (1/60s)
+        delayg = req.gadget_id("28_3")
+        delayg.value = items[1]
+        delayg.numonly = True
+        delayg.need_redraw = True
+
+        #Frame Range
+        frangeg = req.gadget_id("22_6")
+        frangeg.value = items[2]
+        frangeg.need_redraw = True
+
+        req.draw(screen)
+        config.recompose()
+
+        running = 1
+        refresh_fields = False
+        while running:
+            event = pygame.event.wait()
+            gevents = req.process_event(screen, event)
+
+            if event.type == KEYDOWN:
+                if event.key == K_ESCAPE:
+                    running = 0
+                elif event.key in [K_UP, K_DOWN]:
+                    refresh_fields = True
+
+            for ge in gevents:
+                if ge.gadget == list_itemsg:
+                    refresh_fields = True
+
+                if ge.gadget == fpsg:
+                    if re.fullmatch('^\d*\.?\d+$', fpsg.value) and \
+                       float(fpsg.value) > 0:
+                        delayg.value = str(int(60 / float(fpsg.value)))
+                        delayg.need_redraw = True
+                elif ge.gadget == delayg:
+                    if re.fullmatch('^\d+$', delayg.value) and \
+                       int(delayg.value) != 0:
+                        fpsg.value = self.format_fps(int(delayg.value)).strip()
+                        fpsg.need_redraw = True
+                elif ge.gadget.type == Gadget.TYPE_BOOL:
+                    listi = list_itemsg.value
+
+                    if ge.gadget.label == "OK" and not req.has_error():
+                        for i in range(config.anim.num_frames):
+                            config.anim.frame[i].delay = delay_list[i]
+                        running = 0
+                    elif ge.gadget.label == "Cancel":
+                        running = 0
+                    elif ge.gadget.label == "Undo":
+                        delay_list = []
+                        for i in range(config.anim.num_frames):
+                            delay_list.append(config.anim.frame[i].delay)
+                        self.get_fps_list(list_itemsg, delay_list)
+                        refresh_fields = True
+                    elif ge.gadget.label == "All Frames":
+                        frangeg.value = "1-" + str(config.anim.num_frames)
+                        frangeg.need_redraw = True
+                    elif ge.gadget.label == "This Frame":
+                        frangeg.value = str(config.anim.curr_frame)
+                        frangeg.need_redraw = True
+                    elif ge.gadget.label == "Update" and not req.has_error():
+                        if int(delayg.value) > 0:
+                            set_range = self.get_list_from_range(frangeg.value)
+                            for frameno in set_range:
+                                delay_list[frameno-1] = int(delayg.value)
+                            self.get_fps_list(list_itemsg, delay_list)
+                            refresh_fields = True
+
+            if refresh_fields:
+                listi = list_itemsg.value
+                items = list_itemsg.items[listi].split()
+                fpsg.value = items[0]
+                fpsg.need_redraw = True
+                delayg.value = items[1]
+                delayg.need_redraw = True
+                frangeg.value = items[2]
+                frangeg.need_redraw = True
+                refresh_fields = False
+
+            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+                req.draw(screen)
+                config.recompose()
+
+        config.pixel_req_rect = None
+        self.show_curr_frame()
+
+        return
+

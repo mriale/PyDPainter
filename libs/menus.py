@@ -41,6 +41,10 @@ class MenuActionMulti(MenuAction):
         config.save_undo()
         config.doKeyAction()
 
+class DoDummy(MenuAction):
+    def selected(self, attrs):
+        pass
+
 class DoNew(MenuAction):
     def selected(self, attrs):
         config.stencil.enable = False
@@ -1044,6 +1048,10 @@ class DoAnimFrameDeleteAll(MenuAction):
     def selected(self, attrs):
         config.anim.delete_all_frames()
 
+class DoAnimControlSetRate(MenuAction):
+    def selected(self, attrs):
+        config.anim.fps_list_req(config.pixel_req_canvas)
+
 class DoStencilMake(MenuAction):
     def selected(self, attrs):
         stencil_req(config.pixel_req_canvas)
@@ -1300,7 +1308,15 @@ def init_menubar(config_in):
                 ["Delete Frames", " ", DoAnimFrameDelete],
                 ["Delete All", " ", DoAnimFrameDeleteAll],
             ]],
-            ["Control"],
+            ["Control", [
+                ["Set Rate...", " ", DoAnimControlSetRate],
+                ["Previous", "1", DoDummy],
+                ["Next", "2", DoDummy],
+                ["Go to...", "3", DoDummy],
+                ["Play", "4", DoDummy],
+                ["Play once", "5", DoDummy],
+                ["Ping-pong", "6", DoDummy],
+            ]],
             ["Anim Brush"],
         ]])
 
