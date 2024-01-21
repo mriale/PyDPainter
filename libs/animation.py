@@ -275,6 +275,7 @@ class Animation:
             self.playing = False
             config.animtoolbar.tool_id("play").state = 0
             config.animtoolbar.tool_id("play").redraw = True
+            pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
         else:
             self.play_loop=loop
             self.play_ping_pong=ping_pong
@@ -652,6 +653,7 @@ Frame Colors
 """, "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PalKeyListGadget, font=config.font)
         req.center(screen)
         config.pixel_req_rect = req.get_screen_rect()
+        self.save_curr_frame()
 
         MODE_NORMAL = 0
         MODE_COPY = 1
