@@ -1527,7 +1527,7 @@ class pydpainter:
 
 
             #Intercept keys for toolbar
-            if e.type in [KEYDOWN,KEYUP]:
+            if e.type in [KEYDOWN,KEYUP] and not config.anim.playing:
                 if curr_action != None:
                     key_handled = False
                     if e.type == KEYDOWN:
