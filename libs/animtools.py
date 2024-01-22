@@ -111,6 +111,7 @@ def init_animtoolbar(config_in):
     minitoolbar_canvas = pygame.Surface((mt_width,h),0)
 
     minitoolbar = Toolbar(minitoolbar_canvas, config.cursor, (0,0,mt_width,h), minitools_image, height=numsubtools, tip_event=config.TOOLTIPEVENT)
+    minitoolbar.tip_quadrant = 2 #tip on right
     minitoolbar.add_grid((0,0,w,10*scaleY), numtools, 1, attr_list=[
         ["first",       ToolGadget.TT_SINGLE, "", DoFirst],
         ["prev",        ToolGadget.TT_SINGLE, "", DoPrev],

@@ -1296,11 +1296,12 @@ class pydpainter:
            self.animtoolbar.tip_canvas != None and \
            self.menubar.visible and \
            config.help_on:
-            tx = self.animtoolbar.tip_x
+            px = config.font.xsize // 8
+            tx = self.animtoolbar.tip_x + px*11
             atby = config.screen_height - config.menubar.rect[3]
             ty = atby + self.animtoolbar.tip_y
             t_size = self.animtoolbar.tip_canvas.get_size()
-            sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
+            sx = ox + (tx * self.window_size[0] // self.screen_width)
             sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.animtoolbar.tip_canvas, (sx,sy))
 

@@ -48,7 +48,7 @@ class ToolGadget(Gadget):
     def render_tip(self, quadrant=0):
         """
         Render a tooltip into a canvas with speech bubble in quadrant.
-        0=right, 1=bottom, 2=left, 3=top
+        0=left, 1=bottom, 2=right, 3=top
         """
         if self.toolbar.tip_font_size != pygame.display.get_surface().get_height()//50:
             self.toolbar.tip_font_size = pygame.display.get_surface().get_height()//50
@@ -73,10 +73,10 @@ class ToolGadget(Gadget):
                     w = max(w, rect[0] + wrect[0] + 1)
                     h += lineheight
 
-                #box around text
-                box = (0,0,w,h-1)
-                
-                if quadrant == 0: #right
+                if quadrant == 0: #left
+                    #box around text
+                    box = (0,0,w,h-1)
+
                     #tail
                     tx = w-2
                     th = wrect[1]
@@ -84,8 +84,17 @@ class ToolGadget(Gadget):
                     tw = wrect[0]
                     triangle = [(tx,ty), (tx+tw, ty+(th//2)), (tx,ty+th)]
                     w += wrect[0]
-                elif quadrant in [0,2]: #right or left
+                elif quadrant == 2: #right
+                    #tail
+                    tx = wrect[0]-1
+                    th = wrect[1]
+                    ty = (h - th) // 2
+                    tw = wrect[0]
+                    triangle = [(tx,ty), (tx-tw, ty+(th//2)), (tx,ty+th)]
                     w += wrect[0]
+
+                    #box around text
+                    box = (wrect[0]-2,0,w-wrect[0],h-1)
                 elif quadrant in [1,3]: #bottom or top
                     h += wrect[1]
 
@@ -99,7 +108,7 @@ class ToolGadget(Gadget):
                 pygame.draw.lines(tip_canvas, (0,0,0), False, triangle, 2)
 
                 #draw text
-                xo = wrect[0] // 2
+                xo = wrect[0] // 2 + box[0]
                 yo = wrect[1] // 2
                 line_count=0
                 for line in tip:
@@ -157,6 +166,7 @@ class Toolbar:
         self.tip_canvas = None
         self.tip_x = 0
         self.tip_y = 0
+        self.tip_quadrant = 0
         self.wait_for_tip = False
         self.tipg = None
 
@@ -389,7 +399,7 @@ class Toolbar:
                 if toolg.pointin((x,y), toolg.rect) and "render_tip" in dir(toolg):
                     tip_on = True
                     if self.tipg != toolg:
-                        toolg.render_tip()
+                        toolg.render_tip(self.tip_quadrant)
                         self.wait_for_tip = True
                         self.tipg = toolg
                         pygame.time.set_timer(self.tip_event, 1000)
