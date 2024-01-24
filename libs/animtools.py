@@ -19,11 +19,17 @@ class AnimToolAction(Action):
     def get_tip(self):
         if self.gadget.id in tiptext:
             if self.gadget.id == "palettekey":
-                state = config.animtoolbar.tool_id("palettekey").state
+                if config.anim.global_palette:
+                    state = 0
+                elif config.anim.frame[config.anim.curr_frame-1].is_pal_key:
+                    state = 2
+                else:
+                    state = 1
                 line2 = palette_key_labels[state]
                 pal_key_range = config.anim.pal_key_range(config.anim.curr_frame)
                 if state >= 1:
                     line2 = palette_key_labels[state].format(pal_key_range[0], pal_key_range[1])
+                self.gadget.live_tip = True
                 return [tiptext["palettekey"][0], line2]
             else:
                 return tiptext[self.gadget.id]

@@ -406,13 +406,13 @@ class Toolbar:
                         self.tipg = toolg
                         self.live_tip = toolg.live_tip
                         pygame.time.set_timer(self.tip_event, 1000)
-                    elif self.live_tip:
-                        toolg.render_tip(self.tip_quadrant)
             if not tip_on:
                 self.tip_canvas = None
                 self.tipg = None
         elif event.type == self.tip_event:
             pygame.time.set_timer(self.tip_event, TIMEROFF)
             self.wait_for_tip = False
+        if self.live_tip and self.tipg:
+            self.tipg.render_tip(self.tip_quadrant)
         return ge
 
