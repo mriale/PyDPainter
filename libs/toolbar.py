@@ -34,6 +34,7 @@ class ToolGadget(Gadget):
         self.has_subtool = has_subtool
         self.toolbar = toolbar
         self.hotkeys = hotkeys
+        self.live_tip = False
         if action == None:
             self.action = None
         else:
@@ -168,6 +169,7 @@ class Toolbar:
         self.tip_y = 0
         self.tip_quadrant = 0
         self.wait_for_tip = False
+        self.live_tip = False
         self.tipg = None
 
     def hash_coords(self, x, y):
@@ -402,7 +404,10 @@ class Toolbar:
                         toolg.render_tip(self.tip_quadrant)
                         self.wait_for_tip = True
                         self.tipg = toolg
+                        self.live_tip = toolg.live_tip
                         pygame.time.set_timer(self.tip_event, 1000)
+                    elif self.live_tip:
+                        toolg.render_tip(self.tip_quadrant)
             if not tip_on:
                 self.tip_canvas = None
                 self.tipg = None

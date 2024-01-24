@@ -32,6 +32,29 @@ class ToolAction(Action):
 
     def get_tip(self):
         if self.gadget.id in tiptext:
+            if self.gadget.id == "palette":
+                palrgb_tip = list(tiptext[self.gadget.id])
+                x,y = config.get_mouse_pixel_pos()
+                #check for color in palette
+                palg = self.gadget
+                color = -1
+                for i in range(len(palg.palette_bounds)):
+                    x1,y1,x2,y2,colorindex = palg.palette_bounds[i]
+                    if x >= x1 and x <= x1+x2-1 and y >= y1 and y <= y1+y2-1:
+                        color = colorindex
+                if color >= 0:
+                    r,g,b = config.truepal[color]
+                    palrgb_tip.append("Color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (color,r,g,b,r,g,b))
+                self.gadget.live_tip = True
+                return palrgb_tip
+            elif self.gadget.id == "swatch":
+                palrgb_tip = list(tiptext[self.gadget.id])
+                r,g,b = config.truepal[config.color]
+                palrgb_tip.append("FG color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (config.color,r,g,b,r,g,b))
+                r,g,b = config.truepal[config.bgcolor]
+                palrgb_tip.append("BG color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (config.bgcolor,r,g,b,r,g,b))
+                self.gadget.live_tip = True
+                return palrgb_tip
             return tiptext[self.gadget.id]
         else:
             return [self.gadget.id]
