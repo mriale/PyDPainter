@@ -34,7 +34,7 @@ class ToolAction(Action):
         if self.gadget.id in tiptext:
             if self.gadget.id == "palette":
                 palrgb_tip = list(tiptext[self.gadget.id])
-                x,y = config.get_mouse_pixel_pos()
+                x,y = config.get_mouse_pointer_pos()
                 #check for color in palette
                 palg = self.gadget
                 color = -1
