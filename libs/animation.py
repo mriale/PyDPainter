@@ -239,7 +239,7 @@ class Animation:
         self.save_curr_frame()
         frame = self.frame[self.curr_frame-1]
         for i in range(self.num_frames):
-            self.frame[i] = frame
+            self.frame[i] = frame.copy()
         self.show_curr_frame()
 
     def delete_all_frames(self):
