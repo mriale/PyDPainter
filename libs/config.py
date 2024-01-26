@@ -148,6 +148,13 @@ def drop_load_progress(percent):
         prev_time = curr_time
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
+class Project:
+    def __init__(self):
+        self.filename = ""
+        self.filepath = ""
+        self.pixel_canvas = None
+        self.modified_count = -1
+        self.anim = None
 
 class pydpainter:
 
@@ -400,15 +407,19 @@ class pydpainter:
         config.zoom.on = False
         config.zoom.box_on = False
 
-        #Keep spare if same size as new image
-        if "pixel_spare_canvas" in dir(self):
-            sw, sh = self.pixel_spare_canvas.get_size()
-            if sw == self.pixel_width and sh == self.pixel_height:
-                self.pixel_spare_canvas.set_palette(self.pal)
+        #Keep project canvas if same size as new image
+        for i in range(len(self.proj)):
+            if i == self.proj_index:
+                continue
+            if self.proj[i].pixel_canvas:
+                sw, sh = self.proj[i].pixel_canvas.get_size()
+                if sw == self.pixel_width and sh == self.pixel_height:
+                    self.proj[i].pixel_canvas.set_palette(self.pal)
+                else:
+                    self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
             else:
-                self.pixel_spare_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
-        else:
-            self.pixel_spare_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
+                self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
+            self.proj[i].anim.frame = [Frame(self.proj[i].pixel_canvas)]
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
@@ -691,12 +702,16 @@ class pydpainter:
         self.color = 1
         self.bgcolor = 0
 
+        self.proj = [Project(), Project()]
+        self.proj_index = 0
         self.palette_page = 0
         self.NUM_COLORS = 32
         self.filename = ""
         self.filepath = os.path.expanduser("~")
-        self.spare_filename = self.filename
-        self.spare_filepath = self.filepath
+        self.proj[0].filename = self.filename
+        self.proj[0].filepath = self.filepath
+        self.proj[1].filename = self.filename
+        self.proj[1].filepath = self.filepath
         self.toolmode = 0
         self.tool_selected = 0
         self.subtool_selected = 0
@@ -740,6 +755,8 @@ class pydpainter:
         self.stencil = Stencil()
         self.background = Background()
         self.anim = Animation()
+        self.proj[0].anim = self.anim
+        self.proj[1].anim = Animation()
 
         self.cycling = False
         self.cycle_handled = False
@@ -769,7 +786,8 @@ class pydpainter:
 
         self.window_title = "PyDPainter"
         self.modified_count = -1
-        self.spare_modified_count = -1
+        self.proj[0].modified_count = -1
+        self.proj[1].modified_count = -1
         self.UNDO_INDEX_MAX = 20
         self.undo_image = []
         self.undo_index = -1
@@ -854,6 +872,24 @@ class pydpainter:
     def unique_palette(self, pal):
         return unique_palette(pal)
 
+    def set_anim_palettes(config, anim, pal_in, pal, truepal):
+        # Set colors for animation frames
+        if anim.global_palette:
+            for frame in anim.frame:
+                frame.pal = pal_in
+                if truepal != None:
+                    frame.truepal = truepal
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+        else:
+            from_key, to_key = anim.pal_key_range()
+            for frame in anim.frame[from_key-1:to_key]:
+                frame.pal = pal_in
+                if truepal != None:
+                    frame.truepal = truepal
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+
     def set_all_palettes(config, pal_in, truepal=None):
         if len(pal_in) == 256:
             pal = pal_in
@@ -862,7 +898,10 @@ class pydpainter:
             pal = list(pal_in)
             pal.extend([pal_in[0]] * (256 - len(pal)))
         config.pixel_canvas.set_palette(pal)
-        config.pixel_spare_canvas.set_palette(pal)
+        for i in range(len(config.proj)):
+            if config.proj[i].pixel_canvas:
+                config.proj[i].pixel_canvas.set_palette(pal)
+                config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
         config.stencil.set_palette(pal)
         config.background.set_palette(pal)
 
@@ -873,22 +912,7 @@ class pydpainter:
         for img in config.undo_image:
             img.set_palette(pal)
 
-        # Set colors for animation frames
-        if config.anim.global_palette:
-            for frame in config.anim.frame:
-                frame.pal = pal_in
-                if truepal != None:
-                    frame.truepal = truepal
-                if frame.image != None:
-                    frame.image.set_palette(pal)
-        else:
-            from_key, to_key = config.anim.pal_key_range()
-            for frame in config.anim.frame[from_key-1:to_key]:
-                frame.pal = pal_in
-                if truepal != None:
-                    frame.truepal = truepal
-                if frame.image != None:
-                    frame.image.set_palette(pal)
+        config.set_anim_palettes(config.anim, pal_in, pal, truepal)
 
     def calc_tool_visibility_state(self):
         config.tool_visibility_state = config.tool_visibility_state % config.tool_visibility_state_max
@@ -1406,14 +1430,18 @@ class pydpainter:
         config.pixel_width = width
         config.pixel_height = height
 
-        # Crop or expand spare pixel canvas
+        # Crop or expand all project pixel canvas
         new_pixel_canvas = pygame.Surface((width, height),0,8)
         new_pixel_canvas.set_palette(config.pal)
-        if resize:
-            pygame.transform.scale(config.pixel_spare_canvas, (width, height), new_pixel_canvas)
-        else:
-            new_pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
-        config.pixel_spare_canvas = new_pixel_canvas
+        for i in range(len(self.proj)):
+            if i == self.proj_index:
+                config.proj[i].pixel_canvas = config.pixel_canvas
+                continue
+            if resize:
+                pygame.transform.scale(config.proj[i].pixel_canvas, (width, height), new_pixel_canvas)
+            else:
+                new_pixel_canvas.blit(config.proj[i].pixel_canvas, (0,0))
+            config.proj[i].pixel_canvas = new_pixel_canvas
 
         config.clear_undo()
         config.save_undo()

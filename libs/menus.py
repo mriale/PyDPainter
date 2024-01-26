@@ -297,18 +297,35 @@ class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
-        config.pixel_canvas, config.pixel_spare_canvas = config.pixel_spare_canvas, config.pixel_canvas
-        config.filepath, config.spare_filepath = config.spare_filepath, config.filepath
-        config.filename, config.spare_filename = config.spare_filename, config.filename
-        config.modified_count, config.spare_modified_count = config.spare_modified_count, config.modified_count
+
+        #Back up current canvas
+        config.anim.save_curr_frame()
+        i = config.proj_index
+        config.proj[i].pixel_canvas = config.pixel_canvas
+        config.proj[i].filepath = config.filepath
+        config.proj[i].filename = config.filename
+        config.proj[i].modified_count = config.modified_count
+        config.proj[i].anim = config.anim
+
+        #Switch to new canvas
+        config.proj_index = (config.proj_index + 1) % len(config.proj)
+        i = config.proj_index
+        config.pixel_canvas = config.proj[i].pixel_canvas
+        config.filepath = config.proj[i].filepath
+        config.filename = config.proj[i].filename
+        config.modified_count = config.proj[i].modified_count
+        config.anim = config.proj[i].anim
+        config.anim.show_curr_frame(doAction=False)
+
         config.clear_undo()
         config.save_undo()
         config.doKeyAction()
 
 class DoSpareCopy(MenuAction):
     def selected(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        config.pixel_spare_canvas.blit(config.pixel_canvas, (0,0))
+        config.proj[sparei].pixel_canvas.blit(config.pixel_canvas, (0,0))
         config.clear_undo()
         config.save_undo()
 
@@ -317,20 +334,22 @@ class DoMergeFront(MenuActionMulti):
         return "Merge Spare in Front"
 
     def selectedMulti(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        config.pixel_spare_canvas.set_colorkey(config.bgcolor)
-        config.pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
-        config.pixel_spare_canvas.set_colorkey(None)
+        config.proj[sparei].pixel_canvas.set_colorkey(config.bgcolor)
+        config.pixel_canvas.blit(config.proj[sparei].pixel_canvas, (0,0))
+        config.proj[sparei].pixel_canvas.set_colorkey(None)
 
 class DoMergeBack(MenuActionMulti):
     def get_name(self):
         return "Merge Spare in Back"
 
     def selectedMulti(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
         newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
         newimage.set_palette(config.pal)
-        newimage.blit(config.pixel_spare_canvas, (0,0))
+        newimage.blit(config.proj[sparei].pixel_canvas, (0,0))
         config.pixel_canvas.set_colorkey(config.bgcolor)
         newimage.blit(config.pixel_canvas, (0,0))
         config.pixel_canvas.set_colorkey(None)

@@ -152,6 +152,8 @@ class Animation:
     def show_curr_frame(self, doAction=True):
         if self.curr_frame > self.num_frames:
             self.curr_frame = self.num_frames
+        elif self.curr_frame < 1:
+            self.curr_frame = 1
         f = self.curr_frame-1
         if self.frame[f].image == None:
             config.pixel_canvas.fill(config.bgcolor);

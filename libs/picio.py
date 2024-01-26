@@ -388,7 +388,6 @@ def load_anim(filename, config, ifftype, status_func=None):
                     config.anim.frame[-1].pal = list(config.pal)
                     config.anim.frame[-1].truepal = list(config.truepal)
                     config.anim.frame[-1].loadpal = list(config.loadpal)
-                    config.anim.frame[-1].backuppal = list(config.backuppal)
                     config.anim.frame[-1].is_pal_key = is_pal_key
                     config.anim.num_frames += 1
                     is_pal_key = False
