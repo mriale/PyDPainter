@@ -790,9 +790,9 @@ Type in size:
  Width:_____ Height:_____
 
 Or select one:
- [Standard     xxx x yyy]
- [Full Page    xxx x yyy]
- [Overscan     xxx x yyy]
+ [Standard   xxxx x yyyy]
+ [Full Page  xxxx x yyyy]
+ [Overscan   xxxx x yyyy]
 
 Resize: [Yes~No]
 
@@ -817,18 +817,10 @@ Resize: [Yes~No]
     heightg.value = str(config.pixel_height)
     heightg.numonly = True
 
-    if config.display_mode & config.MODE_HIRES:
-        for i in range(0,3):
-            page_size[i][0] *= 2
-
-    if config.display_mode & config.MODE_LACE:
-        for i in range(0,3):
-            page_size[i][1] *= 2
-
     # Populate buttons from page_size array
     for i in range(0,3):
-        pageg[i].label = pageg[i].label.replace("xxx", str(page_size[i][0]))
-        pageg[i].label = pageg[i].label.replace("yyy", str(page_size[i][1]))
+        pageg[i].label = pageg[i].label.replace("xxxx", "%4d"%(page_size[i][0]))
+        pageg[i].label = pageg[i].label.replace("yyyy", "%d"%(page_size[i][1]))
 
     #Gather page resize gadgets
     resize_page = False
