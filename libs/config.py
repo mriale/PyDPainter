@@ -796,7 +796,24 @@ class pydpainter:
         self.running = True
 
         self.tool_visibility_state = 1
-        self.tool_visibility_state_max = 3
+        self.tool_visibility_states = [
+            #toolbar, menubar, animtoolbar
+            [ #animation
+                (False,False,False),
+                (True,True,True),
+                (True,True,False),
+                (False,True,False),
+                (False,False,True),
+            ],
+            [ # single frame
+                (False,False,False),
+                (True,True,False),
+            ],
+            [ # animation playing
+                (False,False,False),
+                (False,False,True),
+            ],
+        ]
 
         self.wait_for_mouseup = [False, False]
 
@@ -915,38 +932,28 @@ class pydpainter:
         config.set_anim_palettes(config.anim, pal_in, pal, truepal)
 
     def calc_tool_visibility_state(self):
-        config.tool_visibility_state = config.tool_visibility_state % config.tool_visibility_state_max
-        if config.anim.num_frames == 1 and config.tool_visibility_state == 2:
-            config.tool_visibility_state = 0
-
+        #Set mode: 0=animation, 1=single frame, 2=animation playing
+        mode=0
         if config.anim.playing:
-            if config.tool_visibility_state == 2:
-                config.tool_visibility_state = 0
-            if self.tool_visibility_state == 0:
-                config.toolbar.visible = False
-                config.menubar.visible = False
-                config.animtoolbar.visible = False
-            elif self.tool_visibility_state == 1:
-                config.toolbar.visible = False
-                config.menubar.visible = False
-                config.animtoolbar.visible = True
+            mode=2
+        elif config.anim.num_frames == 1:
+            mode=1
+
+        state = config.tool_visibility_state
+        state = state % len(config.tool_visibility_states[mode])
+
+        config.toolbar.visible     = config.tool_visibility_states[mode][state][0]
+        config.menubar.visible     = config.tool_visibility_states[mode][state][1]
+        config.animtoolbar.visible = config.tool_visibility_states[mode][state][2]
+
+        if config.menubar.visible:
+            if config.animtoolbar.visible or config.anim.num_frames == 1:
                 config.menubar.title = "PyDPainter"
-        else:
-            if self.tool_visibility_state == 0:
-                config.toolbar.visible = False
-                config.menubar.visible = False
-                config.animtoolbar.visible = False
-            elif self.tool_visibility_state == 1:
-                config.toolbar.visible = True
-                config.menubar.visible = True
-                config.animtoolbar.visible = True
-                config.menubar.title = "PyDPainter"
-            elif self.tool_visibility_state == 2:
-                config.toolbar.visible = True
-                config.menubar.visible = True
-                config.animtoolbar.visible = False
+            else:
                 title = f"{config.anim.curr_frame}/{config.anim.num_frames}" + (" " * 10)
                 config.menubar.title = title[:10]
+
+        config.tool_visibility_state = state
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible
