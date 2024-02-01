@@ -540,7 +540,11 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     else:
         config.display_mode = -1
 
-    config.pal = config.quantize_palette(config.pal, config.color_depth)
+    pal = config.quantize_palette(config.pal, config.color_depth)
+    upal = config.unique_palette(pal)
+    config.pal = list(upal)
+    config.loadpal = list(upal)
+    config.truepal = list(pal)
     pic.set_palette(config.pal)
 
     while len(config.cranges) < 6:
@@ -576,6 +580,11 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             if palette_type == 0: # global palette
                 # grab global palette from a frame 1/3 of the way through the sequence
                 palframe = ((maxframe - firstframe) // 3) + firstframe
+                answer = config.anim.num_req(config.pixel_req_canvas, "Palette From Frame", "Frame", palframe)
+                if answer == None:
+                    return
+                else:
+                    palframe = answer
                 palfilename = filename_in.replace(seq_matches[0], (len(seq_matches[0]) - len(str(palframe))) * "0" + str(palframe))
                 pic = load_pygame_pic(palfilename, config)
                 global_palette = list(config.pal)
@@ -613,7 +622,6 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.pal = list(upal)
             config.loadpal = list(upal)
             config.truepal = list(pal)
-            config.backuppal = list(upal)
             pic.set_palette(config.pal)
             surf_array = pygame.surfarray.pixels2d(pic)
             surf_array[:] = gif.frames[0]["image_data"][:]
@@ -670,7 +678,12 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                     framepic = diffpic
                 delay = gif.frames[i]["delay_time"]*60//100
                 upal = config.unique_palette(pal)
-                config.anim.frame.append(Frame(framepic, delay=delay, pal=upal, truepal=pal, is_pal_key=(gif.frames[i]["local_palette"] != None)))
+                is_pal_key = False
+                pal1 = gif.frames[i]["local_palette"]
+                pal0 = gif.frames[i-1]["local_palette"]
+                if pal0 and pal1 and pal0 != pal1:
+                    is_pal_key = True
+                config.anim.frame.append(Frame(framepic, delay=delay, pal=upal, truepal=pal, is_pal_key=is_pal_key))
             if len(gif.frames) > 1:
                 config.anim.curr_frame = 1
                 config.anim.num_frames = len(gif.frames)
@@ -690,6 +703,26 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                     delay = 4
                 config.anim.frame = [Frame(pic, delay=delay, is_pal_key=True)]
             else:
+                # Make sure palette is same size as first frame
+                num_colors = len(config.anim.frame[0].pal)
+                pal = None
+                if num_colors != len(config.pal):
+                    if num_colors > len(config.pal):
+                        # extend palette
+                        pal = list(config.truepal)
+                        i = len(pal)
+                        while i < num_colors:
+                            pal.append([0,0,0])
+                            i += 1
+                    else:
+                        # contract palette
+                        pal = list(config.truepal[:num_colors])
+                        pic = convert8(pic.convert(), pal)
+                    upal = config.unique_palette(pal)
+                    config.truepal = list(pal)
+                    config.loadpal = list(pal)
+                    config.pal = list(upal)
+                    pic.set_palette(upal)
                 is_pal_key = True
                 config.anim.frame.append(Frame(pic))
                 if config.anim.frame[-1].pal == config.anim.frame[-2].pal:

@@ -547,6 +547,12 @@ class Animation:
                 self.repeat = False
 
     def num_req(self, screen, title, prompt, default_num=""):
+        # save previous requestor
+        prr = config.pixel_req_rect
+        prc = config.pixel_req_canvas.copy()
+        oldcursor = config.cursor.shape
+        config.cursor.shape = config.cursor.NORMAL
+
         req = str2req(title, """
 
    %s: _____@@@
@@ -594,7 +600,11 @@ class Animation:
                 req.draw(screen)
                 config.recompose()
 
-        config.pixel_req_rect = None
+        # restore previous requestor
+        config.pixel_req_rect = prr
+        config.pixel_req_canvas = prc
+        config.cursor.shape = oldcursor
+
         config.recompose()
 
         return retval
