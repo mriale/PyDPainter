@@ -10,12 +10,13 @@ to paint on.
 ## Open...
 ## Save
 ## Save as...
+## Revert
 ## Print...
 ## Flip
 ### Horiz
 ### Vert
 ## Change Color
-### Palette...
+### [Palette…](palette.md)
 ### Use Brush Palette
 ### Restore Palette
 ### Default Palette
@@ -30,7 +31,7 @@ to paint on.
 ### Merge in back
 ## Page Size...
 ## Show Page
-## Screen Format...
+## [Screen Format...](screenformat.md)
 ## About...
 ## Quit
 
