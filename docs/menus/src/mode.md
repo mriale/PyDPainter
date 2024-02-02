@@ -78,10 +78,8 @@ Key: `F4`
 
 To understand the following modes, you need to consider the default 32 color
 palette. The default palette has two built-in __Cycle Ranges__: a grayscale
-range (1) and the famous rainbow range (2) you've seen in most DPaint demos.
-Please note that the rainbow range in the examples is expanded to encompass
-more colors than the default range, and that no colors are shared between the
-two ranges. These ranges are used in all gradient fill options, Shade, Blend
+range (1) and some rainbow red-green (2) you've seen in most DPaint tutos.
+Please note that the rainbow range in the examples can be expanded to encompass more colors than the default range, and that no colors are shared between the two ranges. These ranges are used in all gradient fill options, Shade, Blend
 and Cycle Mode.
 
 ![](Range-2.png)
