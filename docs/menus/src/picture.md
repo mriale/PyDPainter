@@ -6,20 +6,20 @@ _Work in progress..._
 
 Shows the [Screen Format requestor...](screenformat.md) to allow you to choose a new canvas to paint on.
 
-*Tip: remember that pixel art spirit is low screen resolution with all pixels visible on the screen. Similarly, the number of colors used is limited, as is the number of tints available.* 
+*Tip: remember that the defining characteristics of pixel art are low screen resolution with large pixels visible on the screen. Similarly, the number of colors used is limited, as is the number of tints available.* 
 
 
 ## Open...
 Loads bitmap images in the following formats:
-*  .iff or .ilbm (Amiga legacy), from 2 to 16 million colors (conversion to 256 colors max)
-* .lbm PC IFF PBM (???)
+*  .iff or .ilbm (Amiga legacy), from 2 colors to 16 million colors (conversion to 256 colors max)
+* .lbm IFF PBM (PC), 256 color format used on the PC versions of Deluxe Paint
 * .bmp Windows BitMaP image (up to 256 colors)
 * .gif GIF (still image. Animated GIFs are supported, but in the animation menu)
 * .jpg .jpeg JPEG, a lossy photo compression format (conversion to 256 colors)
 * .png (conversion to 256 colors if necessary)
 * .tga Targa images
 
-> Please note! The size of modern images may exceed **PydPainter** inbuilt screen sizes, in which case they will be larger and continue beyond the screen displayed, below the interface. You can scroll them using cursors keys. [see Page Size](#page-size).
+> Please note! The size of modern images may exceed **PyDPainter** built-in screen sizes, in which case they will be larger and continue beyond the screen displayed, below the interface. You can scroll them using cursors keys. [see Page Size](#page-size).
 
 
 The file query is inspired by **DeluxePaint** legacy. You can move up one level in the tree structure by clicking on `.. (parent dir)`
@@ -28,23 +28,25 @@ Above all, you can change the drive by directly typing its letter in the path:
 `C:\Users\Utilisateur\Pictures\`
 
 If you're not used to DOS paths, Windows Explorer can show you the DOS path. Take any file explorer window. Just click on the little (yellow?) icon just before the normal path. i.e.:  
-icon `> This PC > DATA (D:) > Test > PydPainter > iff_pics` which then changes to  
+icon `> This PC > DATA (D:) > Test > PyDPainter > iff_pics` which then changes to  
 `D:\TestT\PyDPainter\iff_pics`.
 
 > You can download sample images from the [Amiga picture archive here](https://amiga.lychesis.net/index.html).
 > In some cases, click on the little disk icon with the IFF arrow to download an image that you can view "in its original state" here and see how the colors have been used, cycled, etc.
 
 ### Conversions
-**PydPainter** is not designed as a high-performance conversion tool. If you need to convert an image to PD's low-resolution, indexed color formats, you can use the following tools:  
+**PyDPainter** is not designed as a high-performance conversion tool. If you need to convert an image to low-resolution, indexed color formats, you can use the following tools:  
 - [Online conversion tool](http://tool.anides.de/)
+- [GIMP](https://www.gimp.org/) image editing program
 - A display/converter such as [XNView](https://www.xnview.com/en/xnview/)
-- You can alse use any old ***Adobe PhotoShop**. It still saves images in the Amiga's iff format.
+- You can also use any old **Adobe PhotoShop**. It still saves images in the Amiga's iff format.
+
 ## Save
-Saves the image in the same format as you loaded it, without warning.
+Saves the image in the same format as you loaded it, overwriting without prompting.
 ## Save as...
 Saves the image by requesting the desired format. You can choose from the same formats as with open. Use the small drop-down menu to the right of the file name.
 ## Revert
-Reloads the image as you last loaded or saved it. Be careful, it will remove everything you've done since then. Handy if you want to try things out from within an image.
+Reloads the image as you last loaded or saved. Be careful, it will remove everything you've done since then. Handy if you want to try things out from within an image.
 ## Print...
 _not supported_
 ## Flip
@@ -55,14 +57,14 @@ horizontally (right-left reversal)
 vertically (up-down flipping)
 ## Change Color
 With a palette often limited to only 32 or 16 colors, you'll need precise color management. That's what these tools are for.
-### [Palette…](palette.md)
+### [Palette...](palette.md)
 ### Use Brush Palette
-Abruptly replaces the palette with that of the last `Brush` you load.
+Abruptly replaces the palette with that of the last `Brush` you loaded.
 *If you're not into psychedelic effects, you'll probably want to use the [Remap](#remap) function after this.*
 ### Restore Palette
-Go back to the previous palette (I'm not sure ???)
+Go back to the palette that the picture had when it was loaded from disk
 ### Default Palette
-Replaces current palette with default palette (which is **PydPainter**'s palette, inspired by **DeluxePaint**'s palette)
+Replaces current palette with default palette (which is **PyDPainter**'s palette, inspired by **DeluxePaint**'s palette)
 
 *If you're not into psychedelic effects, you'll probably want to use the [Remap](#remap) function after this.*
 
