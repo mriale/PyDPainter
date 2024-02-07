@@ -995,10 +995,11 @@ def save_gif_anim(filename, config, status_func=None):
             # Do difference from previous frame
             prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].image).copy()
             surf_diff = np.equal(prev_array, surf_array)
+            surf_diff_ne = np.not_equal(prev_array, surf_array)
 
             # Find background color not in the difference
             all_256 = np.arange(256, dtype=np.uint8)
-            surf_unique = np.unique(surf_array[surf_diff])
+            surf_unique = np.unique(surf_array[surf_diff_ne])
             surf_notin = np.setdiff1d(all_256, surf_unique, assume_unique=True)
             if len(surf_notin) > 0:
                 bgcolor = surf_notin[0]
@@ -1015,6 +1016,9 @@ def save_gif_anim(filename, config, status_func=None):
                     transparent_color_index = bgcolor
                 else:
                     image_data_lzh = surf_lzw
+            else:
+                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
+                image_data_lzh = surf_lzw
 
         frame = {"local_palette": localpal,
                  "image_data": surf_array,

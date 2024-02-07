@@ -419,7 +419,8 @@ class pydpainter:
                     self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
             else:
                 self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
-            self.proj[i].anim.frame = [Frame(self.proj[i].pixel_canvas)]
+            if self.proj[i].anim.num_frames == 1:
+                self.proj[i].anim.frame = [Frame(self.proj[i].pixel_canvas)]
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
