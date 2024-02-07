@@ -416,6 +416,7 @@ class Animation:
         global progress_req
         config.stop_cycling()
         config.stencil.enable = False
+        self.save_curr_frame()
         filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
