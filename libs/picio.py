@@ -703,26 +703,6 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                     delay = 4
                 config.anim.frame = [Frame(pic, delay=delay, is_pal_key=True)]
             else:
-                # Make sure palette is same size as first frame
-                num_colors = len(config.anim.frame[0].pal)
-                pal = None
-                if num_colors != len(config.pal):
-                    if num_colors > len(config.pal):
-                        # extend palette
-                        pal = list(config.truepal)
-                        i = len(pal)
-                        while i < num_colors:
-                            pal.append([0,0,0])
-                            i += 1
-                    else:
-                        # contract palette
-                        pal = list(config.truepal[:num_colors])
-                        pic = convert8(pic.convert(), pal)
-                    upal = config.unique_palette(pal)
-                    config.truepal = list(pal)
-                    config.loadpal = list(pal)
-                    config.pal = list(upal)
-                    pic.set_palette(upal)
                 is_pal_key = True
                 config.anim.frame.append(Frame(pic))
                 if config.anim.frame[-1].pal == config.anim.frame[-2].pal:
@@ -737,6 +717,24 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             pictype = "NONE"
 
     if frameno >= 0:
+        # Find max number of colors in the frames
+        num_colors = 0
+        for frame in config.anim.frame:
+            num_colors = max(len(frame.pal), num_colors)
+
+        # Extend number of colors to max number of colors
+        for frame in config.anim.frame:
+            pal = None
+            if num_colors != len(frame.pal):
+                if num_colors > len(frame.pal):
+                    # extend palette
+                    pal = list(frame.truepal)
+                    pal.extend([[0,0,0]]*(num_colors-len(pal)))
+                upal = config.unique_palette(pal)
+                frame.truepal = list(pal)
+                frame.loadpal = list(pal)
+                frame.pal = list(upal)
+                frame.image.set_palette(upal)
         config.anim.curr_frame = 1
         config.anim.num_frames = len(config.anim.frame)
         pic = config.anim.frame[0].image
