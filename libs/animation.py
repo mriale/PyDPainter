@@ -420,7 +420,7 @@ class Animation:
         filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
-            if True: #try:
+            try:
                 if not libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=False):
                     close_progress_req(progress_req)
                     answer = question_req(config.pixel_req_canvas,
@@ -439,11 +439,9 @@ class Animation:
                 config.filename = filename
                 config.modified_count = 0
                 config.anim.show_curr_frame()
-            """
             except:
                 close_progress_req(progress_req)
                 io_error_anim_req("Load Error", "Unable to save anim:\n%s", filename)
-            """
 
     def handle_events(self, event):
         if event.type == KEYDOWN:

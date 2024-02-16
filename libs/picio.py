@@ -969,7 +969,7 @@ def save_pic(filename, config, overwrite=True):
 
 
 def save_iff_anim(filename, config, status_func=None):
-    pass
+    raise Exception("Unimplemented")
 
 def save_gif_anim(filename, config, status_func=None):
     header = {
