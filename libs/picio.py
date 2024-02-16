@@ -610,7 +610,12 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             pic.set_palette(config.pal)
         elif pictype == "GIF":
             num_CMAP = 0
-            gif = GIFParser(filename, status_func=status_func)
+            gif_status_func = status_func
+            if import_frames:
+                gif_status_func = None
+                if status_func != None:
+                    status_func(frameno / maxframe)
+            gif = GIFParser(filename, status_func=gif_status_func)
             w = gif.header["width"]
             h = gif.header["height"]
             pic = pygame.Surface((w,h), 0, depth=8)
