@@ -87,9 +87,22 @@ class GIFWriter:
         self.file.write(b"\x00") # End of blocks
 
     def write_image_descriptor(self):
+        xcoord = 0
+        if "image_left_position" in self.frame:
+            xcoord = self.frame["image_left_position"]
+        ycoord = 0
+        if "image_top_position" in self.frame:
+            ycoord = self.frame["image_top_position"]
+        width = self.header["width"]
+        if "image_width" in self.frame:
+            width = self.frame["image_width"]
+        height = self.header["height"]
+        if "image_height" in self.frame:
+            height = self.frame["image_height"]
+
         self.file.write(struct.pack("B", IMAGE_DESCRIPTOR))
-        self.file.write(b"\x00\x00\x00\x00") # x,y coords
-        self.file.write(struct.pack("<HH", self.header["width"], self.header["height"]))
+        self.file.write(struct.pack("<HH", xcoord, ycoord))
+        self.file.write(struct.pack("<HH", width, height))
         if self.header["global_color_table"]:
             pal = None
         else:

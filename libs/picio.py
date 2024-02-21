@@ -993,6 +993,10 @@ def save_gif_anim(filename, config, status_func=None):
         transparency = 0
         transparent_color_index = 0
         image_data_lzh = None
+        xcoord = 0
+        ycoord = 0
+        image_width = config.pixel_width
+        image_height = config.pixel_height
         # frame compression using differences
         if i > 0 and not config.anim.frame[i].is_pal_key:
             # Do difference from previous frame
@@ -1008,8 +1012,19 @@ def save_gif_anim(filename, config, status_func=None):
                 bgcolor = surf_notin[0]
                 surf_diff_array = surf_array.copy()
                 surf_diff_array[surf_diff] = bgcolor
+                # find bounds of diff
+                diff_indexes = np.argwhere(surf_diff_ne)
+                if len(diff_indexes) == 0:
+                    #frame has no differences so make it one pixel
+                    minx,miny = (0,0)
+                    maxx,maxy = (0,0)
+                else:
+                    minx,miny = diff_indexes.min(axis=0)
+                    maxx,maxy = diff_indexes.max(axis=0)
+                # trim diff to bounds
+                surf_diff_array_cropped = surf_diff_array[minx:maxx+1,miny:maxy+1]
                 # try compressing diff and overwrite to see which is smaller
-                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
+                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array_cropped.transpose().flatten()))
                 surf_lzw = gif.encode_lzw_data(bytes(surf_array.transpose().flatten()))
                 
                 if len(surf_diff_lzw) < len(surf_lzw):
@@ -1017,6 +1032,10 @@ def save_gif_anim(filename, config, status_func=None):
                     disposal_method = 1
                     transparency = 1
                     transparent_color_index = bgcolor
+                    xcoord = minx
+                    ycoord = miny
+                    image_width = maxx - minx + 1
+                    image_height = maxy - miny + 1
                 else:
                     image_data_lzh = surf_lzw
             else:
@@ -1030,6 +1049,10 @@ def save_gif_anim(filename, config, status_func=None):
                  "disposal_method": disposal_method,
                  "transparency": transparency,
                  "transparent_color_index": transparent_color_index,
+                 "image_left_position": xcoord,
+                 "image_top_position": ycoord,
+                 "image_width": image_width,
+                 "image_height": image_height,
         }
         gif.write_frame(frame)
         surf_array = None
