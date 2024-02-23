@@ -1021,21 +1021,23 @@ def save_gif_anim(filename, config, status_func=None):
                 else:
                     minx,miny = diff_indexes.min(axis=0)
                     maxx,maxy = diff_indexes.max(axis=0)
-                # trim diff to bounds
+                # trim to bounds
                 surf_diff_array_cropped = surf_diff_array[minx:maxx+1,miny:maxy+1]
+                surf_array_cropped = surf_array[minx:maxx+1,miny:maxy+1]
                 # try compressing diff and overwrite to see which is smaller
                 surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array_cropped.transpose().flatten()))
-                surf_lzw = gif.encode_lzw_data(bytes(surf_array.transpose().flatten()))
-                
+                surf_lzw = gif.encode_lzw_data(bytes(surf_array_cropped.transpose().flatten()))
+
+                xcoord = minx
+                ycoord = miny
+                image_width = maxx - minx + 1
+                image_height = maxy - miny + 1
+
                 if len(surf_diff_lzw) < len(surf_lzw):
                     image_data_lzh = surf_diff_lzw
                     disposal_method = 1
                     transparency = 1
                     transparent_color_index = bgcolor
-                    xcoord = minx
-                    ycoord = miny
-                    image_width = maxx - minx + 1
-                    image_height = maxy - miny + 1
                 else:
                     image_data_lzh = surf_lzw
             else:
