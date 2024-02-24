@@ -326,6 +326,7 @@ class DoSpareCopy(MenuAction):
         sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
         config.proj[sparei].pixel_canvas.blit(config.pixel_canvas, (0,0))
+        config.proj[sparei].anim.frame[config.proj[sparei].anim.curr_frame-1].image.blit(config.pixel_canvas, (0,0))
         config.clear_undo()
         config.save_undo()
 
