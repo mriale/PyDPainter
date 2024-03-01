@@ -684,9 +684,12 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 delay = gif.frames[i]["delay_time"]*60//100
                 upal = config.unique_palette(pal)
                 is_pal_key = False
-                pal1 = gif.frames[i]["local_palette"]
-                pal0 = gif.frames[i-1]["local_palette"]
-                if pal0 and pal1 and pal0 != pal1:
+                pal1 = pal
+                if gif.frames[i-1]["local_palette"] != None:
+                    pal0 = gif.frames[i-1]["local_palette"]
+                else:
+                    pal0 = gif.global_palette
+                if pal0 != pal1:
                     is_pal_key = True
                 config.anim.frame.append(Frame(framepic, delay=delay, pal=upal, truepal=pal, is_pal_key=is_pal_key))
             if len(gif.frames) > 1:
