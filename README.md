@@ -33,3 +33,6 @@ Mastodon: [@PyDPainter@mastodon.social](https://mastodon.social/@PyDPainter)
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
 Documentation: [Table of Contents](docs/TOC.md)
+
+**PyDPainter Copyright (C) 2019-2024 Mark Riale**<br>
+This program is licensed under the GPLv3 or later. See LICENSE file for more details.
