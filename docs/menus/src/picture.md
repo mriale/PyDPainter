@@ -1,6 +1,6 @@
 # Picture Menu
 
-_Work in progress..._
+_Ready to review_
 
 ## New...
 
@@ -125,15 +125,50 @@ Merges the spare page in front of the current page. When the spare page
 is brought forward, all pixels matching its current background color will
 appear transparent, allowing images on the current page to show
 through.
+
+Example:
+
+Current page  
+![](merge-in-back.jpg)  
+Spare page  
+![](merge-uhd.jpg)  
+
+**Merge in Front** result  
+![](merge-in-front.jpg)
+
+
 ### Merge in back
 Merges the spare page in back of the current page. When the spare page
 is put behind the current one, all pixels which match the current page's
 background color will appear transparent, allowing images on the spare
 page to show through.
 
-## Page Size...
+Example :
+Spare page  
+![](merge-sky.jpg)    
+Current page  
+![](merge-land.jpg)  
 
-*...to be completed...*
+**Merge in back** merging result:  
+![](merge-in-back.jpg)
+
+
+## Page Size...
+Displays a context-sensitive request (depending on the current screen format: **PC**, Amiga **NTSC** or **PAL**) to enlarge the work area beyond the conventional size.
+
+![](PageSize-AM.jpg)
+
+The **Standard** format is the screen format of the time. It had a border surrounding it.  
+*If you're looking to respect the legacy format of the time (for a gfx competition or retro dev), this is the one for you.*
+
+However, it was already possible to work in **Overscan** without this border, which covered the entire monitor. This was the case for video overlay, professionnal animation, some games and demoscene.
+
+**Full page** refers to the surface area required for a printed sheet (at the time). <--- check this !>
+
+You can freely enter the pixel size of the screen you want in the `Width` and `Height` fields under **Type in size**.  You are no longer limited by your memory but by an arbitrary limit of 9999 pixels. Note, however, that the animation will be impossible to view at larger sizes. And your drawing will be under the PyDPainter menus. You'll have to use the **arrow keys** on your keyboard to move around your image. 
+
+*A free format allows you to animate landscapes or provide huge sprite boards for a game.*
+
 ## Show Page
 Displays your current page in its entirety in a reduced format -
 for example, in 640 x 400 page size in Lo-Res, it shows only every other pixel.
@@ -141,9 +176,14 @@ Pressing `OK` button returns you to the current page.
 
 Key: `Shift-S`
 ## [Screen Format...](screenformat.md)
+
+Changes the display format emulated by **PyDPainter**. This is the same request as `New` but – trying – to keep the current drawing.
 ## About...
 Displays the program's About requester showing the program version
 number, the author's name, the copyright notice and licence.
+
+*Note that versions with the suffix* dev *are development versions. You can test the latest functions and hunt for bugs.*
+
 ## Quit
 Exits PydDPainter.
 
