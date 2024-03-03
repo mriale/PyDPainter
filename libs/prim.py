@@ -547,7 +547,7 @@ class Brush:
 
             return image
 
-    def draw(self, screen, color, coords, handlesymm=True, primprops=None):
+    def draw(self, screen, color, coords, handlesymm=True, primprops=None, erase=False):
         if not rect_onscreen([coords[0]+self.rect[0],
                               coords[1]+self.rect[1],
                               self.rect[2],
@@ -570,7 +570,7 @@ class Brush:
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and erase:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
@@ -579,7 +579,7 @@ class Brush:
                 image.set_colorkey(self.bgcolor_orig)
         elif drawmode == DrawMode.REPLACE:
             if self.image != None:
-                if color == self.bgcolor:
+                if erase:
                     image = pygame.Surface(self.image.get_size(), 0, self.image)
                     image.set_palette(config.pal)
                     image.fill(color)
@@ -807,7 +807,7 @@ class CoordList:
     def prepend(self, listnum, coord):
         self.coordlist[listnum].insert(0, coord)
 
-    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None):
+    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None, erase=False):
         numpoints = 0
         numcolors = 0
         pointspercolor = 0
@@ -865,9 +865,9 @@ class CoordList:
                 else:
                     if primprops.drawmode.spacing == DrawMode.AIRBRUSH:
                         for j in range(primprops.drawmode.airbrush_value):
-                            config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode))
+                            config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
                     else:
-                        config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode))
+                        config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
 
                 if interrupt and config.has_event():
                     return
@@ -1003,7 +1003,7 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     coords_out = symm_coords_list(ccoords, handlesymm=handlesymm)
     return coords_out
 
-def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0):
+def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0, erase=False):
     if filled == 1:
         fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle)
         return
@@ -1020,7 +1020,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
             cl.coordlist[j:j+3] = drawcurve(screen, color, coordfrom, coordto, coordcontrol, coordsonly=True, handlesymm=False)
         primprops = copy.copy(config.primprops)
         primprops.continuous = True
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops, erase=erase)
 
 
 def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0):
@@ -1077,7 +1077,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
         
 
-def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrupt=False):
+def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrupt=False, erase=False):
     if filled == 1:
         fillcircle(screen, color, coords_in, radius, interrupt=interrupt)
         return
@@ -1118,7 +1118,7 @@ def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrup
 
         primprops = copy.copy(config.primprops)
         primprops.continuous = True
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops, erase=erase)
 
 def add_xbounds(xbounds, y, x1, x2):
     if y in xbounds:
@@ -1173,7 +1173,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
 
-def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
+def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False):
     if (xormode and not handlesymm):
         coordfrom_list = [coordfrom]
         coordto_list = [coordto]
@@ -1183,10 +1183,10 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
     for i in range(len(coordfrom_list)):
         if interrupt and config.has_event():
             return
-        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast)
+        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase)
 
 
-def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
+def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False):
     x,y = int(coordfrom[0]), int(coordfrom[1])
     x2,y2 = int(coordto[0]), int(coordto[1])
 
@@ -1245,7 +1245,7 @@ def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coor
     if coordsonly:
         return cl.coordlist[0]
 
-    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt)
+    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt, erase=erase)
 
 
 #Bresenham Quardric Bezier curve algorithm from:
@@ -1347,7 +1347,7 @@ def convert_curve_control(coordfrom, coordto, coordcontrol):
 
 
 #from: http://stackoverflow.com/questions/31757501/pixel-by-pixel-b%C3%A9zier-curve
-def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coordsonly=False, handlesymm=True, interrupt=False):
+def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coordsonly=False, handlesymm=True, interrupt=False, erase=False):
     coordfrom_list = symm_coords(coordfrom, handlesymm)
     coordcontrol_list = symm_coords(coordcontrol, handlesymm)
     coordto_list = symm_coords(coordto, handlesymm)
@@ -1436,10 +1436,10 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
         if coordsonly:
             return cl.coordlist
 
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, erase=erase)
 
 
-def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False):
+def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, erase=False):
     if filled:
         if handlesymm:
             fillrect_symm(screen, color, coordfrom, coordto, xormode=xormode, interrupt=interrupt)
@@ -1449,7 +1449,7 @@ def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmod
     x1,y1 = coordfrom
     x2,y2 = coordto
 
-    drawpoly(screen, color, [(x1,y1), (x2,y1), (x2,y2), (x1,y2), (x1,y1)], xormode=xormode, drawmode=drawmode, handlesymm=handlesymm, interrupt=interrupt, skiplast=True)
+    drawpoly(screen, color, [(x1,y1), (x2,y1), (x2,y2), (x1,y2), (x1,y1)], xormode=xormode, drawmode=drawmode, handlesymm=handlesymm, interrupt=interrupt, skiplast=True, erase=erase)
 
 
 def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=True, interrupt=False):
@@ -2189,7 +2189,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
         end_shape(screen, color, interrupt=interrupt)
 
 
-def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False):
+def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False, erase=False):
     if filled:
         fillpoly(screen, color, coords, handlesymm=handlesymm, interrupt=interrupt)
     else:
@@ -2202,7 +2202,7 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                 if interrupt and config.has_event():
                     return
                 if len(lastcoord) != 0:
-                    drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
+                    drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast), erase=erase)
                 lastcoord = coord
 
 def convert8(pixel_canvas_rgb, pal, status_func=None):
