@@ -309,7 +309,7 @@ class DoDraw(ToolSingleAction):
                 if button == 1:
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
                 elif button == 3:
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
                 self.polylist = [coords]
 
             config.save_undo()
