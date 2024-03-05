@@ -1005,7 +1005,7 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
 
 def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0, erase=False):
     if filled == 1:
-        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle)
+        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle, erase=erase)
         return
 
     ecurves = calc_ellipse_curves(coords, width, height, angle=angle)
@@ -1023,7 +1023,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops, erase=erase)
 
 
-def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0):
+def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0, erase=False):
     if primprops == None:
         primprops = config.primprops
         handlesymm = True
@@ -1033,7 +1033,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
     xc,yc = coords
 
     if width == 0 and height == 0:
-        fillrect(screen, color, (xc,yc), (xc,yc))
+        fillrect(screen, color, (xc,yc), (xc,yc), erase=erase)
         return
 
     ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm, angle=angle)
@@ -1070,7 +1070,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
 
         start_shape()
         for sly in sslk:
-            hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops)
+            hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
@@ -1079,7 +1079,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
 
 def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrupt=False, erase=False):
     if filled == 1:
-        fillcircle(screen, color, coords_in, radius, interrupt=interrupt)
+        fillcircle(screen, color, coords_in, radius, interrupt=interrupt, erase=erase)
         return
 
     coords_list = symm_coords(coords_in)
@@ -1131,7 +1131,7 @@ def add_xbounds(xbounds, y, x1, x2):
     else:
         xbounds[y] = [x1, x2]
 
-def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None):
+def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False):
     handlesymm = True
     if primprops != None:
         handlesymm = primprops.handlesymm
@@ -1166,7 +1166,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
         start_shape()
         for y in xbounds:
             x1,x2 = xbounds[y]
-            hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops)
+            hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
@@ -1442,9 +1442,9 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
 def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, erase=False):
     if filled:
         if handlesymm:
-            fillrect_symm(screen, color, coordfrom, coordto, xormode=xormode, interrupt=interrupt)
+            fillrect_symm(screen, color, coordfrom, coordto, xormode=xormode, interrupt=interrupt, erase=erase)
         else:
-            fillrect(screen, color, coordfrom, coordto, interrupt=interrupt)
+            fillrect(screen, color, coordfrom, coordto, interrupt=interrupt, erase=erase)
         return
     x1,y1 = coordfrom
     x2,y2 = coordto
@@ -1452,8 +1452,8 @@ def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmod
     drawpoly(screen, color, [(x1,y1), (x2,y1), (x2,y2), (x1,y2), (x1,y1)], xormode=xormode, drawmode=drawmode, handlesymm=handlesymm, interrupt=interrupt, skiplast=True, erase=erase)
 
 
-def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=True, interrupt=False):
-    fillrect(screen, color, coordfrom, coordto, interrupt=interrupt)
+def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=True, interrupt=False, erase=False):
+    fillrect(screen, color, coordfrom, coordto, interrupt=interrupt, erase=erase)
     x1,y1 = coordfrom
     x2,y2 = coordto
 
@@ -1461,7 +1461,7 @@ def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=T
     rectlist_symm = symm_coords_list(rectlist, handlesymm)
 
     for i in range(1,len(rectlist_symm)):
-        fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt)
+        fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt, erase=erase)
         if interrupt and config.has_event():
             return
         config.try_recompose()
@@ -1621,7 +1621,7 @@ def hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2):
 def hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2):
     hlines.append([y, xs1, xs2])
 
-def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
+def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=False):
     if primprops == None:
         primprops = config.primprops
 
@@ -1656,7 +1656,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
 
     if primprops.xor:
         hline_XOR(surf_array, y, xs1, xs2)
-    elif primprops.fillmode.value == FillMode.SOLID or color == config.bgcolor:
+    elif primprops.fillmode.value == FillMode.SOLID or erase:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BRUSH:
         hline_BRUSH(surf_array, y, x1, x2,xs1, xs2)
@@ -1994,7 +1994,7 @@ def drawxorcross(screen, x, y):
 
 
 
-def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None):
+def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None, erase=False):
     if primprops == None:
         primprops = config.primprops
 
@@ -2019,13 +2019,13 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None)
         config.fillmode.bounds = [x1,y1,x2,y2]
         start_shape()
         for y in range(y1, y2+1):
-            hline(screen, color, y, x1, x2, primprops=primprops)
+            hline(screen, color, y, x1, x2, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
-def floodfill(surface, fill_color, position):
+def floodfill(surface, fill_color, position, erase=False):
     for x,y in symm_coords(position):
         #Create scanline hash
         sl = {}
@@ -2111,12 +2111,12 @@ def floodfill(surface, fill_color, position):
                 for y in sorted (sl.keys()):
                     #draw scanline fragments
                     for frag in sl[y]:
-                        hline(surface, fill_color, y, frag[0], frag[1])
+                        hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
                     config.try_recompose()
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False):
     n = len(coords)
     if n == 0:
         return
@@ -2176,14 +2176,14 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
             polyints.sort()
 
             for i in range(0, len(polyints), 2):
-                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops)
+                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops, erase=erase)
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
-                hline(screen, color, miny, minx, maxx, primprops=primprops)
+                hline(screen, color, miny, minx, maxx, primprops=primprops, erase=erase)
                 config.try_recompose()
 
         end_shape(screen, color, interrupt=interrupt)
@@ -2191,7 +2191,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
 
 def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False, erase=False):
     if filled:
-        fillpoly(screen, color, coords, handlesymm=handlesymm, interrupt=interrupt)
+        fillpoly(screen, color, coords, handlesymm=handlesymm, interrupt=interrupt, erase=erase)
     else:
         coords_symm = symm_coords_list(coords, handlesymm=handlesymm)
 

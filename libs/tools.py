@@ -309,7 +309,7 @@ class DoDraw(ToolSingleAction):
                 if button == 1:
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
                 elif button == 3:
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
                 self.polylist = [coords]
 
             config.save_undo()
@@ -461,7 +461,7 @@ class DoFill(ToolSingleAction):
         if button == 1:
             floodfill(config.pixel_canvas, config.color, coords)
         elif button == 3:
-            floodfill(config.pixel_canvas, config.bgcolor, coords)
+            floodfill(config.pixel_canvas, config.bgcolor, coords, erase=True)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -1097,7 +1097,7 @@ class DoPolyFill(DoPoly):
                     cycle()
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
                     self.polylist = []
                     config.save_undo()
             else:
@@ -1509,7 +1509,7 @@ class DoBrushPoly(DoBrush):
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
                     config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False, erase=True)
                     self.polylist = []
                     config.save_undo()
 
