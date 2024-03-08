@@ -56,3 +56,5 @@ The 1-based option starts the coordinates at (1,1) rather than (0,0).
 ## Save Config
 Save these choices in the config file for the next time you start **PyDPainter**.
 If you wish to re-initialize the preferences, delete the `.pydpainter` file in your home directory.
+
+###### Documentation written by Stephane Anquetil

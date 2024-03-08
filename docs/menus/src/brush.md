@@ -217,3 +217,4 @@ Use the mouse to freely define the brush's handle point.
 
 ![](handle-place.png)<br>key: `Alt-z`
 
+###### Documentation written by Stephane Anquetil

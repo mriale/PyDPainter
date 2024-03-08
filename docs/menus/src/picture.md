@@ -189,7 +189,7 @@ Pressing `OK` button returns you to the current page.
 Key: `Shift-S`
 
 ## [Screen Format...](screenformat.md)
-Changes the display format emulated by **PyDPainter**. This is the same request as `New` but – trying – to keep the current drawing.
+Changes the display format emulated by **PyDPainter**. This is the same request as `New` but - trying - to keep the current drawing.
 
 ## About...
 Displays the program's About requester showing the program version
@@ -202,3 +202,4 @@ Exits PydDPainter.
 
 Key: `Shift-Q`
 
+###### Documentation written by Stephane Anquetil

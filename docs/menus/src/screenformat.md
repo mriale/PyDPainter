@@ -38,4 +38,4 @@ _Work in progress..._
 ### OK
 ### Make Default
 
-
+###### Documentation written by Stephane Anquetil

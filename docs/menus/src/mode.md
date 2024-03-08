@@ -209,3 +209,5 @@ When you are in **HBrite** mode, painting with the left mouse
 button darkens colors on your painting to their halfbrite equivalent;
 painting with the right button lightens colors that are halfbrite. This
 mode is especially useful to animate pictures with shadow or highlight effects.
+
+###### Documentation written by Stephane Anquetil

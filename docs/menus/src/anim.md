@@ -148,3 +148,5 @@ Key `6`
 
 _not yet implemented_  
 Brushes become animated brushes in this powerful function that lets you draw an animation with an animation. For example, a spinning wheel or a walking monster crossing the screen.
+
+###### Documentation written by Stephane Anquetil

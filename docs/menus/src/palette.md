@@ -129,4 +129,4 @@ This arrow defines the direction of the color cycling, as well as the gradients 
 
 *Tip: the up/down direction is symbolic; the gradient direction is defined in the gradient parameters of any `Fill Type`.*
 
-
+###### Documentation written by Stephane Anquetil
