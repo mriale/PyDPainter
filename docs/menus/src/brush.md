@@ -9,13 +9,13 @@ current `background color` (black by default) will be interpreted as a
 transparent color.
 
 - [Open...](#open)
-- [Save as...](#saveas)
+- [Save as...](#save-as)
 - [Restore](#restore)
 - [Size](#size)
 - [Flip](#flip)
 - [Edge](#edge)
 - [Rotate](#rotate)
-- [Change Color](#changecolor)
+- [Change Color](#change-color)
 - [Bend](#bend)
 - [Handle](#handle)
 
