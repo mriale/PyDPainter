@@ -84,3 +84,5 @@ There are two background modes that are indicated in the title bar:
 ## Perspective
 
 _Not implemented yet_
+
+###### Documentation written by Stephane Anquetil
