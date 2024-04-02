@@ -9,6 +9,7 @@ import re
 import numpy as np
 
 from struct import pack, unpack
+from operator import attrgetter
 
 from libs.colorrange import *
 from libs.prim import *
@@ -290,6 +291,7 @@ def load_anim(filename, config, ifftype, status_func=None):
 
     #initialize anim header
     anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
+    dpan_version, dpan_numframes, dpan_global_fps, dpan_global_delay = (0,0,20, 3)
 
     try:
         filesize = os.path.getsize(filename)
@@ -323,6 +325,12 @@ def load_anim(filename, config, ifftype, status_func=None):
                 display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
                     raise Exception("HAM mode not supported")
+            elif chunk.getname() == b'DPAN':
+                #Deluxe Paint specific chunk
+                dpan_bytes = chunk.read()
+                (dpan_version, dpan_numframes, dpan_global_fps, d1,d2,d3) = unpack(">HHBBBB", dpan_bytes)
+                if dpan_global_fps > 0:
+                    dpan_global_delay = 60 // dpan_global_fps
             elif chunk.getname() == b'BMHD':
                 #bitmap header
                 bmhd_bytes = chunk.read()
@@ -360,13 +368,17 @@ def load_anim(filename, config, ifftype, status_func=None):
                 pic.set_palette(config.pal)
                 config.anim.curr_frame = 1
                 config.anim.num_frames = 1
-                config.anim.frame = [Frame(pic, pal=config.pal, is_pal_key=True)]
+                if anim_reltime == 0:
+                    anim_reltime = dpan_global_delay
+                config.anim.frame = [Frame(pic, pal=config.pal, is_pal_key=True, delay=anim_reltime)]
                 is_pal_key = False
             elif chunk.getname() == b'ANHD':
                 #animation header
                 anhd_bytes = chunk.read()
                 (anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b) = unpack(">BBHHhhLLBBLQQ", anhd_bytes)
-                #print(f"{anim_mode=}")
+                #print(f"{anim_reltime=} {anim_abstime=}")
+                if anim_abstime == 0:
+                    anim_reltime = dpan_global_delay
             elif chunk.getname() == b'DLTA':
                 #Read in column pointers
                 dlta_bytes = chunk.read()
@@ -383,7 +395,7 @@ def load_anim(filename, config, ifftype, status_func=None):
                             bframes = anim_interleave
                         config.anim.frame.append(config.anim.frame[config.anim.num_frames-bframes].copy())
                     if anim_reltime == 0:
-                        anim_reltime = 4
+                        anim_reltime = dpan_global_delay
                     config.anim.frame[-1].delay = anim_reltime
                     config.anim.frame[-1].pal = list(config.pal)
                     config.anim.frame[-1].truepal = list(config.truepal)
@@ -472,11 +484,12 @@ def load_anim(filename, config, ifftype, status_func=None):
 
     config.cranges = cranges
 
-    #trim final 2 frames of looping animation
-    if config.anim.num_frames > 3:
+    #trim final frames of looping animation
+    if dpan_numframes == 0 and config.anim.num_frames > 2:
+        dpan_numframes = config.anim.num_frames - 2
+    while config.anim.num_frames > dpan_numframes:
         del config.anim.frame[-1]
-        del config.anim.frame[-1]
-        config.anim.num_frames -= 2
+        config.anim.num_frames -= 1
 
     config.anim.global_palette = (num_CMAP == 1)
     config.pal = config.anim.frame[0].pal
@@ -970,9 +983,320 @@ def save_pic(filename, config, overwrite=True):
 
     return True
 
+FORM_pos=[]
+def start_FORM(f, name):
+    f.write(b'FORM\0\0\0\0' + bytearray(name, 'utf-8'))
+    FORM_pos.append(f.tell()-4) # add position to stack
+
+def end_FORM(f):
+    fsize = f.tell() - FORM_pos[-1]
+    f.seek(FORM_pos[-1] - 4) # seek to the size after FORM
+    f.write(pack(">I", fsize)) # write length into FORM
+    f.seek(0,2) # seek to end
+    FORM_pos.pop() # remove position from stack
+
+def image16(image):
+    out_image = image
+    w,h = out_image.get_size()
+
+    # adjust canvas width to be divisible by 16
+    if w != w2b(w)*8:
+        out_image = pygame.Surface((w2b(w)*8, h),0, depth=8)
+        out_image.set_palette(image.get_palette())
+        out_image.blit(image, (0,0))
+
+    return out_image
+
+def vsame(col_data, start):
+    count = 1
+    cdata = col_data[start]
+    col = start+1
+    while col < len(col_data) and col_data[col] == cdata:
+        count += 1
+        col += 1
+    return count
+
+def anim5_col_diff(diffmap, col_data):
+    MSKIP, MUNIQ, MSAME = range(3)
+    MAXRUN = 127
+    opcount = 0
+    ops = b''
+    row = 0
+    start_row = row
+    mode = MSKIP
+    same_val = 0
+    #print(f"{diffmap=}")
+    while row < len(col_data):
+        #print(f"{row=}")
+        if mode == MSKIP:
+            if diffmap[row]:
+                if row != start_row:
+                    #write out skip op
+                    #print("SKIP " + str(row-start_row))
+                    ops += pack(">b", row-start_row)
+                    opcount += 1
+                #what op is next?
+                start_row = row
+                if vsame(col_data, row) > 3:
+                    mode = MSAME
+                    same_val = col_data[row]
+                else:
+                    mode = MUNIQ
+            else:
+                if row-start_row >= MAXRUN:
+                    #write out skip op and continue
+                    #print("SKIP " + str(MAXRUN))
+                    ops += pack(">b", MAXRUN)
+                    opcount += 1
+                    start_row += MAXRUN
+        if mode == MUNIQ:
+            if diffmap[row]:
+                if vsame(col_data, row) > 3:
+                    #end uniq and write out uniq op
+                    #print("UNIQ " + str(row-start_row))
+                    ops += pack(">B", 128 + (row-start_row))
+                    ops += bytes(col_data[start_row:row])
+                    opcount += 1
+                    #switch to same op
+                    start_row = row
+                    mode = MSAME
+                    same_val = col_data[row]
+                else:
+                    if row-start_row >= MAXRUN:
+                        #write out uniq op and continue
+                        #print("UNIQ " + str(MAXRUN))
+                        ops += pack(">B", 128 + MAXRUN)
+                        ops += bytes(col_data[start_row:row])
+                        opcount += 1
+                        start_row += MAXRUN
+            else:
+                #write out uniq op
+                #print("UNIQ " + str(row-start_row))
+                ops += pack(">B", 128 + (row-start_row))
+                ops += bytes(col_data[start_row:row])
+                opcount += 1
+                start_row = row
+                mode = MSKIP
+        if mode == MSAME:
+            if same_val != col_data[row]:
+                #write out same op
+                #print("SAME " + str(row-start_row) + " " + str(same_val))
+                ops += pack(">bbB", 0, row-start_row, same_val)
+                opcount += 1
+                #what op is next?
+                start_row = row
+                if diffmap[row]:
+                    mode = MUNIQ
+                else:
+                    mode = MSKIP
+            else:
+                if row-start_row >= MAXRUN:
+                    #write out same op and continue
+                    #print("SAME " + str(row-start_row) + " " + str(same_val))
+                    ops += pack(">bbB", 0, MAXRUN, same_val)
+                    opcount += 1
+                    start_row += MAXRUN
+        row += 1
+    # write out final op
+    if mode == MUNIQ:
+        #write out uniq op
+        #print("UNIQ " + str(row-start_row))
+        ops += pack(">B", 128 + (row-start_row))
+        ops += bytes(col_data[start_row:row])
+        opcount += 1
+    elif mode == MSAME:
+        #write out same op
+        #print("SAME " + str(row-start_row) + " " + str(same_val))
+        ops += pack(">bbB", 0, row-start_row, same_val)
+        opcount += 1
+
+    return (opcount, ops)
+
+def anim5_plane_diff(plane0, plane1):
+    pl_diff = b''
+    # set up column counts
+    ncol = len(plane0[0])
+    opcount_sum = 0
+    col = 0
+
+    diffmap = (plane0 != plane1)
+    #print(f"{diffmap=}")
+
+    # diff a column at a time
+    while col < ncol:
+        #print(f"{col=}")
+        opcount = 0
+        ops = b''
+        if np.all(diffmap[:,col] == False):
+            # no diffs in column
+            pass
+        else:
+            #diff one column
+            opcount, ops = anim5_col_diff(diffmap[:,col], plane1[:,col])
+        pl_diff += pack(">B", opcount)
+        pl_diff += ops
+        opcount_sum += opcount
+        col += 1
+            
+    if opcount_sum == 0:
+        # no diffs in plane
+        return b''
+    else:
+        return pl_diff
 
 def save_iff_anim(filename, config, status_func=None):
-    raise Exception("Unimplemented")
+    nPlanes = int(math.log(len(config.pal),2))
+    newfile = open(filename, 'wb')
+    start_FORM(newfile, "ANIM")
+
+    ####### Write first frame
+
+    start_FORM(newfile, "ILBM")
+    pal = config.truepal
+    
+    write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
+        config.pixel_width, config.pixel_height, \
+        0,0, \
+        nPlanes, \
+        0, \
+        1, \
+        0, \
+        0, \
+        10, 11, \
+        config.pixel_width, config.pixel_height
+        ))
+
+    global_fps = 20
+    mindelay = min(config.anim.frame, key=attrgetter('delay')).delay
+    if mindelay > 0:
+        global_fps = 60 // mindelay
+
+    write_chunk(newfile, b'DPAN', pack(">HHBBBB",
+        3, #version used in DPaint V
+        config.anim.num_frames,
+        global_fps,
+        0,0,0 #flags
+        ))
+
+    anim_abstime = config.anim.frame[0].delay
+    write_chunk(newfile, b'ANHD', pack(">BBHHhhLLBBLQQ",
+        0, 0, # anim_mode, anim_mask
+        config.pixel_width, config.pixel_height, # anim_w, anim_h
+        0, 0, # anim_x, anim_y
+        anim_abstime, config.anim.frame[0].delay, # anim_abstime, anim_reltime
+        0, 0, # anim_interleave, anim_pad0
+        0, 0, 0 # anim_bits, anim_pad8a, anim_pad8b
+        ))
+
+    cmap_chunk = b''
+    for col in pal:
+        cmap_chunk += pack(">BBB", col[0], col[1], col[2])
+    write_chunk(newfile, b'CMAP', cmap_chunk)
+
+    write_chunk(newfile, b'CAMG', pack(">I", config.display_mode))
+
+    for crange in config.cranges:
+        write_chunk(newfile, b'CRNG', pack(">HHHBB", 0, crange.rate, crange.get_flags(), crange.low, crange.high))
+
+    body = b''
+    out_canvas = image16(config.anim.frame[0].image)
+    surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
+    planes_out = c2p(surf_array)
+
+    # write out bitplanes interleaved one line at a time
+    for y in range(0,len(planes_out)):
+        for p in range(0,nPlanes):
+            body += byterun_encode(planes_out[y,p,:].flatten()).tobytes()
+
+    write_chunk(newfile, b'BODY', body)
+
+    end_FORM(newfile)
+
+    ####### Write animation diffs
+
+    previ = 0
+    for i in range(1,config.anim.num_frames+2):
+        curri = i
+        if i >= config.anim.num_frames:
+            curri = i - config.anim.num_frames
+        #print(f"{previ=} {curri=}")
+        localpal = None
+        if config.anim.global_palette:
+            localpal = None
+        elif config.anim.frame[curri].is_pal_key:
+            localpal = config.anim.frame[curri].truepal
+
+        anim_abstime += config.anim.frame[curri].delay
+
+        start_FORM(newfile, "ILBM")
+
+        write_chunk(newfile, b'ANHD', pack(">BBHHhhLLBBLQQ", \
+            5, 0, # anim_mode, anim_mask
+            config.pixel_width, config.pixel_height, # anim_w, anim_h
+            0, 0, # anim_x, anim_y
+            anim_abstime, config.anim.frame[curri].delay, # anim_abstime, anim_reltime
+            0, 0, # anim_interleave, anim_pad0
+            0, 0, 0 # anim_bits, anim_pad8a, anim_pad8b
+            ))
+
+        if localpal != None:
+            cmap_chunk = b''
+            for col in localpal:
+                cmap_chunk += pack(">BBB", col[0], col[1], col[2])
+            write_chunk(newfile, b'CMAP', cmap_chunk)
+
+        dlta_bytes = b''
+        pdelta = [0] * 16
+
+        out_canvas1 = image16(config.anim.frame[curri].image)
+        out_canvas0 = image16(config.anim.frame[previ].image)
+
+        # make previous and current frames into bitplanes
+        surf_array0 = pygame.surfarray.pixels2d(out_canvas0)
+        planes0 = c2p(surf_array0)
+        surf_array0 = None
+        surf_array1 = pygame.surfarray.pixels2d(out_canvas1)
+        planes1 = c2p(surf_array1)
+        surf_array1 = None
+        nplanes = len(planes1[0])
+
+        # finds diffs between previous and current bitplane
+        pl_diff = [b''] * 8
+        for pli in range(nplanes):
+            pl_diff[pli] = anim5_plane_diff(planes0[:,pli,:], planes1[:,pli,:])
+
+        # set pdelta pointers
+        p = 16*4 # past end of delta pointers
+        for pli in range(nplanes):
+            if len(pl_diff[pli]) > 0:
+                pdelta[pli] = p
+            else:
+                pdelta[pli] = 0
+            p += len(pl_diff[pli])
+
+        # build DLTA chunk
+
+        # plane pointers are at beginning of DLTA chunk
+        for p in pdelta:
+            dlta_bytes += pack(">L", p)
+
+        # plane diffs are the rest of the DLTA chunk
+        for pli in range(nplanes):
+            dlta_bytes += pl_diff[pli]
+
+        write_chunk(newfile, b'DLTA', dlta_bytes)
+
+        end_FORM(newfile)
+
+        if status_func:
+            status_func(i / (config.anim.num_frames+2))
+
+        previ = curri - 1
+
+    ####### End of file
+
+    end_FORM(newfile)
+    newfile.close()
 
 def save_gif_anim(filename, config, status_func=None):
     header = {
