@@ -359,9 +359,9 @@ class Animation:
                 config.filename = filename
                 config.modified_count = 0
                 config.anim.show_curr_frame()
-            except:
+            except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Load Error", "Unable to open anim:\n%s", filename)
+                io_error_anim_req(str(ex), "Unable to open anim:\n%s", filename)
 
     def import_frames(self):
         global progress_req

@@ -94,9 +94,9 @@ class DoOpen(MenuAction):
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
                 config.modified_count = 0
-            except:
+            except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+                io_error_req(str(ex), "Unable to open image:\n%s", filename)
 
 class DoSave(MenuAction):
     def selected(self, attrs):

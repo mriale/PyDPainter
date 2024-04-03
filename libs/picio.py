@@ -266,9 +266,20 @@ def load_iff(filename, config, ifftype):
 #read in FORM header
 def read_form(file):
     form_length = 0
+    form_name = b''
     form_id = file.read(4)
     if len(form_id) == 0:
         raise EOFError
+
+    #Skip over random chunks
+    while form_id != b'FORM':
+        len_bytes = file.read(4)
+        chunk_len = unpack(">I", len_bytes)[0]
+        if chunk_len & 1: #word align chunk
+           chunk_len += 1
+        file.seek(chunk_len, 1) #skip chunk
+        form_id = file.read(4)
+ 
     if form_id == b'FORM':
         len_bytes = file.read(4)
         if len(len_bytes) == 0:
@@ -467,6 +478,12 @@ def load_anim(filename, config, ifftype, status_func=None):
                     #Turn array back into image
                     p2c(planes, surf_array)
                     surf_array = None
+                elif anim_mode == 7:
+                    raise Exception(f"IFF ANIM mode {anim_mode} not supported")
+                elif anim_mode == 8:
+                    raise Exception(f"IFF ANIM mode {anim_mode} not supported")
+                else:
+                    raise Exception(f"IFF ANIM mode {anim_mode} not supported")
                 if status_func != None:
                     status_func(iff_file.tell() / filesize)
             else:
