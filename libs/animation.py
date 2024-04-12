@@ -141,6 +141,40 @@ class Animation:
         self.repeat = False
         self.frame_bookmark = -1
         self.global_palette = True
+        self.iter_frames = []
+        self.curr_frame_bak = 1
+        self.iter_progress_req = None
+        self.iter_len = 0
+        self.iter_prev_time = 0
+
+    def iter_progress_anim(self, percent):
+        curr_time = pygame.time.get_ticks()
+        if curr_time - self.iter_prev_time > 33:
+            self.iter_prev_time = curr_time
+            update_progress_req(self.iter_progress_req, config.pixel_req_canvas, percent)
+
+    def __iter__(self):
+        if len(self.iter_frames) == 0:
+            self.iter_frames = [*range(1,self.num_frames+1)]
+        self.curr_frame_bak = self.curr_frame
+        self.iter_len = len(self.iter_frames)
+        self.iter_progress_req = open_progress_req(config.pixel_req_canvas, "Processing...")
+        return self
+
+    def __next__(self):
+        config.save_undo()
+        if len(self.iter_frames) == 0:
+            self.save_curr_frame()
+            self.curr_frame = self.curr_frame_bak
+            self.show_curr_frame(doAction=False)
+            close_progress_req(self.iter_progress_req)
+            raise StopIteration
+        self.iter_progress_anim((self.iter_len-len(self.iter_frames)) / self.iter_len)
+        frame_no = self.iter_frames.pop(0)
+        self.save_curr_frame()
+        self.curr_frame = frame_no
+        self.show_curr_frame(doAction=False)
+        return frame_no
 
     def save_curr_frame(self):
         f = self.curr_frame-1
@@ -163,7 +197,7 @@ class Animation:
             config.pal = list(self.frame[f].pal)
             config.truepal = list(self.frame[f].truepal)
             config.loadpal = list(self.frame[f].loadpal)
-            config.pixel_canvas.blit(self.frame[f].image, (0,0))
+            config.pixel_canvas = self.frame[f].image.copy()
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr

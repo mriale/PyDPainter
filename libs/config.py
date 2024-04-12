@@ -362,9 +362,10 @@ class pydpainter:
         self.sm = sm
 
         if reinit:
+            config.anim = libs.animation.Animation()
             config.truepal = config.get_default_palette(config.NUM_COLORS)
             config.pal = list(config.truepal)
-            config.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
+            config.pixel_canvas = pygame.Surface((self.screen_width, self.screen_height),0,8)
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
 
@@ -457,6 +458,29 @@ class pydpainter:
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
         config.save_undo()
 
+    def guess_color_depth(self, pal):
+        # pictures with more than 32 colors are not Amiga OCS/ECS
+        if len(pal) > 32:
+            return 256
+
+        #check for colors not in 4096 palette
+        is_mod16 = True
+        for i in range(len(pal)):
+            if pal[i][0] % 16 == 0 and pal[i][1] % 16 == 0 and pal[i][2] % 16 == 0:
+                pass
+            else:
+                is_mod16 = False
+        is_mod17 = True
+        for i in range(len(pal)):
+            if pal[i][0] % 17 == 0 and pal[i][1] % 17 == 0 and pal[i][2] % 17 == 0:
+                pass
+            else:
+                is_mod17 = False
+        if is_mod16 or is_mod17:
+            color_depth = 16
+        else:
+            color_depth = 256
+        return color_depth
 
     def get_default_palette(self, numcols=32):
         if numcols == 64 and config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
@@ -894,17 +918,17 @@ class pydpainter:
         # Set colors for animation frames
         if anim.global_palette:
             for frame in anim.frame:
-                frame.pal = pal_in
+                frame.pal = list(pal_in)
                 if truepal != None:
-                    frame.truepal = truepal
+                    frame.truepal = list(truepal)
                 if frame.image != None:
                     frame.image.set_palette(pal)
         else:
             from_key, to_key = anim.pal_key_range()
             for frame in anim.frame[from_key-1:to_key]:
-                frame.pal = pal_in
+                frame.pal = list(pal_in)
                 if truepal != None:
-                    frame.truepal = truepal
+                    frame.truepal = list(truepal)
                 if frame.image != None:
                     frame.image.set_palette(pal)
 
@@ -1427,29 +1451,30 @@ class pydpainter:
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):
-        # Crop or expand pixel canvas
-        new_pixel_canvas = pygame.Surface((width, height),0,8)
-        new_pixel_canvas.set_palette(config.pal)
-        if resize:
-            pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
-        else:
-            new_pixel_canvas.blit(config.pixel_canvas, (0,0))
-        config.pixel_canvas = new_pixel_canvas
-        config.pixel_width = width
-        config.pixel_height = height
-
-        # Crop or expand all project pixel canvas
-        new_pixel_canvas = pygame.Surface((width, height),0,8)
-        new_pixel_canvas.set_palette(config.pal)
-        for i in range(len(self.proj)):
-            if i == self.proj_index:
-                config.proj[i].pixel_canvas = config.pixel_canvas
-                continue
+        for frame_no in config.anim:
+            # Crop or expand pixel canvas
+            new_pixel_canvas = pygame.Surface((width, height),0,8)
+            new_pixel_canvas.set_palette(config.pal)
             if resize:
-                pygame.transform.scale(config.proj[i].pixel_canvas, (width, height), new_pixel_canvas)
+                pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
             else:
-                new_pixel_canvas.blit(config.proj[i].pixel_canvas, (0,0))
-            config.proj[i].pixel_canvas = new_pixel_canvas
+                new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+            config.pixel_canvas = new_pixel_canvas
+            config.pixel_width = width
+            config.pixel_height = height
+
+            # Crop or expand all project pixel canvas
+            new_pixel_canvas = pygame.Surface((width, height),0,8)
+            new_pixel_canvas.set_palette(config.pal)
+            for i in range(len(self.proj)):
+                if i == self.proj_index:
+                    config.proj[i].pixel_canvas = config.pixel_canvas
+                    continue
+                if resize:
+                    pygame.transform.scale(config.proj[i].pixel_canvas, (width, height), new_pixel_canvas)
+                else:
+                    new_pixel_canvas.blit(config.proj[i].pixel_canvas, (0,0))
+                config.proj[i].pixel_canvas = new_pixel_canvas
 
         config.clear_undo()
         config.save_undo()

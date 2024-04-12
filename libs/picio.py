@@ -202,13 +202,10 @@ def load_iff(filename, config, ifftype):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
-                if nPlanes <= 6:
-                    config.color_depth = 16
-                elif nPlanes > 8:
+                #load 24-bit IFF using PyGame loader
+                if nPlanes > 8:
                     iff_file.close()
                     return load_pygame_pic(filename, config)
-                else:
-                    config.color_depth = 256
             elif chunk.getname() == b'CMAP':
                 #color map header
                 cmap_bytes = chunk.read()
@@ -217,6 +214,10 @@ def load_iff(filename, config, ifftype):
                     config.pal.append((0,0,0))
                 for i in range(ncol):
                     config.pal[i] = unpack(">BBB", cmap_bytes[i*3:(i+1)*3])
+                config.color_depth = config.guess_color_depth(config.pal)
+                config.truepal = config.quantize_palette(config.pal, config.color_depth)
+                config.pal = config.unique_palette(config.truepal)
+                config.loadpal = list(config.pal)
             elif chunk.getname() == b'BODY':
                 #bitmap (interleaved)
                 body_bytes = chunk.read()
@@ -347,10 +348,6 @@ def load_anim(filename, config, ifftype, status_func=None):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
-                if nPlanes <= 6:
-                    config.color_depth = 16
-                else:
-                    config.color_depth = 256
             elif chunk.getname() == b'CMAP':
                 #color map header
                 num_CMAP += 1
@@ -361,8 +358,9 @@ def load_anim(filename, config, ifftype, status_func=None):
                     config.pal.append((0,0,0))
                 for i in range(ncol):
                     config.pal[i] = unpack(">BBB", cmap_bytes[i*3:(i+1)*3])
-                config.truepal = list(config.pal)
-                config.pal = config.unique_palette(config.pal)
+                config.color_depth = config.guess_color_depth(config.pal)
+                config.truepal = config.quantize_palette(config.pal, config.color_depth)
+                config.pal = config.unique_palette(config.truepal)
                 config.loadpal = list(config.pal)
             elif chunk.getname() == b'BODY':
                 #bitmap (interleaved)
@@ -549,7 +547,6 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
         else:
             config.pal = get_truecolor_palette(pic.convert(), 256)
             config.pal = pal_power_2(config.pal)
-        config.color_depth = 256
         pic = convert8(pic, config.pal, status_func=status_func)
     else:
         #Clone bitmap and blit back so colors can be added to palette
@@ -562,8 +559,9 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
         newpic.set_palette(config.pal)
         newpic.blit(pic,(0,0))
         pic = newpic
-        config.color_depth = 256
-        
+ 
+    config.color_depth = config.guess_color_depth(config.pal)
+
     iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
     if pic_type(iffinfo_file) == "ILBM":
         load_iff(iffinfo_file, config, "ILBM")
@@ -586,6 +584,10 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
 def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False):
     filename = filename_in
     pic = config.pixel_canvas
+
+    if config.anim.num_frames > 1:
+        #Get rid of animation
+        config.anim = libs.animation.Animation()
 
     #Check for series of numbered files
     seq_matches = re.findall(r'[^0-9]([0-9]{3,})\.[a-zA-z]+$', filename)
@@ -653,6 +655,8 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 pal = gif.global_palette
             else:
                 pal = gif.frames[0]["local_palette"]
+            config.color_depth = config.guess_color_depth(pal)
+            pal = config.quantize_palette(pal, config.color_depth)
             upal = config.unique_palette(pal)
             config.pal = list(upal)
             config.loadpal = list(upal)
@@ -661,7 +665,6 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             surf_array = pygame.surfarray.pixels2d(pic)
             surf_array[:] = gif.frames[0]["image_data"][:]
             surf_array = None
-            config.color_depth = len(config.pal)
             if len(gif.frames) > 1:
                 config.anim.frame = [Frame(pic, delay=gif.frames[0]["delay_time"]*60//100, pal=config.pal, is_pal_key=True)]
             for i in range(1,len(gif.frames)):
@@ -777,14 +780,18 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
         config.anim.num_frames = len(config.anim.frame)
         pic = config.anim.frame[0].image
         config.pal = config.anim.frame[0].pal
+        config.truepal = config.anim.frame[0].truepal
         if config.anim.pal_key_range(1) == [1,config.anim.num_frames]:
             config.anim.global_palette = True
         else:
             config.anim.global_palette = False
 
+    config.color_depth = config.guess_color_depth(config.truepal)
+    config.truepal = config.quantize_palette(config.truepal, config.color_depth)
+    config.pal = config.quantize_palette(config.pal, config.color_depth)
+
     #Guess display mode
     if config.display_mode < 0 or config.display_info.get_id(config.display_mode) == None:
-        config.color_depth = 256
         sm = config.display_info.match_resolution(pic.get_width(), pic.get_height())
         if sm != None:
             config.display_mode = sm.mode_id
