@@ -693,7 +693,7 @@ Frame Colors
 ############################@@
 ############################@@
 ############################^^
-[Copy][Delete]       [Remap]
+[Copy][Delete][Global] [Remap]
 [Cancel][Undo][OK]
 """, "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PalKeyListGadget, font=config.font)
         req.center(screen)
@@ -726,7 +726,7 @@ Frame Colors
         list_sliderg.listgadgets = listg_list
 
         #remap toggle
-        remapg = req.gadget_id("21_11")
+        remapg = req.gadget_id("23_11")
         remap = True
         remapg.state = 1
 
@@ -819,6 +819,19 @@ Frame Colors
                             if listi >= len(list_itemsg.items):
                                 list_itemsg.value -= 1
                             list_itemsg.need_redraw = True
+                    elif ge.gadget.label == "Global":
+                        framei = int(list_itemsg.items[listi])-1
+                        frame_work = list_itemsg.frame_work
+                        #Copy palette from selected palette
+                        pal = frame_work[framei].pal
+                        truepal = frame_work[framei].truepal
+                        for i in range(0,config.anim.num_frames):
+                            frame_work[i].is_pal_key = False
+                            frame_work[i].pal = list(pal)
+                            frame_work[i].truepal = list(truepal)
+                        frame_work[0].is_pal_key = True
+                        #Refresh list
+                        self.get_pal_keys(list_itemsg, list_itemsg.frame_work)
 
             if mode == MODE_NORMAL:
                 config.cursor.shape = config.cursor.NORMAL

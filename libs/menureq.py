@@ -713,6 +713,9 @@ Resize Page: [Yes~No]
                             config.pal = config.unique_palette(config.pal)
                             config.backuppal = list(config.pal)
                             config.pixel_canvas.set_palette(config.pal)
+                            for frame in config.anim.frame:
+                                frame.is_pal_key = True
+                            config.anim.global_palette = False
                         elif num_colors == config.NUM_COLORS:
                             reinit = False
                         elif num_colors > config.NUM_COLORS:
