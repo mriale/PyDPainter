@@ -1065,12 +1065,12 @@ FPS 1/60s Range
                     refresh_fields = True
 
                 if ge.gadget == fpsg:
-                    if re.fullmatch('^\d*\.?\d+$', fpsg.value) and \
+                    if re.fullmatch(r'^\d*\.?\d+$', fpsg.value) and \
                        float(fpsg.value) > 0:
                         delayg.value = str(int(60 / float(fpsg.value)))
                         delayg.need_redraw = True
                 elif ge.gadget == delayg:
-                    if re.fullmatch('^\d+$', delayg.value) and \
+                    if re.fullmatch(r'^\d+$', delayg.value) and \
                        int(delayg.value) != 0:
                         fpsg.value = self.format_fps(int(delayg.value)).strip()
                         fpsg.need_redraw = True

@@ -417,7 +417,7 @@ class Gadget(object):
                     c = " "
                 font.blitstring(screen, (x+xo+px+((self.pos-self.scrollpos)*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
             if self.numonly:
-                if not re.fullmatch('^-?\d*\.?\d+$', self.value):
+                if not re.fullmatch(r'^-?\d*\.?\d+$', self.value):
                     #numeric error
                     self.error = True
                 else:

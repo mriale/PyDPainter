@@ -18,7 +18,7 @@ class PixelFont(object):
         scaledown = 1
         if sizeX == 0:
             sizeX = sizeY
-        matches = re.findall("(\d+)[.][^.]+$", name)
+        matches = re.findall(r"(\d+)[.][^.]+$", name)
         if len(matches) == 1:
             scaleX = 4 - int(matches[0]) // sizeX
             scaleY = 4 - int(matches[0]) // sizeY
