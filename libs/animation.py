@@ -15,6 +15,11 @@ from libs.picio import *
 
 config = None
 
+anim_filetype_list = np.array([
+["ANIM", "Amiga IFF anim"],
+["GIF", "Animated GIF"],
+])
+
 def animation_set_config(config_in):
     global config
     config = config_in
@@ -424,7 +429,7 @@ class Animation:
         global progress_req
         config.stop_cycling()
         config.stencil.enable = False
-        filename = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, has_type=True)
+        filename = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, filetype_list=libs.menus.pic_filetype_list)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             matches = re.fullmatch(r"^(.*?)([0-9]*)\.([^.]+)$", filename)
@@ -451,7 +456,7 @@ class Animation:
         config.stop_cycling()
         config.stencil.enable = False
         self.save_curr_frame()
-        filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename)
+        filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             try:

@@ -13,6 +13,18 @@ from libs.picio import *
 
 config = None
 
+pic_filetype_list = np.array([
+["IFF", "Amiga IFF image"],
+["ILBM","Amiga IFF image"],
+["LBM", "PC IFF PBM image"],
+["GIF", "GIF image"],
+["BMP", "Windows BMP image"],
+["JPG", "JPEG image (lossy)"],
+["JPEG","JPEG image (lossy)"],
+["PNG", "PNG image"],
+["TGA", "Targa image"],
+])
+
 class MenuAction(Action):
     def toolHide(self):
         if config.toolbar.tool_id(config.tool_selected) != None and \
@@ -106,7 +118,7 @@ class DoSave(MenuAction):
         merge_config.pixel_canvas = config.background.get_flattened()
         filename = config.filename
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
+            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
                 save_pic(filename, merge_config)
@@ -121,7 +133,7 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         merge_config = copy.copy(config)
         merge_config.pixel_canvas = config.background.get_flattened()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
+        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
                 if not save_pic(filename, merge_config, overwrite=False):
@@ -405,7 +417,7 @@ class DoBrushOpen(MenuAction):
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, has_type=True)
+        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image

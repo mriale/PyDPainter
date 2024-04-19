@@ -40,18 +40,7 @@ def get_dir(path):
     return dirlist + filelist
 
 
-filetype_list = np.array([
-["IFF", "Amiga IFF image"],
-["ILBM","Amiga IFF image"],
-["LBM", "PC IFF PBM image"],
-["BMP", "Windows BMP image"],
-["JPG", "JPEG image (lossy)"],
-["JPEG","JPEG image (lossy)"],
-["PNG", "PNG image"],
-["TGA", "Targa image"],
-])
-
-def get_type(filename):
+def get_type(filename, filetype_list):
     retval = "type"
     ext = ""
     matches = re.search(r"\.([^.]+)$", filename)
@@ -63,7 +52,7 @@ def get_type(filename):
             ext = ""
     return (ext, ("%-4s\x98" % (retval)))
 
-def pick_file_type(screen, req, file_typeg, ext):
+def pick_file_type(screen, req, file_typeg, ext, filetype_list):
     retval = -1
     req_backup = screen.copy()
     rx,ry,rw,rh = file_typeg.rect
@@ -73,7 +62,7 @@ def pick_file_type(screen, req, file_typeg, ext):
     ly = ry-(fonty*len(filetype_list)+fonty//2)
     lw = rx+rw-lx
     lh = ry-ly
-    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (lx,ly,lw,lh))
+    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (lx,ly,lw,lh), filetype_list=filetype_list)
     pickg.value = -1
     req.gadgets.append(pickg)
     req.draw(screen)
@@ -104,7 +93,8 @@ def pick_file_type(screen, req, file_typeg, ext):
     return retval
 
 class PPtypelist(Gadget):
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, filetype_list=None):
+        self.filetype_list = filetype_list
         super(PPtypelist, self).__init__(type, label, rect, value, maxvalue, id)
         
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -133,8 +123,8 @@ class PPtypelist(Gadget):
                 screen.fill(bgcolor)
                 pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
                 pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
-                for i in range(len(filetype_list)):
-                    (label,desc) = filetype_list[i]
+                for i in range(len(self.filetype_list)):
+                    (label,desc) = self.filetype_list[i]
                     if self.value == i:
                         bg = fgcolor
                         fg = bgcolor
@@ -217,7 +207,11 @@ Dir Name: ______________________
 
     return retval
 
-def file_req(screen, title, action_label, filepath, filename, has_type=False):
+def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
+    if filetype_list is None:
+        has_type = False
+    else:
+        has_type = True
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -281,7 +275,7 @@ File:___________________%s
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
 
     #Initialize file type
-    ext, file_typeg.label = get_type(filename)
+    ext, file_typeg.label = get_type(filename, filetype_list)
     file_typeg.need_redraw = True
 
     #take care of non-square pixels
@@ -326,7 +320,7 @@ File:___________________%s
                             libs.menus.io_error_req("Directory Error", "Unable to create directory:\n%s", newdirpath)
                             running = 0
                 elif ge.gadget == file_typeg:
-                    picki = pick_file_type(screen, req, file_typeg, ext)
+                    picki = pick_file_type(screen, req, file_typeg, ext, filetype_list)
                     if picki >=0 and picki < len(filetype_list):
                         filename = file_nameg.value
                         if filename != "":
@@ -336,7 +330,7 @@ File:___________________%s
                                 filename += "." + filetype_list[picki][0].lower()
                         file_nameg.value = filename
                         file_nameg.need_redraw = True
-                    ext, file_typeg.label = get_type(filename)
+                    ext, file_typeg.label = get_type(filename, filetype_list)
                     file_typeg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
@@ -348,7 +342,7 @@ File:___________________%s
                     list_sliderg.need_redraw = True
                 if ge.type == ge.TYPE_GADGETUP and event.type == KEYDOWN and event.key == K_RETURN:
                     string_enter = True
-                ext, file_typeg.label = get_type(file_nameg.value)
+                ext, file_typeg.label = get_type(file_nameg.value, filetype_list)
                 file_typeg.need_redraw = True
 
         if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
@@ -370,7 +364,7 @@ File:___________________%s
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
-                    ext, file_typeg.label = get_type(filename)
+                    ext, file_typeg.label = get_type(filename, filetype_list)
                     file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
@@ -386,10 +380,10 @@ File:___________________%s
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
-                        ext, file_typeg.label = get_type("")
+                        ext, file_typeg.label = get_type("", filetype_list)
                     else:
                         file_nameg.value = filename
-                        ext, file_typeg.label = get_type(filename)
+                        ext, file_typeg.label = get_type(filename, filetype_list)
 
                     file_nameg.state = 0
                     file_nameg.need_redraw = True
