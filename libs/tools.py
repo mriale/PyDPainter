@@ -65,6 +65,7 @@ class ToolActionMulti(ToolAction):
 
     def selected(self, attrs):
         if config.anim.num_frames > 1:
+            self.gadget.state = 0
             frame_range = config.anim.ask_apply_multi(self.get_name())
             curr_frame_bak = config.anim.curr_frame
             for frame_no in frame_range:
