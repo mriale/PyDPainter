@@ -19,6 +19,10 @@ buttons: [OK]  [Cancel]
 button group: [A~B~C~D~E~F]
 """
 
+if __name__ == '__main__':
+    import os, sys
+    sys.path.insert(0, os.getcwd())
+
 import os.path
 import re
 
@@ -143,13 +147,16 @@ Layers
 
 class Layer(object):
     """This class composites a stack of bitmaps scaling as necessary"""
-    def __init__(self, screen, rect=None, offset=(0,0), scaletype=0, visible=True, req=None, sublayers=[]):
+    SCALE_NONE = 0
+    SCALE_EXACT = 1
+    SCALE_SMOOTH = 2
+    def __init__(self, screen, rect=None, offset=(0,0), scaletype=SCALE_NONE, visible=True, drawable=None, sublayers=[]):
         self.screen = screen
         self.rect = rect
         self.offset = offset
         self.scaletype = scaletype
         self.visible = visible
-        self.req = req
+        self.drawable = drawable
         self.sublayers = sublayers
         self.parent = None
         self.parent_screen = None
@@ -166,7 +173,7 @@ class Layer(object):
         while l != None:
             x -= l.offset[0]
             y -= l.offset[1]
-            if l.scaletype > 0 and l.parent_screen != None:
+            if l.scaletype != self.SCALE_NONE and l.parent_screen != None:
                 w1, h1 = l.screen.get_size()
                 w2, h2 = l.parent_screen.get_size()
                 x = x * w1 // w2
@@ -187,8 +194,14 @@ class Layer(object):
         for layer in self.sublayers:
             ge.extend(layer.process_event(self.screen, event))
 
-        if self.req != None:
-            ge.extend(self.req.process_event(screen, event))
+        if self.drawable != None:
+            if isinstance(self.drawable, list):
+                drawlist = self.drawable
+            else:
+                drawlist = [self.drawable]
+            for d in drawlist:
+                if "process_event" in dir(d):
+                    ge.extend(d.process_event(screen, event))
 
         return ge
 
@@ -198,17 +211,23 @@ class Layer(object):
         if not self.visible:
             return
 
-        if self.req != None:
-            self.req.draw(self.screen)
+        if self.drawable != None:
+            if isinstance(self.drawable, list):
+                drawlist = self.drawable
+            else:
+                drawlist = [self.drawable]
+            for d in drawlist:
+                if "draw" in dir(d):
+                    d.draw(self.screen)
 
         for layer in self.sublayers:
             layer.draw(self.screen)
 
-        if self.scaletype == 0:
+        if self.scaletype == self.SCALE_NONE:
             scaled_image = self.screen
-        elif self.scaletype == 1:
+        elif self.scaletype == self.SCALE_EXACT:
             scaled_image = pygame.transform.scale(self.screen, parent_screen.get_size())
-        elif self.scaletype == 2:
+        elif self.scaletype == self.SCALE_SMOOTH:
             if self.screen.get_bitsize() < 24:
                 screen_rgb = self.screen.convert()
             else:
@@ -1120,6 +1139,11 @@ def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos
 
 def main():
 
+    def main_mapper():
+        mx,my = pygame.mouse.get_pos()
+        lx,ly = layer.screen_to_layer_coords((mx,my))
+        return (lx,ly)
+
     #Initialize the configuration settings
     pygame.init()
     clock = pygame.time.Clock()
@@ -1139,7 +1163,7 @@ def main():
 [RANGE][1~2~3~4~5~6]
 SPEED------------[v]
 [Cancel] [Undo] [OK]
-""", "%#:")
+""", "%#:", mouse_pixel_mapper=main_mapper)
 
     sx,sy = 200,200
 
@@ -1147,10 +1171,12 @@ SPEED------------[v]
     screen = pygame.Surface((sx,sy),0)
     req_screen = pygame.Surface((sx,sy),0)
     cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
+    cursor_images.set_colorkey((0,255,0))
+    cursor_images = cursor_images.convert()
     cursor_layer = Cursor(cursor_images)
     cursor_layer.set_centers([(7,7), (1,1), (7,15), (0,15)])
     #layer = Layer(screen, offset=(10,10), scaletype=1, req=req, sublayers=[cursor_layer])
-    layer = Layer(screen, scaletype=1, sublayers=[Layer(req_screen, req=req), cursor_layer])
+    layer = Layer(screen, scaletype=Layer.SCALE_EXACT, sublayers=[Layer(req_screen, drawable=req), cursor_layer])
 
     pygame.display.set_caption('gadget test')
 
