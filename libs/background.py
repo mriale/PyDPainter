@@ -15,10 +15,13 @@ def background_set_config(config_in):
     config = config_in
 
 class Background:
-    def __init__(self):
+    def __init__(self, layers):
         self.__enable = False
         self.is_reference = False
         self.image = None
+        self.layers = layers
+        self.layers.set("bg", self, priority=-10, visible=False)
+        print(f"new BG {self=}")
 
     @property
     def enable(self):
@@ -31,12 +34,14 @@ class Background:
                 config.clear_pixel_draw_canvas()
                 config.menubar.indicators["background"] = self.draw_indicator
             self.__enable = enable
+            self.layers.set("bg", self, priority=-10, visible=enable)
 
     def fix(self, screen):
         self.image = screen.copy()
         self.__enable = True
         self.is_reference = False
         config.menubar.indicators["background"] = self.draw_indicator
+        self.layers.set("bg", self, priority=-10, visible=True)
 
     def open(self, filename):
         self.image = pygame.image.load(filename)
@@ -44,6 +49,7 @@ class Background:
         self.__enable = True
         self.is_reference = True
         config.menubar.indicators["background"] = self.draw_indicator
+        self.layers.set("bg", self, priority=-10, visible=True)
 
     def clear(self):
         self.__enable = False
@@ -57,12 +63,15 @@ class Background:
             config.save_undo()
         self.__enable = False
         self.image = None
+        self.layers.set("bg", self, priority=-10, visible=False)
         config.pixel_canvas.set_colorkey(None)
  
-    def draw(self, screen):
+    def draw(self, screen, offset=None, rect=None):
+        if offset is None:
+            offset = (config.screen_offset_x, config.screen_offset_y)
         if self.__enable and self.image != None:
             config.bgcolor = 0
-            screen.blit(self.image, (config.screen_offset_x, config.screen_offset_y))
+            screen.blit(self.image, offset, rect)
         elif not self.__enable and self.image != None:
             screen.fill(config.pal[0])
 

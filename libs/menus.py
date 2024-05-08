@@ -318,6 +318,7 @@ class DoSpareSwap(MenuAction):
         config.proj[i].filename = config.filename
         config.proj[i].modified_count = config.modified_count
         config.proj[i].anim = config.anim
+        config.proj[i].layers = config.layers
 
         #Switch to new canvas
         config.proj_index = (config.proj_index + 1) % len(config.proj)
@@ -327,6 +328,20 @@ class DoSpareSwap(MenuAction):
         config.filename = config.proj[i].filename
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
+        config.layers = config.proj[i].layers
+        print(f"{config.proj[0].layers=}")
+        print(f"{config.proj[1].layers=}")        
+        if config.layers.has_key("bg"):
+            config.background = config.layers.get("bg").image
+            print(f"proj {i=} {config.background=}")
+        else:
+            print(f"proj {i=} no BG")
+            config.background = Background(config.layers)
+        if config.layers.has_key("fg"):
+            config.stencil = config.layers.get("fg").image
+        else:
+            config.stencil = Stencil()
+
         config.anim.show_curr_frame(doAction=False)
 
         config.clear_undo()

@@ -15,6 +15,7 @@ from libs.toolbar import *
 from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
+from libs.layer import *
 from libs.stencil import *
 from libs.background import *
 from libs.tools import *
@@ -155,6 +156,7 @@ class Project:
         self.pixel_canvas = None
         self.modified_count = -1
         self.anim = None
+        self.layers = None
 
 class pydpainter:
 
@@ -777,11 +779,19 @@ class pydpainter:
         self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
+        self.layers = LayerStack()
+        self.layers.set("canvas", self.pixel_canvas)
+
         self.stencil = Stencil()
-        self.background = Background()
+        self.layers.set("fg", self.stencil.image, 10, visible=False)
+        self.background = Background(self.layers)
         self.anim = Animation()
         self.proj[0].anim = self.anim
         self.proj[1].anim = Animation()
+        self.proj[0].layers = self.layers
+        self.proj[1].layers = LayerStack()
+        print(f"{self.proj[0].layers=}")
+        print(f"{self.proj[1].layers=}")
 
         self.cycling = False
         self.cycle_handled = False
@@ -944,8 +954,7 @@ class pydpainter:
             if config.proj[i].pixel_canvas:
                 config.proj[i].pixel_canvas.set_palette(pal)
                 config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
-        config.stencil.set_palette(pal)
-        config.background.set_palette(pal)
+                config.proj[i].layers.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -1183,8 +1192,6 @@ class pydpainter:
 
         self.redraw_window_title()
 
-        config.stencil.draw(config.pixel_canvas)
-
         scaleX = config.fontx // 8
         scaleY = config.fonty // 12
 
@@ -1248,15 +1255,12 @@ class pydpainter:
 
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
-            config.background.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
-            screen_rgb.blit(self.pixel_canvas, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
-            #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
+            config.layers.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
 
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
-            config.background.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
-            zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
+            config.layers.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))
 
@@ -1268,8 +1272,9 @@ class pydpainter:
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
-            config.background.draw(screen_rgb)
-            screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
+            config.layers.set("canvas", config.pixel_canvas, priority=0, visible=True)
+            config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
+            config.layers.blit(screen_rgb, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
