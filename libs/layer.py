@@ -10,12 +10,15 @@ with contextlib.redirect_stdout(None):
     from pygame.locals import *
 
 
-class Layer(object):
+class Layer:
     """This class is one layer in a stack of bitmaps"""
     def __init__(self, image, priority=0, visible=True):
         self.image = image
         self.visible = visible
         self.priority = priority
+
+    def __repr__(self):
+        return f"Layer {hex(id(self))}: visible={self.visible} priority={self.priority} image={self.image}"
 
     def blit(self, screen, offset=(0,0), rect=None):
         if self.visible:
@@ -25,11 +28,20 @@ class Layer(object):
                 self.image.draw(screen, offset, rect)
 
 
-class LayerStack(object):
+class LayerStack:
     """This class composites a stack of Layer bitmaps"""
-    def __init__(self, layers={}):
-        self.layers = layers
-        print(f"init LayerStack={self}")
+    def __init__(self, layers=None):
+        if layers is None:
+            self.layers = {}
+        else:
+            self.layers = layers
+
+    def __repr__(self):
+        outstr = f"LayerStack {hex(id(self))}:\n"
+        for key in self.layers:
+            outstr += f"[\"{key}\"] " + str(self.layers[key]) + "\n"
+        outstr = outstr.strip()
+        return outstr
 
     def has_key(self, name):
         return name in self.layers

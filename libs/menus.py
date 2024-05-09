@@ -10,6 +10,8 @@ from libs.menubar import *
 from libs.menureq import *
 from libs.gadget import *
 from libs.picio import *
+from libs.background import *
+from libs.stencil import *
 
 config = None
 
@@ -319,6 +321,7 @@ class DoSpareSwap(MenuAction):
         config.proj[i].modified_count = config.modified_count
         config.proj[i].anim = config.anim
         config.proj[i].layers = config.layers
+        config.proj[i].indicators = config.menubar.indicators
 
         #Switch to new canvas
         config.proj_index = (config.proj_index + 1) % len(config.proj)
@@ -329,18 +332,21 @@ class DoSpareSwap(MenuAction):
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
         config.layers = config.proj[i].layers
-        print(f"{config.proj[0].layers=}")
-        print(f"{config.proj[1].layers=}")        
-        if config.layers.has_key("bg"):
-            config.background = config.layers.get("bg").image
-            print(f"proj {i=} {config.background=}")
+
+        if config.layers.has_key("background"):
+            config.background = config.layers.get("background").image
         else:
-            print(f"proj {i=} no BG")
             config.background = Background(config.layers)
+
         if config.layers.has_key("fg"):
             config.stencil = config.layers.get("fg").image
         else:
             config.stencil = Stencil()
+
+        if config.proj[i].indicators is None:
+            config.menubar.indicators = {}
+        else:
+            config.menubar.indicators = config.proj[i].indicators
 
         config.anim.show_curr_frame(doAction=False)
 

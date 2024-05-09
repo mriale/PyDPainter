@@ -157,6 +157,7 @@ class Project:
         self.modified_count = -1
         self.anim = None
         self.layers = None
+        self.indicators = None
 
 class pydpainter:
 
@@ -790,8 +791,7 @@ class pydpainter:
         self.proj[1].anim = Animation()
         self.proj[0].layers = self.layers
         self.proj[1].layers = LayerStack()
-        print(f"{self.proj[0].layers=}")
-        print(f"{self.proj[1].layers=}")
+        newbg = Background(self.proj[1].layers)
 
         self.cycling = False
         self.cycle_handled = False

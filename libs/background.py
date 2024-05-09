@@ -20,8 +20,7 @@ class Background:
         self.is_reference = False
         self.image = None
         self.layers = layers
-        self.layers.set("bg", self, priority=-10, visible=False)
-        print(f"new BG {self=}")
+        self.layers.set("background", self, priority=-10, visible=False)
 
     @property
     def enable(self):
@@ -34,14 +33,14 @@ class Background:
                 config.clear_pixel_draw_canvas()
                 config.menubar.indicators["background"] = self.draw_indicator
             self.__enable = enable
-            self.layers.set("bg", self, priority=-10, visible=enable)
+            self.layers.set("background", self, priority=-10, visible=enable)
 
     def fix(self, screen):
         self.image = screen.copy()
         self.__enable = True
         self.is_reference = False
         config.menubar.indicators["background"] = self.draw_indicator
-        self.layers.set("bg", self, priority=-10, visible=True)
+        self.layers.set("background", self, priority=-10, visible=True)
 
     def open(self, filename):
         self.image = pygame.image.load(filename)
@@ -49,21 +48,21 @@ class Background:
         self.__enable = True
         self.is_reference = True
         config.menubar.indicators["background"] = self.draw_indicator
-        self.layers.set("bg", self, priority=-10, visible=True)
+        self.layers.set("background", self, priority=-10, visible=True)
 
     def clear(self):
         self.__enable = False
         self.image = None
 
     def free(self):
-        if config.background.image != None and not config.background.is_reference:
+        if self.image != None and not self.is_reference:
             config.clear_pixel_draw_canvas()
             self.image.blit(config.pixel_canvas, (0,0))
             self.draw(config.pixel_canvas)
             config.save_undo()
         self.__enable = False
         self.image = None
-        self.layers.set("bg", self, priority=-10, visible=False)
+        self.layers.set("background", self, priority=-10, visible=False)
         config.pixel_canvas.set_colorkey(None)
  
     def draw(self, screen, offset=None, rect=None):
