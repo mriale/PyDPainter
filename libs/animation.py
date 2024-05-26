@@ -12,6 +12,7 @@ from libs.gadget import *
 from libs.prim import *
 from libs.menureq import *
 from libs.picio import *
+from libs.layer import *
 
 config = None
 
@@ -104,7 +105,7 @@ class PalKeyListGadget(ListGadget):
 
 
 class Frame:
-    def __init__(self, image=None, delay=3, pal=None, truepal=None, is_pal_key = False):
+    def __init__(self, image=None, delay=3, pal=None, truepal=None, is_pal_key = False, layers=None):
         self.image = image
         if delay < 1:
             self.delay = 3
@@ -124,13 +125,17 @@ class Frame:
             self.truepal = list(truepal)
 
         self.loadpal = list(config.loadpal)
+        if layers is None:
+            self.layers = LayerStack()
+        else:
+            self.layers = layers
 
     def copy(self):
         image = None
         if self.image != None:
             image = self.image.copy()
 
-        return Frame(image, self.delay, self.pal, self.truepal)
+        return Frame(image, self.delay, self.pal, self.truepal, layers=self.layers.copy())
 
 class Animation:
     def __init__(self):
@@ -187,6 +192,7 @@ class Animation:
         self.frame[f].pal = list(config.pal)
         self.frame[f].truepal = list(config.truepal)
         self.frame[f].loadpal = list(config.loadpal)
+        self.frame[f].layers = config.layers.copy()
 
     def show_curr_frame(self, doAction=True):
         if self.curr_frame > self.num_frames:
@@ -203,6 +209,7 @@ class Animation:
             config.truepal = list(self.frame[f].truepal)
             config.loadpal = list(self.frame[f].loadpal)
             config.pixel_canvas = self.frame[f].image.copy()
+            config.layers = self.frame[f].layers.copy()
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr

@@ -1820,6 +1820,9 @@ class pydpainter:
                 elif e.unicode == chr(178): #AZERTY backtick key
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
+                elif e.key == K_F12:
+                    print("\n***********Debug************")
+                    print(f"{config.layers=}")
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)

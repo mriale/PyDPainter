@@ -15,12 +15,26 @@ def background_set_config(config_in):
     config = config_in
 
 class Background:
-    def __init__(self, layers):
+    def __init__(self, layers=None):
         self.__enable = False
         self.is_reference = False
         self.image = None
         self.layers = layers
-        self.layers.set("background", self, priority=-10, visible=False)
+        if not layers is None:
+            self.layers.set("background", self, priority=-10, visible=False)
+
+    def __repr__(self):
+        return f"<Background {hex(id(self))}: __enable={self.__enable} is_reference={self.is_reference} image={self.image} layers={hex(id(self.layers))}>"
+        
+
+    def copy(self):
+        bg = Background()
+        bg.__enable = self.__enable
+        bg.is_reference = self.is_reference
+        if not self.image is None:
+            bg.image = self.image.copy()
+        bg.layers = self.layers
+        return bg
 
     @property
     def enable(self):

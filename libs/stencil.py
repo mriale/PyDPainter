@@ -21,6 +21,14 @@ class Stencil:
         self.image = None
         self.mask = None
 
+    def copy(self):
+        st = Stencil()
+        st.__enable = self.__enable
+        st.is_color = self.is_color
+        if not self.image is None:
+            st.image = self.image.copy()
+        st.mask = self.mask
+
     @property
     def enable(self):
         return self.__enable

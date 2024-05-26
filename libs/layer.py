@@ -12,19 +12,27 @@ with contextlib.redirect_stdout(None):
 
 class Layer:
     """This class is one layer in a stack of bitmaps"""
-    def __init__(self, image, priority=0, visible=True):
+    def __init__(self, image, priority=0, visible=True, parent=None):
         self.image = image
         self.visible = visible
         self.priority = priority
+        self.parent = parent
 
     def __repr__(self):
         return f"Layer {hex(id(self))}: visible={self.visible} priority={self.priority} image={self.image}"
+
+    def copy(self, parent=None):
+        img = None
+        if not self.image is None:
+            img = self.image.copy()
+        newlayer = Layer(img, priority=self.priority, visible=self.visible, parent=parent)
+        return newlayer
 
     def blit(self, screen, offset=(0,0), rect=None):
         if self.visible:
             if isinstance(self.image, pygame.Surface):
                 screen.blit(self.image, offset, rect)
-            else:
+            elif not screen is None and not self.image is None:
                 self.image.draw(screen, offset, rect)
 
 
@@ -35,6 +43,12 @@ class LayerStack:
             self.layers = {}
         else:
             self.layers = layers
+
+    def copy(self):
+        ls = LayerStack()
+        for name in self.layers:
+            ls.layers[name] = self.layers[name].copy(ls)
+        return ls
 
     def __repr__(self):
         outstr = f"LayerStack {hex(id(self))}:\n"
@@ -50,7 +64,7 @@ class LayerStack:
         return self.layers[name]
 
     def set(self, name, image, priority=0, visible=True):
-        self.layers[name] = Layer(image, priority, visible)
+        self.layers[name] = Layer(image, priority, visible, self)
 
     def delete(self, name):
         del(self.layers, name)
