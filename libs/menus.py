@@ -1174,7 +1174,12 @@ class DoBackgroundOpen(MenuAction):
 
 class DoBackgroundOnOff(MenuAction):
     def selected(self, attrs):
-        config.background.enable = not config.background.enable
+        enable_state = not config.background.enable
+        for f in config.anim.frame:
+            if "background" in f.layers.layers:
+                f.layers.layers["background"].image.enable = enable_state
+        config.background.enable = enable_state
+        config.layers.layers["background"].visible = enable_state
         config.doKeyAction()
 
 class DoBackgroundFree(MenuAction):
