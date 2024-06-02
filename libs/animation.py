@@ -126,7 +126,7 @@ class Frame:
 
         self.loadpal = list(config.loadpal)
         if layers is None:
-            self.layers = LayerStack()
+            self.layers = LayerStack(indicatorx=config.LAYER_INDICATORX)
         else:
             self.layers = layers
 

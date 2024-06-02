@@ -385,16 +385,14 @@ Speed---------___^^
                 if x1 >= 0 and y1 >= 0 and \
                    x1<config.pixel_canvas.get_width() and \
                    y1<config.pixel_canvas.get_height():
-                    color = config.pixel_canvas.get_at_mapped((x1,y1))
                     if color_action == CA_PICK:
-                        if color == config.bgcolor and config.background.enable:
-                            config.pal[from_color] = tuple(config.background.image.get_at((x1,y1)))[0:3]
-                            config.pal = config.quantize_palette(config.pal, config.color_depth)
-                        else:
-                            config.pal[from_color] = config.pal[color]
+                        config.pal[from_color] = config.layers.get_at((x1,y1))[0:3]
+                        config.pal = config.quantize_palette(config.pal, config.color_depth)
                         color = from_color
                         config.set_all_palettes(config.pal)
                         config.cursor.shape = config.cursor.NORMAL
+                    else:
+                        color = config.pixel_canvas.get_at_mapped((x1,y1))
                     palg.value = color
                     palg.need_redraw = True
                     colorg.value = color

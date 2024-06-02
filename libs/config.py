@@ -17,7 +17,6 @@ from libs.palreq import *
 from libs.picio import *
 from libs.layer import *
 from libs.stencil import *
-from libs.background import *
 from libs.tools import *
 from libs.minitools import *
 from libs.animtools import *
@@ -170,7 +169,7 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         stencil_set_config(self)
-        background_set_config(self)
+        layer_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
         perspective_set_config(self)
@@ -442,7 +441,6 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
         self.stencil.clear()
-        self.background.clear()
 
         self.perspective = Perspective()
 
@@ -714,6 +712,9 @@ class pydpainter:
             self.pixel_mode = "PAL"
             self.pixel_aspect = 59.0/54.0 #PAL
 
+        self.LAYER_INDICATORX = 170
+        self.LAYER_BG_PRIORITY = -100
+
         self.scale = 3
         self.scale_bak = 3
         self.SCANLINES_ON = 0
@@ -780,18 +781,17 @@ class pydpainter:
         self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
-        self.layers = LayerStack()
+        self.layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
         self.layers.set("canvas", self.pixel_canvas)
 
         self.stencil = Stencil()
         self.layers.set("fg", self.stencil.image, 10, visible=False)
-        self.background = Background(self.layers)
+
         self.anim = Animation()
         self.proj[0].anim = self.anim
         self.proj[1].anim = Animation()
         self.proj[0].layers = self.layers
-        self.proj[1].layers = LayerStack()
-        newbg = Background(self.proj[1].layers)
+        self.proj[1].layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
 
         self.cycling = False
         self.cycle_handled = False
@@ -1189,6 +1189,8 @@ class pydpainter:
             for crange in config.cranges:
                 crange.apply_to_pal(self.pal)
             self.set_all_palettes(self.pal)
+
+        self.menubar.indicators["layers"] = self.layers.draw_indicator
 
         self.redraw_window_title()
 

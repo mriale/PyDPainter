@@ -10,7 +10,6 @@ from libs.menubar import *
 from libs.menureq import *
 from libs.gadget import *
 from libs.picio import *
-from libs.background import *
 from libs.stencil import *
 
 config = None
@@ -117,7 +116,7 @@ class DoSave(MenuAction):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.background.get_flattened()
+        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
@@ -134,7 +133,7 @@ class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.background.get_flattened()
+        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
@@ -332,11 +331,6 @@ class DoSpareSwap(MenuAction):
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
         config.layers = config.proj[i].layers
-
-        if config.layers.has_key("background"):
-            config.background = config.layers.get("background").image
-        else:
-            config.background = Background(config.layers)
 
         if config.layers.has_key("fg"):
             config.stencil = config.layers.get("fg").image
@@ -1150,11 +1144,14 @@ class DoStencilFree(MenuAction):
 class DoBackgroundFix(MenuAction):
     def selected(self, attrs):
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
-        config.background.fix(config.pixel_canvas)
-        config.brush.pen_down = False
-        config.bgcolor = 0;
-        config.pixel_canvas.fill(config.bgcolor);
-        config.pixel_canvas.set_colorkey(config.bgcolor)
+        config.clear_pixel_draw_canvas()
+        for frame_no in config.anim:
+            bg_img = config.pixel_canvas.copy()
+            config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="B")
+            config.brush.pen_down = False
+            config.bgcolor = 0;
+            config.pixel_canvas.fill(config.bgcolor);
+            config.pixel_canvas.set_colorkey(config.bgcolor)
         config.save_undo()
         config.toolbar.tool_id("text").action.cleartext()
         config.doKeyAction()
@@ -1165,7 +1162,10 @@ class DoBackgroundOpen(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             try:
-                config.background.open(filename)
+                bg_img = pygame.image.load(filename)
+                bg_img = pygame.transform.smoothscale(bg_img.convert(), config.pixel_canvas.get_size())
+                for frame_no in config.anim:
+                    config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="R")
                 config.bgcolor = 0;
                 config.pixel_canvas.set_colorkey(config.bgcolor)
             except:
@@ -1174,18 +1174,28 @@ class DoBackgroundOpen(MenuAction):
 
 class DoBackgroundOnOff(MenuAction):
     def selected(self, attrs):
-        enable_state = not config.background.enable
-        for f in config.anim.frame:
-            if "background" in f.layers.layers:
-                f.layers.layers["background"].image.enable = enable_state
-        config.background.enable = enable_state
-        config.layers.layers["background"].visible = enable_state
-        config.doKeyAction()
+        if config.layers.has_key("background"):
+            enable_state = not config.layers.get("background").visible
+            for f in config.anim.frame:
+                if "background" in f.layers.layers:
+                    f.layers.get("background").visible = enable_state
+            config.layers.get("background").visible = enable_state
+            config.doKeyAction()
 
 class DoBackgroundFree(MenuAction):
     def selected(self, attrs):
-        config.background.free()
-        config.doKeyAction()
+        if config.layers.has_key("background"):
+            config.clear_pixel_draw_canvas()
+            for frame_no in config.anim:
+                bglayer = config.layers.get("background")
+                if bglayer.image != None and bglayer.indicator != "R":
+                    config.pixel_canvas.set_colorkey(0)
+                    bglayer.image.blit(config.pixel_canvas, (0,0))
+                    config.pixel_canvas.blit(bglayer.image, (0,0))
+                    config.pixel_canvas.set_colorkey(None)
+                    config.save_undo()
+                config.layers.set("background", None, priority=config.LAYER_BG_PRIORITY, visible=False, indicator="")
+            config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
