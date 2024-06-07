@@ -101,7 +101,8 @@ class LayerStack:
     def set_palette(self, pal):
         for key in self.layers:
             layer = self.layers[key]
-            if "set_palette" in dir(layer.image):
+            if "set_palette" in dir(layer.image) and \
+               "get_bytesize" in dir(layer.image) and layer.image.get_bytesize() == 1:
                 layer.image.set_palette(pal)
 
     def draw_indicator(self, screen):
