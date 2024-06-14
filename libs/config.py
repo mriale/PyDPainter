@@ -1274,7 +1274,7 @@ class pydpainter:
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
-            config.layers.set("canvas", config.pixel_canvas, priority=0, visible=True)
+            config.layers.set("canvas", config.pixel_canvas)
             config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
             config.layers.blit(screen_rgb, (self.screen_offset_x, self.screen_offset_y))
 

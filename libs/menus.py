@@ -1175,11 +1175,27 @@ class DoBackgroundOpen(MenuAction):
 class DoBackgroundOnOff(MenuAction):
     def selected(self, attrs):
         if config.layers.has_key("background"):
-            enable_state = not config.layers.get("background").visible
+            if config.layers.get("background").indicator == "":
+                return
+            opacity = config.layers.get("canvas").opacity
+            enable_state = config.layers.get("background").visible
+            if enable_state:
+                if opacity == 255:
+                    opacity = 128
+                else:
+                    enable_state = False
+                    opacity = 255
+            else:
+                enable_state = True
+                opacity = 255
+
             for f in config.anim.frame:
                 if "background" in f.layers.layers:
                     f.layers.get("background").visible = enable_state
+                f.layers.get("canvas").opacity = opacity
             config.layers.get("background").visible = enable_state
+            config.layers.get("canvas").opacity = opacity
+            opacity = config.layers.get("canvas").opacity
             config.doKeyAction()
 
 class DoBackgroundFree(MenuAction):
@@ -1195,6 +1211,7 @@ class DoBackgroundFree(MenuAction):
                     config.pixel_canvas.set_colorkey(None)
                     config.save_undo()
                 config.layers.set("background", None, priority=config.LAYER_BG_PRIORITY, visible=False, indicator="")
+                config.layers.get("canvas").opacity = 255
             config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):

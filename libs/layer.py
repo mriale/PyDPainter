@@ -17,15 +17,16 @@ def layer_set_config(config_in):
 
 class Layer:
     """This class is one layer in a stack of bitmaps"""
-    def __init__(self, image, priority=0, visible=True, parent=None, indicator=""):
+    def __init__(self, image, priority=0, visible=True, parent=None, indicator="", opacity=255):
         self.image = image
         self.visible = visible
         self.priority = priority
         self.parent = parent
         self.indicator = indicator
+        self.opacity = opacity
 
     def __repr__(self):
-        return f"Layer {hex(id(self))}: visible={self.visible} priority={self.priority} image={self.image} indicator={self.indicator}"
+        return f"Layer {hex(id(self))}: visible={self.visible} priority={self.priority} image={self.image} indicator={self.indicator} opacity={self.opacity}"
 
     def copy(self, parent=None):
         img = None
@@ -33,16 +34,20 @@ class Layer:
             img = self.image.copy()
         if parent is None:
             parent = self.parent
-        newlayer = Layer(img, priority=self.priority, visible=self.visible, parent=parent, indicator=self.indicator)
+        newlayer = Layer(img, priority=self.priority, visible=self.visible, parent=parent, indicator=self.indicator, opacity=self.opacity)
         return newlayer
 
     def blit(self, screen, offset=(0,0), rect=None):
         if self.visible:
             if isinstance(self.image, pygame.Surface):
-                screen.blit(self.image, offset, rect)
+                if self.opacity == 255:
+                    img = self.image
+                else:
+                    img = self.image.copy().convert()
+                    img.set_alpha(self.opacity)
+                screen.blit(img, offset, rect)
             elif not screen is None and not self.image is None:
                 self.image.draw(screen, offset, rect)
-
 
 class LayerStack:
     """This class composites a stack of Layer bitmaps"""
@@ -72,10 +77,33 @@ class LayerStack:
     def get(self, name):
         return self.layers[name]
 
-    def set(self, name, image, priority=0, visible=True, parent=None, indicator=""):
-        if parent is None:
-            parent = self
-        self.layers[name] = Layer(image, priority, visible, parent=parent, indicator=indicator)
+    def set(self, name, image=None, priority=None, visible=None, parent=None, indicator=None, opacity=None):
+        if name in self.layers.keys():
+            l = self.layers[name]
+            if not image is None:
+                l.image = image
+            if not priority is None:
+                l.priority = priority
+            if not visible is None:
+                l.visible = visible
+            if not parent is None:
+                l.parent = parent
+            if not indicator is None:
+                l.indicator = indicator
+            if not opacity is None:
+                l.opacity = opacity
+        else:
+            if priority is None:
+                priority = 0
+            if visible is None:
+                visible = True
+            if parent is None:
+                parent = self
+            if indicator is None:
+                indicator = ""
+            if opacity is None:
+                opacity = 255
+            self.layers[name] = Layer(image, priority, visible, parent=parent, indicator=indicator, opacity=opacity)
 
     def delete(self, name):
         del(self.layers, name)
@@ -88,6 +116,8 @@ class LayerStack:
                 if not layer.image is None and isinstance(layer.image, pygame.Surface):
                     if lowest_layer:
                         layer.image.set_colorkey(None)
+                        if layer.opacity != 255:
+                            screen.fill(0, rect=rect)
                     else:
                         layer.image.set_colorkey(0)
                     lowest_layer = False
