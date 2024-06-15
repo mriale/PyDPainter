@@ -46,7 +46,7 @@ def get_type(filename, filetype_list):
     matches = re.search(r"\.([^.]+)$", filename)
     if matches:
         ext = matches.group(1).upper()
-        if filetype_list and ext in filetype_list[:,0]:
+        if not filetype_list is None and ext in filetype_list[:,0]:
             retval = ext
         else:
             ext = ""
