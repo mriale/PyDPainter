@@ -595,14 +595,15 @@ class Brush:
 
                 #create stencil for smear
                 self.smear_stencil = self.cache.image[256].copy()
+                ckey_rgb = self.smear_stencil.get_colorkey()[0:3]
+                ckey = config.pal.index(ckey_rgb)
                 surf_array = pygame.surfarray.pixels2d(self.smear_stencil)
-                bgcolor = config.brush.bgcolor
                 scolor = min(config.NUM_COLORS+1, 255)
-                tfarray = np.not_equal(surf_array, bgcolor)
-                surf_array[tfarray] = bgcolor
+                tfarray = np.not_equal(surf_array, ckey)
+                surf_array[tfarray] = ckey
                 surf_array[np.logical_not(tfarray)] = scolor
                 surf_array = None
-                self.smear_stencil.set_colorkey(bgcolor)
+                self.smear_stencil.set_colorkey(ckey)
 
                 if drawmode == DrawMode.SHADE:
                     #set up cycle translation array
