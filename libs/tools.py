@@ -1338,6 +1338,10 @@ class DoBrush(ToolSingleAction):
         return x >= p1x-w and x <= p1x+w and y >= p1y-h and y <= p1y+h
 
     def selected(self, attrs):
+        if attrs["rightclick"]:
+            config.menubar.menu_id("brush").menu_id("restore").action.selected("")
+            return
+
         config.brush.pen_down = False
         if config.tool_selected == self.id:
             config.subtool_selected = 0 if config.subtool_selected else 1

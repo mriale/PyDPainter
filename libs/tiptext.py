@@ -82,6 +82,7 @@ lbf, rbb]
 tiptext["brush"] = [
 "Brush Tool [b] (rectangle or polygon)",
 "Click brush tool again to toggle rectangle or polygon shape.",
+"Right-click brush tool to restore previous brush.",
 "Draw shape on canvas to pick up brush.",
 "- left button to copy canvas",
 "- right button to cut out canvas with background color"]
