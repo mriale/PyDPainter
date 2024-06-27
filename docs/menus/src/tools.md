@@ -4,7 +4,12 @@ Welcome to the heart of **PyDPainter** and, before it, **Deluxe Paint**. Long be
 
 ![](tools.png)  
 
-A mouse **left-click** on a tool selects it directly. A **right-click** brings up the tool's options. Finally, the tool itself can be halved diagonally, providing a variant - usually the same shape, but filled in. These options are backed up by very short keyboard shortcuts (a single letter), the capital letter of which brings up the variant or the options.
+A mouse **left-click** on a tool selects it directly. A **right-click** brings up the tool's options.  
+Finally, the tool itself can be halved diagonally, providing a variant - usually the same shape, but filled in.
+
+![](t-draw.png)![](t-rectangle.png)![](t-circle.png)![](t-ellipse.png)![](t-poly.png)
+
+ These options are backed up by very short keyboard shortcuts (a single letter), the capital letter of which brings up the variant or the options.
 
 - [Default brushes](#default-brushes)
 - [Stencil](#stencil)
@@ -287,27 +292,98 @@ Note their approximate size, and enter it in the **"Size"** field. 8 is a good d
 
 Key: `t`
 ## Grid
-![](t-grid.png)
+![](t-grid.png)  
+The Grid constrains the action of **all painting tools**:
+![](grid.png)
+### Size XY
+Pixel length and height of the grid. This means that, for example, a line or a drawing can only be drawn at the same pixel spacing.
+### Offset
+Offset from origin (0,0) at top right of work screen.
+### Visual
+Sweep a visual grid across the screen, which you can resize and position with the mouse, as you wish, to enter grid parameters.  
+![](grid-visual.png)  
+The grid can help you quickly draw geometric shapes, spritesheets templates, regular shapes and dot grids. Experiment with different tools, in conjunction with the `SHIFT` and `CTRL` keys!
+
+![](grid-example.png)
 
 Key: `g`
 ## Symmetry
 ![](t-symmetry.png)
 
+The Symmetry tool helps you paint symmetrical patterns around a
+central point or based on a tiling scheme. Symmetry works with **all tools**
+except Text and Brush Selector.
+
+There are two symmetry modes : **Point** and **[Tile](#tile)**. Click the symmetry tool with the right mouse button to set parameters for each of the mode.  
+![](symmetry.png)![](tile.png)  
+
+*Note: the default Mirror, Order 6 settings is not the most usefull, which can lead to the false impression that symmetry is just a way of plastering the screen all willy-nilly.*
+
+### Point Symmetry
+
+**Point Symmetry** works around a central symmetry point in either **Mirror** (mirror image duplication of each point) or **Cyclic** (direct duplication at each symmetry point).
+
+#### Order
+
+You can lower the **Order value to 1** with **Mirror** on to retain a basic mirror function. The left and right parts of the screen will be copied as a mirror erected vertically in the center of the screen.  
+
+An **Order of 2** imitates a paper folded into 4, like the Rorschach tests.
+
+**Cyclic symmetries** of order 2 to 7, especially the odd values, once offset from the center of the screen, let you effortlessly draw bold natural shapes, such as flowers, an impact on the ground, the cracks in a window, a tunnel narrowing...
+
+Values of 5 and above, used with the Line tool and a little practice, will help you draw regular polygons.
+
+The maximum is 99, which may sound crazy, but allows for some very amusing variations on the circle design.
+
+#### X Y values
+The X and Y values allow you to manually enter the origin of symmetry. Note that an origin of 0 may render the tool invisible (it draws outside the screen). 
+
+#### Center
+
+The two Centers buttons automatically calculate the correct value for central symmetry, depending on the size of your page/work screen (that of PydPainter).
+
+#### Place
+To reposition the central point tof your symmetrical pattern:
+1) click **Place**,
+2) move the large cross-hair to the new location
+3) and click the left mouse button.
+
+### Tile
+Use Tile Symmetry to create 'tile' patterns. You can set the horizontal and vertical dimensions (in pixels) of the tile size. Tile is useful in creating fill patterns; once you've created your symmetrical pattern, set the [Grid](#grid) to the same spacing as the tiles to pick up exactly one tile as a
+brush.
+ 
+*Tip: use Tiles in the draft screen (**`j`**) instead, as it fills up the screen very quickly.*
+
+![](tile-ex.png)
+Yeah, easy 90s pop Memphis style wallpaper, baby !
+
 Key: `/`
 ## Magnifier
 ![](t-magnifier.png)
+
+This tool divides the screen into two parts and displays the right-hand side in magnification. This tool is especially useful for detail work. When you are in Magnify mode, you can use any other tool on either side of the screen.
 
 Key: `m`
 ## Zoom magnifier in/out
 ![](t-zoom.png)
 
+Changes the scale in [Magnifier](#magnifier) Mode. Click the Zoom tool with the left mouse button to enlarge the image and click with the right button to shrink the image. Or use the central wheel on modern mouse.
+
 Keys: `>` / `<`
 ## Undo/redo
 ![](t-undo.png)
+
+Reverses the last painting action. Thanks to the huge memory capacity of modern computers, PydPainter allows **up to 20 undos!**
+
+Right-clicking "undoes" previous undos.
+
 
 Keys: `u` / `U`
 ## Clear canvas
 
 ![](t-clr.png)
+Clears the screen to the currently selected **background color**. If you have
+multiple frames, an Options requester appears for you to indicate which
+frames you want to clear.
 
 Key: `K`
