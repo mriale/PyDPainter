@@ -293,6 +293,7 @@ Note their approximate size, and enter it in the **"Size"** field. 8 is a good d
 Key: `t`
 ## Grid
 ![](t-grid.png)  
+
 The Grid constrains the action of **all painting tools**:
 ![](grid.png)
 ### Size XY
