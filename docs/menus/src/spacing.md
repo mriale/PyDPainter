@@ -38,4 +38,4 @@ Default operation. Brush paints continuously, without spacing.
 ---
 
 From left to right, examples of the 4 default settings, with Circle, Rectangle and Line tools, each with a different brush (indicated in red).  
-![](spacing-examples.png)  
+![](spacing-examples.png)
