@@ -374,6 +374,7 @@ class DoCurve(ToolSingleAction):
                 drawcurve(config.pixel_canvas, config.color, self.line_start, self.line_end, coords, interrupt=True)
             elif self.button == 3:
                 drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, interrupt=True, erase=True)
+        self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def mousedown(self, coords, button):
         if not button in [1,3]:
@@ -402,6 +403,20 @@ class DoCurve(ToolSingleAction):
             config.brush.pen_down = False
             self.move(coords)
 
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            config.save_undo()
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
+        return False
+
     def drag(self, coords, buttons):
         if not (buttons[0] or buttons[2]):
             return
@@ -413,6 +428,7 @@ class DoCurve(ToolSingleAction):
                 drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
             elif buttons[2]:
                 drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True, erase=True)
+            self.leave_trace(coords, buttons)
 
     def mouseup(self, coords, button):
         if not button in [1,3]:
