@@ -8,6 +8,10 @@ Table of Contents
 - [View Quick Reference Card](hotkeys-toolbox.png)
 - [Download PDF version](hotkeys-toolbox.pdf)
 
+### Tools
+
+- [Toolbox](tools/src/toolbox.md)
+
 ### Menus
 
 - [Picture](menus/src/picture.md)
@@ -17,7 +21,7 @@ Table of Contents
 - [Effect](menus/src/effect.md)
 - [Prefs](menus/src/prefs.md)
 
-Tutorials
+### Tutorials
 
 - [Cloud and Noise Tutorial](tutorials/src/clouds/Clouds.md)
 - [Plasma Texture Tutorial](tutorials/src/plasma/Plasma.md)
