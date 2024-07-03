@@ -69,9 +69,31 @@ If you're smoothing red on a black background, but no dark red/brown color is av
 | :----: |
 | *Examples with a suite of 6 colors (3 bright yellow, cyan, blue and 3 white), a 7-color orange gradient and the default grayscale (12 colors).* |
 
-**Remember to select one of the Range colors as foreground color to select your gradient and get this type of preview.**
+**Remember to select one of the [Range](palette.md#range) colors as foreground color to select your gradient and get this type of preview.**
 
-*to be continued and illustrated...*
+ Select one of the five options by clicking it with the left mouse button. Preview will update automatically.
+
+<img src="gradient-fill-v.png" width="500">
+
+**Vertical fill** paints the gradient vertically from left to right with an even distribution.
+
+<img src="gradient-fill-v-line.png" width="500">
+ 
+**Vertical Line** fill paints the gradient vertically from top to bottom, one line at a time and adjusts the gradient on each line so that it follows the contours of the shape being filled.
+
+<img src="gradient-fill-h.png" width="500">
+
+**Horizontal fill** paints the gradient horizontally from top to bottom.
+
+<img src="gradient-fill-h-line.png" width="500">
+
+**Horizontal Line** fill paints the gradient left to right one line at a time and adjusts the gradient on each line so that it follows the contours of the shape being filled.
+
+<img src="gradient-fill-hv-line.png" width="500">
+
+**Vertical and Horizontal** both lines ??? help !!!
+
+*The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen, and any type of shape.*
 
 ## Dither
 
