@@ -69,31 +69,31 @@ If you're smoothing red on a black background, but no dark red/brown color is av
 | :----: |
 | *Examples with a suite of 6 colors (3 bright yellow, cyan, blue and 3 white), a 7-color orange gradient and the default grayscale (12 colors).* |
 
-**Remember to select one of the [Range](palette.md#range) colors as foreground color to select your gradient and get this type of preview.**
+**Remember to select one of the [Range](../../menus/src/palette.md#range) colors as foreground color to select your gradient and get this type of preview.**
 
- Select one of the five options by clicking it with the left mouse button. Preview will update automatically.
+Select one of the gradient options by clicking it with the left mouse button. Preview will update automatically.
 
 <img src="gradient-fill-v.png" width="500">
 
-**Vertical fill** paints the gradient vertically from left to right with an even distribution.
+**Vertical fill** paints the gradient top-to-bottom with an even distribution without regard to the shape of the object.
 
 <img src="gradient-fill-v-line.png" width="500">
  
-**Vertical Line** fill paints the gradient vertically from top to bottom, one line at a time and adjusts the gradient on each line so that it follows the contours of the shape being filled.
+**Vertical Line** fill paints the gradient top-to-bottom adjusting the gradient so that it follows the contours of the shape being filled.
 
 <img src="gradient-fill-h.png" width="500">
 
-**Horizontal fill** paints the gradient horizontally from top to bottom.
+**Horizontal fill** paints the gradient left-to-right with an even distribution without regard to the shape of the object.
 
 <img src="gradient-fill-h-line.png" width="500">
 
-**Horizontal Line** fill paints the gradient left to right one line at a time and adjusts the gradient on each line so that it follows the contours of the shape being filled.
+**Horizontal Line** fill paints the gradient left-to-right adjusting the gradient so that it follows the contours of the shape being filled.
 
 <img src="gradient-fill-hv-line.png" width="500">
 
-**Vertical and Horizontal** both lines ??? help !!!
+**Vertical and Horizontal** fill paints the gradient from the inside out adjusting the gradient so that it follows the contours of the shape being filled.
 
-*The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen, and any type of shape.*
+*The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen and any type of shape.*
 
 ## Dither
 
