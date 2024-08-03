@@ -51,21 +51,23 @@ class Layer:
 
 class LayerStack:
     """This class composites a stack of Layer bitmaps"""
-    def __init__(self, layers=None, indicatorx=0):
+    def __init__(self, layers=None, indicatorx=0, current_layer_name=""):
         if layers is None:
             self.layers = {}
         else:
             self.layers = layers
         self.indicatorx = indicatorx
+        self.repeat = False
+        self.current_layer_name = current_layer_name
 
     def copy(self):
-        ls = LayerStack(indicatorx = self.indicatorx)
+        ls = LayerStack(indicatorx=self.indicatorx, current_layer_name=self.current_layer_name)
         for name in self.layers:
             ls.layers[name] = self.layers[name].copy(ls)
         return ls
 
     def __repr__(self):
-        outstr = f"LayerStack {hex(id(self))}:\n"
+        outstr = f"LayerStack {hex(id(self))} current_layer_name=\"{self.current_layer_name}\":\n"
         for key in self.layers:
             outstr += f"[\"{key}\"] " + str(self.layers[key]) + "\n"
         outstr = outstr.strip()
@@ -74,8 +76,14 @@ class LayerStack:
     def has_key(self, name):
         return name in self.layers
 
-    def get(self, name):
-        return self.layers[name]
+    def get(self, name=None):
+        if name is None:
+            if self.has_key(self.current_layer_name):
+                return self.layers[self.current_layer_name]
+            else:
+                return None
+        else:
+            return self.layers[name]
 
     def set(self, name, image=None, priority=None, visible=None, parent=None, indicator=None, opacity=None):
         if name in self.layers.keys():
@@ -106,10 +114,22 @@ class LayerStack:
             self.layers[name] = Layer(image, priority, visible, parent=parent, indicator=indicator, opacity=opacity)
 
     def delete(self, name):
-        del(self.layers, name)
+        del self.layers[name]
+
+    def get_priority_name(self, priority):
+        for key in self.layers:
+            if self.layers[key].priority == priority:
+                return key
+        return None
 
     def blit(self, screen, offset=(0,0), rect=None, exclude=[]):
+        if rect is None:
+            rect_offset = (offset[0],offset[1], config.pixel_width, config.pixel_height)
+        else:
+            rect_offset = rect
+
         lowest_layer = True
+        layer_drawn = False
         for key in sorted(self.layers, key=lambda l: self.layers[l].priority):
             layer = self.layers[key]
             if layer.visible and not layer.indicator in exclude:
@@ -117,11 +137,14 @@ class LayerStack:
                     if lowest_layer:
                         layer.image.set_colorkey(None)
                         if layer.opacity != 255:
-                            screen.fill(0, rect=rect)
+                            screen.fill(config.pal[0], rect=rect_offset)
                     else:
                         layer.image.set_colorkey(0)
                     lowest_layer = False
                     layer.blit(screen, offset, rect)
+                    layer_drawn = True
+        if not layer_drawn:
+            screen.fill(config.pal[0], rect=rect_offset)
 
     def get_at(self, coords):
         image = config.pixel_canvas.copy().convert()
@@ -150,3 +173,41 @@ class LayerStack:
         pic = config.pixel_canvas.copy()
         self.blit(pic, exclude=exclude)
         return pic
+
+    def process_layertoolbar_events(self, mta_list, event):
+        for ge in mta_list:
+            if ge.gadget.id == "opacityslider":
+                if self.has_key(self.current_layer_name):
+                    self.get(self.current_layer_name).opacity = ge.gadget.value*17
+            elif ge.gadget.id == "framecount":
+                if ge.type == ge.TYPE_GADGETDOWN:
+                    self.ask_frame()
+            elif ge.gadget.id == "prev":
+                if self.playing:
+                    self.currdir = -1
+                else:
+                    pygame.time.set_timer(config.TOOLEVENT, 500)
+                    self.repeat = True
+            elif ge.gadget.id == "next":
+                if self.playing:
+                    self.currdir = 1
+                else:
+                    pygame.time.set_timer(config.TOOLEVENT, 500)
+                    self.repeat = True
+            elif ge.gadget.id == "play":
+                if ge.gadget.state == 0:
+                    self.playing = False
+                else:
+                    self.playing = True
+                    pygame.time.set_timer(config.TOOLEVENT, config.anim.frame[self.curr_frame-1].delay * 1000 // 60)
+        if len(mta_list) == 0 and event.type == config.TOOLEVENT:
+            if config.animtoolbar.tool_id("prev").state == 1:
+                self.prev_frame()
+                pygame.time.set_timer(config.TOOLEVENT, 50)
+            elif config.animtoolbar.tool_id("next").state == 1:
+                self.next_frame()
+                pygame.time.set_timer(config.TOOLEVENT, 50)
+            elif self.repeat:
+                pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
+                self.repeat = False
+

@@ -174,7 +174,10 @@ def draw_animtoolbar(screen_rgb):
         else:
             atbw = config.screen_width
         atbslx = 80
-        pygame.draw.rect(screen_rgb, (0,0,0), (0,atby-2*scaleY,atbw,scaleY))
+        layer_cutout_x = 0
+        if config.layertoolbar.visible:
+            layer_cutout_x = config.layertoolbar.rect[2]
+        pygame.draw.rect(screen_rgb, (0,0,0), (layer_cutout_x,atby-2*scaleY,atbw-layer_cutout_x,scaleY))
         pygame.draw.rect(screen_rgb, (255,255,255), (0,atby-scaleY,atbw,scaleY))
         pygame.draw.rect(screen_rgb, (160,160,160), (0,atby,atbw,atbh))
         config.animtoolbar.tool_id("frameslider").need_redraw = True

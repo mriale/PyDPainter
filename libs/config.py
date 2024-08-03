@@ -20,6 +20,7 @@ from libs.stencil import *
 from libs.tools import *
 from libs.minitools import *
 from libs.animtools import *
+from libs.layertools import *
 from libs.menubar import *
 from libs.menus import *
 from libs.perspective import *
@@ -315,6 +316,8 @@ class pydpainter:
            config.minitoolbar.tip_canvas = None
         if "animtoolbar" in dir(config):
            config.animtoolbar.tip_canvas = None
+        if "layertoolbar" in dir(config):
+           config.layertoolbar.tip_canvas = None
 
         display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
 
@@ -432,6 +435,7 @@ class pydpainter:
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
         self.animtoolbar = init_animtoolbar(config)
+        self.layertoolbar = init_layertoolbar(config)
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
@@ -713,7 +717,7 @@ class pydpainter:
             self.pixel_aspect = 59.0/54.0 #PAL
 
         self.LAYER_INDICATORX = 170
-        self.LAYER_BG_PRIORITY = -100
+        self.LAYER_BG_PRIORITY = 0
 
         self.scale = 3
         self.scale_bak = 3
@@ -782,8 +786,8 @@ class pydpainter:
         self.pixel_canvas.set_palette(self.pal)
 
         self.layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
-        self.layers.set("canvas", self.pixel_canvas)
-
+        self.layers.set("canvas", self.pixel_canvas, priority=1)
+        self.layers.current_layer_name = "canvas"
         self.stencil = Stencil()
         self.layers.set("fg", self.stencil.image, 10, visible=False)
 
@@ -1286,9 +1290,13 @@ class pydpainter:
             self.toolbar.tip_canvas = None
             self.minitoolbar.tip_canvas = None
             self.animtoolbar.tip_canvas = None
+            self.layertoolbar.tip_canvas = None
 
         #blit toolbar layer
         self.toolbar.draw(screen_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
+
+        #blit layertoolbar layer
+        draw_layertoolbar(screen_rgb)
 
         #blit menu layer
         self.menubar.draw(screen_rgb)
@@ -1367,6 +1375,21 @@ class pydpainter:
             sx = ox + (tx * self.window_size[0] // self.screen_width)
             sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.animtoolbar.tip_canvas, (sx,sy))
+
+        #blit layertoolbar tooltip layer
+        if self.layertoolbar.visible and \
+           not self.layertoolbar.wait_for_tip and \
+           self.layertoolbar.tip_canvas != None and \
+           self.menubar.visible and \
+           config.help_on:
+            px = config.font.xsize // 8
+            tx = self.layertoolbar.tip_x + px*11
+            atby = config.menubar.rect[3]
+            ty = atby + self.layertoolbar.tip_y
+            t_size = self.layertoolbar.tip_canvas.get_size()
+            sx = ox + (tx * self.window_size[0] // self.screen_width)
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            self.screen.blit(self.layertoolbar.tip_canvas, (sx,sy))
 
         pygame.display.flip()
         self.last_recompose_timer = pygame.time.get_ticks()
@@ -1658,7 +1681,14 @@ class pydpainter:
             else:
                 mta_list = []
 
-            wait_for_mouseup_gui = True in config.toolbar.wait_for_mouseup or True in config.minitoolbar.wait_for_mouseup or True in config.menubar.wait_for_mouseup or True in config.animtoolbar.wait_for_mouseup
+            #Get layertoolbar events if any
+            if self.layertoolbar.visible:
+                mtl_list = self.layertoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+                config.layers.process_layertoolbar_events(mtl_list, e)
+            else:
+                mtl_list = []
+
+            wait_for_mouseup_gui = True in config.toolbar.wait_for_mouseup or True in config.minitoolbar.wait_for_mouseup or True in config.menubar.wait_for_mouseup or True in config.animtoolbar.wait_for_mouseup or True in config.layertoolbar.wait_for_mouseup
 
             if wait_for_mouseup_gui:
                 self.cycle_handled = True
@@ -1668,6 +1698,7 @@ class pydpainter:
                (self.toolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
                self.menubar.is_inside(self.get_mouse_pointer_pos(e)) or \
                self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
+               self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
                wait_for_mouseup_gui):
                 self.cursor.shape = self.cursor.NORMAL
                 hide_draw_tool = True
@@ -1708,7 +1739,7 @@ class pydpainter:
                 (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
-            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)):
+            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)):
                 if e.button == 2: #middle drag
                     zoom_drag = self.get_mouse_pixel_pos(e)
                 elif e.button == 4: #scroll up
@@ -1852,7 +1883,7 @@ class pydpainter:
                 #No toolbar event so process event as action on selected tool
                 if curr_action != None and len(te_list) == 0 and \
                    len(mte_list) == 0 and len(me_list) == 0 and \
-                   len(mta_list) == 0 and \
+                   len(mta_list) == 0 and len(mtl_list) == 0 and \
                    not wait_for_mouseup_gui and not hide_draw_tool:
                     if config.coords_on:
                         cx,cy = self.get_mouse_pixel_pos(e)

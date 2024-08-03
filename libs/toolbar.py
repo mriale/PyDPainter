@@ -212,7 +212,7 @@ class Toolbar:
                         action = attr_list[count][3]
                 toolg = ToolGadget(Gadget.TYPE_CUSTOM,"",
                                   (xo+(w//width)*x, yo+(h//height)*y,
-                                   w//width, h//height),
+                                   w//width, h//height-1),
                                    toolbar=self, tool_type=tool_type,
                                    id=gid, hotkeys=hotkeys, action=action)
                 self.tools.append(toolg)

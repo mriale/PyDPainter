@@ -1210,7 +1210,7 @@ class DoBackgroundFree(MenuAction):
                     config.pixel_canvas.blit(bglayer.image, (0,0))
                     config.pixel_canvas.set_colorkey(None)
                     config.save_undo()
-                config.layers.set("background", None, priority=config.LAYER_BG_PRIORITY, visible=False, indicator="")
+                config.layers.delete("background")
                 config.layers.get("canvas").opacity = 255
             config.doKeyAction()
 
