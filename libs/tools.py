@@ -178,6 +178,19 @@ class ToolDragAction(ToolAction):
             self.last_trace_time = t
         return False
 
+    def constrain_square(self, coords):
+        coords_out = list(coords)
+        if pygame.key.get_mods() & KMOD_SHIFT:
+            scaleX = config.sm.scaleX
+            scaleY = config.sm.scaleY
+            xdiff = self.p1[0] - coords[0]
+            ydiff = self.p1[1] - coords[1]
+            if abs(xdiff // scaleX) > abs(ydiff // scaleY):
+                coords_out[1] = self.p1[1] + int(math.copysign(scaleY * xdiff / scaleX, -ydiff))
+            else:
+                coords_out[0] = self.p1[0] + int(math.copysign(scaleX * ydiff / scaleY, -xdiff))
+        return coords_out
+
 class DoBIBrush(ToolAction):
     """
     Built-In brushes
@@ -615,7 +628,12 @@ class DoRect(ToolDragAction):
         if attrs["subtool"] and attrs["rightclick"]:
             fill_req(config.pixel_req_canvas)
         else:
+            config.enable_constrain = False
             super().selected(attrs)
+
+    def deselected(self, attrs):
+        config.enable_constrain = True
+        super().deselected(attrs)
 
     def drawbefore(self, coords):
         mouseX, mouseY = coords
@@ -624,6 +642,7 @@ class DoRect(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        coords = self.constrain_square(coords)
         if self.leave_trace(coords, buttons):
             return
         if buttons[0]:
@@ -632,6 +651,7 @@ class DoRect(ToolDragAction):
             drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, interrupt=True, erase=True)
 
     def drawfinal(self, coords, button):
+        coords = self.constrain_square(coords)
         if button == 1:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected)
         elif button == 3:
@@ -1373,6 +1393,12 @@ class DoBrush(ToolSingleAction):
         self.do_brush_poly.last_coords = config.get_mouse_pixel_pos()
         self.do_brush_rect.hidden = False
         self.do_brush_poly.hidden = False
+        if not config.subtool_selected:
+            config.enable_constrain = False
+
+    def deselected(self, attrs):
+        config.enable_constrain = True
+        super().deselected(attrs)
 
     def hide(self):
         if config.subtool_selected:
@@ -1424,10 +1450,12 @@ class DoBrushRect(ToolDragAction):
         drawxorcross(config.pixel_canvas, mouseX, mouseY)
 
     def drawrubber(self, coords, buttons):
+        coords = self.constrain_square(coords)
         if buttons[0] or buttons[2]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, xormode=True, handlesymm=False)
 
     def drawfinal(self, coords, button):
+        coords = self.constrain_square(coords)
         if button == 1 or button == 3:
             bgcolor = config.bgcolor
             if config.auto_transp_on:

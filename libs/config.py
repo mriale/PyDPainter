@@ -759,6 +759,7 @@ class pydpainter:
         self.symm_num = 6
         self.symm_width = 50
         self.symm_height = 50
+        self.enable_constrain = True
         self.constrain_x = -1
         self.constrain_y = -1
         self.help_on = True
@@ -1123,7 +1124,7 @@ class pydpainter:
             self.zoom.mousedown_side = 0
 
         #turn constrain on or off
-        if pygame.key.get_mods() & KMOD_SHIFT:
+        if pygame.key.get_mods() & KMOD_SHIFT and self.enable_constrain:
             if self.constrain_x < 0 and self.constrain_y < 0:
                 if "rel" in dir(event):
                     if abs(event.rel[0]) > abs(event.rel[1]):
