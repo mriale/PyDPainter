@@ -174,8 +174,8 @@ class Perspective:
                 self.draw_cursor()
                 update_cursor = False
 
-            event = pygame.event.wait()
-            if event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.wait()
+            if event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
                 continue
 

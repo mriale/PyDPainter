@@ -103,7 +103,7 @@ def main():
         for i in range(0,8):
             f4.blitstring(screen, (0,396+(i*32)), char_range(chr(i*32),chr(((i+1)*32)-1)))
 
-        for event in pygame.event.get():
+        for event in config.xevent.get():
             if event.type == QUIT:
                 running = 0
             elif event.type == KEYDOWN:

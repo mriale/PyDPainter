@@ -620,7 +620,7 @@ class Animation:
         running = 1
         retval = None
         while running:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
             gevents = req.process_event(screen, event)
 
             if event.type == KEYDOWN:
@@ -641,7 +641,7 @@ class Animation:
                     elif ge.gadget.label == "Cancel":
                         running = 0 
 
-            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
                 config.recompose()
 
@@ -748,7 +748,7 @@ Frame Colors
         copy_from_framei = 0
         running = 1
         while running:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
             gevents = req.process_event(screen, event)
 
             if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -853,7 +853,7 @@ Frame Colors
             if remap:
                 remapg.state = 1
 
-            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
                 config.recompose()
 
@@ -911,7 +911,7 @@ Frames: ___________________
         running = 1
         result = []
         while running:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
             gevents = req.process_event(screen, event)
 
             if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -938,7 +938,7 @@ Frames: ___________________
                         frameg.error = False
                         frameg.need_redraw = True
 
-            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
                 config.recompose()
 
@@ -1063,7 +1063,7 @@ FPS 1/60s Range
         running = 1
         refresh_fields = False
         while running:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
             gevents = req.process_event(screen, event)
 
             if event.type == KEYDOWN:
@@ -1126,7 +1126,7 @@ FPS 1/60s Range
                 frangeg.need_redraw = True
                 refresh_fields = False
 
-            if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
                 req.draw(screen)
                 config.recompose()
 

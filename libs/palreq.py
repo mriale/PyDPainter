@@ -368,7 +368,7 @@ Speed---------___^^
     config.recompose()
 
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -573,7 +573,7 @@ Speed---------___^^
                     config.pal = config.quantize_palette(config.pal, config.color_depth)
                     config.set_all_palettes(config.pal)
         range_numg[current_range].state = 1
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             colorg.need_redraw = True
             palg.need_redraw = True
 

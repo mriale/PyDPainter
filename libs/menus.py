@@ -488,13 +488,13 @@ class DoBrushStretch(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -671,13 +671,13 @@ class DoBrushRotateAny(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -726,13 +726,13 @@ class DoBrushShear(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -860,13 +860,13 @@ class DoBrushBendX(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -934,13 +934,13 @@ class DoBrushBendY(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -1013,13 +1013,13 @@ class DoBrushHandlePlace(MenuAction):
         point_placed = False
         first_time = True
         while not point_placed:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:

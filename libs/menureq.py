@@ -72,7 +72,7 @@ def pick_file_type(screen, req, file_typeg, ext, filetype_list):
     wait_for_mouseup = 0
 
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             x,y = req.mouse_pixel_mapper(event)
             if pickg.pointin((x,y), pickg.screenrect):
@@ -182,7 +182,7 @@ Dir Name: ______________________
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -196,7 +196,7 @@ Dir Name: ______________________
                 elif ge.gadget.label == "Cancel":
                     running = 0 
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -293,7 +293,7 @@ File:___________________%s
 
     while running or wait_for_mouseup:
         string_enter = False
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -345,7 +345,7 @@ File:___________________%s
                 ext, file_typeg.label = get_type(file_nameg.value, filetype_list)
                 file_typeg.need_redraw = True
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
                 filename = list_itemsg.items[list_itemsg.value]
                 if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
@@ -630,7 +630,7 @@ Resize Page: [Yes~No]
     reinit = False
     ok_clicked = False
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -777,7 +777,7 @@ Resize Page: [Yes~No]
         else:
             gResize[0].state = 1
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -844,7 +844,7 @@ Resize: [Yes~No]
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -871,7 +871,7 @@ Resize: [Yes~No]
         else:
             gResize[0].state = 1
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -940,7 +940,7 @@ def page_preview_req(screen):
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -951,7 +951,7 @@ def page_preview_req(screen):
                 if ge.gadget.label == "OK":
                     running = 0
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -1006,7 +1006,7 @@ for more details.    ############
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -1017,7 +1017,7 @@ for more details.    ############
                 if ge.gadget.label == "OK":
                     running = 0 
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -1075,7 +1075,7 @@ def update_progress_req(req, screen, progress):
     progressg = req.gadget_id("0_0")
     progressg.value = progress
     progressg.need_redraw = True
-    pygame.event.get()
+    config.xevent.get()
     req.draw(screen)
     config.recompose()
 
@@ -1280,7 +1280,7 @@ def stencil_req(screen):
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -1321,7 +1321,7 @@ def stencil_req(screen):
                     palpageg.need_redraw = True
                     colorsg.need_redraw = True
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
             (rx,ry,rw,rh) = req.rect
             if ry < 14:
@@ -1367,7 +1367,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
     button_clicked = -1
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key in hotkeys:
@@ -1384,7 +1384,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
                 button_clicked = buttons.index(ge.gadget.label)
                 running = 0 
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 

@@ -250,7 +250,7 @@ Preview
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -300,7 +300,7 @@ Preview
         if underline:
             font_underlineg.state = 1
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             #Font preview
             screen.set_clip(previewg.screenrect)
@@ -347,13 +347,13 @@ def place_point(symm_center):
     point_placed = False
     first_time = True
     while not point_placed:
-        event = pygame.event.poll()
-        while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+        event = config.xevent.poll()
+        while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
             #get rid of extra mouse movements
-            event = pygame.event.poll()
+            event = config.xevent.poll()
 
         if event.type == pygame.NOEVENT and not first_time:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
 
         mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
         if event.type == MOUSEMOTION:
@@ -410,13 +410,13 @@ def place_grid(gcoords):
     point_placed = False
     first_time = True
     while not point_placed:
-        event = pygame.event.poll()
-        while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+        event = config.xevent.poll()
+        while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
             #get rid of extra mouse movements
-            event = pygame.event.poll()
+            event = config.xevent.poll()
 
         if event.type == pygame.NOEVENT and not first_time:
-            event = pygame.event.wait()
+            event = config.xevent.wait()
 
         mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
         if not dragging:
@@ -497,7 +497,7 @@ Offset: _____ _____
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -523,7 +523,7 @@ Offset: _____ _____
                     sizeYg.need_redraw = True
                     req.draw(screen)
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -565,7 +565,7 @@ Height:  ____
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -584,7 +584,7 @@ Height:  ____
                     return 0
 
         tileg.state = 1
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
     return -1
@@ -639,7 +639,7 @@ X:_____  Y:_____
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -684,7 +684,7 @@ X:_____  Y:_____
         elif config.symm_type == 1:
             mirrorg.state = 1
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
     return -1
@@ -738,7 +738,7 @@ def spacing_req(screen):
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -769,7 +769,7 @@ def spacing_req(screen):
                     ge.gadget.state = 1
                     ge.gadget.need_redraw = True
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -934,7 +934,7 @@ Dither:----------------00
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -979,7 +979,7 @@ Dither:----------------00
             if g.label == FillMode.LABEL_STR[fillmode_value]:
                 g.state = 1
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 

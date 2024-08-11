@@ -570,13 +570,13 @@ class DoAirbrush(ToolSingleAction):
 
         while not point_placed:
             config.cursor.shape = 4
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if not dragging:
@@ -1839,13 +1839,13 @@ class PalGadget(ToolGadget):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
@@ -2074,7 +2074,7 @@ def main():
         
         #screen.fill((0,0,0))
 
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         if event.type == QUIT:
             running = 0
 

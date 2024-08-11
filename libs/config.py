@@ -26,6 +26,7 @@ from libs.menus import *
 from libs.perspective import *
 from libs.animation import *
 from libs.version import *
+from libs.xevent import *
 from libs.zoom import *
 
 import numpy as np
@@ -175,6 +176,7 @@ class pydpainter:
         version_set_config(self)
         perspective_set_config(self)
         animation_set_config(self)
+        xevent_set_config(self)
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
@@ -327,9 +329,9 @@ class pydpainter:
         else:
             if force or resize_window or pygame.version.vernum[0] == 1:
                 #Wait for mouse buttons to be released before resizing window
-                pygame.event.get()
+                config.xevent.get()
                 while True in pygame.mouse.get_pressed():
-                    pygame.event.get()
+                    config.xevent.get()
                 new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
                 if pygame.version.vernum[0] == 1:
@@ -648,7 +650,7 @@ class pydpainter:
         global custom_event_counter
         user_event = None
         if "custom_type" in dir(pygame.event):
-            user_event = pygame.event.custom_type()
+            user_event = config.xevent.custom_type()
         else:
             user_event = USEREVENT + custom_event_counter
             custom_event_counter += 1
@@ -674,6 +676,7 @@ class pydpainter:
 
         self.display_info = DisplayInfo()
 
+        self.xevent = Xevent()
         self.fontx = fontx
         self.fonty = fonty
         self.text_tool_font_name = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
@@ -1150,7 +1153,7 @@ class pydpainter:
         return((mouseX, mouseY))
 
     def has_event(self, timeout=16):
-        return pygame.event.peek((KEYDOWN,
+        return config.xevent.peek((KEYDOWN,
                             MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION)) and \
                pygame.time.get_ticks() - self.last_recompose_timer > timeout
 
@@ -1569,18 +1572,18 @@ class pydpainter:
 
         #main loop
         while config.running:
-            e = pygame.event.wait()
+            e = config.xevent.wait()
 
-            if e.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            if e.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
                 continue
 
-            if e.type == pygame.VIDEORESIZE and pygame.event.peek((VIDEORESIZE)):
+            if e.type == pygame.VIDEORESIZE and config.xevent.peek((VIDEORESIZE)):
                 #get rid of extra resize events
                 continue
 
             if e.type in self.ALLCUSTOMEVENTS:
-                if  pygame.event.peek(self.ALLCUSTOMEVENTS):
+                if  config.xevent.peek(self.ALLCUSTOMEVENTS):
                     #get rid of extraneous color cycle and other user events
                     continue
 
