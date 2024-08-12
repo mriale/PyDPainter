@@ -206,6 +206,11 @@ Key: `r`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
+Press the `SHIFT` key for a square drawing constraint.
+
+Press the `CTRL` key to draw rectangles on the fly as you move the mouse.
+
+
 ## Circle tool
 
 ![](t-circle.png)
@@ -222,6 +227,10 @@ of the circle.*
 Key: `c`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+
+Press the `SHIFT` key to start with the next circle center on your last click.
+
+Press the `CTRL` key to draw circles on the fly as you move the mouse.
 
 ## Ellipse tool
 
@@ -296,6 +305,8 @@ For greater precision, you can click on the brush tool a second time (or press  
 However, there is one aspect of brush selection you should be aware of: if any parts of your brush consist of the current background color, those parts will be transparent. In other words, whenever you pick up a brush, it's as if you are picking up only the non-background colors; any background colors in the brush will remain invisible even after you change to a new background color. This means that you can create brushes with intricate outlines without fear of picking up a rectangle of the surrounding background color.
 
 *Tip: What's more, if you delimit a brush on the screen, but this time by clicking with the right mouse button, this will erase what you've taken as a brush from the screen. This allows you to move blocks of graphics quickly.*
+
+Press the `SHIFT` key during use for for a "square" constraint.
 
 Key: `b`
 
