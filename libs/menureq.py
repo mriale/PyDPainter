@@ -678,6 +678,9 @@ Resize Page: [Yes~No]
                         #Get rid of animation
                         config.anim = libs.animation.Animation()
 
+                    config.color = 1
+                    config.bgcolor = 0
+
                     for frame_no in config.anim:
                         if new_clicked:
                             reinit = True
