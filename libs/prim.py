@@ -2026,7 +2026,17 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None,
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
-def floodfill(surface, fill_color, position, erase=False):
+def has_sl(sl, x, y):
+    slfound = False
+    if y in sl:
+        for sly in sl[y]:
+            if x >= sly[0] and x <= sly[1]:
+                #fragment already in list
+                slfound = True
+                break
+    return slfound
+
+def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
     for x,y in symm_coords(position):
         #Create scanline hash
         sl = {}
@@ -2036,23 +2046,28 @@ def floodfill(surface, fill_color, position, erase=False):
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
             maxx, maxy = config.pixel_width, config.pixel_height
             current_color = surf_array[x,y]
-            if fill_color == current_color:
-                if config.fillmode.value == FillMode.SOLID:
-                    continue
-                else:
-                    for crange in config.cranges:
-                        if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
-                            fill_color = crange.next_color(fill_color)
-
-            if surf_array[x,y] == fill_color:
+            if bounds_color < 0:
+                if fill_color == current_color:
+                    if config.fillmode.value == FillMode.SOLID:
+                        continue
+                    else:
+                        for crange in config.cranges:
+                            if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
+                                fill_color = crange.next_color(fill_color)
+                        continue
+            elif current_color == bounds_color:
                 continue
 
             frontier = [(x,y)]
             while len(frontier) > 0:
                 x, y = frontier.pop()
                 if x >= 0 and x < maxx and y >= 0 and y < maxy:
-                    if surf_array[x, y] != current_color:
-                        continue
+                    if bounds_color < 0:
+                        if surf_array[x, y] != current_color:
+                            continue
+                    else:
+                        if surf_array[x, y] == bounds_color or has_sl(sl,x,y):
+                            continue
                 else:
                     continue
                 surf_array[x, y] = fill_color

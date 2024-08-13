@@ -488,10 +488,13 @@ class DoFill(ToolSingleAction):
         config.cycle_handled = True
 
     def mousedown(self, coords, button):
+        bounds_color = -1
+        if pygame.key.get_mods() & pygame.KMOD_ALT:
+            bounds_color = config.bgcolor
         if button == 1:
-            floodfill(config.pixel_canvas, config.color, coords)
+            floodfill(config.pixel_canvas, config.color, coords, bounds_color=bounds_color)
         elif button == 3:
-            floodfill(config.pixel_canvas, config.bgcolor, coords, erase=True)
+            floodfill(config.pixel_canvas, config.bgcolor, coords, erase=True, bounds_color=bounds_color)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
