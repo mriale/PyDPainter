@@ -19,7 +19,7 @@ tiptext["draw"] = [
 "Draw / Area Tool",
 "Upper left of tool is Draw [d]",
 "Lower right of tool is filled Area [D]",
-"- ALT-click filled Area tool to outline with brush",
+"- [ALT]-click filled Area tool to outline with brush",
 "Drag out continuous strokes on canvas.",
 lbf, rbb]
 
@@ -55,7 +55,8 @@ tiptext["rect"] = [
 outline + " [r]",
 filled + " [R]",
 dragshape,
-lbf, rbb]
+lbf, rbb,
+"- hold [SHIFT] to constrain to square"]
 
 tiptext["circle"] = [
 "Circle Tool",
@@ -86,7 +87,8 @@ tiptext["brush"] = [
 "Right-click brush tool to restore previous brush.",
 "Draw shape on canvas to pick up brush.",
 "- left button to copy canvas",
-"- right button to cut out canvas with background color"]
+"- right button to cut out canvas with background color",
+"- hold [SHIFT] to constrain to square"]
 
 tiptext["text"] = [
 "Text Tool [t]",
