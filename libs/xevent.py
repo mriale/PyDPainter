@@ -64,14 +64,16 @@ class Xevent(object):
 
     def poll(self):
         self.pump()
-        xevent = pygame.NOEVENT
+        xevent = lambda: None
+        xevent.type = pygame.NOEVENT
         if len(self.xq) > 0:
             xevent = self.xq.pop(0)
         return xevent
 
     def wait(self):
-        xevent = pygame.NOEVENT
-        while xevent == pygame.NOEVENT:
+        xevent = lambda: None
+        xevent.type = pygame.NOEVENT
+        while xevent.type == pygame.NOEVENT:
             self.pump()
             if len(self.xq) > 0:
                 xevent = self.xq.pop(0)
