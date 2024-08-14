@@ -161,6 +161,17 @@ clicking the right button.
 shape. If the shape is not completely enclosed (that is, if there is a hole in
 its perimeter), the paint will "leak" through and fill the entire page.*
 
+Holding down the `Alt` key when you click with the Fill cursor, fills outward to the background color. In other words, the fill spreads
+outward until it reaches areas of the current background color.
+
+Standard filling is struggling. It stops at the edge of each color of the sky gradient.
+![](standard-fill-sky.png)
+
+Filling the sky with `ALT` stops only at the **background** color (green of landscape). Combined with the Stencils function, this is a very effective cleaning tool.
+
+![](ALT-fill-sky.png)
+
+
 Key: `f`
 
 Right-click tool to open [Fill](fill.md) type.
