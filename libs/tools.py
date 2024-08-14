@@ -257,8 +257,13 @@ class DoDraw(ToolSingleAction):
     """
     Continuous freehand drawing/filled tool
     """
+    def __init__(self, *args, **kwargs):
+        self.outline = False
+        super(DoDraw, self).__init__(*args, **kwargs)
+
     def selected(self, attrs):
         config.brush.pen_down = False
+        self.outline = False
         if attrs["rightclick"]:
             if attrs["subtool"]:
                 fill_req(config.pixel_req_canvas)
@@ -267,6 +272,8 @@ class DoDraw(ToolSingleAction):
         if attrs["subtool"]:
             config.subtool_selected = 1
             self.polylist = [config.get_mouse_pixel_pos()]
+            if pygame.key.get_mods() & pygame.KMOD_ALT:
+                self.outline = True
         else:
             config.subtool_selected = 0
         self.last_coords = config.get_mouse_pixel_pos()
@@ -300,8 +307,9 @@ class DoDraw(ToolSingleAction):
             if self.polylist == None:
                 return
             if buttons[0] or buttons[2]:
-                drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
-                self.polylist.append(coords)
+                if self.polylist[-1] != coords:
+                    drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
+                    self.polylist.append(coords)
                 config.cycle_handled = True
         else:
             if buttons[0]:
@@ -319,11 +327,20 @@ class DoDraw(ToolSingleAction):
             if config.subtool_selected:
                 if self.polylist == None:
                     return
+
                 config.clear_pixel_draw_canvas()
+                closed_poly = list(self.polylist)
+                if len(closed_poly) > 0:
+                    closed_poly.append(closed_poly[0])
+
                 if button == 1:
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
+                    if self.outline:
+                        drawpoly(config.pixel_canvas, config.color, closed_poly)
                 elif button == 3:
                     fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
+                    if self.outline:
+                        drawpoly(config.pixel_canvas, config.bgcolor, closed_poly, erase=True)
                 self.polylist = [coords]
 
             config.save_undo()

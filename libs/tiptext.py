@@ -19,6 +19,7 @@ tiptext["draw"] = [
 "Draw / Area Tool",
 "Upper left of tool is Draw [d]",
 "Lower right of tool is filled Area [D]",
+"- ALT-click filled Area tool to outline with brush",
 "Drag out continuous strokes on canvas.",
 lbf, rbb]
 
