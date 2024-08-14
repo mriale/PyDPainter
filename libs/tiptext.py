@@ -10,6 +10,8 @@ outline = "Upper left of tool draws an outline"
 filled = "Lower right of tool draws a filled area"
 dragshape = "Drag out shape on canvas."
 
+ctrltrace = "- hold [CTRL] while dragging to leave traces"
+
 tiptext["dot"] = [
 "Dot Tool [s]",
 "Drag out dotted strokes on canvas.",
@@ -27,6 +29,7 @@ tiptext["line"] = [
 "Line Tool [v]",
 "Drag out straight line on canvas.",
 lbf, rbb,
+ctrltrace,
 "Right-click tool to adjust Spacing. [V]"]
 
 tiptext["curve"] = [
@@ -35,6 +38,7 @@ tiptext["curve"] = [
 "2. Move mouse to adjust curve",
 "3. Click again to finalize curve",
 lbf, rbb,
+ctrltrace,
 "Right-click tool to adjust Spacing."]
 
 tiptext["fill"] = [
@@ -56,6 +60,7 @@ outline + " [r]",
 filled + " [R]",
 dragshape,
 lbf, rbb,
+ctrltrace,
 "- hold [SHIFT] to constrain to square"]
 
 tiptext["circle"] = [
@@ -63,7 +68,8 @@ tiptext["circle"] = [
 outline + " [c]",
 filled + " [C]",
 dragshape,
-lbf, rbb]
+lbf, rbb,
+ctrltrace]
 
 tiptext["ellipse"] = [
 "Ellipse Tool",
@@ -71,7 +77,8 @@ outline + " [e]",
 filled + " [E]",
 dragshape,
 "Drag again to rotate.",
-lbf, rbb]
+lbf, rbb,
+ctrltrace]
 
 tiptext["poly"] = [
 "Polygon Tool",

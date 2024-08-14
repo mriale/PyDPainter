@@ -780,6 +780,20 @@ class DoEllipse(ToolDragAction):
             elif self.button == 3:
                 drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
 
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            config.save_undo()
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
+        return False
+
     def mousedown(self, coords, button):
         if not button in [1,3]:
             return
@@ -826,6 +840,8 @@ class DoEllipse(ToolDragAction):
         if not (buttons[0] or buttons[2]):
             return
 
+        if self.leave_trace(coords, buttons):
+            return
         config.cycle_handled = True
         if self.state == self.ST_XY:
             config.clear_pixel_draw_canvas()
