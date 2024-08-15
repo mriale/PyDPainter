@@ -100,15 +100,21 @@ which mouse button you press when you paint the shape. If you release the mouse
 button before you close the shape, **PyDPainter** closes the shape for you with
 a straight line from your cursor position to where you began the shape.
 
-Current brush is ignored.
+Current brush is ignored unless you press `ALT` while clicking on the tool.
+Then both tools, drawing and fill, are drawn with the same shape you make on screen, including the possible stroke options (defaults or custom brush, current Mode, spacing options like airbrush, etc.).
+
+![](ALT-areafill.png)
+
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](spacing.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+
 
 Key: `D`
 
-![](areafill-example.png)  
 
-_Tip: Drawing a shape that intersects itself creates an interesting effect of
-unfilled holes. You can fill with background color, drawing with the right
-button._
+
+_Tip: Drawing a shape that intersects itself creates an interesting effect of unfilled holes. You can fill with background color, drawing with the right button._  
+
+![](areafill-example.png)  
 
 ## Line tool
 
@@ -258,6 +264,11 @@ the mouse button and hold. Now you can rotate your ellipse until it has just the
 Key: `e`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+
+With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
+Amazing results can be achieved easily:  
+![](elipse-trace.png)
+
 
 ## Polygon tool
 
