@@ -36,9 +36,15 @@ class MenuActionMulti(MenuAction):
     def get_name(self):
         return ""
 
+    def is_ask_multi(self):
+        return True
+
     def selected(self, attrs):
         if config.anim.num_frames > 1:
-            frame_range = config.anim.ask_apply_multi(self.get_name())
+            if self.is_ask_multi():
+                frame_range = config.anim.ask_apply_multi(self.get_name())
+            else:
+                frame_range = range(config.anim.num_frames)
             curr_frame_bak = config.anim.curr_frame
             for frame_no in frame_range:
                 config.anim.save_curr_frame()
@@ -1099,18 +1105,29 @@ class DoAnimControlSetRate(MenuAction):
     def selected(self, attrs):
         config.anim.fps_list_req(config.pixel_req_canvas)
 
-class DoStencilMake(MenuAction):
-    def selected(self, attrs):
-        stencil_req(config.pixel_req_canvas)
-        config.doKeyAction()
+class DoStencilMake(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
 
-class DoStencilRemake(MenuAction):
     def selected(self, attrs):
+        if stencil_req(config.pixel_req_canvas):
+            super().selected(attrs)
+
+    def selectedMulti(self, attrs):
         config.stencil.remake(config.pixel_canvas)
-        config.doKeyAction()
 
-class DoStencilLockFG(MenuAction):
-    def selected(self, attrs):
+class DoStencilRemake(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
+        config.stencil.remake(config.pixel_canvas)
+
+class DoStencilLockFG(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
         config.stencil.lock_fg(config.pixel_canvas)
         config.doKeyAction()
 
@@ -1132,14 +1149,16 @@ class DoStencilOnOff(MenuAction):
         config.stencil.enable = not config.stencil.enable
         config.doKeyAction()
 
-class DoStencilFree(MenuAction):
-    def selected(self, attrs):
+class DoStencilFree(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
         if config.stencil.image != None:
             config.clear_pixel_draw_canvas()
             config.stencil.draw(config.pixel_canvas)
             config.save_undo()
         config.stencil.free()
-        config.doKeyAction()
 
 class DoBackgroundFix(MenuAction):
     def selected(self, attrs):

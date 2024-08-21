@@ -143,6 +143,9 @@ class LayerStack:
                     lowest_layer = False
                     layer.blit(screen, offset, rect)
                     layer_drawn = True
+                elif not layer.image is None:
+                    layer.blit(screen, offset, rect)
+                    layer_drawn = True
         if not layer_drawn:
             screen.fill(config.pal[0], rect=rect_offset)
 

@@ -210,6 +210,7 @@ class Animation:
             config.loadpal = list(self.frame[f].loadpal)
             config.pixel_canvas = self.frame[f].image.copy()
             config.layers = self.frame[f].layers.copy()
+            config.stencil.reframe(config.pixel_canvas)
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr

@@ -21,6 +21,9 @@ class Stencil:
         self.image = None
         self.mask = None
 
+    def __repr__(self):
+        return f"<Stencil {hex(id(self))}: __enable={self.__enable} is_color={self.is_color} image={self.image} mask=<{hex(id(self.mask))}> >"
+
     def copy(self):
         st = Stencil()
         st.__enable = self.__enable
@@ -50,6 +53,16 @@ class Stencil:
     def make(self, screen, is_stencil_color):
         self.is_color[:] = is_stencil_color[:]
         self.remake(screen)
+
+    def reframe(self, screen):
+        if self.image is None and self.mask is None:
+            return
+        self.image = screen.copy()
+        #create mask
+        surf_array = pygame.surfarray.pixels2d(self.image)
+        self.mask = np.where(self.is_color[surf_array])
+        surf_array = None
+        config.menubar.indicators["stencil"] = self.draw_indicator
 
     def remake(self, screen):
         self.image = screen.copy()
@@ -86,11 +99,32 @@ class Stencil:
         config.stencil.image = None
         config.stencil.mask = None
  
-    def draw(self, screen):
+    def draw(self, screen, offset=(0,0), rect=None):
         if self.__enable and self.image != None and self.mask != None:
+            screen2 = screen.copy()
+            screen2.blit(self.image, offset, rect)
+            screen_size = np.array(screen.get_size())
             surf_array = pygame.surfarray.pixels2d(screen)
-            surf_array2 = pygame.surfarray.pixels2d(self.image)
-            surf_array[self.mask] = surf_array2[self.mask]
+            surf_array2 = pygame.surfarray.pixels2d(screen2)
+
+            if rect is None:
+                rect = [0,0, screen.get_width(), screen.get_height()]
+
+            #translate mask to drawing area
+            screen_size -= [1,1]
+            m = np.array(self.mask).transpose()
+            m -= [rect[0], rect[1]]
+            m += offset
+
+            #clip mask to drawing area
+            m = m[ (m[:,0] >= offset[0]) & (m[:,0] <= screen_size[0]) &
+                   (m[:,1] >= offset[1]) & (m[:,1] <= screen_size[1]) ]
+            m = m.transpose()
+            mask_offset = tuple(m)
+
+            #draw with mask
+            if m.size > 0:
+                surf_array[mask_offset] = surf_array2[mask_offset]
             surf_array = None
             surf_array2 = None
 
