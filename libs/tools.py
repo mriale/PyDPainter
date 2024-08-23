@@ -499,7 +499,7 @@ class DoFill(ToolSingleAction):
             config.subtool_selected = 0
 
     def move(self, coords):
-        pass
+        config.clear_pixel_draw_canvas()
 
     def drag(self, coords, buttons):
         config.cycle_handled = True

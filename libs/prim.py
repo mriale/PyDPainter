@@ -2054,7 +2054,6 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
                         for crange in config.cranges:
                             if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
                                 fill_color = crange.next_color(fill_color)
-                        continue
             elif current_color == bounds_color:
                 continue
 
