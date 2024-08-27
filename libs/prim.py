@@ -367,8 +367,8 @@ class Brush:
         self.prev_x = None
         self.prev_y = None
         self.pen_down = False
-        self.cycle_trans = np.arange(0,255, dtype=np.uint8)
-        self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
+        self.cycle_trans = np.arange(0,256, dtype=np.uint8)
+        self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
 
@@ -566,7 +566,9 @@ class Brush:
                 self.prev_x = None
                 self.prev_y = None
                 self.smear_image = None
-            if drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
+            if drawmode == DrawMode.CYCLE and config.multicycle and not self.image is None:
+                pass
+            elif drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
@@ -586,6 +588,22 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
+        elif drawmode == DrawMode.CYCLE and config.multicycle and not self.image is None:
+            if self.pen_down:
+                #set up translation for color cycling
+                for crange in config.cranges:
+                    if crange.is_active() and crange.low < crange.high:
+                        arange = crange.get_range()
+                        for ci in arange:
+                            self.cycle_trans[ci] = crange.next_color(self.cycle_trans[ci])
+            #Color cycle brush
+            image = self.image.copy()
+            surf_array = pygame.surfarray.pixels2d(image)
+            surf_array2 = self.cycle_trans[surf_array]
+            np.copyto(surf_array, surf_array2)
+            surf_array = None
+            surf_array2 = None
+            image.set_colorkey(self.bgcolor_orig)
         elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
             if self.cache.image[256] == None:
                 self.cache.image[256] = self.render_image(config.color)

@@ -1265,6 +1265,14 @@ class DoPrefsAutoTransp(MenuAction):
         config.auto_transp_on = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsMultiCycle(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.multicycle = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsHideMenus(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1446,6 +1454,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Prefs", [
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            ["/MultiCycle", " ", DoPrefsMultiCycle],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],

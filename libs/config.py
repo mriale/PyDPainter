@@ -455,6 +455,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("flip").checked = self.coords_flip
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("1based").checked = self.coords_1based
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
+        self.menubar.menu_id("prefs").menu_id("multicycle").checked = self.multicycle
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
@@ -580,6 +581,7 @@ class pydpainter:
             f.write("coords_flip=%s\n" % (self.coords_flip))
             f.write("coords_1based=%s\n" % (self.coords_1based))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
+            f.write("multicycle=%s\n" % (self.multicycle))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
@@ -634,6 +636,8 @@ class pydpainter:
                         self.coords_1based = True if vars[1] == "True" else False
                     elif vars[0] == "auto_transp_on":
                         self.auto_transp_on = True if vars[1] == "True" else False
+                    elif vars[0] == "multicycle":
+                        self.multicycle = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
                         self.hide_menus = True if vars[1] == "True" else False
                     elif vars[0] == "force_1_to_1_pixels":
@@ -773,6 +777,7 @@ class pydpainter:
         self.coords_flip = False
         self.coords_1based = False
         self.auto_transp_on = False
+        self.multicycle = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
         self.true_symmetry = False

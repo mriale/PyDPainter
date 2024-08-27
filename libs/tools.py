@@ -315,7 +315,8 @@ class DoDraw(ToolSingleAction):
             if buttons[0]:
                 drawmode = config.drawmode.value
                 if drawmode == DrawMode.CYCLE:
-                    drawmode = DrawMode.COLOR
+                    if config.brush.image is None or config.multicycle == False:
+                        drawmode = DrawMode.COLOR
                 drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode)
                 self.last_coords = coords
             elif buttons[2]:
