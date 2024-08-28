@@ -367,6 +367,7 @@ class Brush:
         self.prev_x = None
         self.prev_y = None
         self.pen_down = False
+        self.cycle_pos = np.zeros(6, dtype=np.uint8)
         self.cycle_trans = np.arange(0,256, dtype=np.uint8)
         self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
@@ -566,7 +567,7 @@ class Brush:
                 self.prev_x = None
                 self.prev_y = None
                 self.smear_image = None
-            if drawmode == DrawMode.CYCLE and config.multicycle and not self.image is None:
+            if drawmode == DrawMode.CYCLE and config.multicycle and self.type == Brush.CUSTOM:
                 pass
             elif drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
                 drawmode = DrawMode.COLOR
@@ -588,14 +589,31 @@ class Brush:
                 else:
                     image = self.image
                     image.set_colorkey(None)
-        elif drawmode == DrawMode.CYCLE and config.multicycle and not self.image is None:
-            if self.pen_down:
-                #set up translation for color cycling
-                for crange in config.cranges:
-                    if crange.is_active() and crange.low < crange.high:
-                        arange = crange.get_range()
-                        for ci in arange:
-                            self.cycle_trans[ci] = crange.next_color(self.cycle_trans[ci])
+        elif drawmode == DrawMode.CYCLE and config.multicycle and self.type == Brush.CUSTOM:
+            #update offset for current cycle range
+            crange = config.get_range(color)
+            coffset=0
+            if crange is None:
+                #don't cycle because color not in range
+                self.cycle_pos[:] = 0
+            else:
+                coffset = color - crange.low
+                crange_index = config.cranges.index(crange)
+                self.cycle_pos[crange_index] = coffset
+                #update offsets for other cycle ranges
+                for i in range(len(config.cranges)):
+                    if i != crange_index:
+                        crange = config.cranges[i]
+                        self.cycle_pos[i] = crange.curr_color(crange.low, coffset) - crange.low
+                
+            #set up translation for color cycling
+            self.cycle_trans = np.arange(0,256, dtype=np.uint8)
+            for crange_index in range(len(config.cranges)):
+                crange = config.cranges[crange_index]
+                if crange.is_active() and crange.low < crange.high:
+                    arange = crange.get_range()
+                    for ci in arange:
+                        self.cycle_trans[ci] = crange.curr_color(ci, self.cycle_pos[crange_index])
             #Color cycle brush
             image = self.image.copy()
             surf_array = pygame.surfarray.pixels2d(image)

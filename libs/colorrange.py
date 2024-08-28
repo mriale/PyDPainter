@@ -105,6 +105,12 @@ class colorrange:
             flags |= 2
         return flags
 
+    def curr_color(self, color_index, offset):
+        if color_index >= self.low and color_index <= self.high and \
+           self.low < self.high:
+            color_index = (((color_index + offset) - self.low) % (self.high-self.low+1)) + self.low
+        return color_index
+
     def next_color(self, color_index):
         if color_index >= self.low and color_index <= self.high:
             if self.reverse:
