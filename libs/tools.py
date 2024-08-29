@@ -240,12 +240,22 @@ class DoDot(ToolSingleAction):
             config.brush.pen_down = True
             config.clear_pixel_draw_canvas()
             config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+        if config.anim.num_frames > 1 and \
+           button in [1,3] and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+            config.save_undo()
+            config.anim.next_frame(doAction=False)
 
     def drag(self, coords, buttons):
         if buttons[0]:
             config.brush.draw(config.pixel_canvas, config.color, coords)
         elif buttons[2]:
             config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+        if config.anim.num_frames > 1 and \
+           (buttons[0] or buttons[2]) and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+            config.save_undo()
+            config.anim.next_frame(doAction=False)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -301,6 +311,11 @@ class DoDraw(ToolSingleAction):
                 config.clear_pixel_draw_canvas()
                 config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                 self.last_coords = coords
+            if config.anim.num_frames > 1 and \
+               button in [1,3] and \
+               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                config.save_undo()
+                config.anim.next_frame(doAction=False)
 
     def drag(self, coords, buttons):
         if config.subtool_selected:
@@ -317,11 +332,16 @@ class DoDraw(ToolSingleAction):
                 if drawmode == DrawMode.CYCLE:
                     if config.brush.image is None or config.multicycle == False:
                         drawmode = DrawMode.COLOR
-                drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode)
+                drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode, animpaint=False)
                 self.last_coords = coords
             elif buttons[2]:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.last_coords, coords, erase=True)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.last_coords, coords, erase=True, animpaint=False)
                 self.last_coords = coords
+            if config.anim.num_frames > 1 and \
+               (buttons[0] or buttons[2]) and \
+               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                config.save_undo()
+                config.anim.next_frame(doAction=False)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -469,9 +489,9 @@ class DoCurve(ToolSingleAction):
         if self.line_start:
             config.clear_pixel_draw_canvas()
             if button == 1:
-                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords)
+                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
             elif button == 3:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, erase=True)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True, erase=True)
             self.line_end = coords
 
     def keydown(self, key, mod, unicode):

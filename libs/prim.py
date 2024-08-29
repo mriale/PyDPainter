@@ -844,7 +844,7 @@ class CoordList:
     def prepend(self, listnum, coord):
         self.coordlist[listnum].insert(0, coord)
 
-    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None, erase=False):
+    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None, erase=False, animpaint=True):
         numpoints = 0
         numcolors = 0
         pointspercolor = 0
@@ -855,13 +855,23 @@ class CoordList:
             if xormode == True:
                 primprops = PrimProps()
             else:
-                primprops = config.primprops
+                primprops = copy.deepcopy(config.primprops)
         else:
+            primprops = copy.deepcopy(primprops)
             drawmode = primprops.drawmode.value if drawmode == -1 else drawmode
 
         xormode = primprops.xor if xormode == -1 else xormode
         handlesymm = primprops.handlesymm if handlesymm == -1 else handlesymm
         interrupt = primprops.interrupt if interrupt == -1 else interrupt
+
+        if animpaint and config.anim.num_frames > 1 and \
+           not xormode and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                if primprops.drawmode.spacing == DrawMode.CONTINUOUS:
+                    primprops.drawmode.spacing = DrawMode.N_TOTAL
+                    primprops.drawmode.n_total_value = config.anim.num_frames
+        else:
+            animpaint = False
 
         #handle color cycling
         arange = []
@@ -905,6 +915,11 @@ class CoordList:
                             config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
                     else:
                         config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
+
+                if animpaint and not interrupt:
+                    config.save_undo()
+                    config.anim.next_frame(doAction=False)
+                    screen = config.pixel_canvas
 
                 if interrupt and config.has_event():
                     return
@@ -1210,7 +1225,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
 
-def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False):
+def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     if (xormode and not handlesymm):
         coordfrom_list = [coordfrom]
         coordto_list = [coordto]
@@ -1220,10 +1235,10 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
     for i in range(len(coordfrom_list)):
         if interrupt and config.has_event():
             return
-        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase)
+        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase, animpaint=animpaint)
 
 
-def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False):
+def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     x,y = int(coordfrom[0]), int(coordfrom[1])
     x2,y2 = int(coordto[0]), int(coordto[1])
 
@@ -1282,7 +1297,7 @@ def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coor
     if coordsonly:
         return cl.coordlist[0]
 
-    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt, erase=erase)
+    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt, erase=erase, animpaint=animpaint)
 
 
 #Bresenham Quardric Bezier curve algorithm from:

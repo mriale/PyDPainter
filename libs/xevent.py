@@ -24,15 +24,20 @@ class Xevent(object):
     def __init__(self):
         self.last_key = None
         self.xq = []
+        self.keys_down = []
 
     def dedup_new(self, new_xevents):
         for e in list(new_xevents):
             if e.type == KEYDOWN:
+                if not e.key in self.keys_down:
+                    self.keys_down.append(e.key)
                 if e.key == self.last_key and e.key in self.MOD_KEYS:
                     new_xevents.remove(e)
                     continue
                 self.last_key = e.key
             elif e.type == KEYUP:
+                if e.key in self.keys_down:
+                    self.keys_down.remove(e.key)
                 self.last_key = None
         return new_xevents
 

@@ -248,14 +248,14 @@ class Animation:
             self.curr_frame = self.num_frames
         self.show_curr_frame()
 
-    def next_frame(self):
+    def next_frame(self, doAction=True):
         if self.num_frames == 1:
             return
         self.save_curr_frame()
         self.curr_frame += 1
         if self.curr_frame > self.num_frames:
             self.curr_frame = 1
-        self.show_curr_frame()
+        self.show_curr_frame(doAction)
 
     def add_frame(self):
         config.animtoolbar.tool_id("addframe").state = 0
