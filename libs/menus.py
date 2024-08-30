@@ -1105,6 +1105,36 @@ class DoAnimControlSetRate(MenuAction):
     def selected(self, attrs):
         config.anim.fps_list_req(config.pixel_req_canvas)
 
+class DoAnimControlPrevious(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.prev_frame()
+
+class DoAnimControlNext(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.next_frame()
+
+class DoAnimControlGoto(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.ask_frame()
+
+class DoAnimControlPlay(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play(loop=True)
+
+class DoAnimControlPlayOnce(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play()
+
+class DoAnimControlPingPong(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play(ping_pong=True)
+
 class DoStencilMake(MenuActionMulti):
     def is_ask_multi(self):
         return False
@@ -1422,12 +1452,12 @@ def init_menubar(config_in):
             ]],
             ["Control", [
                 ["Set Rate...", " ", DoAnimControlSetRate],
-                ["Previous", "1", DoDummy],
-                ["Next", "2", DoDummy],
-                ["Go to...", "3", DoDummy],
-                ["Play", "4", DoDummy],
-                ["Play once", "5", DoDummy],
-                ["Ping-pong", "6", DoDummy],
+                ["Previous", "1", DoAnimControlPrevious],
+                ["Next", "2", DoAnimControlNext],
+                ["Go to...", "3", DoAnimControlGoto],
+                ["Play", "4", DoAnimControlPlay],
+                ["Play once", "5", DoAnimControlPlayOnce],
+                ["Ping-pong", "6", DoAnimControlPingPong],
             ]],
             ["Anim Brush"],
         ]])
