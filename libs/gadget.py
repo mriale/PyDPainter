@@ -384,6 +384,15 @@ class Gadget(object):
                             g.need_redraw = True
                             g.value -= self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+            if event.type == KEYDOWN:
+                if event.key in [K_RETURN, K_KP_ENTER] and \
+                   g.label in ["OK", "Yes"]:
+                    self.state = 0
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                if event.key == K_ESCAPE and \
+                   g.label in ["Cancel", "No"]:
+                    self.state = 0
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
 
         #selected
         if g.state == 1:
