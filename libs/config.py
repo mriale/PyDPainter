@@ -285,6 +285,8 @@ class pydpainter:
     def resize_display(self, resize_window=True, first_init=False, force=False):
         if config.fullscreen:
             if force:
+                pygame.event.set_grab(True)
+                pygame.event.set_keyboard_grab(True)
                 config.scale_bak = config.scale
             pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
@@ -295,6 +297,8 @@ class pydpainter:
             config.window_size = new_window_size
             return
         elif force:
+            pygame.event.set_grab(False)
+            pygame.event.set_keyboard_grab(False)
             config.scale = config.scale_bak
             config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
