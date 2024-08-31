@@ -1856,6 +1856,8 @@ class PalGadget(ToolGadget):
                 ry = swh * 4 // 10
                 rx = sww * 4 // 24
                 orect = [scx-rx, scy-ry, rx*2, ry*2]
+                if config.color > len(config.pal):
+                    config.color = 1
                 pygame.draw.ellipse(screen, config.pal[config.color], orect, 0)
             elif self.label == "^": # direction arrow
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
