@@ -697,6 +697,7 @@ class pydpainter:
         self.text_tool_font_underline = False
         self.text_tool_font = pygame.font.Font(pygame.font.match_font(self.text_tool_font_name), self.text_tool_font_size)
         self.last_recompose_timer = 0
+        self.window_canvas_rect = [0,0,1,1]
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h
         self.max_width_init = self.dinfo.current_w
@@ -1045,12 +1046,17 @@ class pydpainter:
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
-        if config.fullscreen:
-            screenX, screenY = self.max_width, self.max_height
-        else:
-            screenX, screenY = self.window_size
-        mouseX = mouseX * self.screen_width // screenX
-        mouseY = mouseY * self.screen_height // screenY
+        ox,oy,screenX,screenY = config.window_canvas_rect
+
+        #constrain mouse to edge of screen
+        mouseX = max(ox, mouseX)
+        mouseX = min(mouseX, screenX-ox-1)
+        mouseY = max(oy, mouseY)
+        mouseY = min(mouseY, screenY-oy-1)
+
+        #scale window mouse coords to pixel coords
+        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
+        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
         return((mouseX, mouseY))
 
     def calc_page_pos(self, mouseX, mouseY):
@@ -1083,12 +1089,10 @@ class pydpainter:
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
 
-        if config.fullscreen:
-            screenX, screenY = self.max_width, self.max_height
-        else:
-            screenX, screenY = self.window_size
-        mouseX = mouseX * self.screen_width // screenX
-        mouseY = mouseY * self.screen_height // screenY
+        ox,oy,screenX,screenY = config.window_canvas_rect
+
+        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
+        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
 
         mouseside = 0
 
@@ -1347,6 +1351,7 @@ class pydpainter:
             oy = (self.screen.get_height() - scaledup.get_height()) // 2
         else:
             ox, oy = 0,0
+        config.window_canvas_rect = [ox,oy, self.window_size[0], self.window_size[1]]
         self.screen.blit(scaledup,(ox,oy))
         scaledup = None
 
