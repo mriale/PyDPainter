@@ -286,7 +286,8 @@ class pydpainter:
         if config.fullscreen:
             if force:
                 pygame.event.set_grab(True)
-                pygame.event.set_keyboard_grab(True)
+                if "set_keyboard_grab" in dir(pygame.event):
+                    pygame.event.set_keyboard_grab(True)
                 config.scale_bak = config.scale
             pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
@@ -298,7 +299,8 @@ class pydpainter:
             return
         elif force:
             pygame.event.set_grab(False)
-            pygame.event.set_keyboard_grab(False)
+            if "set_keyboard_grab" in dir(pygame.event):
+                pygame.event.set_keyboard_grab(False)
             config.scale = config.scale_bak
             config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
