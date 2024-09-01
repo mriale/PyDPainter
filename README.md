@@ -2,6 +2,8 @@
 
 A usable pixel art program written in Python
 
+![screenshot](pydpainter-screenshot.png)
+
 ## About
 
 PyDPainter, pronounced "Pied Painter" (like Pied Piper), is an attempt to create a usable pixel art program in Python using PyGame.
@@ -17,6 +19,8 @@ have become popular once again. Many tools to deal with this medium are either t
 or too crude. This project is an attempt to bring back an old but reliable tool and
 enhance it with some features to help it better coexist in the modern world.
 
+Latest Release (with Windows EXE): https://github.com/mriale/PyDPainter/releases/latest
+
 YouTube video: [Quick PyDPainter Demo](https://youtu.be/GGfsSvbrb4o)
 
 Ko-fi donation page:
@@ -24,8 +28,11 @@ https://ko-fi.com/mriale
 
 Facebook group: [PyDPainter](https://www.facebook.com/groups/583338860398152/?ref=share)
 
+Mastodon: [@PyDPainter@mastodon.social](https://mastodon.social/@PyDPainter)
+
 See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current progress.
 
 Documentation: [Table of Contents](docs/TOC.md)
 
-![screenshot](pydpainter-screenshot.png)
+**PyDPainter Copyright (C) 2019-2024 Mark Riale**<br>
+This program is licensed under the GPLv3 or later. See [LICENSE](LICENSE) file for more details.
