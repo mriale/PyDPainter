@@ -21,7 +21,9 @@ enhance it with some features to help it better coexist in the modern world.
 
 Latest Release (with Windows EXE): https://github.com/mriale/PyDPainter/releases/latest
 
-YouTube video: [Quick PyDPainter Demo](https://youtu.be/GGfsSvbrb4o)
+YouTube videos:
+* [Quick PyDPainter Demo](https://youtu.be/GGfsSvbrb4o)
+* [PyDPainter 2.0 Trailer](https://youtu.be/l385Z7_CRB0)
 
 Ko-fi donation page:
 https://ko-fi.com/mriale
