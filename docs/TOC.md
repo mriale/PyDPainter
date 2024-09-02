@@ -28,4 +28,5 @@ Table of Contents
 - [Plasma Texture Tutorial](tutorials/src/plasma/Plasma.md)
 - [Planet Tutorial](tutorials/src/planet/Planet.md)
 - [Galaxy Tutorial](tutorials/src/galaxy/Galaxy.md)
+- [Animpainting Tutorial](tutorials/src/animpainting/animpainting.md)
 
