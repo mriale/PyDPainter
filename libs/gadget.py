@@ -125,121 +125,6 @@ class Action(object):
         return False
 
 
-"""
-Layers
-
-+window (w*zoom, h*zoom)
-  |
-  +scanlines (h*2)
-    |
-    +pixel stack
-      |
-      +pixel_canvas
-      +toolbar/menu
-      +(requestor)
-      +mouse pointer
-"""
-
-
-class Layer(object):
-    """This class composites a stack of bitmaps scaling as necessary"""
-    def __init__(self, screen, rect=None, offset=(0,0), scaletype=0, visible=True, req=None, sublayers=[]):
-        self.screen = screen
-        self.rect = rect
-        self.offset = offset
-        self.scaletype = scaletype
-        self.visible = visible
-        self.req = req
-        self.sublayers = sublayers
-        self.parent = None
-        self.parent_screen = None
-        for layer in self.sublayers:
-            layer.parent = self
-
-    def add(self, layer):
-        layer.parent = self
-        self.sublayers.append(layer)
-
-    def screen_to_layer_coords(self, screen_coords):
-        x, y = screen_coords
-        l = self
-        while l != None:
-            x -= l.offset[0]
-            y -= l.offset[1]
-            if l.scaletype > 0 and l.parent_screen != None:
-                w1, h1 = l.screen.get_size()
-                w2, h2 = l.parent_screen.get_size()
-                x = x * w1 // w2
-                y = y * w1 // w2
-            l = l.parent
-
-        return (x, y)
-
-    def process_event(self, screen, event):
-        ge = []
-
-        if not self.visible:
-            return ge
-
-        if event.type == MOUSEMOTION or event.type == MOUSEBUTTONDOWN or event.type == MOUSEBUTTONUP:
-            event.newpos = self.screen_to_layer_coords(event.pos)
-
-        for layer in self.sublayers:
-            ge.extend(layer.process_event(self.screen, event))
-
-        if self.req != None:
-            ge.extend(self.req.process_event(screen, event))
-
-        return ge
-
-    def draw(self, parent_screen):
-        self.parent_screen = parent_screen
-
-        if not self.visible:
-            return
-
-        if self.req != None:
-            self.req.draw(self.screen)
-
-        for layer in self.sublayers:
-            layer.draw(self.screen)
-
-        if self.scaletype == 0:
-            scaled_image = self.screen
-        elif self.scaletype == 1:
-            scaled_image = pygame.transform.scale(self.screen, parent_screen.get_size())
-        elif self.scaletype == 2:
-            if self.screen.get_bitsize() < 24:
-                screen_rgb = self.screen.convert()
-            else:
-                screen_rgb = self.screen
-            scaled_image = pygame.transform.smoothscale(screen_rgb, parent_screen.get_size())
-
-        parent_screen.blit(scaled_image, self.offset, self.rect)
-
-
-class Cursor(Layer):
-    """This class renders the mouse pointer as a layer, which acts as a sprite"""
-    def set_centers(self, center):
-        self.center = center
-        self.shape = 0
-
-    def get_mouse_pos(self):
-        return self.screen_to_layer_coords(pygame.mouse.get_pos())
-
-    def draw(self, parent_screen):
-        #draw mouse cursor
-        if not pygame.mouse.get_focused():
-            return
-
-        if not self.visible and self.shape != 1:
-            return
-
-        mouseX, mouseY = self.get_mouse_pos()
-        centerX, centerY = self.center[self.shape]
-        parent_screen.blit(self.screen, (mouseX-centerX, mouseY-centerY), (16*self.shape,0,16,self.screen.get_height()))
-
-
 class GadgetEvent(object):
     TYPE_GADGETDOWN, TYPE_GADGETUP, TYPE_MOUSEMOVE, TYPE_KEY = range(4)
     typearray = ['TYPE_GADGETDOWN', 'TYPE_GADGETUP', 'TYPE_MOUSEMOVE', 'TYPE_KEY']
@@ -277,6 +162,7 @@ class Gadget(object):
         self.fonty = fonty
         self.fonth = int(fonty / 1.5)
         self.error = False
+        self.scrolldelta = 1
         self.need_redraw = True
         if value == None:
             if type == self.TYPE_PROP or type == self.TYPE_PROP_VERT:
@@ -368,7 +254,9 @@ class Gadget(object):
                 pygame.draw.rect(screen, hcolor, (x+xo,y+yo, w-px, py), 0)
                 pygame.draw.rect(screen, hcolor, (x+xo,y+yo, px, h), 0)
         elif self.type == Gadget.TYPE_PROP:
-            propo = (w-self.fontx-px) * self.value // (self.maxvalue-1) + px
+            propo = px
+            if self.maxvalue-1 != 0:
+                propo = (w-self.fontx-px) * self.value // (self.maxvalue-1) + px
             self.screenrect2 = (x+xo+propo, y+yo, self.fontx, h)
             diamond = ((propo+x+xo+(self.fontx//2)-px, y+yo+py+py+py),
                        (propo+x+xo+(self.fontx)-(3*px), y+yo+(self.fonth//2)+py),
@@ -384,7 +272,9 @@ class Gadget(object):
                 pygame.draw.polygon(screen, bgcolor, diamond, 0)
                 pygame.draw.line(screen, hcolor, diamond[3], diamond[0])
         elif self.type == Gadget.TYPE_PROP_VERT:
-            propo = (h-self.fonth) * (self.maxvalue-1-self.value) // (self.maxvalue-1)
+            propo = 0
+            if self.maxvalue-1 != 0:
+                propo = (h-self.fonth) * (self.maxvalue-1-self.value) // (self.maxvalue-1)
             diamond = ((x+xo+(self.fontx//2)-px,y+yo+py+py+propo),
                        (x+xo+w-(3*px), y+yo+(self.fonth//2)+propo),
                        (x+xo+(self.fontx//2)-px,y+yo+self.fonth-py-py+propo),
@@ -411,12 +301,14 @@ class Gadget(object):
                 else:
                     c = " "
                 font.blitstring(screen, (x+xo+px+((self.pos-self.scrollpos)*self.fontx),y+yo+py+py), c, hcolor, (255,0,0))
-            if self.numonly and not re.fullmatch('^-?\d*\.?\d+$', self.value):
-                #numeric error
+            if self.numonly:
+                if not re.fullmatch(r'^-?\d*\.?\d+$', self.value):
+                    #numeric error
+                    self.error = True
+                else:
+                    self.error = False
+            if self.error:
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
-                self.error = True
-            else:
-                self.error = False
         elif self.type == Gadget.TYPE_LABEL:
             font.blitstring(screen, (x+xo,y+yo+2), self.label, fgcolor, bgcolor)
         if not self.enabled:
@@ -477,19 +369,30 @@ class Gadget(object):
                         g.state = 1
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
                 #handle scroll up
-                elif event.type == MOUSEBUTTONDOWN and event.button == 4:
-                    if g.type == Gadget.TYPE_PROP or g.type == Gadget.TYPE_PROP_VERT:
-                        if g.value < g.maxvalue-1:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
+                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                        if g.value + self.scrolldelta <= g.maxvalue-1 and \
+                           g.value + self.scrolldelta >= 0:
                             g.need_redraw = True
-                            g.value += 1
+                            g.value += self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 #handle scroll down
-                elif event.type == MOUSEBUTTONDOWN and event.button == 5:
-                    if g.type == Gadget.TYPE_PROP or g.type == Gadget.TYPE_PROP_VERT:
-                        if g.value > 0:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
+                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                        if g.value - self.scrolldelta <= g.maxvalue-1 and \
+                           g.value - self.scrolldelta >= 0:
                             g.need_redraw = True
-                            g.value -= 1
+                            g.value -= self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+            if event.type == KEYDOWN:
+                if event.key in [K_RETURN, K_KP_ENTER] and \
+                   g.label in ["OK", "Yes"]:
+                    self.state = 0
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                if event.key == K_ESCAPE and \
+                   g.label in ["Cancel", "No"]:
+                    self.state = 0
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
 
         #selected
         if g.state == 1:
@@ -725,6 +628,7 @@ class ListGadget(Gadget):
                             item = 0
                         g.value = item
                         g.need_redraw = True
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                     #List slider
                     elif g.label == "@":
                         #drag slider
@@ -1107,73 +1011,4 @@ def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos
     #    print("'" + line + "'")
 
     return req
-
-def main():
-
-    #Initialize the configuration settings
-    pygame.init()
-    clock = pygame.time.Clock()
-
-    req = str2req("Color Palette", """
-             %%%%%%
- R G B H S V ______
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-:|:|:|:|:|:| ######
-[SPREAD]   [Ex~COPY]
-[RANGE][1~2~3~4~5~6]
-SPEED------------[v]
-[Cancel] [Undo] [OK]
-""", "%#:")
-
-    sx,sy = 200,200
-
-    scaled_screen = pygame.display.set_mode((sx*3,sy*3), RESIZABLE)
-    screen = pygame.Surface((sx,sy),0)
-    req_screen = pygame.Surface((sx,sy),0)
-    cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
-    cursor_layer = Cursor(cursor_images)
-    cursor_layer.set_centers([(7,7), (1,1), (7,15), (0,15)])
-    #layer = Layer(screen, offset=(10,10), scaletype=1, req=req, sublayers=[cursor_layer])
-    layer = Layer(screen, scaletype=1, sublayers=[Layer(req_screen, req=req), cursor_layer])
-
-    pygame.display.set_caption('gadget test')
-
-    strg = req.gadget_id("13_1")
-    rg = req.gadget_id("1_2")
-    gg = req.gadget_id("3_2")
-    bg = req.gadget_id("5_2")
-    strg.value = hex(rg.value)[2] + hex(gg.value)[2] + hex(bg.value)[2]
-
-    running = 1
-
-    while running:
-        
-        #screen.fill((0,0,0))
-
-        event = pygame.event.wait()
-        if event.type == QUIT:
-            running = 0
-
-        gevents = layer.process_event(screen, event)
-
-        for ge in gevents:
-            #print(ge)
-            if ge.gadget.type == Gadget.TYPE_PROP or ge.gadget.type == Gadget.TYPE_PROP_VERT:
-                strg.value = hex(rg.value)[2] + hex(gg.value)[2] + hex(bg.value)[2]
-
-        #req.draw(screen)
-        #cursor_layer.offset = pygame.mouse.get_pos()
-        layer.draw(scaled_screen)
-
-        pygame.display.flip()
-        #clock.tick(60)
-        
-
-if __name__ == '__main__': main()
 

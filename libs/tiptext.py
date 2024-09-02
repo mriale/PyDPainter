@@ -10,6 +10,8 @@ outline = "Upper left of tool draws an outline"
 filled = "Lower right of tool draws a filled area"
 dragshape = "Drag out shape on canvas."
 
+ctrltrace = "- hold [CTRL] while dragging to leave traces"
+
 tiptext["dot"] = [
 "Dot Tool [s]",
 "Drag out dotted strokes on canvas.",
@@ -19,6 +21,7 @@ tiptext["draw"] = [
 "Draw / Area Tool",
 "Upper left of tool is Draw [d]",
 "Lower right of tool is filled Area [D]",
+"- [ALT]-click filled Area tool to outline with brush",
 "Drag out continuous strokes on canvas.",
 lbf, rbb]
 
@@ -26,6 +29,7 @@ tiptext["line"] = [
 "Line Tool [v]",
 "Drag out straight line on canvas.",
 lbf, rbb,
+ctrltrace,
 "Right-click tool to adjust Spacing. [V]"]
 
 tiptext["curve"] = [
@@ -34,6 +38,7 @@ tiptext["curve"] = [
 "2. Move mouse to adjust curve",
 "3. Click again to finalize curve",
 lbf, rbb,
+ctrltrace,
 "Right-click tool to adjust Spacing."]
 
 tiptext["fill"] = [
@@ -54,14 +59,17 @@ tiptext["rect"] = [
 outline + " [r]",
 filled + " [R]",
 dragshape,
-lbf, rbb]
+lbf, rbb,
+ctrltrace,
+"- hold [SHIFT] to constrain to square"]
 
 tiptext["circle"] = [
 "Circle Tool",
 outline + " [c]",
 filled + " [C]",
 dragshape,
-lbf, rbb]
+lbf, rbb,
+ctrltrace]
 
 tiptext["ellipse"] = [
 "Ellipse Tool",
@@ -69,7 +77,8 @@ outline + " [e]",
 filled + " [E]",
 dragshape,
 "Drag again to rotate.",
-lbf, rbb]
+lbf, rbb,
+ctrltrace]
 
 tiptext["poly"] = [
 "Polygon Tool",
@@ -82,9 +91,11 @@ lbf, rbb]
 tiptext["brush"] = [
 "Brush Tool [b] (rectangle or polygon)",
 "Click brush tool again to toggle rectangle or polygon shape.",
+"Right-click brush tool to restore previous brush.",
 "Draw shape on canvas to pick up brush.",
 "- left button to copy canvas",
-"- right button to cut out canvas with background color"]
+"- right button to cut out canvas with background color",
+"- hold [SHIFT] to constrain to square"]
 
 tiptext["text"] = [
 "Text Tool [t]",
@@ -157,3 +168,42 @@ tiptext["scale"]     = ["Scale window to be larger or smaller"]
 tiptext["fullscreen"]= ["Toggle full-screen mode [F11]"]
 tiptext["scanlines"] = ["Toggle retro CRT scanline simulation"]
 tiptext["aspect"]    = ["Select whether pixels are square or rectangular"]
+
+tiptext["first"]     = ["First Frame [Shift-1] or [Ctrl-Home]"]
+tiptext["prev"]      = ["Previous Frame [1] or [Page Up]"]
+tiptext["play"]      = ["Play Animation [4] and [Esc]/[Space] to stop"]
+tiptext["next"]      = ["Next Frame [2] or [Page Down]"]
+tiptext["last"]      = ["Last Frame [Shift-2] or [Ctrl-End]"]
+tiptext["palettekey"]= ["Palette key frame","Global/Local/None"]
+tiptext["fps"]       = ["Set Anim Rate"]
+tiptext["addframe"]  = ["Add Frames"]
+tiptext["deleteframe"] = ["Delete Frames"]
+
+tiptext["merge"]     = ["Merge current layer down"]
+tiptext["clone"]     = ["Clone current layer"]
+tiptext["addlayer"]  = ["Add layer"]
+tiptext["dellayer"]  = ["Delete layer"]
+tiptext["movelayer"] = ["Move current layer up or down"]
+tiptext["visible0"]  = ["Toggle visibility - background layer"]
+vlayer_text = "Toggle visibility - layer %d"
+tiptext["visible1"]  = [vlayer_text%(1)]
+tiptext["visible2"]  = [vlayer_text%(2)]
+tiptext["visible3"]  = [vlayer_text%(3)]
+tiptext["visible4"]  = [vlayer_text%(4)]
+tiptext["visible5"]  = [vlayer_text%(5)]
+tiptext["visible6"]  = [vlayer_text%(6)]
+tiptext["visible7"]  = [vlayer_text%(7)]
+tiptext["visible8"]  = [vlayer_text%(8)]
+tiptext["visible9"]  = [vlayer_text%(9)]
+tiptext["layer0"]    = ["Draw on background layer"]
+layer_text = "Draw on layer %d"
+tiptext["layer1"]    = [layer_text%(1)]
+tiptext["layer2"]    = [layer_text%(2)]
+tiptext["layer3"]    = [layer_text%(3)]
+tiptext["layer4"]    = [layer_text%(4)]
+tiptext["layer5"]    = [layer_text%(5)]
+tiptext["layer6"]    = [layer_text%(6)]
+tiptext["layer7"]    = [layer_text%(7)]
+tiptext["layer8"]    = [layer_text%(8)]
+tiptext["layer9"]    = [layer_text%(9)]
+

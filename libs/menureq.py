@@ -40,30 +40,19 @@ def get_dir(path):
     return dirlist + filelist
 
 
-filetype_list = np.array([
-["IFF", "Amiga IFF image"],
-["ILBM","Amiga IFF image"],
-["LBM", "PC IFF PBM image"],
-["BMP", "Windows BMP image"],
-["JPG", "JPEG image (lossy)"],
-["JPEG","JPEG image (lossy)"],
-["PNG", "PNG image"],
-["TGA", "Targa image"],
-])
-
-def get_type(filename):
+def get_type(filename, filetype_list):
     retval = "type"
     ext = ""
     matches = re.search(r"\.([^.]+)$", filename)
     if matches:
         ext = matches.group(1).upper()
-        if ext in filetype_list[:,0]:
+        if not filetype_list is None and ext in filetype_list[:,0]:
             retval = ext
         else:
             ext = ""
     return (ext, ("%-4s\x98" % (retval)))
 
-def pick_file_type(screen, req, file_typeg, ext):
+def pick_file_type(screen, req, file_typeg, ext, filetype_list):
     retval = -1
     req_backup = screen.copy()
     rx,ry,rw,rh = file_typeg.rect
@@ -73,7 +62,7 @@ def pick_file_type(screen, req, file_typeg, ext):
     ly = ry-(fonty*len(filetype_list)+fonty//2)
     lw = rx+rw-lx
     lh = ry-ly
-    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (lx,ly,lw,lh))
+    pickg = PPtypelist(Gadget.TYPE_CUSTOM, "#", (lx,ly,lw,lh), filetype_list=filetype_list)
     pickg.value = -1
     req.gadgets.append(pickg)
     req.draw(screen)
@@ -83,7 +72,7 @@ def pick_file_type(screen, req, file_typeg, ext):
     wait_for_mouseup = 0
 
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         if event.type == MOUSEBUTTONDOWN and event.button == 1:
             x,y = req.mouse_pixel_mapper(event)
             if pickg.pointin((x,y), pickg.screenrect):
@@ -104,7 +93,8 @@ def pick_file_type(screen, req, file_typeg, ext):
     return retval
 
 class PPtypelist(Gadget):
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, filetype_list=None):
+        self.filetype_list = filetype_list
         super(PPtypelist, self).__init__(type, label, rect, value, maxvalue, id)
         
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -133,8 +123,8 @@ class PPtypelist(Gadget):
                 screen.fill(bgcolor)
                 pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
                 pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
-                for i in range(len(filetype_list)):
-                    (label,desc) = filetype_list[i]
+                for i in range(len(self.filetype_list)):
+                    (label,desc) = self.filetype_list[i]
                     if self.value == i:
                         bg = fgcolor
                         fg = bgcolor
@@ -166,8 +156,62 @@ class PPtypelist(Gadget):
                     g.need_redraw = True
         return ge
 
+def ask_dir_req(screen):
+    # save previous requestor
+    prr = config.pixel_req_rect
+    prc = config.pixel_req_canvas.copy()
+    oldcursor = config.cursor.shape
+    config.cursor.shape = config.cursor.NORMAL
+    retval = ""
 
-def file_req(screen, title, action_label, filepath, filename, has_type=False):
+    req = str2req("Create Directory", """
+
+Dir Name: ______________________
+
+[Cancel][OK]
+""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    dirnameg = req.gadget_id("10_1")
+    dirnameg.value = ""
+    dirnameg.maxvalue = 255
+
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = config.xevent.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK" and not req.has_error():
+                    retval = dirnameg.value
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0 
+
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    # restore previous requestor
+    config.pixel_req_rect = prr
+    config.pixel_req_canvas.blit(prc, (0,0))
+    config.cursor.shape = oldcursor
+
+    return retval
+
+def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
+    if filetype_list is None:
+        has_type = False
+    else:
+        has_type = True
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -181,7 +225,7 @@ Path:_________________________
 ############################@@
 ############################^^
 File:___________________%s
-[%s][Cancel]
+[%s][Cancel]  [Make Dir]
 """%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -231,7 +275,7 @@ File:___________________%s
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
 
     #Initialize file type
-    ext, file_typeg.label = get_type(filename)
+    ext, file_typeg.label = get_type(filename, filetype_list)
     file_typeg.need_redraw = True
 
     #take care of non-square pixels
@@ -249,7 +293,7 @@ File:___________________%s
 
     while running or wait_for_mouseup:
         string_enter = False
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -263,8 +307,20 @@ File:___________________%s
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget.label == "Make Dir":
+                    newdir = ask_dir_req(screen)
+                    if newdir != "":
+                        newdirpath = os.path.join(filepath, newdir)
+                        try:
+                            os.mkdir(newdirpath)
+                            list_itemsg.items = get_dir(filepath)
+                            list_itemsg.need_redraw = True
+                            list_sliderg.need_redraw = True
+                        except:
+                            libs.menus.io_error_req("Directory Error", "Unable to create directory:\n%s", newdirpath)
+                            running = 0
                 elif ge.gadget == file_typeg:
-                    picki = pick_file_type(screen, req, file_typeg, ext)
+                    picki = pick_file_type(screen, req, file_typeg, ext, filetype_list)
                     if picki >=0 and picki < len(filetype_list):
                         filename = file_nameg.value
                         if filename != "":
@@ -274,7 +330,7 @@ File:___________________%s
                                 filename += "." + filetype_list[picki][0].lower()
                         file_nameg.value = filename
                         file_nameg.need_redraw = True
-                    ext, file_typeg.label = get_type(filename)
+                    ext, file_typeg.label = get_type(filename, filetype_list)
                     file_typeg.need_redraw = True
             if ge.gadget.type == Gadget.TYPE_STRING:
                 if ge.type == ge.TYPE_GADGETUP and ge.gadget == file_pathg:
@@ -286,10 +342,10 @@ File:___________________%s
                     list_sliderg.need_redraw = True
                 if ge.type == ge.TYPE_GADGETUP and event.type == KEYDOWN and event.key == K_RETURN:
                     string_enter = True
-                ext, file_typeg.label = get_type(file_nameg.value)
+                ext, file_typeg.label = get_type(file_nameg.value, filetype_list)
                 file_typeg.need_redraw = True
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             if event.type == MOUSEBUTTONDOWN and event.button == 1 and list_itemsg.pointin(config.get_mouse_pixel_pos(event), list_itemsg.screenrect):
                 filename = list_itemsg.items[list_itemsg.value]
                 if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
@@ -308,7 +364,7 @@ File:___________________%s
                 else:
                     file_nameg.value = filename
                     file_nameg.need_redraw = True
-                    ext, file_typeg.label = get_type(filename)
+                    ext, file_typeg.label = get_type(filename, filetype_list)
                     file_typeg.need_redraw = True
                     if pygame.time.get_ticks() - last_click_ms < 500:
                         if file_nameg.value != "":
@@ -324,10 +380,10 @@ File:___________________%s
                     filename = list_itemsg.items[list_itemsg.value]
                     if len(filename) > 2 and (filename[0:2] == "\x92\x93" or filename[0:2] == ".."):
                         file_nameg.value = ""
-                        ext, file_typeg.label = get_type("")
+                        ext, file_typeg.label = get_type("", filetype_list)
                     else:
                         file_nameg.value = filename
-                        ext, file_typeg.label = get_type(filename)
+                        ext, file_typeg.label = get_type(filename, filetype_list)
 
                     file_nameg.state = 0
                     file_nameg.need_redraw = True
@@ -440,6 +496,28 @@ Resize Page: [Yes~No]
         gResize[i].state = (resize_page == (i == 1))
         gResize[i].need_redraw = True
 
+    def apply_cdepth():
+        if cdepth == 16:
+            g12bit.state = 1
+            gDepth[5].label = "EHB"
+            gDepth[5].need_redraw = True
+            gDepth[6].enabled = False
+            gDepth[6].need_redraw = True
+            gDepth[7].enabled = False
+            gDepth[7].need_redraw = True
+        else:
+            g24bit.state = 1
+            gDepth[4].enabled = True
+            gDepth[4].need_redraw = True
+            gDepth[5].enabled = True
+            gDepth[5].need_redraw = True
+            gDepth[5].label = " 64"
+            gDepth[5].need_redraw = True
+            gDepth[6].enabled = True
+            gDepth[6].need_redraw = True
+            gDepth[7].enabled = True
+            gDepth[7].need_redraw = True
+
     def apply_aspect():
         global cdepth
         if aspect == 0:
@@ -465,29 +543,8 @@ Resize Page: [Yes~No]
             g.label = "%-10s%4dx%d" % (modes[i].name, modes[i].x, modes[i].y)
             g.need_redraw = True
             i += 1
-    apply_aspect()
 
-    def apply_cdepth():
-        if cdepth == 16:
-            g12bit.state = 1
-            gDepth[5].label = "EHB"
-            gDepth[5].need_redraw = True
-            gDepth[6].enabled = False
-            gDepth[6].need_redraw = True
-            gDepth[7].enabled = False
-            gDepth[7].need_redraw = True
-        else:
-            g24bit.state = 1
-            gDepth[4].enabled = True
-            gDepth[4].need_redraw = True
-            gDepth[5].enabled = True
-            gDepth[5].need_redraw = True
-            gDepth[5].label = " 64"
-            gDepth[5].need_redraw = True
-            gDepth[6].enabled = True
-            gDepth[6].need_redraw = True
-            gDepth[7].enabled = True
-            gDepth[7].need_redraw = True
+    apply_aspect()
     apply_cdepth()
 
     def apply_bdepth():
@@ -514,6 +571,7 @@ Resize Page: [Yes~No]
             gDepth[5].enabled = True
             gDepth[5].need_redraw = True
         gres[res].state = 1
+
     apply_mode()
 
     def get_top_colors(num_colors):
@@ -572,7 +630,7 @@ Resize Page: [Yes~No]
     reinit = False
     ok_clicked = False
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -609,7 +667,6 @@ Resize Page: [Yes~No]
                 resize_page = (gResize.index(ge.gadget) == 1)
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label in ["OK","Make Default"] and not req.has_error():
-                    config.background.free()
                     ok_clicked = True
                     num_colors = 2**bdepth
                     if bdepth == 6 and cdepth == 16:
@@ -617,71 +674,85 @@ Resize Page: [Yes~No]
                     else:
                         halfbright = False
 
-                    if new_clicked:
-                        reinit = True
-                    elif num_colors < config.NUM_COLORS:
-                        #reduce palette to higest frequency color indexes
-                        reinit = False
+                    if new_clicked and config.anim.num_frames > 1:
+                        #Get rid of animation
+                        config.anim = libs.animation.Animation()
 
-                        num_top_colors = num_colors
+                    config.color = 1
+                    config.bgcolor = 0
+
+                    for frame_no in config.anim:
+                        if new_clicked:
+                            reinit = True
+                        elif num_colors < config.NUM_COLORS:
+                            #reduce palette to highest frequency color indexes
+                            reinit = False
+
+                            num_top_colors = num_colors
+                            if halfbright:
+                                num_top_colors = 32
+
+                            colorlist = get_top_colors(num_top_colors)
+
+                            newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
+
+                            #convert colors to reduced palette using blit
+                            new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
+                            new_pixel_canvas.set_palette(newpal)
+                            new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+
+                            #substitute new canvas for the higher color one
+                            config.pixel_canvas = new_pixel_canvas
+                            config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
+                            config.truepal = config.quantize_palette(config.truepal, cdepth)
+                            config.pal = list(config.truepal)
+                            config.pal = config.unique_palette(config.pal)
+                            config.backuppal = list(config.pal)
+                            config.pixel_canvas.set_palette(config.pal)
+                            for frame in config.anim.frame:
+                                frame.is_pal_key = True
+                            config.anim.global_palette = False
+                        elif num_colors == config.NUM_COLORS:
+                            reinit = False
+                        elif num_colors > config.NUM_COLORS:
+                            reinit = False
+
+                            config.truepal = config.quantize_palette(config.truepal, cdepth)
+                            newpal = config.get_default_palette(num_colors)
+                            config.truepal.extend(newpal[config.NUM_COLORS:num_colors])
+                            if halfbright:
+                                for i in range(0,32):
+                                    config.truepal[i+32] = \
+                                              ((config.truepal[i][0] & 0xee) // 2,
+                                               (config.truepal[i][1] & 0xee) // 2,
+                                               (config.truepal[i][2] & 0xee) // 2)
+                            config.pal = list(config.truepal)
+                            config.pal = config.unique_palette(config.pal)
+                            config.backuppal = list(config.pal)
+                            config.pixel_canvas.set_palette(config.pal)
+
+                        sm = config.display_info.get_display(display_names[aspect])[res]
+                        dmode = sm.mode_id
+                        px = sm.x
+                        py = sm.y
+
                         if halfbright:
-                            num_top_colors = 32
+                            dmode |= config.MODE_EXTRA_HALFBRIGHT
 
-                        colorlist = get_top_colors(num_top_colors)
-
-                        newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
-
-                        #convert colors to reduced palette using blit
-                        new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
-                        new_pixel_canvas.set_palette(newpal)
-                        new_pixel_canvas.blit(config.pixel_canvas, (0,0))
-
-                        #substitute new canvas for the higher color one
-                        config.pixel_canvas = new_pixel_canvas
-                        config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
-                        config.truepal = config.quantize_palette(config.truepal, cdepth)
-                        config.pal = list(config.truepal)
-                        config.pal = config.unique_palette(config.pal)
-                        config.backuppal = list(config.pal)
-                        config.pixel_canvas.set_palette(config.pal)
-                    elif num_colors == config.NUM_COLORS:
-                        reinit = False
-                    elif num_colors > config.NUM_COLORS:
-                        reinit = False
-
-                        config.truepal = config.quantize_palette(config.truepal, cdepth)
-                        newpal = config.get_default_palette(num_colors)
-                        config.truepal.extend(newpal[config.NUM_COLORS:num_colors])
-                        if halfbright:
-                            for i in range(0,32):
-                                config.truepal[i+32] = \
-                                          ((config.truepal[i][0] & 0xee) // 2,
-                                           (config.truepal[i][1] & 0xee) // 2,
-                                           (config.truepal[i][2] & 0xee) // 2)
-                        config.pal = list(config.truepal)
-                        config.pal = config.unique_palette(config.pal)
-                        config.backuppal = list(config.pal)
-                        config.pixel_canvas.set_palette(config.pal)
-
-                    sm = config.display_info.get_display(display_names[aspect])[res]
-                    dmode = sm.mode_id
-                    px = sm.x
-                    py = sm.y
-
-                    if halfbright:
-                        dmode |= config.MODE_EXTRA_HALFBRIGHT
-
-                    if not new_clicked and resize_page and (px != config.pixel_width or py != config.pixel_height):
-                        new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
-                        new_pixel_canvas.set_palette(config.pal)
-                        config.pixel_canvas = new_pixel_canvas
-                        reinit = False
+                        if not new_clicked and resize_page and (px != config.pixel_width or py != config.pixel_height):
+                            new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
+                            new_pixel_canvas.set_palette(config.pal)
+                            config.pixel_canvas = new_pixel_canvas
+                            reinit = False
 
                     config.display_mode = dmode
                     config.pixel_width = px
                     config.pixel_height = py
                     config.color_depth = cdepth
                     config.NUM_COLORS = num_colors
+                    config.pal = list(config.truepal)
+                    config.pal = config.unique_palette(config.pal)
+                    config.set_all_palettes(config.pal, config.truepal)
                     if ge.gadget.label == "Make Default":
                         config.saveConfig()
                     running = 0
@@ -709,13 +780,14 @@ Resize Page: [Yes~No]
         else:
             gResize[0].state = 1
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
     config.pixel_req_rect = None
     if ok_clicked:
         config.initialize_surfaces(reinit=reinit)
+        config.anim.show_curr_frame()
     else:
         config.recompose()
 
@@ -728,9 +800,9 @@ Type in size:
  Width:_____ Height:_____
 
 Or select one:
- [Standard     xxx x yyy]
- [Full Page    xxx x yyy]
- [Overscan     xxx x yyy]
+ [Standard   xxxx x yyyy]
+ [Full Page  xxxx x yyyy]
+ [Overscan   xxxx x yyyy]
 
 Resize: [Yes~No]
 
@@ -747,28 +819,18 @@ Resize: [Yes~No]
 
     pageg = [standardg, fullpageg, overscang]
 
-    if config.display_mode & config.PAL_MONITOR_ID == config.PAL_MONITOR_ID:
-        page_size = [[320,256],[320,435],[368,283]]
-    else:
-        page_size = [[320,200],[320,340],[362,241]]
+    sm = config.display_info.get_id(config.display_mode)
+    page_size = [[sm.x,sm.y],[sm.x,int(sm.y*1.7)],[sm.max_x,sm.max_y]]
 
     widthg.value = str(config.pixel_width)
     widthg.numonly = True
     heightg.value = str(config.pixel_height)
     heightg.numonly = True
 
-    if config.display_mode & config.MODE_HIRES:
-        for i in range(0,3):
-            page_size[i][0] *= 2
-
-    if config.display_mode & config.MODE_LACE:
-        for i in range(0,3):
-            page_size[i][1] *= 2
-
     # Populate buttons from page_size array
     for i in range(0,3):
-        pageg[i].label = pageg[i].label.replace("xxx", str(page_size[i][0]))
-        pageg[i].label = pageg[i].label.replace("yyy", str(page_size[i][1]))
+        pageg[i].label = pageg[i].label.replace("xxxx", "%4d"%(page_size[i][0]))
+        pageg[i].label = pageg[i].label.replace("yyyy", "%d"%(page_size[i][1]))
 
     #Gather page resize gadgets
     resize_page = False
@@ -785,7 +847,7 @@ Resize: [Yes~No]
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -812,18 +874,19 @@ Resize: [Yes~No]
         else:
             gResize[0].state = 1
 
-        if not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
     config.pixel_req_rect = None
-    config.recompose()
+    config.initialize_surfaces()
+    config.anim.show_curr_frame()
 
     return
 
 class PreviewPic(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
-        self.pic = config.background.get_flattened().convert()
+        self.pic = config.layers.get_flattened(exclude=["R"]).convert()
         super(PreviewPic, self).__init__(type, label, rect, value, maxvalue, id)
  
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -880,7 +943,7 @@ def page_preview_req(screen):
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -891,7 +954,7 @@ def page_preview_req(screen):
                 if ge.gadget.label == "OK":
                     running = 0
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -946,7 +1009,7 @@ for more details.    ############
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -957,7 +1020,7 @@ for more details.    ############
                 if ge.gadget.label == "OK":
                     running = 0 
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 
@@ -1015,7 +1078,7 @@ def update_progress_req(req, screen, progress):
     progressg = req.gadget_id("0_0")
     progressg.value = progress
     progressg.need_redraw = True
-    pygame.event.get()
+    config.xevent.get()
     req.draw(screen)
     config.recompose()
 
@@ -1220,7 +1283,7 @@ def stencil_req(screen):
 
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
@@ -1261,7 +1324,7 @@ def stencil_req(screen):
                     palpageg.need_redraw = True
                     colorsg.need_redraw = True
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
             (rx,ry,rw,rh) = req.rect
             if ry < 14:
@@ -1307,7 +1370,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
     button_clicked = -1
     running = 1
     while running:
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key in hotkeys:
@@ -1324,7 +1387,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
                 button_clicked = buttons.index(ge.gadget.label)
                 running = 0 
 
-        if running and not pygame.event.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+        if running and not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
             config.recompose()
 

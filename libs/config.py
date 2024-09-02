@@ -15,13 +15,18 @@ from libs.toolbar import *
 from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
+from libs.layer import *
 from libs.stencil import *
-from libs.background import *
 from libs.tools import *
 from libs.minitools import *
+from libs.animtools import *
+from libs.layertools import *
 from libs.menubar import *
 from libs.menus import *
+from libs.perspective import *
+from libs.animation import *
 from libs.version import *
+from libs.xevent import *
 from libs.zoom import *
 
 import numpy as np
@@ -145,10 +150,19 @@ def drop_load_progress(percent):
         prev_time = curr_time
         update_progress_req(progress_req, config.pixel_req_canvas, percent)
 
+class Project:
+    def __init__(self):
+        self.filename = ""
+        self.filepath = ""
+        self.pixel_canvas = None
+        self.modified_count = -1
+        self.anim = None
+        self.layers = None
+        self.indicators = None
 
 class pydpainter:
 
-    def __init__(self):
+    def __init__(self, do_recover):
         global config
         config = self
         prim_set_config(self)
@@ -157,9 +171,12 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         stencil_set_config(self)
-        background_set_config(self)
+        layer_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
+        perspective_set_config(self)
+        animation_set_config(self)
+        xevent_set_config(self)
         pygame.init()
         pygame.mixer.quit() #hack to stop 100% CPU ultilization
         
@@ -179,16 +196,27 @@ class pydpainter:
         self.dinfo = pygame.display.Info()
         self.initialize()
 
-        #load picture if specified from command line
-        if config.args.filename:
-            filename = config.args.filename
+        #load picture if recovered
+        if do_recover != "":
+            filename = os.path.join(do_recover, "recover.bmp")
             config.pixel_canvas = load_pic(filename, config)
+            config.truepal = list(config.pal)
+            config.pal = config.unique_palette(config.pal)
+            config.initialize_surfaces()
+            config.modified_count = 0
+
+        #load picture if specified from command line
+        elif config.args.filename:
+            filename = config.args.filename
+            config.pixel_canvas = load_pic(filename, config, cmd_load=True)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
             config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
             config.filename = filename
             config.modified_count = 0
+            if config.anim.num_frames > 1:
+                config.anim.show_curr_frame()
 
     def closest_scale4(self,maxnum,num):
         if num >= maxnum:
@@ -257,6 +285,9 @@ class pydpainter:
     def resize_display(self, resize_window=True, first_init=False, force=False):
         if config.fullscreen:
             if force:
+                pygame.event.set_grab(True)
+                if "set_keyboard_grab" in dir(pygame.event):
+                    pygame.event.set_keyboard_grab(True)
                 config.scale_bak = config.scale
             pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
@@ -267,6 +298,9 @@ class pydpainter:
             config.window_size = new_window_size
             return
         elif force:
+            pygame.event.set_grab(False)
+            if "set_keyboard_grab" in dir(pygame.event):
+                pygame.event.set_keyboard_grab(False)
             config.scale = config.scale_bak
             config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
@@ -288,6 +322,10 @@ class pydpainter:
            config.toolbar.tip_canvas = None
         if "minitoolbar" in dir(config):
            config.minitoolbar.tip_canvas = None
+        if "animtoolbar" in dir(config):
+           config.animtoolbar.tip_canvas = None
+        if "layertoolbar" in dir(config):
+           config.layertoolbar.tip_canvas = None
 
         display_flags = HWSURFACE|DOUBLEBUF|RESIZABLE
 
@@ -297,9 +335,9 @@ class pydpainter:
         else:
             if force or resize_window or pygame.version.vernum[0] == 1:
                 #Wait for mouse buttons to be released before resizing window
-                pygame.event.get()
+                config.xevent.get()
                 while True in pygame.mouse.get_pressed():
-                    pygame.event.get()
+                    config.xevent.get()
                 new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
                 if pygame.version.vernum[0] == 1:
@@ -316,8 +354,16 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
-        self.screen_width = sm.x
-        self.screen_height = sm.y
+        pixel_size = self.pixel_canvas.get_size()
+        if pixel_size[0] >= sm.x and pixel_size[0] <= sm.max_x and \
+           pixel_size[1] >= sm.y and pixel_size[1] <= sm.max_y:
+            #overscan
+            self.screen_width = pixel_size[0]
+            self.screen_height = pixel_size[1]
+        else:
+            self.screen_width = sm.x
+            self.screen_height = sm.y
+
         if config.force_1_to_1_pixels:
             self.pixel_aspect = sm.aspect_y / sm.aspect_x
             self.pixel_mode = "square"
@@ -329,9 +375,10 @@ class pydpainter:
         self.sm = sm
 
         if reinit:
+            config.anim = libs.animation.Animation()
             config.truepal = config.get_default_palette(config.NUM_COLORS)
             config.pal = list(config.truepal)
-            config.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
+            config.pixel_canvas = pygame.Surface((self.screen_width, self.screen_height),0,8)
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
 
@@ -374,15 +421,20 @@ class pydpainter:
         config.zoom.on = False
         config.zoom.box_on = False
 
-        #Keep spare if same size as new image
-        if "pixel_spare_canvas" in dir(self):
-            sw, sh = self.pixel_spare_canvas.get_size()
-            if sw == self.pixel_width and sh == self.pixel_height:
-                self.pixel_spare_canvas.set_palette(self.pal)
+        #Keep project canvas if same size as new image
+        for i in range(len(self.proj)):
+            if i == self.proj_index:
+                continue
+            if self.proj[i].pixel_canvas:
+                sw, sh = self.proj[i].pixel_canvas.get_size()
+                if sw == self.pixel_width and sh == self.pixel_height:
+                    self.proj[i].pixel_canvas.set_palette(self.pal)
+                else:
+                    self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
             else:
-                self.pixel_spare_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
-        else:
-            self.pixel_spare_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
+                self.proj[i].pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0, self.pixel_canvas)
+            if self.proj[i].anim.num_frames == 1:
+                self.proj[i].anim.frame = [Frame(self.proj[i].pixel_canvas)]
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
@@ -390,6 +442,8 @@ class pydpainter:
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
+        self.animtoolbar = init_animtoolbar(config)
+        self.layertoolbar = init_layertoolbar(config)
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
@@ -399,13 +453,15 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
         self.stencil.clear()
-        self.background.clear()
+
+        self.perspective = Perspective()
 
         # set prefs
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("show").checked = self.coords_on
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("flip").checked = self.coords_flip
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("1based").checked = self.coords_1based
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
+        self.menubar.menu_id("prefs").menu_id("multicycle").checked = self.multicycle
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
@@ -416,9 +472,32 @@ class pydpainter:
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
         config.save_undo()
 
+    def guess_color_depth(self, pal):
+        # pictures with more than 32 colors are not Amiga OCS/ECS
+        if len(pal) > 32:
+            return 256
+
+        #check for colors not in 4096 palette
+        is_mod16 = True
+        for i in range(len(pal)):
+            if pal[i][0] % 16 == 0 and pal[i][1] % 16 == 0 and pal[i][2] % 16 == 0:
+                pass
+            else:
+                is_mod16 = False
+        is_mod17 = True
+        for i in range(len(pal)):
+            if pal[i][0] % 17 == 0 and pal[i][1] % 17 == 0 and pal[i][2] % 17 == 0:
+                pass
+            else:
+                is_mod17 = False
+        if is_mod16 or is_mod17:
+            color_depth = 16
+        else:
+            color_depth = 256
+        return color_depth
 
     def get_default_palette(self, numcols=32):
-        if config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+        if numcols == 64 and config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
             newpal = [
                 (0,0,0), (238,204,170), (255,0,0), (204,0,0), (170,0,0), (0,221,0),
                 (0,170,0), (0,136,0), (0,0,255), (0,0,204), (0,0,170), (255,255,68),
@@ -508,6 +587,7 @@ class pydpainter:
             f.write("coords_flip=%s\n" % (self.coords_flip))
             f.write("coords_1based=%s\n" % (self.coords_1based))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
+            f.write("multicycle=%s\n" % (self.multicycle))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
@@ -562,6 +642,8 @@ class pydpainter:
                         self.coords_1based = True if vars[1] == "True" else False
                     elif vars[0] == "auto_transp_on":
                         self.auto_transp_on = True if vars[1] == "True" else False
+                    elif vars[0] == "multicycle":
+                        self.multicycle = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
                         self.hide_menus = True if vars[1] == "True" else False
                     elif vars[0] == "force_1_to_1_pixels":
@@ -578,7 +660,7 @@ class pydpainter:
         global custom_event_counter
         user_event = None
         if "custom_type" in dir(pygame.event):
-            user_event = pygame.event.custom_type()
+            user_event = config.xevent.custom_type()
         else:
             user_event = USEREVENT + custom_event_counter
             custom_event_counter += 1
@@ -604,6 +686,7 @@ class pydpainter:
 
         self.display_info = DisplayInfo()
 
+        self.xevent = Xevent()
         self.fontx = fontx
         self.fonty = fonty
         self.text_tool_font_name = re.sub(r'\..{1,3}$', '', pygame.font.get_default_font())
@@ -616,6 +699,7 @@ class pydpainter:
         self.text_tool_font_underline = False
         self.text_tool_font = pygame.font.Font(pygame.font.match_font(self.text_tool_font_name), self.text_tool_font_size)
         self.last_recompose_timer = 0
+        self.window_canvas_rect = [0,0,1,1]
         self.max_width = self.dinfo.current_w
         self.max_height = self.dinfo.current_h
         self.max_width_init = self.dinfo.current_w
@@ -646,6 +730,9 @@ class pydpainter:
             self.pixel_mode = "PAL"
             self.pixel_aspect = 59.0/54.0 #PAL
 
+        self.LAYER_INDICATORX = 170
+        self.LAYER_BG_PRIORITY = 0
+
         self.scale = 3
         self.scale_bak = 3
         self.SCANLINES_ON = 0
@@ -662,12 +749,16 @@ class pydpainter:
         self.color = 1
         self.bgcolor = 0
 
+        self.proj = [Project(), Project()]
+        self.proj_index = 0
         self.palette_page = 0
         self.NUM_COLORS = 32
         self.filename = ""
         self.filepath = os.path.expanduser("~")
-        self.spare_filename = self.filename
-        self.spare_filepath = self.filepath
+        self.proj[0].filename = self.filename
+        self.proj[0].filepath = self.filepath
+        self.proj[1].filename = self.filename
+        self.proj[1].filepath = self.filepath
         self.toolmode = 0
         self.tool_selected = 0
         self.subtool_selected = 0
@@ -682,6 +773,7 @@ class pydpainter:
         self.symm_num = 6
         self.symm_width = 50
         self.symm_height = 50
+        self.enable_constrain = True
         self.constrain_x = -1
         self.constrain_y = -1
         self.help_on = True
@@ -692,6 +784,7 @@ class pydpainter:
         self.coords_flip = False
         self.coords_1based = False
         self.auto_transp_on = False
+        self.multicycle = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
@@ -708,8 +801,17 @@ class pydpainter:
         self.loadpal = list(self.pal)
         self.pixel_canvas.set_palette(self.pal)
 
+        self.layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
+        self.layers.set("canvas", self.pixel_canvas, priority=1)
+        self.layers.current_layer_name = "canvas"
         self.stencil = Stencil()
-        self.background = Background()
+        self.layers.set("fg", self.stencil.image, 10, visible=False)
+
+        self.anim = Animation()
+        self.proj[0].anim = self.anim
+        self.proj[1].anim = Animation()
+        self.proj[0].layers = self.layers
+        self.proj[1].layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
 
         self.cycling = False
         self.cycle_handled = False
@@ -739,13 +841,34 @@ class pydpainter:
 
         self.window_title = "PyDPainter"
         self.modified_count = -1
-        self.spare_modified_count = -1
+        self.proj[0].modified_count = -1
+        self.proj[1].modified_count = -1
         self.UNDO_INDEX_MAX = 20
         self.undo_image = []
         self.undo_index = -1
         self.suppress_undo = False
         self.suppress_redraw = False
         self.running = True
+
+        self.tool_visibility_state = 1
+        self.tool_visibility_states = [
+            #toolbar, menubar, animtoolbar
+            [ #animation
+                (False,False,False),
+                (True,True,True),
+                (True,True,False),
+                (False,True,False),
+                (False,False,True),
+            ],
+            [ # single frame
+                (False,False,False),
+                (True,True,False),
+            ],
+            [ # animation playing
+                (False,False,False),
+                (False,False,True),
+            ],
+        ]
 
         self.wait_for_mouseup = [False, False]
 
@@ -778,12 +901,13 @@ class pydpainter:
         return buttons
 
     def doKeyAction(self, curr_action=None):
-        if curr_action == None:
-            curr_action = config.toolbar.tool_id(config.tool_selected).action
-        if self.get_mouse_pressed() == (0,0,0):
-            curr_action.move(config.get_mouse_pixel_pos())
-        else:
-            curr_action.drag(config.get_mouse_pixel_pos(), self.get_mouse_pressed())
+        if not config.anim.playing:
+            if curr_action == None:
+                curr_action = config.toolbar.tool_id(config.tool_selected).action
+            if self.get_mouse_pressed() == (0,0,0):
+                curr_action.move(config.get_mouse_pixel_pos())
+            else:
+                curr_action.drag(config.get_mouse_pixel_pos(), self.get_mouse_pressed())
 
     def getPalNtscDefault(self):
         display_mode = self.PAL_MONITOR_ID
@@ -820,7 +944,25 @@ class pydpainter:
     def unique_palette(self, pal):
         return unique_palette(pal)
 
-    def set_all_palettes(config, pal_in):
+    def set_anim_palettes(config, anim, pal_in, pal, truepal):
+        # Set colors for animation frames
+        if anim.global_palette:
+            for frame in anim.frame:
+                frame.pal = list(pal_in)
+                if truepal != None:
+                    frame.truepal = list(truepal)
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+        else:
+            from_key, to_key = anim.pal_key_range()
+            for frame in anim.frame[from_key-1:to_key]:
+                frame.pal = list(pal_in)
+                if truepal != None:
+                    frame.truepal = list(truepal)
+                if frame.image != None:
+                    frame.image.set_palette(pal)
+
+    def set_all_palettes(config, pal_in, truepal=None):
         if len(pal_in) == 256:
             pal = pal_in
         else:
@@ -828,9 +970,11 @@ class pydpainter:
             pal = list(pal_in)
             pal.extend([pal_in[0]] * (256 - len(pal)))
         config.pixel_canvas.set_palette(pal)
-        config.pixel_spare_canvas.set_palette(pal)
-        config.stencil.set_palette(pal)
-        config.background.set_palette(pal)
+        for i in range(len(config.proj)):
+            if config.proj[i].pixel_canvas:
+                config.proj[i].pixel_canvas.set_palette(pal)
+                config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
+                config.proj[i].layers.set_palette(pal)
 
         if config.brush.image != None:
             config.brush.image.set_palette(pal)
@@ -839,22 +983,54 @@ class pydpainter:
         for img in config.undo_image:
             img.set_palette(pal)
 
+        config.set_anim_palettes(config.anim, pal_in, pal, truepal)
+
+    def calc_tool_visibility_state(self):
+        #Set mode: 0=animation, 1=single frame, 2=animation playing
+        mode=0
+        if config.anim.playing:
+            mode=2
+        elif config.anim.num_frames == 1:
+            mode=1
+
+        state = config.tool_visibility_state
+        state = state % len(config.tool_visibility_states[mode])
+
+        config.toolbar.visible     = config.tool_visibility_states[mode][state][0]
+        config.menubar.visible     = config.tool_visibility_states[mode][state][1]
+        config.animtoolbar.visible = config.tool_visibility_states[mode][state][2]
+
+        if config.menubar.visible:
+            if config.animtoolbar.visible or config.anim.num_frames == 1:
+                config.menubar.title = "PyDPainter"
+            else:
+                title = f"{config.anim.curr_frame}/{config.anim.num_frames}" + (" " * 10)
+                config.menubar.title = title[:10]
+
+        config.tool_visibility_state = state
+
     def set_screen_offset(self, x, y):
-        # calculate offsets for toolbar and menubar if visible
+        # calculate offsets for toolbars and menubar if visible
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
+        tw = 0
+        mh = 0
+        atbh = 0
+
         if config.toolbar.visible:
             tw = config.toolbar.rect[2]
-        else:
-            tw = 0
+
         if config.menubar.visible:
             mh = config.menubar.rect[3]
-        else:
-            mh = 0
+
+        if config.animtoolbar.visible:
+            atbh = config.animtoolbar.rect[3] + 3*scaleY
 
         # Center canvas if smaller than the screen
         if self.pixel_width < self.screen_width - tw:
             self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
-        if self.pixel_height < self.screen_height - mh:
-            self.screen_offset_y = (self.screen_height - self.pixel_height - mh) // 2
+        if self.pixel_height < self.screen_height - mh - atbh:
+            self.screen_offset_y = (self.screen_height - self.pixel_height - mh - atbh) // 2
 
         # Restrict scrolling offset to edges of screen
         if self.pixel_width >= self.screen_width - tw:
@@ -862,9 +1038,9 @@ class pydpainter:
                 self.screen_offset_x = self.screen_width - self.pixel_width - tw
             elif x > 0:
                 self.screen_offset_x = 0
-        if self.pixel_height >= self.screen_height - mh:
-            if y < self.screen_height - self.pixel_height:
-                self.screen_offset_y = self.screen_height - self.pixel_height
+        if self.pixel_height >= self.screen_height - mh - atbh:
+            if y < self.screen_height - self.pixel_height - atbh:
+                self.screen_offset_y = self.screen_height - self.pixel_height - atbh
             elif y > mh:
                 self.screen_offset_y = mh
 
@@ -872,12 +1048,17 @@ class pydpainter:
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
-        if config.fullscreen:
-            screenX, screenY = self.max_width, self.max_height
-        else:
-            screenX, screenY = self.window_size
-        mouseX = mouseX * self.screen_width // screenX
-        mouseY = mouseY * self.screen_height // screenY
+        ox,oy,screenX,screenY = config.window_canvas_rect
+
+        #constrain mouse to edge of screen
+        mouseX = max(ox, mouseX)
+        mouseX = min(mouseX, screenX-ox-1)
+        mouseY = max(oy, mouseY)
+        mouseY = min(mouseY, screenY-oy-1)
+
+        #scale window mouse coords to pixel coords
+        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
+        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
         return((mouseX, mouseY))
 
     def calc_page_pos(self, mouseX, mouseY):
@@ -910,12 +1091,10 @@ class pydpainter:
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
             mouseX, mouseY = event.pos
 
-        if config.fullscreen:
-            screenX, screenY = self.max_width, self.max_height
-        else:
-            screenX, screenY = self.window_size
-        mouseX = mouseX * self.screen_width // screenX
-        mouseY = mouseY * self.screen_height // screenY
+        ox,oy,screenX,screenY = config.window_canvas_rect
+
+        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
+        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
 
         mouseside = 0
 
@@ -963,7 +1142,7 @@ class pydpainter:
             self.zoom.mousedown_side = 0
 
         #turn constrain on or off
-        if pygame.key.get_mods() & KMOD_SHIFT:
+        if pygame.key.get_mods() & KMOD_SHIFT and self.enable_constrain:
             if self.constrain_x < 0 and self.constrain_y < 0:
                 if "rel" in dir(event):
                     if abs(event.rel[0]) > abs(event.rel[1]):
@@ -989,7 +1168,7 @@ class pydpainter:
         return((mouseX, mouseY))
 
     def has_event(self, timeout=16):
-        return pygame.event.peek((KEYDOWN,
+        return config.xevent.peek((KEYDOWN,
                             MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION)) and \
                pygame.time.get_ticks() - self.last_recompose_timer > timeout
 
@@ -1027,14 +1206,19 @@ class pydpainter:
             pygame.display.set_caption(config.window_title)
 
     def recompose(self):
+        self.calc_tool_visibility_state()
+
         if self.cycling:
             for crange in config.cranges:
                 crange.apply_to_pal(self.pal)
             self.set_all_palettes(self.pal)
 
+        self.menubar.indicators["layers"] = self.layers.draw_indicator
+
         self.redraw_window_title()
 
-        config.stencil.draw(config.pixel_canvas)
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
 
         screen_rgb = None
         if self.zoom.on:
@@ -1045,11 +1229,15 @@ class pydpainter:
             zoom_height = self.screen_height // self.zoom.factor
 
             menu_bar_height = 0
+            atbh = 0
             if self.toolbar.visible:
                 zoom_width -= self.toolbar.rect[2] // self.zoom.factor
             if self.menubar.visible:
                 zoom_height -= self.menubar.rect[3] // self.zoom.factor
                 menu_bar_height = self.menubar.rect[3]
+            if self.animtoolbar.visible and self.anim.num_frames > 1:
+                atbh = self.animtoolbar.rect[3] + 3*scaleY
+                zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
             self.zoom.xoffset = zxc - (w//2)
             self.zoom.yoffset = zyc - ((self.screen_height-menu_bar_height) // 2)
@@ -1061,8 +1249,8 @@ class pydpainter:
 
             if self.zoom.yoffset < -menu_bar_height:
                 self.zoom.yoffset = -menu_bar_height
-            elif self.zoom.yoffset > self.pixel_height - self.screen_height:
-                self.zoom.yoffset = self.pixel_height - self.screen_height
+            elif self.zoom.yoffset > self.pixel_height - self.screen_height + atbh:
+                self.zoom.yoffset = self.pixel_height - self.screen_height + atbh
 
             zx0 = zxc-(zoom_width//2)
             zy0 = zyc-(zoom_height//2)
@@ -1092,15 +1280,12 @@ class pydpainter:
 
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
-            config.background.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
-            screen_rgb.blit(self.pixel_canvas, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
-            #pygame.draw.rect(screen_rgb, (255,255,255), (zx0-self.zoom.xoffset,zy0-self.zoom.yoffset, zoom_width, zoom_height), 1)
+            config.layers.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
 
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
-            config.background.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
-            zoom_canvas.blit(self.pixel_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
+            config.layers.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))
 
@@ -1112,8 +1297,9 @@ class pydpainter:
 
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
-            config.background.draw(screen_rgb)
-            screen_rgb.blit(self.pixel_canvas, (self.screen_offset_x, self.screen_offset_y))
+            config.layers.set("canvas", config.pixel_canvas)
+            config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
+            config.layers.blit(screen_rgb, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
         if self.pixel_req_rect != None:
@@ -1122,9 +1308,14 @@ class pydpainter:
             screen_rgb.blit(self.pixel_req_canvas, self.pixel_req_rect, self.pixel_req_rect)
             self.toolbar.tip_canvas = None
             self.minitoolbar.tip_canvas = None
+            self.animtoolbar.tip_canvas = None
+            self.layertoolbar.tip_canvas = None
 
         #blit toolbar layer
         self.toolbar.draw(screen_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
+
+        #blit layertoolbar layer
+        draw_layertoolbar(screen_rgb)
 
         #blit menu layer
         self.menubar.draw(screen_rgb)
@@ -1136,6 +1327,9 @@ class pydpainter:
             else:
                 mtbx = self.screen_width-(self.minitoolbar.rect[2]//len(self.minitoolbar.tools)*2)
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
+
+        #blit animtoolbar layer
+        draw_animtoolbar(screen_rgb)
 
         #scale image double height
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
@@ -1159,6 +1353,7 @@ class pydpainter:
             oy = (self.screen.get_height() - scaledup.get_height()) // 2
         else:
             ox, oy = 0,0
+        config.window_canvas_rect = [ox,oy, self.window_size[0], self.window_size[1]]
         self.screen.blit(scaledup,(ox,oy))
         scaledup = None
 
@@ -1185,6 +1380,36 @@ class pydpainter:
             sx = ox + (tx * self.window_size[0] // self.screen_width) - t_size[0]
             sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.minitoolbar.tip_canvas, (sx,sy))
+
+        #blit animtoolbar tooltip layer
+        if self.animtoolbar.visible and \
+           not self.animtoolbar.wait_for_tip and \
+           self.animtoolbar.tip_canvas != None and \
+           self.menubar.visible and \
+           config.help_on:
+            px = config.font.xsize // 8
+            tx = self.animtoolbar.tip_x + px*11
+            atby = config.screen_height - config.menubar.rect[3]
+            ty = atby + self.animtoolbar.tip_y
+            t_size = self.animtoolbar.tip_canvas.get_size()
+            sx = ox + (tx * self.window_size[0] // self.screen_width)
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            self.screen.blit(self.animtoolbar.tip_canvas, (sx,sy))
+
+        #blit layertoolbar tooltip layer
+        if self.layertoolbar.visible and \
+           not self.layertoolbar.wait_for_tip and \
+           self.layertoolbar.tip_canvas != None and \
+           self.menubar.visible and \
+           config.help_on:
+            px = config.font.xsize // 8
+            tx = self.layertoolbar.tip_x + px*11
+            atby = config.menubar.rect[3]
+            ty = atby + self.layertoolbar.tip_y
+            t_size = self.layertoolbar.tip_canvas.get_size()
+            sx = ox + (tx * self.window_size[0] // self.screen_width)
+            sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
+            self.screen.blit(self.layertoolbar.tip_canvas, (sx,sy))
 
         pygame.display.flip()
         self.last_recompose_timer = pygame.time.get_ticks()
@@ -1265,6 +1490,8 @@ class pydpainter:
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
 
     def start_cycling(self):
+        if config.anim.num_frames > 1 and config.anim.global_palette == False:
+            return
         if not self.cycling:
             self.backuppal = list(self.pal)
             self.cycling = True
@@ -1274,25 +1501,30 @@ class pydpainter:
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
     def size_canvas(self, width, height, resize):
-        # Crop or expand pixel canvas
-        new_pixel_canvas = pygame.Surface((width, height),0,8)
-        new_pixel_canvas.set_palette(config.pal)
-        if resize:
-            pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
-        else:
-            new_pixel_canvas.blit(config.pixel_canvas, (0,0))
-        config.pixel_canvas = new_pixel_canvas
-        config.pixel_width = width
-        config.pixel_height = height
+        for frame_no in config.anim:
+            # Crop or expand pixel canvas
+            new_pixel_canvas = pygame.Surface((width, height),0,8)
+            new_pixel_canvas.set_palette(config.pal)
+            if resize:
+                pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
+            else:
+                new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+            config.pixel_canvas = new_pixel_canvas
+            config.pixel_width = width
+            config.pixel_height = height
 
-        # Crop or expand spare pixel canvas
-        new_pixel_canvas = pygame.Surface((width, height),0,8)
-        new_pixel_canvas.set_palette(config.pal)
-        if resize:
-            pygame.transform.scale(config.pixel_spare_canvas, (width, height), new_pixel_canvas)
-        else:
-            new_pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
-        config.pixel_spare_canvas = new_pixel_canvas
+            # Crop or expand all project pixel canvas
+            new_pixel_canvas = pygame.Surface((width, height),0,8)
+            new_pixel_canvas.set_palette(config.pal)
+            for i in range(len(self.proj)):
+                if i == self.proj_index:
+                    config.proj[i].pixel_canvas = config.pixel_canvas
+                    continue
+                if resize:
+                    pygame.transform.scale(config.proj[i].pixel_canvas, (width, height), new_pixel_canvas)
+                else:
+                    new_pixel_canvas.blit(config.proj[i].pixel_canvas, (0,0))
+                config.proj[i].pixel_canvas = new_pixel_canvas
 
         config.clear_undo()
         config.save_undo()
@@ -1356,18 +1588,18 @@ class pydpainter:
 
         #main loop
         while config.running:
-            e = pygame.event.wait()
+            e = config.xevent.wait()
 
-            if e.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            if e.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
                 continue
 
-            if e.type == pygame.VIDEORESIZE and pygame.event.peek((VIDEORESIZE)):
+            if e.type == pygame.VIDEORESIZE and config.xevent.peek((VIDEORESIZE)):
                 #get rid of extra resize events
                 continue
 
             if e.type in self.ALLCUSTOMEVENTS:
-                if  pygame.event.peek(self.ALLCUSTOMEVENTS):
+                if  config.xevent.peek(self.ALLCUSTOMEVENTS):
                     #get rid of extraneous color cycle and other user events
                     continue
 
@@ -1375,9 +1607,10 @@ class pydpainter:
                 config.running = False
 
             if e.type == VIDEORESIZE:
-                config.scale = config.closest_scale((e.w, e.h))
-                config.resize_display(False)
-                self.recompose()
+                if not config.fullscreen:
+                    config.scale = config.closest_scale((e.w, e.h))
+                    config.resize_display(False)
+                    self.recompose()
                 continue
 
             #Load in droppped file
@@ -1386,9 +1619,11 @@ class pydpainter:
                 if filename != (()) and filename != "":
                     global progress_req
                     config.stencil.enable = False
-                    progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+                    progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
                     try:
-                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress)
+                        config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress, cmd_load=True)
+                        config.bgcolor = 0
+                        config.color = 1
                         close_progress_req(progress_req)
                         config.truepal = list(config.pal)
                         config.pal = config.unique_palette(config.pal)
@@ -1396,13 +1631,15 @@ class pydpainter:
                         config.filepath = os.path.dirname(filename)
                         config.filename = filename
                         config.modified_count = 0
-                    except:
+                        if config.anim.num_frames > 1:
+                            config.anim.show_curr_frame()
+                    except Exception as ex:
                         close_progress_req(progress_req)
-                        io_error_req("Load Error", "Unable to open image:\n%s", filename)
+                        io_error_req(str(ex), "Unable to open image:\n%s", filename)
 
 
             #Intercept keys for toolbar
-            if e.type in [KEYDOWN,KEYUP]:
+            if e.type in [KEYDOWN,KEYUP] and not config.anim.playing:
                 if curr_action != None:
                     key_handled = False
                     if e.type == KEYDOWN:
@@ -1432,30 +1669,46 @@ class pydpainter:
                 else:
                     pygame.mouse.set_visible(False)
 
-            #Get toolbar events if any and set current action to tool selected
-            te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
-            if len(te_list) > 0:
-                self.cycle_handled = True
-            curr_action = None
-            if config.zoom.box_on:
-                curr_action = config.toolbar.tool_id("magnify").action
-            elif config.toolbar.tool_id(config.tool_selected) != None and \
-               config.toolbar.tool_id(config.tool_selected).action != None:
-                curr_action = config.toolbar.tool_id(config.tool_selected).action
+            if not config.anim.playing:
+                #Get toolbar events if any and set current action to tool selected
+                te_list = self.toolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+                if len(te_list) > 0:
+                    self.cycle_handled = True
+                curr_action = None
+                if config.zoom.box_on:
+                    curr_action = config.toolbar.tool_id("magnify").action
+                elif config.toolbar.tool_id(config.tool_selected) != None and \
+                   config.toolbar.tool_id(config.tool_selected).action != None:
+                    curr_action = config.toolbar.tool_id(config.tool_selected).action
 
-            #Get mintoolbar events if any
+            #Get minitoolbar events if any
             if self.menubar.visible:
                 mte_list = self.minitoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
             else:
                 mte_list = []
 
-            #Get menubar events if any
-            if len(mte_list) > 0:
-                me_list = []
-            else:
-                me_list = self.menubar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+            if not config.anim.playing:
+                #Get menubar events if any
+                if len(mte_list) > 0:
+                    me_list = []
+                else:
+                    me_list = self.menubar.process_event(self.screen, e, self.get_mouse_pointer_pos)
 
-            wait_for_mouseup_gui = True in config.toolbar.wait_for_mouseup or True in config.minitoolbar.wait_for_mouseup or True in config.menubar.wait_for_mouseup
+            #Get animtoolbar events if any
+            if self.animtoolbar.visible:
+                mta_list = self.animtoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+                config.anim.process_animtoolbar_events(mta_list, e)
+            else:
+                mta_list = []
+
+            #Get layertoolbar events if any
+            if self.layertoolbar.visible:
+                mtl_list = self.layertoolbar.process_event(self.screen, e, self.get_mouse_pointer_pos)
+                config.layers.process_layertoolbar_events(mtl_list, e)
+            else:
+                mtl_list = []
+
+            wait_for_mouseup_gui = True in config.toolbar.wait_for_mouseup or True in config.minitoolbar.wait_for_mouseup or True in config.menubar.wait_for_mouseup or True in config.animtoolbar.wait_for_mouseup or True in config.layertoolbar.wait_for_mouseup
 
             if wait_for_mouseup_gui:
                 self.cycle_handled = True
@@ -1464,6 +1717,8 @@ class pydpainter:
             if not True in config.wait_for_mouseup and \
                (self.toolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
                self.menubar.is_inside(self.get_mouse_pointer_pos(e)) or \
+               self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
+               self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)) or \
                wait_for_mouseup_gui):
                 self.cursor.shape = self.cursor.NORMAL
                 hide_draw_tool = True
@@ -1475,21 +1730,22 @@ class pydpainter:
                 self.cursor.shape = self.cursor.CROSS
                 hide_draw_tool = False
 
-            #Do move action for toolbar events
-            if curr_action != None and not hide_draw_tool:
-                for te in te_list:
-                    #print(te)
-                    if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
-                       te.gadget.tool_type == ToolGadget.TT_GROUP:
-                        if e.type == KEYDOWN:
-                            if self.get_mouse_pressed() == (0,0,0):
-                                curr_action.move(self.get_mouse_pixel_pos(e))
+            if not config.anim.playing:
+                #Do move action for toolbar events
+                if curr_action != None and not hide_draw_tool:
+                    for te in te_list:
+                        #print(te)
+                        if te.gadget.tool_type == ToolGadget.TT_TOGGLE or \
+                           te.gadget.tool_type == ToolGadget.TT_GROUP:
+                            if e.type == KEYDOWN:
+                                if self.get_mouse_pressed() == (0,0,0):
+                                    curr_action.move(self.get_mouse_pixel_pos(e))
+                                else:
+                                    curr_action.drag(self.get_mouse_pixel_pos(e), self.get_mouse_pressed())
                             else:
-                                curr_action.drag(self.get_mouse_pixel_pos(e), self.get_mouse_pressed())
-                        else:
-                            curr_action.move(self.get_mouse_pixel_pos(e))
-            elif curr_action != None and hide_draw_tool:
-                curr_action.hide()
+                                curr_action.move(self.get_mouse_pixel_pos(e))
+                elif curr_action != None and hide_draw_tool:
+                    curr_action.hide()
 
             #process middle mouse button for pan
             if not config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button == 2:
@@ -1503,7 +1759,7 @@ class pydpainter:
                 (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
-            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5]:
+            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)):
                 if e.button == 2: #middle drag
                     zoom_drag = self.get_mouse_pixel_pos(e)
                 elif e.button == 4: #scroll up
@@ -1524,7 +1780,14 @@ class pydpainter:
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.unicode == ".":
+                if e.mod & KMOD_CTRL:
+                    if e.key == K_RETURN:
+                        config.perspective.do_mode()
+                        gotkey = True
+                elif e.key == K_KP_ENTER:
+                    config.perspective.do_mode()
+                    gotkey = True
+                elif e.unicode == ".":
                     gotkey = True
                 elif e.unicode == "+" or e.unicode == "=":
                     gotkey = True
@@ -1594,12 +1857,7 @@ class pydpainter:
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
                 elif e.key == K_F10:
-                    if config.toolbar.visible:
-                        config.toolbar.visible = False
-                        config.menubar.visible = False
-                    else:
-                        config.toolbar.visible = True
-                        config.menubar.visible = True
+                    self.tool_visibility_state += 1
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
                     config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
@@ -1615,6 +1873,9 @@ class pydpainter:
                 elif e.unicode == chr(178): #AZERTY backtick key
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
+                elif e.key == K_F12:
+                    print("\n***********Debug************")
+                    print(f"{config.layers=}")
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
@@ -1635,40 +1896,45 @@ class pydpainter:
                     curr_action.mouseup(self.get_mouse_pixel_pos(e), config.meta_alt)
                     config.get_mouse_pressed(e)
 
-            #No toolbar event so process event as action on selected tool
-            if curr_action != None and len(te_list) == 0 and \
-               len(mte_list) == 0 and len(me_list) == 0 and \
-               not wait_for_mouseup_gui and not hide_draw_tool:
-                if config.coords_on:
-                    cx,cy = self.get_mouse_pixel_pos(e)
-                    if config.p1 != None and True in self.get_mouse_pressed():
-                        config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
+            #Process events for animation
+            config.anim.handle_events(e)
+
+            if not config.anim.playing:
+                #No toolbar event so process event as action on selected tool
+                if curr_action != None and len(te_list) == 0 and \
+                   len(mte_list) == 0 and len(me_list) == 0 and \
+                   len(mta_list) == 0 and len(mtl_list) == 0 and \
+                   not wait_for_mouseup_gui and not hide_draw_tool:
+                    if config.coords_on:
+                        cx,cy = self.get_mouse_pixel_pos(e)
+                        if config.p1 != None and True in self.get_mouse_pressed():
+                            config.menubar.title_right = "%4d\x94%4d\x96" % (abs(cx-config.p1[0])+1, abs(cy-config.p1[1])+1)
+                        else:
+                            config.menubar.title_right = config.xypos_string((cx, cy))
+                            config.p1 = None
                     else:
-                        config.menubar.title_right = config.xypos_string((cx, cy))
-                        config.p1 = None
-                else:
-                    config.menubar.title_right = ""
-                if e.type == MOUSEMOTION:
-                    mbuttons = self.get_mouse_pressed(e)
-                    if mbuttons == (0,0,0):
-                        curr_action.move(self.get_mouse_pixel_pos(e))
-                    else:
-                        curr_action.drag(self.get_mouse_pixel_pos(e), mbuttons)
-                elif e.type == MOUSEBUTTONDOWN and buttons[0] != buttons[2]:
-                    zoom_region = config.zoom.region(e.pos)
-                    config.wait_for_mouseup[zoom_region] = True
-                    curr_action.mousedown(self.get_mouse_pixel_pos(e), e.button)
-                elif e.type == MOUSEBUTTONUP and buttons[0] == buttons[2]:
-                    if last_wait_for_mouseup_gui:
-                        curr_action.move(self.get_mouse_pixel_pos(e))
-                    else:
-                        curr_action.mouseup(self.get_mouse_pixel_pos(e), e.button)
-                        config.wait_for_mouseup = [False] * len(config.wait_for_mouseup)
-                elif e.type == self.TOOLEVENT:
-                    if buttons[0] or buttons[2]:
-                        curr_action.drag(self.get_mouse_pixel_pos(e), buttons)
-                    else:
-                        curr_action.move(self.get_mouse_pixel_pos(e))
+                        config.menubar.title_right = ""
+                    if e.type == MOUSEMOTION:
+                        mbuttons = self.get_mouse_pressed(e)
+                        if mbuttons == (0,0,0):
+                            curr_action.move(self.get_mouse_pixel_pos(e))
+                        else:
+                            curr_action.drag(self.get_mouse_pixel_pos(e), mbuttons)
+                    elif e.type == MOUSEBUTTONDOWN and buttons[0] != buttons[2]:
+                        zoom_region = config.zoom.region(e.pos)
+                        config.wait_for_mouseup[zoom_region] = True
+                        curr_action.mousedown(self.get_mouse_pixel_pos(e), e.button)
+                    elif e.type == MOUSEBUTTONUP and buttons[0] == buttons[2]:
+                        if last_wait_for_mouseup_gui:
+                            curr_action.move(self.get_mouse_pixel_pos(e))
+                        else:
+                            curr_action.mouseup(self.get_mouse_pixel_pos(e), e.button)
+                            config.wait_for_mouseup = [False] * len(config.wait_for_mouseup)
+                    elif e.type == self.TOOLEVENT:
+                        if buttons[0] or buttons[2]:
+                            curr_action.drag(self.get_mouse_pixel_pos(e), buttons)
+                        else:
+                            curr_action.move(self.get_mouse_pixel_pos(e))
 
             last_wait_for_mouseup_gui = wait_for_mouseup_gui
 

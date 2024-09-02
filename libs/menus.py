@@ -10,8 +10,21 @@ from libs.menubar import *
 from libs.menureq import *
 from libs.gadget import *
 from libs.picio import *
+from libs.stencil import *
 
 config = None
+
+pic_filetype_list = np.array([
+["IFF", "Amiga IFF image"],
+["ILBM","Amiga IFF image"],
+["LBM", "PC IFF PBM image"],
+["GIF", "GIF image"],
+["BMP", "Windows BMP image"],
+["JPG", "JPEG image (lossy)"],
+["JPEG","JPEG image (lossy)"],
+["PNG", "PNG image"],
+["TGA", "Targa image"],
+])
 
 class MenuAction(Action):
     def toolHide(self):
@@ -19,12 +32,45 @@ class MenuAction(Action):
            config.toolbar.tool_id(config.tool_selected).action != None:
             config.toolbar.tool_id(config.tool_selected).action.hide()
 
+class MenuActionMulti(MenuAction):
+    def get_name(self):
+        return ""
+
+    def is_ask_multi(self):
+        return True
+
+    def selected(self, attrs):
+        if config.anim.num_frames > 1:
+            if self.is_ask_multi():
+                frame_range = config.anim.ask_apply_multi(self.get_name())
+            else:
+                frame_range = range(config.anim.num_frames)
+            curr_frame_bak = config.anim.curr_frame
+            for frame_no in frame_range:
+                config.anim.save_curr_frame()
+                config.anim.curr_frame = frame_no
+                config.anim.show_curr_frame(doAction=False)
+                self.selectedMulti(attrs)
+                config.save_undo()
+            config.anim.save_curr_frame()
+            config.anim.curr_frame = curr_frame_bak
+            config.anim.show_curr_frame(doAction=False)
+        else:
+            self.selectedMulti(attrs)
+        config.save_undo()
+        config.doKeyAction()
+
+class DoDummy(MenuAction):
+    def selected(self, attrs):
+        pass
+
 class DoNew(MenuAction):
     def selected(self, attrs):
         config.stencil.enable = False
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
+            config.anim.__init__()
 
 def io_error_req(title, message, filename, linelen=33):
     if len(filename) > linelen:
@@ -55,7 +101,7 @@ class DoOpen(MenuAction):
         config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
-            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 config.bgcolor = 0
@@ -67,19 +113,19 @@ class DoOpen(MenuAction):
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
                 config.modified_count = 0
-            except:
+            except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s", filename)
+                io_error_req(str(ex), "Unable to open image:\n%s", filename)
 
 class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.background.get_flattened()
+        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = config.filename
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
+            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
                 save_pic(filename, merge_config)
@@ -93,8 +139,8 @@ class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.background.get_flattened()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, has_type=True)
+        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
                 if not save_pic(filename, merge_config, overwrite=False):
@@ -136,7 +182,7 @@ class DoRevert(MenuAction):
             else:
                 return
 
-            progress_req = open_progress_req(config.pixel_req_canvas, "Remapping Colors...")
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
                 config.bgcolor = 0
@@ -152,26 +198,30 @@ class DoRevert(MenuAction):
                 close_progress_req(progress_req)
                 io_error_req("Load Error", "Unable to open image:\n%s", filename)
 
-class DoPictureFlipX(MenuAction):
-    def selected(self, attrs):
+class DoPictureFlipX(MenuActionMulti):
+    def get_name(self):
+        return "Flip Horizontally"
+
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureFlipY(MenuAction):
-    def selected(self, attrs):
+class DoPictureFlipY(MenuActionMulti):
+    def get_name(self):
+        return "Flip Vertically"
+
+    def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
-        config.save_undo()
-        config.doKeyAction()
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
         self.toolHide()
         palette_req(config.pixel_req_canvas)
+        config.save_undo()
+        config.doKeyAction()
 
 def resizePalette(origpal, numcol):
     if len(origpal) < numcol:
@@ -192,24 +242,24 @@ class DoPictureBrushPalette(MenuAction):
             truepal = resizePalette(config.brush.pal, config.NUM_COLORS)
             pal = config.quantize_palette(truepal, config.color_depth)
             config.pal = list(pal)
-            config.set_all_palettes(pal)
             config.truepal = list(truepal)
+            config.set_all_palettes(pal, config.truepal)
 
 class DoPictureRestorePalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         pal = resizePalette(config.loadpal, config.NUM_COLORS)
         config.pal = list(pal)
-        config.set_all_palettes(pal)
         config.truepal = list(pal)
+        config.set_all_palettes(pal, config.truepal)
 
 class DoPictureDefaultPalette(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         pal = config.get_default_palette(config.NUM_COLORS)
         config.pal = list(pal)
-        config.set_all_palettes(pal)
         config.truepal = list(pal)
+        config.set_all_palettes(pal, config.truepal)
 
 class DoCycle(MenuAction):
     def selected(self, attrs):
@@ -218,8 +268,13 @@ class DoCycle(MenuAction):
         else:
             config.start_cycling()
 
-class DoPictureBG2FG(MenuAction):
-    def selected(self, attrs):
+class DoPictureBG2FG(MenuActionMulti):
+    def get_name(self):
+        return "Copy BG to FG"
+
+    def selectedMulti(self, attrs):
+        config.stop_cycling()
+        config.stencil.enable = False
         #replace FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -227,11 +282,12 @@ class DoPictureBG2FG(MenuAction):
         tfarray = np.equal(surf_array, bgcolor)
         surf_array[tfarray] = color
         surf_array = None
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureBGxFG(MenuAction):
-    def selected(self, attrs):
+class DoPictureBGxFG(MenuActionMulti):
+    def get_name(self):
+        return "Swap BG and FG"
+
+    def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
         #swap FG color with BG color
@@ -243,61 +299,96 @@ class DoPictureBGxFG(MenuAction):
         surf_array[bgarray] = color
         surf_array[fgarray] = bgcolor
         surf_array = None
-        config.save_undo()
-        config.doKeyAction()
 
-class DoPictureRemap(MenuAction):
-    def selected(self, attrs):
+class DoPictureRemap(MenuActionMulti):
+    def get_name(self):
+        return "Remap Palette"
+
+    def selectedMulti(self, attrs):
         config.stop_cycling()
         config.stencil.enable = False
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
         config.clear_undo()
-        config.save_undo()
-        config.doKeyAction()
 
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.enable = False
-        config.pixel_canvas, config.pixel_spare_canvas = config.pixel_spare_canvas, config.pixel_canvas
-        config.filepath, config.spare_filepath = config.spare_filepath, config.filepath
-        config.filename, config.spare_filename = config.spare_filename, config.filename
-        config.modified_count, config.spare_modified_count = config.spare_modified_count, config.modified_count
+
+        #Back up current canvas
+        config.anim.save_curr_frame()
+        i = config.proj_index
+        config.proj[i].pixel_canvas = config.pixel_canvas
+        config.proj[i].filepath = config.filepath
+        config.proj[i].filename = config.filename
+        config.proj[i].modified_count = config.modified_count
+        config.proj[i].anim = config.anim
+        config.proj[i].layers = config.layers
+        config.proj[i].indicators = config.menubar.indicators
+
+        #Switch to new canvas
+        config.proj_index = (config.proj_index + 1) % len(config.proj)
+        i = config.proj_index
+        config.pixel_canvas = config.proj[i].pixel_canvas
+        config.filepath = config.proj[i].filepath
+        config.filename = config.proj[i].filename
+        config.modified_count = config.proj[i].modified_count
+        config.anim = config.proj[i].anim
+        config.layers = config.proj[i].layers
+
+        if config.layers.has_key("fg"):
+            config.stencil = config.layers.get("fg").image
+        else:
+            config.stencil = Stencil()
+
+        if config.proj[i].indicators is None:
+            config.menubar.indicators = {}
+        else:
+            config.menubar.indicators = config.proj[i].indicators
+
+        config.anim.show_curr_frame(doAction=False)
+
         config.clear_undo()
         config.save_undo()
         config.doKeyAction()
 
 class DoSpareCopy(MenuAction):
     def selected(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        config.pixel_spare_canvas.blit(config.pixel_canvas, (0,0))
+        config.proj[sparei].pixel_canvas.blit(config.pixel_canvas, (0,0))
+        config.proj[sparei].anim.frame[config.proj[sparei].anim.curr_frame-1].image.blit(config.pixel_canvas, (0,0))
         config.clear_undo()
         config.save_undo()
 
-class DoMergeFront(MenuAction):
-    def selected(self, attrs):
-        config.clear_pixel_draw_canvas()
-        config.pixel_spare_canvas.set_colorkey(config.bgcolor)
-        config.pixel_canvas.blit(config.pixel_spare_canvas, (0,0))
-        config.pixel_spare_canvas.set_colorkey(None)
-        config.clear_undo()
-        config.save_undo()
+class DoMergeFront(MenuActionMulti):
+    def get_name(self):
+        return "Merge Spare in Front"
 
-class DoMergeBack(MenuAction):
-    def selected(self, attrs):
+    def selectedMulti(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
+        config.clear_pixel_draw_canvas()
+        config.proj[sparei].pixel_canvas.set_colorkey(config.bgcolor)
+        config.pixel_canvas.blit(config.proj[sparei].pixel_canvas, (0,0))
+        config.proj[sparei].pixel_canvas.set_colorkey(None)
+
+class DoMergeBack(MenuActionMulti):
+    def get_name(self):
+        return "Merge Spare in Back"
+
+    def selectedMulti(self, attrs):
+        sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
         newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
         newimage.set_palette(config.pal)
-        newimage.blit(config.pixel_spare_canvas, (0,0))
+        newimage.blit(config.proj[sparei].pixel_canvas, (0,0))
         config.pixel_canvas.set_colorkey(config.bgcolor)
         newimage.blit(config.pixel_canvas, (0,0))
         config.pixel_canvas.set_colorkey(None)
         config.pixel_canvas.blit(newimage, (0,0))
         newimage = None
-        config.clear_undo()
-        config.save_undo()
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
@@ -347,7 +438,7 @@ class DoBrushOpen(MenuAction):
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, has_type=True)
+        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image
@@ -403,13 +494,13 @@ class DoBrushStretch(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -586,13 +677,13 @@ class DoBrushRotateAny(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -641,13 +732,13 @@ class DoBrushShear(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -775,13 +866,13 @@ class DoBrushBendX(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -849,13 +940,13 @@ class DoBrushBendY(MenuAction):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -928,13 +1019,13 @@ class DoBrushHandlePlace(MenuAction):
         point_placed = False
         first_time = True
         while not point_placed:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION:
@@ -974,18 +1065,99 @@ class DoMode(MenuAction):
         config.menubar.title_extra = self.gadget.label
         config.doKeyAction()
 
-class DoStencilMake(MenuAction):
+class DoAnimOpen(MenuAction):
     def selected(self, attrs):
-        stencil_req(config.pixel_req_canvas)
-        config.doKeyAction()
+        config.anim.open_file()
 
-class DoStencilRemake(MenuAction):
+class DoAnimSave(MenuAction):
     def selected(self, attrs):
+        config.anim.save_file()
+
+class DoAnimFrameImport(MenuAction):
+    def selected(self, attrs):
+        config.anim.import_frames()
+
+class DoAnimFrameExport(MenuAction):
+    def selected(self, attrs):
+        config.anim.export_frames()
+
+class DoAnimFrameAdd(MenuAction):
+    def selected(self, attrs):
+        config.anim.add_frame()
+
+class DoAnimFrameSetNumber(MenuAction):
+    def selected(self, attrs):
+        config.anim.num_frames_req(config.pixel_req_canvas)
+
+class DoAnimFrameCopyAll(MenuAction):
+    def selected(self, attrs):
+        config.anim.copy_frame_to_all()
+
+class DoAnimFrameDelete(MenuAction):
+    def selected(self, attrs):
+        config.anim.delete_frame()
+
+class DoAnimFrameDeleteAll(MenuAction):
+    def selected(self, attrs):
+        config.anim.delete_all_frames()
+
+class DoAnimControlSetRate(MenuAction):
+    def selected(self, attrs):
+        config.anim.fps_list_req(config.pixel_req_canvas)
+
+class DoAnimControlPrevious(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.prev_frame()
+
+class DoAnimControlNext(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.next_frame()
+
+class DoAnimControlGoto(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.ask_frame()
+
+class DoAnimControlPlay(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play(loop=True)
+
+class DoAnimControlPlayOnce(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play()
+
+class DoAnimControlPingPong(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.anim.play(ping_pong=True)
+
+class DoStencilMake(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selected(self, attrs):
+        if stencil_req(config.pixel_req_canvas):
+            super().selected(attrs)
+
+    def selectedMulti(self, attrs):
         config.stencil.remake(config.pixel_canvas)
-        config.doKeyAction()
 
-class DoStencilLockFG(MenuAction):
-    def selected(self, attrs):
+class DoStencilRemake(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
+        config.stencil.remake(config.pixel_canvas)
+
+class DoStencilLockFG(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
         config.stencil.lock_fg(config.pixel_canvas)
         config.doKeyAction()
 
@@ -1007,23 +1179,28 @@ class DoStencilOnOff(MenuAction):
         config.stencil.enable = not config.stencil.enable
         config.doKeyAction()
 
-class DoStencilFree(MenuAction):
-    def selected(self, attrs):
+class DoStencilFree(MenuActionMulti):
+    def is_ask_multi(self):
+        return False
+
+    def selectedMulti(self, attrs):
         if config.stencil.image != None:
             config.clear_pixel_draw_canvas()
             config.stencil.draw(config.pixel_canvas)
             config.save_undo()
         config.stencil.free()
-        config.doKeyAction()
 
 class DoBackgroundFix(MenuAction):
     def selected(self, attrs):
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
-        config.background.fix(config.pixel_canvas)
-        config.brush.pen_down = False
-        config.bgcolor = 0;
-        config.pixel_canvas.fill(config.bgcolor);
-        config.pixel_canvas.set_colorkey(config.bgcolor)
+        config.clear_pixel_draw_canvas()
+        for frame_no in config.anim:
+            bg_img = config.pixel_canvas.copy()
+            config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="B")
+            config.brush.pen_down = False
+            config.bgcolor = 0;
+            config.pixel_canvas.fill(config.bgcolor);
+            config.pixel_canvas.set_colorkey(config.bgcolor)
         config.save_undo()
         config.toolbar.tool_id("text").action.cleartext()
         config.doKeyAction()
@@ -1034,7 +1211,10 @@ class DoBackgroundOpen(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Open Background Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             try:
-                config.background.open(filename)
+                bg_img = pygame.image.load(filename)
+                bg_img = pygame.transform.smoothscale(bg_img.convert(), config.pixel_canvas.get_size())
+                for frame_no in config.anim:
+                    config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="R")
                 config.bgcolor = 0;
                 config.pixel_canvas.set_colorkey(config.bgcolor)
             except:
@@ -1043,13 +1223,45 @@ class DoBackgroundOpen(MenuAction):
 
 class DoBackgroundOnOff(MenuAction):
     def selected(self, attrs):
-        config.background.enable = not config.background.enable
-        config.doKeyAction()
+        if config.layers.has_key("background"):
+            if config.layers.get("background").indicator == "":
+                return
+            opacity = config.layers.get("canvas").opacity
+            enable_state = config.layers.get("background").visible
+            if enable_state:
+                if opacity == 255:
+                    opacity = 128
+                else:
+                    enable_state = False
+                    opacity = 255
+            else:
+                enable_state = True
+                opacity = 255
+
+            for f in config.anim.frame:
+                if "background" in f.layers.layers:
+                    f.layers.get("background").visible = enable_state
+                f.layers.get("canvas").opacity = opacity
+            config.layers.get("background").visible = enable_state
+            config.layers.get("canvas").opacity = opacity
+            opacity = config.layers.get("canvas").opacity
+            config.doKeyAction()
 
 class DoBackgroundFree(MenuAction):
     def selected(self, attrs):
-        config.background.free()
-        config.doKeyAction()
+        if config.layers.has_key("background"):
+            config.clear_pixel_draw_canvas()
+            for frame_no in config.anim:
+                bglayer = config.layers.get("background")
+                if bglayer.image != None and bglayer.indicator != "R":
+                    config.pixel_canvas.set_colorkey(0)
+                    bglayer.image.blit(config.pixel_canvas, (0,0))
+                    config.pixel_canvas.blit(bglayer.image, (0,0))
+                    config.pixel_canvas.set_colorkey(None)
+                    config.save_undo()
+                config.layers.delete("background")
+                config.layers.get("canvas").opacity = 255
+            config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
@@ -1081,6 +1293,14 @@ class DoPrefsAutoTransp(MenuAction):
             return
         self.gadget.checked = not self.gadget.checked
         config.auto_transp_on = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsMultiCycle(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.multicycle = self.gadget.checked
         config.doKeyAction()
 
 class DoPrefsHideMenus(MenuAction):
@@ -1218,12 +1438,28 @@ def init_menubar(config_in):
 
     menubar.add_menu(
         ["Anim", [
-            ["!Open..."],
-            ["!Save..."],
-            ["!Move..."],
-            ["!Frames"],
-            ["!Control"],
-            ["!Anim Brush"],
+            ["Open...", " ", DoAnimOpen],
+            ["Save...", " ", DoAnimSave],
+            ["Move..."],
+            ["Frames", [
+                ["Import...", " ", DoAnimFrameImport],
+                ["Export...", " ", DoAnimFrameExport],
+                ["Set #...", " ", DoAnimFrameSetNumber],
+                ["Copy to All", " ", DoAnimFrameCopyAll],
+                ["Add Frames", " ", DoAnimFrameAdd],
+                ["Delete Frames", " ", DoAnimFrameDelete],
+                ["Delete All", " ", DoAnimFrameDeleteAll],
+            ]],
+            ["Control", [
+                ["Set Rate...", " ", DoAnimControlSetRate],
+                ["Previous", "1", DoAnimControlPrevious],
+                ["Next", "2", DoAnimControlNext],
+                ["Go to...", "3", DoAnimControlGoto],
+                ["Play", "4", DoAnimControlPlay],
+                ["Play once", "5", DoAnimControlPlayOnce],
+                ["Ping-pong", "6", DoAnimControlPingPong],
+            ]],
+            ["Anim Brush"],
         ]])
 
     menubar.add_menu(
@@ -1248,6 +1484,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Prefs", [
             ["/AutoTransp", " ", DoPrefsAutoTransp],
+            ["/MultiCycle", " ", DoPrefsMultiCycle],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],

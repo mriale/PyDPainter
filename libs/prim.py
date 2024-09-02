@@ -367,8 +367,9 @@ class Brush:
         self.prev_x = None
         self.prev_y = None
         self.pen_down = False
-        self.cycle_trans = np.arange(0,255, dtype=np.uint8)
-        self.cycle_trans_back = np.arange(0,255, dtype=np.uint8)
+        self.cycle_pos = np.zeros(6, dtype=np.uint8)
+        self.cycle_trans = np.arange(0,256, dtype=np.uint8)
+        self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
 
@@ -547,7 +548,7 @@ class Brush:
 
             return image
 
-    def draw(self, screen, color, coords, handlesymm=True, primprops=None):
+    def draw(self, screen, color, coords, handlesymm=True, primprops=None, erase=False):
         if not rect_onscreen([coords[0]+self.rect[0],
                               coords[1]+self.rect[1],
                               self.rect[2],
@@ -566,11 +567,13 @@ class Brush:
                 self.prev_x = None
                 self.prev_y = None
                 self.smear_image = None
-            if drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
+            if drawmode == DrawMode.CYCLE and config.multicycle and self.type == Brush.CUSTOM:
+                pass
+            elif drawmode not in (DrawMode.MATTE, DrawMode.REPLACE):
                 drawmode = DrawMode.COLOR
 
         #handle erase with background color
-        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and color == self.bgcolor:
+        if drawmode in (DrawMode.MATTE, DrawMode.SMEAR, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT) and erase:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
@@ -579,13 +582,46 @@ class Brush:
                 image.set_colorkey(self.bgcolor_orig)
         elif drawmode == DrawMode.REPLACE:
             if self.image != None:
-                if color == self.bgcolor:
+                if erase:
                     image = pygame.Surface(self.image.get_size(), 0, self.image)
                     image.set_palette(config.pal)
                     image.fill(color)
                 else:
                     image = self.image
                     image.set_colorkey(None)
+        elif drawmode == DrawMode.CYCLE and config.multicycle and self.type == Brush.CUSTOM:
+            #update offset for current cycle range
+            crange = config.get_range(color)
+            coffset=0
+            if crange is None:
+                #don't cycle because color not in range
+                self.cycle_pos[:] = 0
+            else:
+                coffset = color - crange.low
+                crange_index = config.cranges.index(crange)
+                self.cycle_pos[crange_index] = coffset
+                #update offsets for other cycle ranges
+                for i in range(len(config.cranges)):
+                    if i != crange_index:
+                        crange = config.cranges[i]
+                        self.cycle_pos[i] = crange.curr_color(crange.low, coffset) - crange.low
+                
+            #set up translation for color cycling
+            self.cycle_trans = np.arange(0,256, dtype=np.uint8)
+            for crange_index in range(len(config.cranges)):
+                crange = config.cranges[crange_index]
+                if crange.is_active() and crange.low < crange.high:
+                    arange = crange.get_range()
+                    for ci in arange:
+                        self.cycle_trans[ci] = crange.curr_color(ci, self.cycle_pos[crange_index])
+            #Color cycle brush
+            image = self.image.copy()
+            surf_array = pygame.surfarray.pixels2d(image)
+            surf_array2 = self.cycle_trans[surf_array]
+            np.copyto(surf_array, surf_array2)
+            surf_array = None
+            surf_array2 = None
+            image.set_colorkey(self.bgcolor_orig)
         elif drawmode in (DrawMode.SMEAR, DrawMode.SHADE, DrawMode.BLEND, DrawMode.SMOOTH, DrawMode.TINT):
             if self.cache.image[256] == None:
                 self.cache.image[256] = self.render_image(config.color)
@@ -595,14 +631,15 @@ class Brush:
 
                 #create stencil for smear
                 self.smear_stencil = self.cache.image[256].copy()
+                ckey_rgb = self.smear_stencil.get_colorkey()[0:3]
+                ckey = config.pal.index(ckey_rgb)
                 surf_array = pygame.surfarray.pixels2d(self.smear_stencil)
-                bgcolor = config.brush.bgcolor
                 scolor = min(config.NUM_COLORS+1, 255)
-                tfarray = np.not_equal(surf_array, bgcolor)
-                surf_array[tfarray] = bgcolor
+                tfarray = np.not_equal(surf_array, ckey)
+                surf_array[tfarray] = ckey
                 surf_array[np.logical_not(tfarray)] = scolor
                 surf_array = None
-                self.smear_stencil.set_colorkey(bgcolor)
+                self.smear_stencil.set_colorkey(ckey)
 
                 if drawmode == DrawMode.SHADE:
                     #set up cycle translation array
@@ -807,7 +844,7 @@ class CoordList:
     def prepend(self, listnum, coord):
         self.coordlist[listnum].insert(0, coord)
 
-    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None):
+    def draw(self, screen, color, drawmode=-1, xormode=-1, handlesymm=-1, interrupt=-1, primprops=None, erase=False, animpaint=True):
         numpoints = 0
         numcolors = 0
         pointspercolor = 0
@@ -818,13 +855,23 @@ class CoordList:
             if xormode == True:
                 primprops = PrimProps()
             else:
-                primprops = config.primprops
+                primprops = copy.deepcopy(config.primprops)
         else:
+            primprops = copy.deepcopy(primprops)
             drawmode = primprops.drawmode.value if drawmode == -1 else drawmode
 
         xormode = primprops.xor if xormode == -1 else xormode
         handlesymm = primprops.handlesymm if handlesymm == -1 else handlesymm
         interrupt = primprops.interrupt if interrupt == -1 else interrupt
+
+        if animpaint and config.anim.num_frames > 1 and \
+           not xormode and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                if primprops.drawmode.spacing == DrawMode.CONTINUOUS:
+                    primprops.drawmode.spacing = DrawMode.N_TOTAL
+                    primprops.drawmode.n_total_value = config.anim.num_frames
+        else:
+            animpaint = False
 
         #handle color cycling
         arange = []
@@ -865,9 +912,14 @@ class CoordList:
                 else:
                     if primprops.drawmode.spacing == DrawMode.AIRBRUSH:
                         for j in range(primprops.drawmode.airbrush_value):
-                            config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode))
+                            config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
                     else:
-                        config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode))
+                        config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
+
+                if animpaint and not interrupt:
+                    config.save_undo()
+                    config.anim.next_frame(doAction=False)
+                    screen = config.pixel_canvas
 
                 if interrupt and config.has_event():
                     return
@@ -1003,9 +1055,9 @@ def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
     coords_out = symm_coords_list(ccoords, handlesymm=handlesymm)
     return coords_out
 
-def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0):
+def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, interrupt=False, angle=0, erase=False):
     if filled == 1:
-        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle)
+        fillellipse(screen, color, coords, width, height, interrupt=interrupt, angle=angle, erase=erase)
         return
 
     ecurves = calc_ellipse_curves(coords, width, height, angle=angle)
@@ -1020,10 +1072,10 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
             cl.coordlist[j:j+3] = drawcurve(screen, color, coordfrom, coordto, coordcontrol, coordsonly=True, handlesymm=False)
         primprops = copy.copy(config.primprops)
         primprops.continuous = True
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops, erase=erase)
 
 
-def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0):
+def fillellipse (screen, color, coords, width, height, interrupt=False, primprops=None, angle=0, erase=False):
     if primprops == None:
         primprops = config.primprops
         handlesymm = True
@@ -1033,7 +1085,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
     xc,yc = coords
 
     if width == 0 and height == 0:
-        fillrect(screen, color, (xc,yc), (xc,yc))
+        fillrect(screen, color, (xc,yc), (xc,yc), erase=erase)
         return
 
     ecurves = calc_ellipse_curves(coords, width, height, handlesymm=handlesymm, angle=angle)
@@ -1070,16 +1122,16 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
 
         start_shape()
         for sly in sslk:
-            hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops)
+            hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
         
 
-def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrupt=False):
+def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrupt=False, erase=False):
     if filled == 1:
-        fillcircle(screen, color, coords_in, radius, interrupt=interrupt)
+        fillcircle(screen, color, coords_in, radius, interrupt=interrupt, erase=erase)
         return
 
     coords_list = symm_coords(coords_in)
@@ -1118,7 +1170,7 @@ def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrup
 
         primprops = copy.copy(config.primprops)
         primprops.continuous = True
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, primprops=primprops, erase=erase)
 
 def add_xbounds(xbounds, y, x1, x2):
     if y in xbounds:
@@ -1131,7 +1183,7 @@ def add_xbounds(xbounds, y, x1, x2):
     else:
         xbounds[y] = [x1, x2]
 
-def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None):
+def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False):
     handlesymm = True
     if primprops != None:
         handlesymm = primprops.handlesymm
@@ -1166,14 +1218,14 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
         start_shape()
         for y in xbounds:
             x1,x2 = xbounds[y]
-            hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops)
+            hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
 
-def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
+def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     if (xormode and not handlesymm):
         coordfrom_list = [coordfrom]
         coordto_list = [coordto]
@@ -1183,10 +1235,10 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
     for i in range(len(coordfrom_list)):
         if interrupt and config.has_event():
             return
-        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast)
+        drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase, animpaint=animpaint)
 
 
-def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False):
+def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     x,y = int(coordfrom[0]), int(coordfrom[1])
     x2,y2 = int(coordto[0]), int(coordto[1])
 
@@ -1245,7 +1297,7 @@ def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coor
     if coordsonly:
         return cl.coordlist[0]
 
-    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt)
+    cl.draw(screen, color, drawmode=drawmode, xormode=xormode, handlesymm=handlesymm, interrupt=interrupt, erase=erase, animpaint=animpaint)
 
 
 #Bresenham Quardric Bezier curve algorithm from:
@@ -1347,7 +1399,7 @@ def convert_curve_control(coordfrom, coordto, coordcontrol):
 
 
 #from: http://stackoverflow.com/questions/31757501/pixel-by-pixel-b%C3%A9zier-curve
-def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coordsonly=False, handlesymm=True, interrupt=False):
+def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coordsonly=False, handlesymm=True, interrupt=False, erase=False):
     coordfrom_list = symm_coords(coordfrom, handlesymm)
     coordcontrol_list = symm_coords(coordcontrol, handlesymm)
     coordto_list = symm_coords(coordto, handlesymm)
@@ -1436,24 +1488,24 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
         if coordsonly:
             return cl.coordlist
 
-        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt)
+        cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, erase=erase)
 
 
-def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False):
+def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, erase=False):
     if filled:
         if handlesymm:
-            fillrect_symm(screen, color, coordfrom, coordto, xormode=xormode, interrupt=interrupt)
+            fillrect_symm(screen, color, coordfrom, coordto, xormode=xormode, interrupt=interrupt, erase=erase)
         else:
-            fillrect(screen, color, coordfrom, coordto, interrupt=interrupt)
+            fillrect(screen, color, coordfrom, coordto, interrupt=interrupt, erase=erase)
         return
     x1,y1 = coordfrom
     x2,y2 = coordto
 
-    drawpoly(screen, color, [(x1,y1), (x2,y1), (x2,y2), (x1,y2), (x1,y1)], xormode=xormode, drawmode=drawmode, handlesymm=handlesymm, interrupt=interrupt, skiplast=True)
+    drawpoly(screen, color, [(x1,y1), (x2,y1), (x2,y2), (x1,y2), (x1,y1)], xormode=xormode, drawmode=drawmode, handlesymm=handlesymm, interrupt=interrupt, skiplast=True, erase=erase)
 
 
-def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=True, interrupt=False):
-    fillrect(screen, color, coordfrom, coordto, interrupt=interrupt)
+def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=True, interrupt=False, erase=False):
+    fillrect(screen, color, coordfrom, coordto, interrupt=interrupt, erase=erase)
     x1,y1 = coordfrom
     x2,y2 = coordto
 
@@ -1461,7 +1513,7 @@ def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=T
     rectlist_symm = symm_coords_list(rectlist, handlesymm)
 
     for i in range(1,len(rectlist_symm)):
-        fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt)
+        fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt, erase=erase)
         if interrupt and config.has_event():
             return
         config.try_recompose()
@@ -1621,7 +1673,7 @@ def hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2):
 def hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2):
     hlines.append([y, xs1, xs2])
 
-def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
+def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=False):
     if primprops == None:
         primprops = config.primprops
 
@@ -1656,7 +1708,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False):
 
     if primprops.xor:
         hline_XOR(surf_array, y, xs1, xs2)
-    elif primprops.fillmode.value == FillMode.SOLID or color == config.bgcolor:
+    elif primprops.fillmode.value == FillMode.SOLID or erase:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BRUSH:
         hline_BRUSH(surf_array, y, x1, x2,xs1, xs2)
@@ -1994,7 +2046,7 @@ def drawxorcross(screen, x, y):
 
 
 
-def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None):
+def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None, erase=False):
     if primprops == None:
         primprops = config.primprops
 
@@ -2019,38 +2071,53 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None)
         config.fillmode.bounds = [x1,y1,x2,y2]
         start_shape()
         for y in range(y1, y2+1):
-            hline(screen, color, y, x1, x2, primprops=primprops)
+            hline(screen, color, y, x1, x2, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
-def floodfill(surface, fill_color, position):
+def has_sl(sl, x, y):
+    slfound = False
+    if y in sl:
+        for sly in sl[y]:
+            if x >= sly[0] and x <= sly[1]:
+                #fragment already in list
+                slfound = True
+                break
+    return slfound
+
+def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
     for x,y in symm_coords(position):
         #Create scanline hash
         sl = {}
         config.fillmode.bounds = copy.copy(FillMode.NOBOUNDS)
         if onscreen((x,y)):
+            surface_bak = surface.copy()
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
             maxx, maxy = config.pixel_width, config.pixel_height
             current_color = surf_array[x,y]
-            if fill_color == current_color:
-                if config.fillmode.value == FillMode.SOLID:
-                    continue
-                else:
-                    for crange in config.cranges:
-                        if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
-                            fill_color = crange.next_color(fill_color)
-
-            if surf_array[x,y] == fill_color:
+            if bounds_color < 0:
+                if fill_color == current_color:
+                    if config.fillmode.value == FillMode.SOLID:
+                        continue
+                    else:
+                        for crange in config.cranges:
+                            if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
+                                fill_color = crange.next_color(fill_color)
+            elif current_color == bounds_color:
                 continue
 
             frontier = [(x,y)]
             while len(frontier) > 0:
                 x, y = frontier.pop()
                 if x >= 0 and x < maxx and y >= 0 and y < maxy:
-                    if surf_array[x, y] != current_color:
-                        continue
+                    if bounds_color < 0:
+                        if surf_array[x, y] != current_color:
+                            continue
+                    else:
+                        if surf_array[x, y] == bounds_color or has_sl(sl,x,y):
+                            continue
                 else:
                     continue
                 surf_array[x, y] = fill_color
@@ -2105,15 +2172,17 @@ def floodfill(surface, fill_color, position):
 
             start_shape()
             if config.fillmode.value != FillMode.SOLID:
+                #Restore pre-filled state
+                surface.blit(surface_bak, (0,0))
                 for y in sorted (sl.keys()):
                     #draw scanline fragments
                     for frag in sl[y]:
-                        hline(surface, fill_color, y, frag[0], frag[1])
+                        hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
                     config.try_recompose()
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False):
     n = len(coords)
     if n == 0:
         return
@@ -2173,22 +2242,22 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
             polyints.sort()
 
             for i in range(0, len(polyints), 2):
-                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops)
+                hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops, erase=erase)
                 if interrupt and config.has_event():
                     return
                 config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
-                hline(screen, color, miny, minx, maxx, primprops=primprops)
+                hline(screen, color, miny, minx, maxx, primprops=primprops, erase=erase)
                 config.try_recompose()
 
         end_shape(screen, color, interrupt=interrupt)
 
 
-def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False):
+def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False, erase=False):
     if filled:
-        fillpoly(screen, color, coords, handlesymm=handlesymm, interrupt=interrupt)
+        fillpoly(screen, color, coords, handlesymm=handlesymm, interrupt=interrupt, erase=erase)
     else:
         coords_symm = symm_coords_list(coords, handlesymm=handlesymm)
 
@@ -2199,10 +2268,16 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
                 if interrupt and config.has_event():
                     return
                 if len(lastcoord) != 0:
-                    drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast))
+                    drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast), erase=erase)
                 lastcoord = coord
 
-def convert8(pixel_canvas_rgb, pal, is_bgr=False, status_func=None):
+def convert8(pixel_canvas_rgb, pal, status_func=None):
+    #Decide whether pic is RGB or BGR
+    if pixel_canvas_rgb.get_shifts()[0] == 0:
+        is_bgr = True
+    else:
+        is_bgr = False
+
     #Create color map for all 16 million colors
     cmap = np.zeros(0x1000000, dtype="uint8")
 

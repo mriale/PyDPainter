@@ -32,9 +32,55 @@ class ToolAction(Action):
 
     def get_tip(self):
         if self.gadget.id in tiptext:
+            if self.gadget.id == "palette":
+                palrgb_tip = list(tiptext[self.gadget.id])
+                x,y = config.get_mouse_pointer_pos()
+                #check for color in palette
+                palg = self.gadget
+                color = -1
+                for i in range(len(palg.palette_bounds)):
+                    x1,y1,x2,y2,colorindex = palg.palette_bounds[i]
+                    if x >= x1 and x <= x1+x2-1 and y >= y1 and y <= y1+y2-1:
+                        color = colorindex
+                if color >= 0:
+                    r,g,b = config.truepal[color]
+                    palrgb_tip.append("Color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (color,r,g,b,r,g,b))
+                self.gadget.live_tip = True
+                return palrgb_tip
+            elif self.gadget.id == "swatch":
+                palrgb_tip = list(tiptext[self.gadget.id])
+                r,g,b = config.truepal[config.color]
+                palrgb_tip.append("FG color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (config.color,r,g,b,r,g,b))
+                r,g,b = config.truepal[config.bgcolor]
+                palrgb_tip.append("BG color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (config.bgcolor,r,g,b,r,g,b))
+                self.gadget.live_tip = True
+                return palrgb_tip
             return tiptext[self.gadget.id]
         else:
             return [self.gadget.id]
+
+class ToolActionMulti(ToolAction):
+    def get_name(self):
+        return ""
+
+    def selected(self, attrs):
+        if config.anim.num_frames > 1:
+            self.gadget.state = 0
+            frame_range = config.anim.ask_apply_multi(self.get_name())
+            curr_frame_bak = config.anim.curr_frame
+            for frame_no in frame_range:
+                config.anim.save_curr_frame()
+                config.anim.curr_frame = frame_no
+                config.anim.show_curr_frame(doAction=False)
+                self.selectedMulti(attrs)
+                config.save_undo()
+            config.anim.save_curr_frame()
+            config.anim.curr_frame = curr_frame_bak
+            config.anim.show_curr_frame(doAction=False)
+        else:
+            self.selectedMulti(attrs)
+        config.save_undo()
+        config.doKeyAction()
 
 class ToolSingleAction(ToolAction):
     pass
@@ -52,7 +98,7 @@ class ToolDragAction(ToolAction):
         if buttons[0]:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords, interrupt=True)
         elif buttons[2]:
-            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True)
+            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True, erase=True)
 
     def drawfinal(self, coords, button):
         if self.p1 == None:
@@ -60,7 +106,7 @@ class ToolDragAction(ToolAction):
         if button == 1:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords)
         elif button == 3:
-            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords)
+            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, erase=True)
         config.save_undo()
 
     def selected(self, attrs):
@@ -132,6 +178,19 @@ class ToolDragAction(ToolAction):
             self.last_trace_time = t
         return False
 
+    def constrain_square(self, coords):
+        coords_out = list(coords)
+        if pygame.key.get_mods() & KMOD_SHIFT:
+            scaleX = config.sm.scaleX
+            scaleY = config.sm.scaleY
+            xdiff = self.p1[0] - coords[0]
+            ydiff = self.p1[1] - coords[1]
+            if abs(xdiff // scaleX) > abs(ydiff // scaleY):
+                coords_out[1] = self.p1[1] + int(math.copysign(scaleY * xdiff / scaleX, -ydiff))
+            else:
+                coords_out[0] = self.p1[0] + int(math.copysign(scaleX * ydiff / scaleY, -xdiff))
+        return coords_out
+
 class DoBIBrush(ToolAction):
     """
     Built-In brushes
@@ -180,13 +239,23 @@ class DoDot(ToolSingleAction):
         elif button == 3:
             config.brush.pen_down = True
             config.clear_pixel_draw_canvas()
-            config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+            config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+        if config.anim.num_frames > 1 and \
+           button in [1,3] and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+            config.save_undo()
+            config.anim.next_frame(doAction=False)
 
     def drag(self, coords, buttons):
         if buttons[0]:
             config.brush.draw(config.pixel_canvas, config.color, coords)
         elif buttons[2]:
-            config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+            config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+        if config.anim.num_frames > 1 and \
+           (buttons[0] or buttons[2]) and \
+           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+            config.save_undo()
+            config.anim.next_frame(doAction=False)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -198,8 +267,13 @@ class DoDraw(ToolSingleAction):
     """
     Continuous freehand drawing/filled tool
     """
+    def __init__(self, *args, **kwargs):
+        self.outline = False
+        super(DoDraw, self).__init__(*args, **kwargs)
+
     def selected(self, attrs):
         config.brush.pen_down = False
+        self.outline = False
         if attrs["rightclick"]:
             if attrs["subtool"]:
                 fill_req(config.pixel_req_canvas)
@@ -208,6 +282,8 @@ class DoDraw(ToolSingleAction):
         if attrs["subtool"]:
             config.subtool_selected = 1
             self.polylist = [config.get_mouse_pixel_pos()]
+            if pygame.key.get_mods() & pygame.KMOD_ALT:
+                self.outline = True
         else:
             config.subtool_selected = 0
         self.last_coords = config.get_mouse_pixel_pos()
@@ -233,38 +309,59 @@ class DoDraw(ToolSingleAction):
             elif button == 3:
                 config.brush.pen_down = True
                 config.clear_pixel_draw_canvas()
-                config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                 self.last_coords = coords
+            if config.anim.num_frames > 1 and \
+               button in [1,3] and \
+               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                config.save_undo()
+                config.anim.next_frame(doAction=False)
 
     def drag(self, coords, buttons):
         if config.subtool_selected:
             if self.polylist == None:
                 return
             if buttons[0] or buttons[2]:
-                drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
-                self.polylist.append(coords)
+                if self.polylist[-1] != coords:
+                    drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, xormode=1, handlesymm=True, skiplast=True)
+                    self.polylist.append(coords)
                 config.cycle_handled = True
         else:
             if buttons[0]:
                 drawmode = config.drawmode.value
                 if drawmode == DrawMode.CYCLE:
-                    drawmode = DrawMode.COLOR
-                drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode)
+                    if config.brush.image is None or config.multicycle == False:
+                        drawmode = DrawMode.COLOR
+                drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode, animpaint=False)
                 self.last_coords = coords
             elif buttons[2]:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.last_coords, coords)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.last_coords, coords, erase=True, animpaint=False)
                 self.last_coords = coords
+            if config.anim.num_frames > 1 and \
+               (buttons[0] or buttons[2]) and \
+               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+                config.save_undo()
+                config.anim.next_frame(doAction=False)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
             if config.subtool_selected:
                 if self.polylist == None:
                     return
+
                 config.clear_pixel_draw_canvas()
+                closed_poly = list(self.polylist)
+                if len(closed_poly) > 0:
+                    closed_poly.append(closed_poly[0])
+
                 if button == 1:
                     fillpoly(config.pixel_canvas, config.color, self.polylist)
+                    if self.outline:
+                        drawpoly(config.pixel_canvas, config.color, closed_poly)
                 elif button == 3:
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
+                    if self.outline:
+                        drawpoly(config.pixel_canvas, config.bgcolor, closed_poly, erase=True)
                 self.polylist = [coords]
 
             config.save_undo()
@@ -294,13 +391,13 @@ class DoLine(ToolDragAction):
         if buttons[0]:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords, interrupt=True)
         elif buttons[2]:
-            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True)
+            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True, erase=True)
 
     def drawfinal(self, coords, button):
         if button == 1:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords)
         elif button == 3:
-            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords)
+            drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, erase=True)
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
@@ -327,7 +424,8 @@ class DoCurve(ToolSingleAction):
             if self.button == 1:
                 drawcurve(config.pixel_canvas, config.color, self.line_start, self.line_end, coords, interrupt=True)
             elif self.button == 3:
-                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, interrupt=True)
+                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, interrupt=True, erase=True)
+        self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def mousedown(self, coords, button):
         if not button in [1,3]:
@@ -342,19 +440,33 @@ class DoCurve(ToolSingleAction):
             if button == 1:
                 config.brush.draw(config.pixel_canvas, config.color, coords)
             elif button == 3:
-                config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
             self.button = button
         else:
             config.clear_pixel_draw_canvas()
             if button == 1:
                 drawcurve(config.pixel_canvas, config.color, self.line_start, self.line_end, coords)
             elif button == 3:
-                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords)
+                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, erase=True)
             config.save_undo()
             self.line_start = None
             self.line_end = None
             config.brush.pen_down = False
             self.move(coords)
+
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            config.save_undo()
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
+        return False
 
     def drag(self, coords, buttons):
         if not (buttons[0] or buttons[2]):
@@ -366,7 +478,8 @@ class DoCurve(ToolSingleAction):
             if buttons[0]:
                 drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
             elif buttons[2]:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True, erase=True)
+            self.leave_trace(coords, buttons)
 
     def mouseup(self, coords, button):
         if not button in [1,3]:
@@ -376,9 +489,9 @@ class DoCurve(ToolSingleAction):
         if self.line_start:
             config.clear_pixel_draw_canvas()
             if button == 1:
-                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords)
+                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
             elif button == 3:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True, erase=True)
             self.line_end = coords
 
     def keydown(self, key, mod, unicode):
@@ -407,16 +520,19 @@ class DoFill(ToolSingleAction):
             config.subtool_selected = 0
 
     def move(self, coords):
-        pass
+        config.clear_pixel_draw_canvas()
 
     def drag(self, coords, buttons):
         config.cycle_handled = True
 
     def mousedown(self, coords, button):
+        bounds_color = -1
+        if pygame.key.get_mods() & pygame.KMOD_ALT:
+            bounds_color = config.bgcolor
         if button == 1:
-            floodfill(config.pixel_canvas, config.color, coords)
+            floodfill(config.pixel_canvas, config.color, coords, bounds_color=bounds_color)
         elif button == 3:
-            floodfill(config.pixel_canvas, config.bgcolor, coords)
+            floodfill(config.pixel_canvas, config.bgcolor, coords, erase=True, bounds_color=bounds_color)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -426,13 +542,13 @@ class DoAirbrush(ToolSingleAction):
     """
     Airbrush tool
     """
-    def draw(self, color, coords):
+    def draw(self, color, coords, erase=False):
         cycle()
         max_spray = 5
         if pygame.key.get_mods() & pygame.KMOD_CTRL:
             max_spray = 1
         for i in range(0,max_spray):
-            config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]))
+            config.brush.draw(config.pixel_canvas, color, config.airbrush_coords(coords[0],coords[1]), erase=erase)
 
     def hide(self):
         super().hide()
@@ -458,14 +574,14 @@ class DoAirbrush(ToolSingleAction):
         elif button == 3:
             config.brush.pen_down = True
             config.clear_pixel_draw_canvas()
-            self.draw(config.bgcolor, coords)
+            self.draw(config.bgcolor, coords, erase=True)
             pygame.time.set_timer(config.TOOLEVENT, 15)
 
     def drag(self, coords, buttons):
         if buttons[0]:
             self.draw(config.color, coords)
         elif buttons[2]:
-            self.draw(config.bgcolor, coords)
+            self.draw(config.bgcolor, coords, erase=True)
 
     def mouseup(self, coords, button):
         if button in [1,3]:
@@ -495,13 +611,13 @@ class DoAirbrush(ToolSingleAction):
 
         while not point_placed:
             config.cursor.shape = 4
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if not dragging:
@@ -553,7 +669,12 @@ class DoRect(ToolDragAction):
         if attrs["subtool"] and attrs["rightclick"]:
             fill_req(config.pixel_req_canvas)
         else:
+            config.enable_constrain = False
             super().selected(attrs)
+
+    def deselected(self, attrs):
+        config.enable_constrain = True
+        super().deselected(attrs)
 
     def drawbefore(self, coords):
         mouseX, mouseY = coords
@@ -562,18 +683,20 @@ class DoRect(ToolDragAction):
             config.brush.draw(config.pixel_canvas, config.color, coords)
 
     def drawrubber(self, coords, buttons):
+        coords = self.constrain_square(coords)
         if self.leave_trace(coords, buttons):
             return
         if buttons[0]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected, interrupt=True)
         elif buttons[2]:
-            drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, interrupt=True)
+            drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, interrupt=True, erase=True)
 
     def drawfinal(self, coords, button):
+        coords = self.constrain_square(coords)
         if button == 1:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected)
         elif button == 3:
-            drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected)
+            drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, erase=True)
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
@@ -613,9 +736,9 @@ class DoCircle(ToolDragAction):
                 drawellipse(config.pixel_canvas, config.color, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True)
         elif buttons[2]:
             if ax == ay:
-                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, interrupt=True)
+                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, interrupt=True, erase=True)
             else:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True, erase=True)
 
     def drawfinal(self, coords, button):
         mouseX, mouseY = coords
@@ -632,9 +755,9 @@ class DoCircle(ToolDragAction):
                 drawellipse(config.pixel_canvas, config.color, self.p1, radius*ax, radius*ay, filled=config.subtool_selected)
         elif button == 3:
             if ax == ay:
-                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected)
+                drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, erase=True)
             else:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected, erase=True)
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
@@ -676,7 +799,21 @@ class DoEllipse(ToolDragAction):
             if self.button == 1:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
             elif self.button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
+
+    def leave_trace(self, coords, buttons):
+        t = pygame.time.get_ticks()
+        if "last_trace_time" in dir(self):
+            if t - self.last_trace_time > 60:
+                if pygame.key.get_mods() & pygame.KMOD_CTRL:
+                        button = 1 if buttons[0] else 3 if buttons[2] else 0
+                        if button != 0:
+                            config.save_undo()
+                            self.last_trace_time = t
+                            return True
+        else:
+            self.last_trace_time = t
+        return False
 
     def mousedown(self, coords, button):
         if not button in [1,3]:
@@ -692,7 +829,7 @@ class DoEllipse(ToolDragAction):
             if button == 1:
                 config.brush.draw(config.pixel_canvas, config.color, coords)
             elif button == 3:
-                config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
             self.button = button
             self.state = self.ST_XY
         elif self.state == self.ST_XY:
@@ -705,13 +842,13 @@ class DoEllipse(ToolDragAction):
             if button == 1:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
             elif button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
             self.state = self.ST_ROTATE
         elif self.state == self.ST_ROTATE:
             if button == 1:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected)
             elif button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, erase=True)
             config.save_undo()
             self.p1 = None
             self.p2 = None
@@ -724,6 +861,8 @@ class DoEllipse(ToolDragAction):
         if not (buttons[0] or buttons[2]):
             return
 
+        if self.leave_trace(coords, buttons):
+            return
         config.cycle_handled = True
         if self.state == self.ST_XY:
             config.clear_pixel_draw_canvas()
@@ -734,7 +873,7 @@ class DoEllipse(ToolDragAction):
             if buttons[0]:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
             elif buttons[2]:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
         elif self.state == self.ST_ROTATE:
             config.clear_pixel_draw_canvas()
             ax = config.aspectX
@@ -750,7 +889,7 @@ class DoEllipse(ToolDragAction):
             if buttons[0]:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
             elif buttons[2]:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle, erase=True)
 
     def mouseup(self, coords, button):
         if not button in [1,3]:
@@ -771,7 +910,7 @@ class DoEllipse(ToolDragAction):
             if button == 1:
                 drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle)
             elif button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, angle=angle, erase=True)
             self.p1 = None
             self.p2 = None
             self.p3 = None
@@ -924,7 +1063,7 @@ class DoPolyLine(DoPoly):
                     self.last_coords = coords
                 elif button == 3:
                     config.brush.pen_down = True
-                    config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                    config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                     self.polylist.append(coords)
                     self.last_coords = coords
         self.hidden = False
@@ -941,10 +1080,10 @@ class DoPolyLine(DoPoly):
         elif buttons[2]:
             config.clear_pixel_draw_canvas()
             if len(self.polylist) > 0:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.polylist[-1], coords, handlesymm=True, interrupt=True)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.polylist[-1], coords, handlesymm=True, interrupt=True, erase=True)
                 self.draw_p1()
             else:
-                config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
             self.last_coords = coords
         self.hidden = False
 
@@ -968,9 +1107,9 @@ class DoPolyLine(DoPoly):
             elif button == 3:
                 config.clear_pixel_draw_canvas()
                 if len(self.polylist) > 0:
-                    drawline_symm(config.pixel_canvas, config.bgcolor, self.polylist[-1], coords, handlesymm=True)
+                    drawline_symm(config.pixel_canvas, config.bgcolor, self.polylist[-1], coords, handlesymm=True, erase=True)
                 else:
-                    config.brush.draw(config.pixel_canvas, config.bgcolor, coords)
+                    config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                 config.save_undo()
                 self.polylist.append(coords)
                 self.last_coords = coords
@@ -1052,7 +1191,7 @@ class DoPolyFill(DoPoly):
                     cycle()
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, erase=True)
                     self.polylist = []
                     config.save_undo()
             else:
@@ -1292,6 +1431,10 @@ class DoBrush(ToolSingleAction):
         return x >= p1x-w and x <= p1x+w and y >= p1y-h and y <= p1y+h
 
     def selected(self, attrs):
+        if attrs["rightclick"]:
+            config.menubar.menu_id("brush").menu_id("restore").action.selected("")
+            return
+
         config.brush.pen_down = False
         if config.tool_selected == self.id:
             config.subtool_selected = 0 if config.subtool_selected else 1
@@ -1307,6 +1450,12 @@ class DoBrush(ToolSingleAction):
         self.do_brush_poly.last_coords = config.get_mouse_pixel_pos()
         self.do_brush_rect.hidden = False
         self.do_brush_poly.hidden = False
+        if not config.subtool_selected:
+            config.enable_constrain = False
+
+    def deselected(self, attrs):
+        config.enable_constrain = True
+        super().deselected(attrs)
 
     def hide(self):
         if config.subtool_selected:
@@ -1358,10 +1507,12 @@ class DoBrushRect(ToolDragAction):
         drawxorcross(config.pixel_canvas, mouseX, mouseY)
 
     def drawrubber(self, coords, buttons):
+        coords = self.constrain_square(coords)
         if buttons[0] or buttons[2]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, xormode=True, handlesymm=False)
 
     def drawfinal(self, coords, button):
+        coords = self.constrain_square(coords)
         if button == 1 or button == 3:
             bgcolor = config.bgcolor
             if config.auto_transp_on:
@@ -1464,7 +1615,7 @@ class DoBrushPoly(DoBrush):
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
                     config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
-                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False)
+                    fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False, erase=True)
                     self.polylist = []
                     config.save_undo()
 
@@ -1591,14 +1742,16 @@ class DoUndo(ToolAction):
         else:
             config.undo()
 
-class DoClear(ToolAction):
+class DoClear(ToolActionMulti):
     """
     Clear screen to background color
     """
-    def selected(self, attrs):
+    def get_name(self):
+        return "Clear Canvas"
+
+    def selectedMulti(self, attrs):
         config.brush.pen_down = False
         config.pixel_canvas.fill(config.bgcolor);
-        config.save_undo()
         config.toolbar.tool_id("text").action.cleartext()
 
 class DoSwatch(ToolAction):
@@ -1703,6 +1856,8 @@ class PalGadget(ToolGadget):
                 ry = swh * 4 // 10
                 rx = sww * 4 // 24
                 orect = [scx-rx, scy-ry, rx*2, ry*2]
+                if config.color > len(config.pal):
+                    config.color = 1
                 pygame.draw.ellipse(screen, config.pal[config.color], orect, 0)
             elif self.label == "^": # direction arrow
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
@@ -1743,13 +1898,13 @@ class PalGadget(ToolGadget):
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
-            event = pygame.event.poll()
-            while event.type == pygame.MOUSEMOTION and pygame.event.peek((MOUSEMOTION)):
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
-                event = pygame.event.poll()
+                event = config.xevent.poll()
 
             if event.type == pygame.NOEVENT and not first_time:
-                event = pygame.event.wait()
+                event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
@@ -1978,7 +2133,7 @@ def main():
         
         #screen.fill((0,0,0))
 
-        event = pygame.event.wait()
+        event = config.xevent.wait()
         if event.type == QUIT:
             running = 0
 

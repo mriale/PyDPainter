@@ -28,6 +28,7 @@ exe = EXE(
     a.datas,
     [],
     name='PyDPainter',
+    icon='data/icon.png',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,

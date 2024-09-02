@@ -100,15 +100,21 @@ which mouse button you press when you paint the shape. If you release the mouse
 button before you close the shape, **PyDPainter** closes the shape for you with
 a straight line from your cursor position to where you began the shape.
 
-Current brush is ignored.
+Current brush is ignored unless you press `ALT` while clicking on the tool.
+Then both tools, drawing and fill, are drawn with the same shape you make on screen, including the possible stroke options (defaults or custom brush, current Mode, spacing options like airbrush, etc.).
+
+![](ALT-areafill.png)
+
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](spacing.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+
 
 Key: `D`
 
-![](areafill-example.png)  
 
-_Tip: Drawing a shape that intersects itself creates an interesting effect of
-unfilled holes. You can fill with background color, drawing with the right
-button._
+
+_Tip: Drawing a shape that intersects itself creates an interesting effect of unfilled holes. You can fill with background color, drawing with the right button._  
+
+![](areafill-example.png)  
 
 ## Line tool
 
@@ -161,6 +167,17 @@ clicking the right button.
 shape. If the shape is not completely enclosed (that is, if there is a hole in
 its perimeter), the paint will "leak" through and fill the entire page.*
 
+Holding down the `Alt` key when you click with the Fill cursor, fills outward to the background color. In other words, the fill spreads
+outward until it reaches areas of the current background color.
+
+Standard filling is struggling. It stops at the edge of each color of the sky gradient.
+![](standard-fill-sky.png)
+
+Filling the sky with `ALT` stops only at the **background** color (green of landscape). Combined with the Stencils function, this is a very effective cleaning tool.
+
+![](ALT-fill-sky.png)
+
+
 Key: `f`
 
 Right-click tool to open [Fill](fill.md) type.
@@ -206,6 +223,11 @@ Key: `r`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
+Press the `SHIFT` key for a square drawing constraint.
+
+Press the `CTRL` key to draw rectangles on the fly as you move the mouse.
+
+
 ## Circle tool
 
 ![](t-circle.png)
@@ -223,6 +245,10 @@ Key: `c`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
+Press the `SHIFT` key to start with the next circle center on your last click.
+
+Press the `CTRL` key to draw circles on the fly as you move the mouse.
+
 ## Ellipse tool
 
 ![](t-ellipse.png)
@@ -238,6 +264,11 @@ the mouse button and hold. Now you can rotate your ellipse until it has just the
 Key: `e`
 
 Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+
+With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
+Amazing results can be achieved easily:  
+![](elipse-trace.png)
+
 
 ## Polygon tool
 
@@ -296,6 +327,8 @@ For greater precision, you can click on the brush tool a second time (or press  
 However, there is one aspect of brush selection you should be aware of: if any parts of your brush consist of the current background color, those parts will be transparent. In other words, whenever you pick up a brush, it's as if you are picking up only the non-background colors; any background colors in the brush will remain invisible even after you change to a new background color. This means that you can create brushes with intricate outlines without fear of picking up a rectangle of the surrounding background color.
 
 *Tip: What's more, if you delimit a brush on the screen, but this time by clicking with the right mouse button, this will erase what you've taken as a brush from the screen. This allows you to move blocks of graphics quickly.*
+
+Press the `SHIFT` key during use for for a "square" constraint.
 
 Key: `b`
 

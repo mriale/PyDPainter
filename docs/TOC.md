@@ -4,9 +4,10 @@ PyDPainter Documentation
 Table of Contents
 -----------------
 
-### Quick Reference Card
-- [View Quick Reference Card](hotkeys-toolbox.png)
-- [Download PDF version](hotkeys-toolbox.pdf)
+### Quick Reference Cards
+- [View Toolbox Quick Reference Card](hotkeys-toolbox.png)
+- [Toolbox PDF version](hotkeys-toolbox.pdf)
+- [View Animation Toolbar Quick Reference Card](hotkeys-animtools.png)
 
 ### Tools
 
@@ -27,4 +28,5 @@ Table of Contents
 - [Plasma Texture Tutorial](tutorials/src/plasma/Plasma.md)
 - [Planet Tutorial](tutorials/src/planet/Planet.md)
 - [Galaxy Tutorial](tutorials/src/galaxy/Galaxy.md)
+- [Animpainting Tutorial](tutorials/src/animpainting/animpainting.md)
 

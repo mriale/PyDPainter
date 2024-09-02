@@ -34,6 +34,7 @@ class ToolGadget(Gadget):
         self.has_subtool = has_subtool
         self.toolbar = toolbar
         self.hotkeys = hotkeys
+        self.live_tip = False
         if action == None:
             self.action = None
         else:
@@ -48,7 +49,7 @@ class ToolGadget(Gadget):
     def render_tip(self, quadrant=0):
         """
         Render a tooltip into a canvas with speech bubble in quadrant.
-        0=right, 1=bottom, 2=left, 3=top
+        0=left, 1=bottom, 2=right, 3=top
         """
         if self.toolbar.tip_font_size != pygame.display.get_surface().get_height()//50:
             self.toolbar.tip_font_size = pygame.display.get_surface().get_height()//50
@@ -59,6 +60,9 @@ class ToolGadget(Gadget):
         if self.action != None and "get_tip" in dir(self.action):
             tip = self.action.get_tip()
             if tip != None:
+                if len(tip) == 0:
+                    self.toolbar.tip_canvas = None
+                    return
                 #size box
                 wrect = title_font.size("W")
                 lineheight = title_font.get_linesize()
@@ -70,10 +74,10 @@ class ToolGadget(Gadget):
                     w = max(w, rect[0] + wrect[0] + 1)
                     h += lineheight
 
-                #box around text
-                box = (0,0,w,h-1)
-                
-                if quadrant == 0: #right
+                if quadrant == 0: #left
+                    #box around text
+                    box = (0,0,w,h-1)
+
                     #tail
                     tx = w-2
                     th = wrect[1]
@@ -81,8 +85,17 @@ class ToolGadget(Gadget):
                     tw = wrect[0]
                     triangle = [(tx,ty), (tx+tw, ty+(th//2)), (tx,ty+th)]
                     w += wrect[0]
-                elif quadrant in [0,2]: #right or left
+                elif quadrant == 2: #right
+                    #tail
+                    tx = wrect[0]-1
+                    th = wrect[1]
+                    ty = (h - th) // 2
+                    tw = wrect[0]
+                    triangle = [(tx,ty), (tx-tw, ty+(th//2)), (tx,ty+th)]
                     w += wrect[0]
+
+                    #box around text
+                    box = (wrect[0]-2,0,w-wrect[0],h-1)
                 elif quadrant in [1,3]: #bottom or top
                     h += wrect[1]
 
@@ -96,7 +109,7 @@ class ToolGadget(Gadget):
                 pygame.draw.lines(tip_canvas, (0,0,0), False, triangle, 2)
 
                 #draw text
-                xo = wrect[0] // 2
+                xo = wrect[0] // 2 + box[0]
                 yo = wrect[1] // 2
                 line_count=0
                 for line in tip:
@@ -154,7 +167,9 @@ class Toolbar:
         self.tip_canvas = None
         self.tip_x = 0
         self.tip_y = 0
+        self.tip_quadrant = 0
         self.wait_for_tip = False
+        self.live_tip = False
         self.tipg = None
 
     def hash_coords(self, x, y):
@@ -240,7 +255,7 @@ class Toolbar:
             for toolg in group_list:
                 toolg.group_list = group_list
 
-    def draw(self, screen=None, offset=(0,0)):
+    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         if screen == None:
             screen = self.screen
 
@@ -253,9 +268,9 @@ class Toolbar:
         for toolg in self.tools:
             if isinstance(toolg, ToolGadget) and toolg.tool_type != ToolGadget.TT_CUSTOM:
                 if toolg.state != 0:
-                    toolg.draw(screen, None, offset=offset)
+                    toolg.draw(screen, font, offset=offset)
             else:
-                toolg.draw(screen, None, offset=offset)
+                toolg.draw(screen, font, offset=offset, fgcolor=fgcolor, bgcolor=bgcolor, hcolor=hcolor)
 
     def tool_id(self, id):
         for g in self.tools:
@@ -352,8 +367,14 @@ class Toolbar:
             if event.type == MOUSEBUTTONUP:
                 self.wait_for_mouseup[event.button] = False
             for toolg in self.tools:
-                if toolg.tool_type == ToolGadget.TT_SINGLE and toolg.state > 0:
+                if isinstance(toolg, ToolGadget) and toolg.tool_type == ToolGadget.TT_SINGLE and toolg.state > 0:
                     toolg.state = 0
+                else:
+                    ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
+        elif self.visible and event.type == MOUSEBUTTONDOWN and event.button in [4,5]:
+            for toolg in self.get_tools_by_coords(x,y):
+                if toolg.pointin((x,y), toolg.rect):
+                    ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
         elif event.type == KEYDOWN and \
              (event.unicode in self.hotkey_map or \
               event.key in self.hotkey_map):
@@ -371,14 +392,19 @@ class Toolbar:
             if True in self.wait_for_mouseup and \
                event.buttons == (0,0,0):
                 self.wait_for_mouseup = [False, False, False, False]
+            elif True in self.wait_for_mouseup:
+                for toolg in self.get_tools_by_coords(x,y):
+                    if not isinstance(toolg, ToolGadget):
+                        ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
             tip_on = False
             for toolg in self.get_tools_by_coords(x,y):
                 if toolg.pointin((x,y), toolg.rect) and "render_tip" in dir(toolg):
                     tip_on = True
                     if self.tipg != toolg:
-                        toolg.render_tip()
+                        toolg.render_tip(self.tip_quadrant)
                         self.wait_for_tip = True
                         self.tipg = toolg
+                        self.live_tip = toolg.live_tip
                         pygame.time.set_timer(self.tip_event, 1000)
             if not tip_on:
                 self.tip_canvas = None
@@ -386,5 +412,7 @@ class Toolbar:
         elif event.type == self.tip_event:
             pygame.time.set_timer(self.tip_event, TIMEROFF)
             self.wait_for_tip = False
+        if self.live_tip and self.tipg:
+            self.tipg.render_tip(self.tip_quadrant)
         return ge
 
