@@ -1223,7 +1223,7 @@ def save_iff_anim(filename, config, status_func=None):
         write_chunk(newfile, b'CRNG', pack(">HHHBB", 0, crange.rate, crange.get_flags(), crange.low, crange.high))
 
     body = b''
-    out_canvas = image16(config.anim.frame[0].image)
+    out_canvas = image16(config.anim.frame[0].layers.get_flattened())
     surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
     planes_out = c2p(surf_array)
 
@@ -1272,8 +1272,8 @@ def save_iff_anim(filename, config, status_func=None):
         dlta_bytes = b''
         pdelta = [0] * 16
 
-        out_canvas1 = image16(config.anim.frame[curri].image)
-        out_canvas0 = image16(config.anim.frame[previ].image)
+        out_canvas1 = image16(config.anim.frame[curri].layers.get_flattened())
+        out_canvas0 = image16(config.anim.frame[previ].layers.get_flattened())
 
         # make previous and current frames into bitplanes
         surf_array0 = pygame.surfarray.pixels2d(out_canvas0)
@@ -1339,7 +1339,7 @@ def save_gif_anim(filename, config, status_func=None):
             localpal = None
         else:
             localpal = config.anim.frame[i].truepal
-        surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].image).copy()
+        surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].layers.get_flattened())
         disposal_method = 0
         transparency = 0
         transparent_color_index = 0
@@ -1351,7 +1351,7 @@ def save_gif_anim(filename, config, status_func=None):
         # frame compression using differences
         if i > 0 and not config.anim.frame[i].is_pal_key:
             # Do difference from previous frame
-            prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].image).copy()
+            prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].layers.get_flattened())
             surf_diff = np.equal(prev_array, surf_array)
             surf_diff_ne = np.not_equal(prev_array, surf_array)
 
