@@ -590,7 +590,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
         config.anim = libs.animation.Animation()
 
     #Check for series of numbered files
-    seq_matches = re.findall(r'[^0-9]([0-9]{3,})\.[a-zA-z]+$', filename)
+    seq_matches = re.findall(r'[^0-9]([0-9]{3,})\.[a-zA-Z]+$', filename)
 
     frameno = -1
     firstframe = -1
