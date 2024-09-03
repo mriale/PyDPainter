@@ -74,7 +74,7 @@ class PPGadget(Gadget):
                 elif numcolors <= 4:
                     color_cols = 1
                     
-                colors_shown = 32
+                colors_shown = 64
                 if numcolors < colors_shown:
                     colors_shown = numcolors
 
@@ -184,13 +184,13 @@ class PPGadget(Gadget):
                         if abs(g.value) == 1:
                             g.value = -g.value
                         elif g.value == -2:
-                            palette_page -= 32
+                            palette_page -= 64
                             if palette_page < 0:
                                 palette_page = 0
                         elif g.value == 2:
-                            palette_page += 32
+                            palette_page += 64
                             if palette_page >= config.NUM_COLORS:
-                                palette_page = config.NUM_COLORS - 32
+                                palette_page = config.NUM_COLORS - 64
                     g.state = 0
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
@@ -301,7 +301,7 @@ Speed---------___^^
     palpage_rg = req.gadget_id("17_8")
     palpage_rg.value = 2
 
-    if len(config.pal) > 32 and not config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
+    if len(config.pal) > 64 and not config.display_mode & config.MODE_EXTRA_HALFBRIGHT:
         palpageg.enabled = True
         palpage_lg.enabled = True
         palpage_rg.enabled = True
@@ -397,8 +397,8 @@ Speed---------___^^
                     palg.need_redraw = True
                     colorg.value = color
                     colorg.need_redraw = True
-                    palette_page = color // 32 * 32
-                    palpageg.label = chr(65+(palette_page//32))
+                    palette_page = color // 64 * 64
+                    palpageg.label = chr(65+(palette_page//64))
                     palpageg.need_redraw = True
                     set_rgb_sliders(config.pal[color], rg, gg, bg)
                     strg.value = rgb_to_hex(config.pal[color])
@@ -531,7 +531,7 @@ Speed---------___^^
                 elif ge.gadget.label == "^":
                     config.cranges[current_range].set_dir(speed_dirg.value)
                     speed_dirg.need_redraw = True
-                    palpageg.label = chr(65+(palette_page//32))
+                    palpageg.label = chr(65+(palette_page//64))
                     palpageg.need_redraw = True
             elif ge.gadget.type == Gadget.TYPE_PROP_VERT:
                 if ge.gadget.id == rg.id or ge.gadget.id == gg.id or ge.gadget.id == bg.id:

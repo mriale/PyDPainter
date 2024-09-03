@@ -1804,19 +1804,19 @@ class PalGadget(ToolGadget):
                 elif numcolors <= 4:
                     color_cols = 1
 
-                colors_shown = 32
+                colors_shown = 64
                 if numcolors < colors_shown:
                     colors_shown = numcolors
 
                 color_rows = colors_shown // color_cols
                 color_width = w // color_cols
-                if numcolors <= 32:
+                if numcolors <= 64:
                     color_height = int(round(h*1.0 / color_rows))
                 else:
                     color_height = int((h-self.palettearrows_image.get_height())*1.0 / color_rows)
 
                 self.value = config.color
-                if config.color < config.palette_page or config.color > config.palette_page + 31:
+                if config.color < config.palette_page or config.color > config.palette_page + colors_shown-1:
                     config.palette_page = config.color & 0xE0
 
                 screen.set_clip(self.screenrect)
@@ -1834,7 +1834,7 @@ class PalGadget(ToolGadget):
                 pygame.draw.rect(screen, (255,255,255), curr_rect, 1)
 
                 #draw color pager if > 32 colors
-                if numcolors > 32:
+                if numcolors > 64:
                     #draw palette arrows
                     ah = self.palettearrows_image.get_height()
                     aw = self.palettearrows_image.get_width() // 10
@@ -1842,7 +1842,7 @@ class PalGadget(ToolGadget):
                     ay = y+yo+1+color_rows*color_height
                     self.palette_bounds.append((ax,ay,aw,ah,-1))
                     screen.blit(self.palettearrows_image, (ax,ay), (aw*8,0,aw,ah))
-                    screen.blit(self.palettearrows_image, (ax+aw,ay), (aw*config.palette_page//32,0,aw,ah))
+                    screen.blit(self.palettearrows_image, (ax+aw,ay), (aw*config.palette_page//64,0,aw,ah))
                     self.palette_bounds.append((ax+aw+aw,ay,aw,ah,-2))
                     screen.blit(self.palettearrows_image, (ax+aw+aw,ay), (aw*9,0,aw,ah))
 
@@ -1952,12 +1952,12 @@ class PalGadget(ToolGadget):
                                         config.bgcolor = colorindex
                                 elif colorindex == -1: #palette page left
                                     if config.palette_page > 0:
-                                        config.palette_page -= 32
-                                        config.color -= 32
+                                        config.palette_page -= 64
+                                        config.color -= 64
                                 elif colorindex == -2: #palette page right
-                                    if config.palette_page < config.NUM_COLORS-32:
-                                        config.palette_page += 32
-                                        config.color += 32
+                                    if config.palette_page < config.NUM_COLORS-64:
+                                        config.palette_page += 64
+                                        config.color += 64
                                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                     elif g.label == "%": #Current color swatch
                         if event.button == 1:
