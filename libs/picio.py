@@ -516,6 +516,14 @@ def load_anim(filename, config, ifftype, status_func=None):
         newpic.blit(pic, (0,0))
         pic = newpic
 
+        #crop anim images to actual bitmap size
+        for i in range(config.anim.num_frames):
+            pic2 = config.anim.frame[i].image
+            newpic = pygame.Surface((w, h), 0, pic2)
+            newpic.set_palette(pic2.get_palette())
+            newpic.blit(pic2, (0,0))
+            config.anim.frame[i].image = newpic
+
     return pic
 
 def pal_power_2(palin):
@@ -785,6 +793,11 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.anim.global_palette = True
         else:
             config.anim.global_palette = False
+
+    if config.anim.num_frames > 1:
+        # Add layers to all frames
+        for i in range(len(config.anim.frame)):
+            config.anim.frame[i].layers.set("canvas", config.anim.frame[i].image, priority=1)
 
     config.color_depth = config.guess_color_depth(config.truepal)
     config.truepal = config.quantize_palette(config.truepal, config.color_depth)
