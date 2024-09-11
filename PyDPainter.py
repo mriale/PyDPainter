@@ -115,10 +115,7 @@ def check_recover():
             root.mainloop()
 
 if __name__ == "__main__":
-    try:
-        check_recover()
-    except Exception:
-        pass
+    check_recover()
     config = pydpainter(do_recover)
     try:
         config.run()
