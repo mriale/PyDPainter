@@ -154,6 +154,16 @@ class LayerStack:
         self.blit(image, (0,0))
         return tuple(image.get_at(coords))[0:3]
 
+    def get_palette(self):
+        for key in self.layers:
+            layer = self.layers[key]
+            if layer.visible and "get_palette" in dir(layer.image) and \
+               "get_bytesize" in dir(layer.image) and layer.image.get_bytesize() == 1:
+                pal = layer.image.get_palette()
+                if not pal is None:
+                    return(pal)
+        return None
+
     def set_palette(self, pal):
         for key in self.layers:
             layer = self.layers[key]
@@ -174,6 +184,7 @@ class LayerStack:
 
     def get_flattened(self, exclude=[]):
         pic = config.pixel_canvas.copy()
+        pic.set_palette(self.get_palette())
         self.blit(pic, exclude=exclude)
         return pic
 

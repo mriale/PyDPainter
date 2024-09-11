@@ -303,7 +303,7 @@ def load_anim(filename, config, ifftype, status_func=None):
 
     #initialize anim header
     anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
-    dpan_version, dpan_numframes, dpan_global_fps, dpan_global_delay = (0,0,20, 3)
+    dpan_version, dpan_numframes, dpan_global_fps, dpan_global_delay = (0,0,0,0)
 
     try:
         filesize = os.path.getsize(filename)
@@ -341,6 +341,9 @@ def load_anim(filename, config, ifftype, status_func=None):
                 #Deluxe Paint specific chunk
                 dpan_bytes = chunk.read()
                 (dpan_version, dpan_numframes, dpan_global_fps, d1,d2,d3) = unpack(">HHBBBB", dpan_bytes)
+                #print(f"{(dpan_version, dpan_numframes, dpan_global_fps, d1,d2,d3)=}")
+                if dpan_version < 3:
+                    dpan_global_fps = 0
                 if dpan_global_fps > 0:
                     dpan_global_delay = 60 // dpan_global_fps
             elif chunk.getname() == b'BMHD':
@@ -386,7 +389,7 @@ def load_anim(filename, config, ifftype, status_func=None):
                 anhd_bytes = chunk.read()
                 (anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b) = unpack(">BBHHhhLLBBLQQ", anhd_bytes)
                 #print(f"{anim_reltime=} {anim_abstime=}")
-                if anim_abstime == 0:
+                if anim_abstime == 0 and dpan_global_delay != 0:
                     anim_reltime = dpan_global_delay
             elif chunk.getname() == b'DLTA':
                 #Read in column pointers
@@ -499,12 +502,15 @@ def load_anim(filename, config, ifftype, status_func=None):
 
     config.cranges = cranges
 
-    #trim final frames of looping animation
-    if dpan_numframes == 0 and config.anim.num_frames > 2:
-        dpan_numframes = config.anim.num_frames - 2
-    while config.anim.num_frames > dpan_numframes:
-        del config.anim.frame[-1]
-        config.anim.num_frames -= 1
+    if dpan_numframes > 0:
+        #take frame 0 delay from looping frame to be trimmed
+        if config.anim.num_frames - dpan_numframes == 2:
+            config.anim.frame[0].delay = config.anim.frame[-2].delay
+        
+        #trim final frames of looping animation
+        while config.anim.num_frames > dpan_numframes:
+            del config.anim.frame[-1]
+            config.anim.num_frames -= 1
 
     config.anim.global_palette = (num_CMAP == 1)
     config.pal = config.anim.frame[0].pal
@@ -515,6 +521,14 @@ def load_anim(filename, config, ifftype, status_func=None):
         newpic.set_palette(config.pal)
         newpic.blit(pic, (0,0))
         pic = newpic
+
+        #crop anim images to actual bitmap size
+        for i in range(config.anim.num_frames):
+            pic2 = config.anim.frame[i].image
+            newpic = pygame.Surface((w, h), 0, pic2)
+            newpic.set_palette(pic2.get_palette())
+            newpic.blit(pic2, (0,0))
+            config.anim.frame[i].image = newpic
 
     return pic
 
@@ -785,6 +799,11 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.anim.global_palette = True
         else:
             config.anim.global_palette = False
+
+    if config.anim.num_frames > 1:
+        # Add layers to all frames
+        for i in range(len(config.anim.frame)):
+            config.anim.frame[i].layers.set("canvas", config.anim.frame[i].image, priority=1)
 
     config.color_depth = config.guess_color_depth(config.truepal)
     config.truepal = config.quantize_palette(config.truepal, config.color_depth)
