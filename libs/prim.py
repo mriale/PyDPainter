@@ -493,6 +493,10 @@ class Brush:
             if self.size == 1:
                 image = pygame.Surface((1,1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
+                if color == 0:
+                    image.set_colorkey(1)
+                else:
+                    image.set_colorkey(0)
                 image.fill(color)
             else:
                 image = pygame.Surface((self.size*ax*2+1, self.size*ay*2+1),0, config.pixel_canvas)
