@@ -13,11 +13,43 @@ APPLICATION_EXTENSION = 0xFF
 COMMENT_EXTENSION     = 0xFE
 PLAINTEXT_EXTENSION   = 0x01
 
-class LzwEntry:
-    def __init__(self, byte=None, prev=-1, len=1):
-        self.byte = byte
-        self.prev = prev
-        self.len = len
+class BitReader(object):
+    def __init__(self, byte_string):
+        if not isinstance(byte_string, bytes):
+            raise TypeError("Requires bytelike object")
+        self._str = bytes(byte_string)
+        self._ptr = 0
+        self._len = len(byte_string) * 8
+    def read(self, amount):
+        byte_start, start = divmod(self._ptr, 8)
+        byte_end, end = divmod(min(self._ptr+amount, self._len), 8)
+        if byte_start > self._len:
+            return 0
+        if byte_start == byte_end:
+            byte = self._str[byte_start]
+            if start:
+                byte >>= start
+            byte &= ~(-1 << (end - start))
+            self._ptr = (byte_end << 3) | end
+            bit_str = byte
+        else:
+            bit_str = 0
+            bit_index = 0
+            i = byte_start
+            if start:
+                bit_str |= self._str[i] >> start
+                bit_index += (8 - start)
+                i += 1
+            while i < byte_end:
+                bit_str |= (self._str[i] << bit_index)
+                bit_index += 8
+                i += 1
+            if end:
+                byte = self._str[i] & (~(-1 << end))
+                bit_str |= (byte << bit_index)
+                bit_index += end
+        self._ptr = (byte_end << 3) | end
+        return bit_str
 
 class GIFParser:
     def __init__(self, filename, status_func=None):
@@ -129,98 +161,41 @@ class GIFParser:
 # GIF decoding routine from:
 #  https://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art011
     def decode_lzw_data(self, input_data, key_size):
-        input = list(input_data)
-        code_length = key_size
-        input_length = len(input_data)
-        out = []
-
-        maxbits = 0
-        i = 0
-        idi = 0
-        outi = 0
-        bit = 0
-        code = -1
-        prev = -1
-        dictionary = {}
-        dictionary_ind = 0
-        mask = 0x01
-        reset_code_length = code_length
-        clear_code = 1 << code_length
-        stop_code = clear_code + 1
-        match_len = 0
-
-        # Initialize the first 2^code_len entries of the dictionary with their
-        # indices. The rest of the entries will be built up dynamically.
-
-        for dictionary_ind in range(1 << code_length):
-            dictionary[dictionary_ind] = LzwEntry(dictionary_ind)
-
-        # 2^code_len + 1 is the special "end" code; don't give it an entry here
-        dictionary_ind = (1 << code_length) + 2
-
-        while input_length > 0:
-            code = 0x0
-            # Always read one more bit than the code length
-            for i in range(code_length + 1):
-                bit = 1 if input_data[idi] & mask else 0
-                mask <<= 1
-
-                if mask == 0x100:
-                    mask = 0x01
-                    idi += 1;
-                    input_length -= 1
-
-                code = code | (bit << i)
-
-            if code == clear_code:
-                code_length = reset_code_length;
-                for dictionary_ind in range(1 << code_length):
-                    dictionary[dictionary_ind] = LzwEntry(dictionary_ind)
-                dictionary_ind = (1 << code_length) + 2
-                prev = -1
-                continue
-            elif code == stop_code:
+        code_in = BitReader(input_data)
+        idx_out = []
+        bit_size = key_size + 1
+        bit_inc = (1 << (bit_size)) - 1
+        CLEAR = 1 << key_size
+        END = CLEAR + 1
+        code_table_len = END + 1
+        code_last = -1
+        code_table = [-1] * code_table_len
+        for x in range(code_table_len):
+            code_table[x] = (x,)
+        while code_last != END:
+            code_id = code_in.read(bit_size)
+            if code_id == CLEAR:
+                bit_size = key_size + 1
+                bit_inc = (1 << (bit_size)) - 1
+                code_last = -1
+                code_table = code_table[:code_table_len]
+            elif code_id == END:
                 break
-
-            # Update the dictionary with this character plus the _entry_
-            # (character or string) that came before it
-            if prev > -1 and code_length < 12:
-                if code > dictionary_ind:
-                    #print("code = %.02x, but dictionary_ind = %.02x\n"%(code, dictionary_ind))
-                    return []
-
-                # Special handling for KwKwK
-                ptr = code
-                if code == dictionary_ind:
-                    ptr = prev;
-
-                while dictionary[ptr].prev != -1:
-                    ptr = dictionary[ptr].prev
-                dictionary[dictionary_ind] = LzwEntry(dictionary[ptr].byte,prev, dictionary[prev].len + 1)
-                dictionary_ind += 1
-
-                # GIF89a mandates that this stops at 12 bits
-                if dictionary_ind == (1 << (code_length + 1)) and code_length < 11:
-                    code_length += 1
-
-            prev = code
-
-            # Now copy the dictionary entry backwards into "out"
-            match_len = dictionary[code].len
-            while code != -1:
-                maxout = outi + dictionary[code].len
-                if maxout > len(out):
-                    out.extend((maxout - len(out)) * [0])
-                out[outi + dictionary[code].len - 1] = dictionary[code].byte;
-                if dictionary[code].prev == code:
-                    #print("Internal error; self-reference.")
-                    return []
-                code = dictionary[code].prev;
-
-            outi += match_len;
-
-        return out
-
+            elif code_id < len(code_table) and code_table[code_id] is not None:
+                current = code_table[code_id]
+                idx_out.extend(current)
+                k = (current[0],)
+            elif code_last not in (-1, CLEAR, END):
+                previous = code_table[code_last]
+                k = (previous[0],)
+                idx_out.extend(previous + k)
+            if len(code_table) == bit_inc and bit_size < 12:
+                bit_size += 1
+                bit_inc = (1 << (bit_size)) - 1
+            if code_last not in (-1, CLEAR, END):
+                code_table.append(code_table[code_last] + k)
+            code_last = code_id
+        return idx_out
     def get_frames(self):
         frames = []
 
