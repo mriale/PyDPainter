@@ -3,6 +3,7 @@
 
 import struct, os
 import numpy as np
+from gif2numpy.gif_decode import lzw_decompress
 
 EXTENSION_INTRODUCER = 0x21
 IMAGE_DESCRIPTOR     = 0x2C
@@ -12,44 +13,6 @@ GRAPHIC_CONTROL       = 0xF9
 APPLICATION_EXTENSION = 0xFF
 COMMENT_EXTENSION     = 0xFE
 PLAINTEXT_EXTENSION   = 0x01
-
-class BitReader(object):
-    def __init__(self, byte_string):
-        if not isinstance(byte_string, bytes):
-            raise TypeError("Requires bytelike object")
-        self._str = bytes(byte_string)
-        self._ptr = 0
-        self._len = len(byte_string) * 8
-    def read(self, amount):
-        byte_start, start = divmod(self._ptr, 8)
-        byte_end, end = divmod(min(self._ptr+amount, self._len), 8)
-        if byte_start > self._len:
-            return 0
-        if byte_start == byte_end:
-            byte = self._str[byte_start]
-            if start:
-                byte >>= start
-            byte &= ~(-1 << (end - start))
-            self._ptr = (byte_end << 3) | end
-            bit_str = byte
-        else:
-            bit_str = 0
-            bit_index = 0
-            i = byte_start
-            if start:
-                bit_str |= self._str[i] >> start
-                bit_index += (8 - start)
-                i += 1
-            while i < byte_end:
-                bit_str |= (self._str[i] << bit_index)
-                bit_index += 8
-                i += 1
-            if end:
-                byte = self._str[i] & (~(-1 << end))
-                bit_str |= (byte << bit_index)
-                bit_index += end
-        self._ptr = (byte_end << 3) | end
-        return bit_str
 
 class GIFParser:
     def __init__(self, filename, status_func=None):
@@ -158,44 +121,9 @@ class GIFParser:
             "local_palette": pal,
         }
 
-# GIF decoding routine from:
-#  https://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art011
     def decode_lzw_data(self, input_data, key_size):
-        code_in = BitReader(input_data)
-        idx_out = []
-        bit_size = key_size + 1
-        bit_inc = (1 << (bit_size)) - 1
-        CLEAR = 1 << key_size
-        END = CLEAR + 1
-        code_table_len = END + 1
-        code_last = -1
-        code_table = [-1] * code_table_len
-        for x in range(code_table_len):
-            code_table[x] = (x,)
-        while code_last != END:
-            code_id = code_in.read(bit_size)
-            if code_id == CLEAR:
-                bit_size = key_size + 1
-                bit_inc = (1 << (bit_size)) - 1
-                code_last = -1
-                code_table = code_table[:code_table_len]
-            elif code_id == END:
-                break
-            elif code_id < len(code_table) and code_table[code_id] is not None:
-                current = code_table[code_id]
-                idx_out.extend(current)
-                k = (current[0],)
-            elif code_last not in (-1, CLEAR, END):
-                previous = code_table[code_last]
-                k = (previous[0],)
-                idx_out.extend(previous + k)
-            if len(code_table) == bit_inc and bit_size < 12:
-                bit_size += 1
-                bit_inc = (1 << (bit_size)) - 1
-            if code_last not in (-1, CLEAR, END):
-                code_table.append(code_table[code_last] + k)
-            code_last = code_id
-        return idx_out
+        return lzw_decompress(input_data, key_size)
+
     def get_frames(self):
         frames = []
 

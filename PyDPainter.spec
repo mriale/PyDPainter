@@ -8,7 +8,7 @@ a = Analysis(
     ['PyDPainter.py'],
     pathex=['libs'],
     binaries=[],
-    datas=[('data','data')],
+    datas=[('data','data'),('gif2numpy','gif2numpy')],
     hiddenimports=[],
     hookspath=[],
     runtime_hooks=[],
