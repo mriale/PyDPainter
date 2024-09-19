@@ -621,12 +621,9 @@ Resize Page: [Yes~No]
         return newpal
 
     def get_max_color_index():
-        max_color_index = 0
-        for y in range(config.pixel_canvas.get_height()):
-            for x in range(config.pixel_canvas.get_width()):
-                color_index = config.pixel_canvas.get_at_mapped((x,y))
-                if max_color_index < color_index:
-                    max_color_index = color_index
+        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        max_color_index = np.max(surf_array)
+        surf_array = None
         return max_color_index
 
 
