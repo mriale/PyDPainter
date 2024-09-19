@@ -620,6 +620,15 @@ Resize Page: [Yes~No]
 
         return newpal
 
+    def get_max_color_index():
+        max_color_index = 0
+        for y in range(config.pixel_canvas.get_height()):
+            for x in range(config.pixel_canvas.get_width()):
+                color_index = config.pixel_canvas.get_at_mapped((x,y))
+                if max_color_index < color_index:
+                    max_color_index = color_index
+        return max_color_index
+
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -692,21 +701,26 @@ Resize Page: [Yes~No]
                             if halfbright:
                                 num_top_colors = 32
 
-                            colorlist = get_top_colors(num_top_colors)
+                            if get_max_color_index() < num_colors:
+                                config.pal = config.pal[0:num_colors]
+                                config.truepal = config.truepal[0:num_colors]
+                            else:
+                                colorlist = get_top_colors(num_top_colors)
 
-                            newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
+                                newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
 
-                            #convert colors to reduced palette using blit
-                            new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
-                            new_pixel_canvas.set_palette(newpal)
-                            new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+                                #convert colors to reduced palette using blit
+                                new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
+                                new_pixel_canvas.set_palette(newpal)
+                                new_pixel_canvas.blit(config.pixel_canvas, (0,0))
 
-                            #substitute new canvas for the higher color one
-                            config.pixel_canvas = new_pixel_canvas
-                            config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
-                            config.truepal = config.quantize_palette(config.truepal, cdepth)
-                            config.pal = list(config.truepal)
-                            config.pal = config.unique_palette(config.pal)
+                                #substitute new canvas for the higher color one
+                                config.pixel_canvas = new_pixel_canvas
+                                config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
+                                config.truepal = config.quantize_palette(config.truepal, cdepth)
+                                config.pal = list(config.truepal)
+                                config.pal = config.unique_palette(config.pal)
+
                             config.backuppal = list(config.pal)
                             config.pixel_canvas.set_palette(config.pal)
                             for frame in config.anim.frame:
