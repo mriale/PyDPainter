@@ -506,9 +506,9 @@ class Animation:
                 elif event.key == K_6:
                     self.play(ping_pong=True)
                 elif event.key == K_7:
-                    pass #animbrush prev
+                    config.brush.prev_frame()
                 elif event.key == K_8:
-                    pass #animbrush next
+                    config.brush.next_frame()
                 elif self.playing and (event.key == K_ESCAPE or event.key == K_SPACE):
                     self.play(stop=True)
                 elif event.key == K_PAGEUP:
@@ -529,9 +529,9 @@ class Animation:
                 elif event.key == K_6:
                     self.play(ping_pong=True)
                 elif event.key == K_7:
-                    pass #animbrush first
+                    config.brush.first_frame()
                 elif event.key == K_8:
-                    pass #animbrush last
+                    config.brush.last_frame()
             elif not event.mod & KMOD_SHIFT and event.mod & KMOD_CTRL:
                 if event.key == K_HOME:
                     self.first_frame()

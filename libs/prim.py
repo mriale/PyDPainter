@@ -270,6 +270,14 @@ class BrushCache:
             self.type.append(-1)
             self.bgcolor.append(-1)
 
+class BrushFrame:
+    def __init__(self, brush, image):
+        self.image = image.copy()
+        self.image_orig = image.copy()
+        self.image_backup = image.copy()
+        self.cache = BrushCache()
+        self.size = brush.size
+
 class Brush:
     """This class models a brush that can be stamped on the screen"""
     CUSTOM = 0
@@ -284,62 +292,11 @@ class Brush:
     CORNER_LL = 4
     PLACE = 5
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None):
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False):
         self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
-            # Get bounds of polygon brush
-            if polylist != None:
-                minx = min(polylist,key=itemgetter(0))[0];
-                maxx = max(polylist,key=itemgetter(0))[0];
-                miny = min(polylist,key=itemgetter(1))[1];
-                maxy = max(polylist,key=itemgetter(1))[1];
-                coordfrom = (minx, miny)
-                coordto = (maxx, maxy)
-            else:
-                # Rectangle brush
-                if coordfrom == None:
-                    coordfrom = (0,0)
-                if coordto == None:
-                    coordto = (screen.get_width()-1, screen.get_height()-1)
-
-            x1,y1 = coordfrom
-            x2,y2 = coordto
-
-            if x1 > x2:
-                x1, x2 = x2, x1
-
-            if y1 > y2:
-                y1, y2 = y2, y1
-
-            w = x2-x1+1
-            h = y2-y1+1
-
-            self.image = pygame.Surface((w, h),0, config.pixel_canvas)
-            self.image.set_palette(config.pal)
-            self.image.blit(screen, (0,0), (x1,y1,w,h))
-            self.image.set_colorkey(bgcolor)
-
-            # Handle polygon masking
-            if polylist != None:
-                # Adjust polylist to brush coords
-                pl = []
-                for x,y in polylist:
-                    pl.append((x-x1,y-y1))
-
-                # Create image same size as brush and draw poly into it
-                polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
-                primprops = PrimProps()
-                fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
-
-                # Create numpy mask out of poly and apply to brush
-                surf_array_poly = pygame.surfarray.pixels2d(polyimage)
-                poly_mask = np.where(surf_array_poly == 0)
-                surf_array_brush = pygame.surfarray.pixels2d(self.image)
-                surf_array_brush[poly_mask] = bgcolor
-                surf_array_brush = None
-                surf_array_poly = None
-                polyimage = None
-
+            self.image = self.get_image_from_screen(screen, bgcolor=bgcolor, coordfrom=coordfrom, coordto=coordto, pal=pal, polylist=polylist, animbrush=animbrush)
+            w,h = self.image.get_size()
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
@@ -348,6 +305,8 @@ class Brush:
             self.__size = h
             self.aspect = 1.0
             self.calc_handle(w, h)
+            self.frame = list([BrushFrame(self, self.image)])
+            self.animbrush = animbrush
         else:
             self.image = None
             self.rect = [0,0,size,size]
@@ -358,6 +317,8 @@ class Brush:
             self.__size = size
             self.aspect = 1.0
             self.calc_handle(size, size)
+            self.frame = []
+            self.animbrush = False
 
         self.cache = BrushCache()
         self.smear_stencil = None
@@ -372,11 +333,67 @@ class Brush:
         self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
+        self.currframe = 0
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
         else:
             self.pal = pal
+
+    def get_image_from_screen(self, screen, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False):
+        # Get bounds of polygon brush
+        if polylist != None:
+            minx = min(polylist,key=itemgetter(0))[0];
+            maxx = max(polylist,key=itemgetter(0))[0];
+            miny = min(polylist,key=itemgetter(1))[1];
+            maxy = max(polylist,key=itemgetter(1))[1];
+            coordfrom = (minx, miny)
+            coordto = (maxx, maxy)
+        else:
+            # Rectangle brush
+            if coordfrom == None:
+                coordfrom = (0,0)
+            if coordto == None:
+                coordto = (screen.get_width()-1, screen.get_height()-1)
+
+        x1,y1 = coordfrom
+        x2,y2 = coordto
+
+        if x1 > x2:
+            x1, x2 = x2, x1
+
+        if y1 > y2:
+            y1, y2 = y2, y1
+
+        w = x2-x1+1
+        h = y2-y1+1
+
+        image = pygame.Surface((w, h),0, config.pixel_canvas)
+        image.set_palette(config.pal)
+        image.blit(screen, (0,0), (x1,y1,w,h))
+        image.set_colorkey(bgcolor)
+
+        # Handle polygon masking
+        if polylist != None:
+            # Adjust polylist to brush coords
+            pl = []
+            for x,y in polylist:
+                pl.append((x-x1,y-y1))
+
+            # Create image same size as brush and draw poly into it
+            polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
+            primprops = PrimProps()
+            fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+
+            # Create numpy mask out of poly and apply to brush
+            surf_array_poly = pygame.surfarray.pixels2d(polyimage)
+            poly_mask = np.where(surf_array_poly == 0)
+            surf_array_brush = pygame.surfarray.pixels2d(image)
+            surf_array_brush[poly_mask] = bgcolor
+            surf_array_brush = None
+            surf_array_poly = None
+            polyimage = None
+        return image
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
@@ -467,6 +484,57 @@ class Brush:
         if type != self.__type:
             self.__type = type
             self.size = self.__size  #recalc handle and wipe cache
+
+    def add_frame(self, image):
+        self.frame.append(BrushFrame(self, image))
+
+    def save_frame(self):
+        frameno = self.currframe
+        if len(self.frame) > 0:
+            self.frame[frameno].image = self.image
+            self.frame[frameno].image_orig = self.image_orig
+            self.frame[frameno].image_backup = self.image_backup
+            self.frame[frameno].size = self.size
+
+    def set_frame(self, frameno, doAction=True):
+        if frameno < 0:
+            frameno = len(self.frame)-1
+        elif frameno >= len(self.frame):
+            frameno = 0
+
+        self.currframe = frameno
+
+        if len(self.frame) > 0:
+            self.image = self.frame[frameno].image
+            self.image_orig = self.frame[frameno].image_orig
+            self.image_backup = self.frame[frameno].image_backup
+            self.cache = self.frame[frameno].cache
+            if self.size != self.frame[frameno].size:
+                self.frame[frameno].size = self.size
+                self.size = self.__size  #recalc handle and wipe cache
+
+        if doAction:
+            config.doKeyAction()
+
+    def first_frame(self, doAction=True):
+        self.save_frame()
+        frameno = 0
+        self.set_frame(frameno, doAction)
+
+    def last_frame(self, doAction=True):
+        self.save_frame()
+        frameno = -1
+        self.set_frame(frameno, doAction)
+
+    def next_frame(self, doAction=True):
+        self.save_frame()
+        frameno = self.currframe + 1
+        self.set_frame(frameno, doAction)
+
+    def prev_frame(self, doAction=True):
+        self.save_frame()
+        frameno = self.currframe - 1
+        self.set_frame(frameno, doAction)
 
     def render_image(self, color):
         ax = config.aspectX
@@ -830,6 +898,9 @@ class Brush:
                     screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
+
+        if self.pen_down and self.animbrush:
+            self.next_frame(doAction=False)
 
     def reset_stroke(self):
         self.smear_count = 0

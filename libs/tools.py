@@ -1413,6 +1413,7 @@ class DoBrush(ToolSingleAction):
         self.p1w,self.p1h = (2,2)
         self.do_brush_rect = DoBrushRect(id=id, gadget=gadget)
         self.do_brush_poly = DoBrushPoly(id=id, gadget=gadget)
+        self.animbrush = False
         super(ToolSingleAction, self).__init__(id=id, gadget=gadget)
 
     def draw_p1(self):
@@ -1440,6 +1441,16 @@ class DoBrush(ToolSingleAction):
             config.subtool_selected = 0 if config.subtool_selected else 1
         else:
             config.subtool_selected = 0
+
+        # Animbrush
+        if "animbrush" in attrs or \
+           config.xevent.is_key_down([K_LALT, K_RALT, K_LSUPER, K_LMETA]):
+            self.animbrush = True
+        else:
+            self.animbrush = False
+        self.do_brush_rect.animbrush = self.animbrush
+        self.do_brush_poly.animbrush = self.animbrush
+
         config.tool_selected = self.id
         self.gadget.state = config.subtool_selected + 1
         self.gadget.need_redraw = True
@@ -1523,7 +1534,24 @@ class DoBrushRect(ToolDragAction):
                    config.pixel_canvas.get_at_mapped((x2,y2)) == col and \
                    config.pixel_canvas.get_at_mapped((x1,y2)) == col:
                     bgcolor = col
-            config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords)
+            config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords, animbrush=self.animbrush)
+            if self.animbrush:
+                i = config.anim.curr_frame
+                while i < config.anim.num_frames:
+                    config.brush.add_frame(config.brush.get_image_from_screen(config.anim.frame[i].image, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords, animbrush=self.animbrush))
+                    i += 1
+                i = 0
+                while i < config.anim.curr_frame-1:
+                    config.brush.add_frame(config.brush.get_image_from_screen(config.anim.frame[i].image, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords, animbrush=self.animbrush))
+                    i += 1
+                """
+                image2 = config.brush.image.copy()
+                image2.fill(1)
+                image3 = config.brush.image.copy()
+                image3.fill(2)
+                config.brush.add_frame(image2)
+                config.brush.add_frame(image3)
+                """
         if button == 1:
             pass
         elif button == 3:
@@ -1606,15 +1634,17 @@ class DoBrushPoly(DoBrush):
             self.last_coords = coords
             if (self.in_p1_rect(coords) and len(self.polylist) > 2) or \
                 self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
+                if self.animbrush:
+                    print("pick up animbrush")
                 if button == 1:
                     config.clear_pixel_draw_canvas()
-                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
+                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist, animbrush=self.animbrush)
                     self.polylist = []
                     config.save_undo()
                     cycle()
                 elif button == 3:
                     config.clear_pixel_draw_canvas()
-                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist)
+                    config.brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, polylist=self.polylist, animbrush=self.animbrush)
                     fillpoly(config.pixel_canvas, config.bgcolor, self.polylist, handlesymm=False, erase=True)
                     self.polylist = []
                     config.save_undo()

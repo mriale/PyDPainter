@@ -48,6 +48,14 @@ class Xevent(object):
     def custom_type(self):
         return pygame.event.custom_type()
 
+    def is_key_down(self, keylist):
+        if not type(keylist) is list:
+            keylist = [keylist]
+        for item in keylist:
+            if item in self.keys_down:
+                return True
+        return False
+
     def get(self):
         self.pump()
         xevents = self.xq

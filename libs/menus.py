@@ -1135,6 +1135,21 @@ class DoAnimControlPingPong(MenuAction):
         if not attrs is None and "menu1" in attrs:
             config.anim.play(ping_pong=True)
 
+class DoAnimBrushPrevious(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.brush.prev_frame()
+
+class DoAnimBrushNext(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.brush.next_frame()
+
+class DoAnimBrushPickup(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.toolbar.click(config.toolbar.tool_id("brush"), MOUSEBUTTONDOWN, attrlist=[["animbrush",True]])
+
 class DoStencilMake(MenuActionMulti):
     def is_ask_multi(self):
         return False
@@ -1459,7 +1474,14 @@ def init_menubar(config_in):
                 ["Play once", "5", DoAnimControlPlayOnce],
                 ["Ping-pong", "6", DoAnimControlPingPong],
             ]],
-            ["Anim Brush"],
+            ["Anim Brush", [
+                ["!Open...", " ", DoAnimOpen],
+                ["!Save...", " ", DoAnimSave],
+                ["Pick Up", "alt-b", DoAnimBrushPickup],
+                ["!Settings...", " ", DoAnimSave],
+                ["Previous", "7", DoAnimBrushPrevious],
+                ["Next", "8", DoAnimBrushNext],
+            ]],
         ]])
 
     menubar.add_menu(
