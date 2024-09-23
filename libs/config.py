@@ -287,12 +287,13 @@ class pydpainter:
 
         return s
 
-    def resize_display(self, resize_window=True, first_init=False, force=False):
+    def resize_display(self, resize_window=True, first_init=False, force=False, grab=True):
         if config.fullscreen:
             if force:
-                pygame.event.set_grab(True)
-                if "set_keyboard_grab" in dir(pygame.event):
-                    pygame.event.set_keyboard_grab(True)
+                if grab:
+                    pygame.event.set_grab(True)
+                    if "set_keyboard_grab" in dir(pygame.event):
+                        pygame.event.set_keyboard_grab(True)
                 config.scale_bak = config.scale
             pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
@@ -1867,7 +1868,7 @@ class pydpainter:
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
                     config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
-                    config.resize_display(force=True)
+                    config.resize_display(force=True, grab=(e.mod & KMOD_SHIFT == 0))
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
