@@ -334,6 +334,7 @@ class Brush:
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
         self.currframe = 0
+        self.startframe = 0
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -902,8 +903,15 @@ class Brush:
         if self.pen_down and self.animbrush:
             self.next_frame(doAction=False)
 
+    def set_startframe(self, startframe=-1):
+        if startframe < 0:
+            self.startframe = self.currframe
+        else:
+            self.startframe = startframe
+
     def reset_stroke(self):
         self.smear_count = 0
+        self.set_frame(self.startframe, doAction=False)
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -967,8 +975,9 @@ class CoordList:
             pointspercolor = numpoints / numcolors
 
         currpoint = -1
+        config.brush.set_startframe()
+        config.brush.reset_stroke()
         for i in range(0,self.numlists):
-            config.brush.reset_stroke()
             for c in self.coordlist[i]:
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
@@ -991,15 +1000,17 @@ class CoordList:
                     else:
                         config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
 
-                if animpaint and not interrupt:
-                    config.save_undo()
-                    config.anim.next_frame(doAction=False)
-                    screen = config.pixel_canvas
+                    if animpaint and not interrupt:
+                        config.save_undo()
+                        config.anim.next_frame(doAction=False)
+                        screen = config.pixel_canvas
 
-                if interrupt and config.has_event():
-                    return
+                    if interrupt and config.has_event():
+                        config.brush.reset_stroke()
+                        return
 
                 config.try_recompose()
+        config.brush.reset_stroke()
 
 
 class DrawMode:

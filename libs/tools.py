@@ -439,8 +439,10 @@ class DoCurve(ToolSingleAction):
             config.clear_pixel_draw_canvas()
             if button == 1:
                 config.brush.draw(config.pixel_canvas, config.color, coords)
+                config.brush.prev_frame(doAction=False)
             elif button == 3:
                 config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+                config.brush.prev_frame(doAction=False)
             self.button = button
         else:
             config.clear_pixel_draw_canvas()
@@ -828,8 +830,10 @@ class DoEllipse(ToolDragAction):
             config.clear_pixel_draw_canvas()
             if button == 1:
                 config.brush.draw(config.pixel_canvas, config.color, coords)
+                config.brush.prev_frame(doAction=False)
             elif button == 3:
                 config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+                config.brush.prev_frame(doAction=False)
             self.button = button
             self.state = self.ST_XY
         elif self.state == self.ST_XY:
@@ -1059,11 +1063,13 @@ class DoPolyLine(DoPoly):
                 if button == 1:
                     config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.color, coords)
+                    config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
                 elif button == 3:
                     config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
+                    config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
         self.hidden = False
@@ -1544,14 +1550,6 @@ class DoBrushRect(ToolDragAction):
                 while i < config.anim.curr_frame-1:
                     config.brush.add_frame(config.brush.get_image_from_screen(config.anim.frame[i].image, bgcolor=bgcolor, coordfrom=self.p1, coordto=coords, animbrush=self.animbrush))
                     i += 1
-                """
-                image2 = config.brush.image.copy()
-                image2.fill(1)
-                image3 = config.brush.image.copy()
-                image3.fill(2)
-                config.brush.add_frame(image2)
-                config.brush.add_frame(image3)
-                """
         if button == 1:
             pass
         elif button == 3:
