@@ -335,6 +335,7 @@ class Brush:
         self.tint_trans = np.empty((256), dtype=np.uint8)
         self.currframe = 0
         self.startframe = 0
+        self.endframe = 0
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -911,6 +912,7 @@ class Brush:
 
     def reset_stroke(self):
         self.smear_count = 0
+        self.endframe = self.currframe
         self.set_frame(self.startframe, doAction=False)
 
 class CoordList:

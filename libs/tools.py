@@ -100,7 +100,7 @@ class ToolDragAction(ToolAction):
         elif buttons[2]:
             drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True, erase=True)
 
-    def drawfinal(self, coords, button):
+    def drawfinal(self, coords, button, set_brush=True):
         if self.p1 == None:
             return
         if button == 1:
@@ -171,7 +171,7 @@ class ToolDragAction(ToolAction):
                 if pygame.key.get_mods() & pygame.KMOD_CTRL:
                         button = 1 if buttons[0] else 3 if buttons[2] else 0
                         if button != 0:
-                            self.drawfinal(coords, button)
+                            self.drawfinal(coords, button, set_brush=False)
                             self.last_trace_time = t
                             return True
         else:
@@ -349,6 +349,7 @@ class DoDraw(ToolSingleAction):
                 if self.polylist == None:
                     return
 
+                config.brush.pen_down = True
                 config.clear_pixel_draw_canvas()
                 closed_poly = list(self.polylist)
                 if len(closed_poly) > 0:
@@ -393,7 +394,8 @@ class DoLine(ToolDragAction):
         elif buttons[2]:
             drawline_symm(config.pixel_canvas, config.bgcolor, self.p1, coords, interrupt=True, erase=True)
 
-    def drawfinal(self, coords, button):
+    def drawfinal(self, coords, button, set_brush=True):
+        config.brush.pen_down = True
         if button == 1:
             drawline_symm(config.pixel_canvas, config.color, self.p1, coords)
         elif button == 3:
@@ -401,6 +403,8 @@ class DoLine(ToolDragAction):
         config.save_undo()
         config.brush.pen_down = False
         self.move(coords)
+        if set_brush:
+            config.brush.set_frame(config.brush.endframe, doAction=False)
 
 class DoCurve(ToolSingleAction):
     """
@@ -693,7 +697,8 @@ class DoRect(ToolDragAction):
         elif buttons[2]:
             drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, interrupt=True, erase=True)
 
-    def drawfinal(self, coords, button):
+    def drawfinal(self, coords, button, set_brush=True):
+        config.brush.pen_down = True
         coords = self.constrain_square(coords)
         if button == 1:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, filled=config.subtool_selected)
@@ -704,6 +709,8 @@ class DoRect(ToolDragAction):
         self.move(coords)
         if config.subtool_selected:
             cycle()
+        if set_brush:
+            config.brush.set_frame(config.brush.endframe, doAction=False)
 
 class DoCircle(ToolDragAction):
     """
@@ -742,7 +749,8 @@ class DoCircle(ToolDragAction):
             else:
                 drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, interrupt=True, erase=True)
 
-    def drawfinal(self, coords, button):
+    def drawfinal(self, coords, button, set_brush=True):
+        config.brush.pen_down = True
         mouseX, mouseY = coords
         startX, startY = self.p1
         ax = config.aspectX
@@ -765,6 +773,8 @@ class DoCircle(ToolDragAction):
         self.move(coords)
         if config.subtool_selected:
             cycle()
+        if set_brush:
+            config.brush.set_frame(config.brush.endframe, doAction=False)
 
 class DoEllipse(ToolDragAction):
     """
@@ -1110,6 +1120,7 @@ class DoPolyLine(DoPoly):
                     self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
+                config.brush.set_frame(config.brush.endframe, doAction=False)
             elif button == 3:
                 config.clear_pixel_draw_canvas()
                 if len(self.polylist) > 0:
@@ -1123,6 +1134,7 @@ class DoPolyLine(DoPoly):
                     self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
+                config.brush.set_frame(config.brush.endframe, doAction=False)
             self.move(coords)
         self.hidden = False
 
@@ -1528,7 +1540,8 @@ class DoBrushRect(ToolDragAction):
         if buttons[0] or buttons[2]:
             drawrect(config.pixel_canvas, config.color, self.p1, coords, xormode=True, handlesymm=False)
 
-    def drawfinal(self, coords, button):
+    def drawfinal(self, coords, button, set_brush=True):
+        config.brush.pen_down = True
         coords = self.constrain_square(coords)
         if button == 1 or button == 3:
             bgcolor = config.bgcolor
@@ -1568,6 +1581,8 @@ class DoBrushRect(ToolDragAction):
             config.toolbar.tool_id("spray1").state = 0
             config.toolbar.tool_id("spray2").state = 0
             config.setDrawMode(DrawMode.MATTE)
+        if set_brush:
+            config.brush.set_frame(config.brush.endframe, doAction=False)
 
 class DoBrushPoly(DoBrush):
     """
