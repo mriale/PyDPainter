@@ -497,6 +497,7 @@ class Brush:
             self.frame[frameno].image_orig = self.image_orig
             self.frame[frameno].image_backup = self.image_backup
             self.frame[frameno].size = self.size
+            self.frame[frameno].cache = self.cache
 
     def set_frame(self, frameno, doAction=True):
         if frameno < 0:
@@ -504,6 +505,7 @@ class Brush:
         elif frameno >= len(self.frame):
             frameno = 0
 
+        self.save_frame()
         self.currframe = frameno
 
         if len(self.frame) > 0:
@@ -519,22 +521,18 @@ class Brush:
             config.doKeyAction()
 
     def first_frame(self, doAction=True):
-        self.save_frame()
         frameno = 0
         self.set_frame(frameno, doAction)
 
     def last_frame(self, doAction=True):
-        self.save_frame()
         frameno = -1
         self.set_frame(frameno, doAction)
 
     def next_frame(self, doAction=True):
-        self.save_frame()
         frameno = self.currframe + 1
         self.set_frame(frameno, doAction)
 
     def prev_frame(self, doAction=True):
-        self.save_frame()
         frameno = self.currframe - 1
         self.set_frame(frameno, doAction)
 
