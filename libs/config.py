@@ -1803,7 +1803,11 @@ class pydpainter:
                         if self.airbrush_size > 50:
                             self.airbrush_size = 50
                     else:
-                        self.brush.size += 1
+                        if config.brush.type == Brush.CUSTOM:
+                            for frame_no in config.brush:
+                                self.brush.size += 1
+                        else:
+                            self.brush.size += 1
                         setBIBrush()
                 elif e.unicode == "-":
                     gotkey = True
@@ -1812,7 +1816,11 @@ class pydpainter:
                         if self.airbrush_size < 5:
                             self.airbrush_size = 5
                     else:
-                        self.brush.size -= 1
+                        if config.brush.type == Brush.CUSTOM:
+                            for frame_no in config.brush:
+                                self.brush.size -= 1
+                        else:
+                            self.brush.size -= 1
                         setBIBrush()
                 elif e.unicode == "]":
                     gotkey = True

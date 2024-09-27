@@ -21,6 +21,8 @@ class Xevent(object):
                 K_LSUPER, K_RSUPER,
                ]
 
+    ANIM_KEYS = [K_RALT, K_LALT, K_RMETA, K_LMETA, K_LSUPER, K_RSUPER]
+
     def __init__(self):
         self.last_key = None
         self.xq = []

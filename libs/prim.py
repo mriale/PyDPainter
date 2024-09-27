@@ -8,6 +8,7 @@ import os.path
 import random
 import copy
 import colorsys
+from libs.menureq import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -277,6 +278,9 @@ class BrushFrame:
         self.image_backup = image.copy()
         self.cache = BrushCache()
         self.size = brush.size
+        self.aspect = brush.aspect
+        self.rect = brush.rect
+        self.handle_frac = brush.handle_frac
 
 class Brush:
     """This class models a brush that can be stamped on the screen"""
@@ -497,7 +501,10 @@ class Brush:
             self.frame[frameno].image_orig = self.image_orig
             self.frame[frameno].image_backup = self.image_backup
             self.frame[frameno].size = self.size
+            self.frame[frameno].aspect = self.aspect
             self.frame[frameno].cache = self.cache
+            self.frame[frameno].rect = list(self.rect)
+            self.frame[frameno].handle_frac = list(self.handle_frac)
 
     def set_frame(self, frameno, doAction=True):
         if frameno < 0:
@@ -513,9 +520,10 @@ class Brush:
             self.image_orig = self.frame[frameno].image_orig
             self.image_backup = self.frame[frameno].image_backup
             self.cache = self.frame[frameno].cache
-            if self.size != self.frame[frameno].size:
-                self.frame[frameno].size = self.size
-                self.size = self.__size  #recalc handle and wipe cache
+            self.rect = list(self.frame[frameno].rect)
+            self.handle_frac = list(self.frame[frameno].handle_frac)
+            self.aspect = self.frame[frameno].aspect
+            self.__size = self.frame[frameno].size
 
         if doAction:
             config.doKeyAction()
@@ -535,6 +543,33 @@ class Brush:
     def prev_frame(self, doAction=True):
         frameno = self.currframe - 1
         self.set_frame(frameno, doAction)
+
+    def iter_progress_anim(self, percent):
+        curr_time = pygame.time.get_ticks()
+        if curr_time - self.iter_prev_time > 33:
+            if self.iter_progress_req is None:
+                self.iter_progress_req = open_progress_req(config.pixel_req_canvas, "Processing...")
+            self.iter_prev_time = curr_time
+            update_progress_req(self.iter_progress_req, config.pixel_req_canvas, percent)
+
+    def __iter__(self):
+        self.iter_frames = [*range(0,len(self.frame))]
+        self.curr_frame_bak = self.currframe
+        self.iter_len = len(self.iter_frames)
+        self.iter_prev_time = pygame.time.get_ticks()
+        self.iter_progress_req = None
+        return self
+
+    def __next__(self):
+        if len(self.iter_frames) == 0:
+            self.set_frame(self.curr_frame_bak, doAction=False)
+            if self.iter_progress_req:
+                close_progress_req(self.iter_progress_req)
+            raise StopIteration
+        self.iter_progress_anim((self.iter_len-len(self.iter_frames)) / self.iter_len)
+        frame_no = self.iter_frames.pop(0)
+        self.set_frame(frame_no, doAction=False)
+        return frame_no
 
     def render_image(self, color):
         ax = config.aspectX
@@ -949,7 +984,7 @@ class CoordList:
 
         if animpaint and config.anim.num_frames > 1 and \
            not xormode and \
-           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+           config.xevent.is_key_down(config.xevent.ANIM_KEYS):
                 if primprops.drawmode.spacing == DrawMode.CONTINUOUS:
                     primprops.drawmode.spacing = DrawMode.N_TOTAL
                     primprops.drawmode.n_total_value = config.anim.num_frames

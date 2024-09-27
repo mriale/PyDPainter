@@ -242,7 +242,7 @@ class DoDot(ToolSingleAction):
             config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
         if config.anim.num_frames > 1 and \
            button in [1,3] and \
-           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+           config.xevent.is_key_down(config.xevent.ANIM_KEYS):
             config.save_undo()
             config.anim.next_frame(doAction=False)
 
@@ -253,7 +253,7 @@ class DoDot(ToolSingleAction):
             config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
         if config.anim.num_frames > 1 and \
            (buttons[0] or buttons[2]) and \
-           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+           config.xevent.is_key_down(config.xevent.ANIM_KEYS):
             config.save_undo()
             config.anim.next_frame(doAction=False)
 
@@ -313,7 +313,7 @@ class DoDraw(ToolSingleAction):
                 self.last_coords = coords
             if config.anim.num_frames > 1 and \
                button in [1,3] and \
-               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+               config.xevent.is_key_down(config.xevent.ANIM_KEYS):
                 config.save_undo()
                 config.anim.next_frame(doAction=False)
 
@@ -339,7 +339,7 @@ class DoDraw(ToolSingleAction):
                 self.last_coords = coords
             if config.anim.num_frames > 1 and \
                (buttons[0] or buttons[2]) and \
-               (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+               config.xevent.is_key_down(config.xevent.ANIM_KEYS):
                 config.save_undo()
                 config.anim.next_frame(doAction=False)
 
@@ -1462,7 +1462,7 @@ class DoBrush(ToolSingleAction):
 
         # Animbrush
         if "animbrush" in attrs or \
-           config.xevent.is_key_down([K_LALT, K_RALT, K_LSUPER, K_LMETA]):
+           config.xevent.is_key_down(config.xevent.ANIM_KEYS):
             self.animbrush = True
         else:
             self.animbrush = False
@@ -1499,6 +1499,10 @@ class DoBrush(ToolSingleAction):
             self.do_brush_rect.move(coords)
 
     def mousedown(self, coords, button):
+        if config.xevent.is_key_down(config.xevent.ANIM_KEYS):
+            self.animbrush = True
+        self.do_brush_rect.animbrush = self.animbrush
+        self.do_brush_poly.animbrush = self.animbrush
         if config.subtool_selected:
             self.do_brush_poly.mousedown(coords, button)
         else:
