@@ -6,7 +6,7 @@ A usable pixel art program written in Python
 
 ## About
 
-PyDPainter, pronounced "Pied Painter" (like Pied Piper), is an attempt to create a usable pixel art program in Python using PyGame.
+PyDPainter, pronounced "Pied Painter" (like Pied Piper), is an attempt to create a usable pixel art program for modern computers in Python using PyGame.
 The original inspiration came from the [Commodore Amiga](https://en.wikipedia.org/wiki/Amiga)
 version of [*Deluxe Paint*](https://en.wikipedia.org/wiki/Deluxe_Paint) released by Electronic Arts in 1985.
 Back then, *Deluxe Paint* helped define the user interface of a paint program with tool bars, menus, and the
