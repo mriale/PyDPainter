@@ -1643,7 +1643,7 @@ class DoBrushPoly(DoBrush):
         config.cycle_handled = True
 
     def mouseup(self, coords, button):
-        if button in [1,3] and len(self.polylist) > 1:
+        if button in [1,3] and len(self.polylist) > 0:
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], self.last_coords, xormode=1, handlesymm=False, skiplast=True)
             if self.in_p1_rect(coords) and len(self.polylist) > 2:
                 coords = self.polylist[0]
