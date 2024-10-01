@@ -42,7 +42,7 @@ class ToolAction(Action):
                     x1,y1,x2,y2,colorindex = palg.palette_bounds[i]
                     if x >= x1 and x <= x1+x2-1 and y >= y1 and y <= y1+y2-1:
                         color = colorindex
-                if color >= 0:
+                if color >= 0 and color < config.NUM_COLORS:
                     r,g,b = config.truepal[color]
                     palrgb_tip.append("Color: %d  RGB: #%02x%02x%02x (%d,%d,%d)" % (color,r,g,b,r,g,b))
                 self.gadget.live_tip = True
@@ -1479,6 +1479,7 @@ class DoBrush(ToolSingleAction):
         self.do_brush_poly.last_coords = config.get_mouse_pixel_pos()
         self.do_brush_rect.hidden = False
         self.do_brush_poly.hidden = False
+        self.do_brush_rect.p1 = self.p1
         if not config.subtool_selected:
             config.enable_constrain = False
 
