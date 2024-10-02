@@ -395,12 +395,16 @@ def place_point(symm_center):
     return ret_coords
 
 def place_grid(gcoords):
-    n = 4
     w = gcoords[2]
     ow = w
     h = gcoords[3]
     oh = h
     ret_coords = list(gcoords)
+    if len(ret_coords) < 6:
+        ret_coords.append(4)
+        ret_coords.append(4)
+    nx = ret_coords[4]
+    ny = ret_coords[5]
     point_coords = (0,0)
     mpoint_coords = point_coords
     pixel_req_rect_bak = config.pixel_req_rect
@@ -420,16 +424,16 @@ def place_grid(gcoords):
 
         mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
         if not dragging:
-            point_coords = (mouseX-(n*w), mouseY-(n*h))
+            point_coords = (mouseX-(nx*w), mouseY-(ny*h))
             mpoint_coords = (mouseX, mouseY)
         if event.type == MOUSEMOTION:
             if dragging:
                 diffX = mouseX - mpoint_coords[0]
                 diffY = mouseY - mpoint_coords[1]
-                h = oh + (diffY // n)
+                h = oh + (diffY // ny)
                 if h == 0:
                     h = 1
-                w = ow + (diffX // n)
+                w = ow + (diffX // nx)
                 if w == 0:
                     w = 1
         elif event.type == MOUSEBUTTONDOWN:
@@ -438,21 +442,25 @@ def place_grid(gcoords):
             point_placed = True
             wnew = int(abs(w))
             hnew = int(abs(h))
-            ret_coords = [point_coords[0]%wnew, point_coords[1]%hnew, wnew, hnew]
+            ret_coords = list([point_coords[0]%wnew, point_coords[1]%hnew, wnew, hnew, nx, ny])
         elif event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 point_placed = True
+            elif event.key == K_x:
+                nx += 1
+            elif event.key == K_y:
+                ny += 1
 
         config.clear_pixel_draw_canvas()
 
         pcx,pcy = point_coords
-        for x in range(0,n+1):
+        for x in range(0,nx+1):
             drawline(config.pixel_canvas, 1,
-                (pcx+(x*w),pcy), (pcx+(x*w),pcy+(n*h)),
+                (pcx+(x*w),pcy), (pcx+(x*w),pcy+(ny*h)),
                 xormode=True)
-        for y in range(0,n+1):
+        for y in range(0,ny+1):
             drawline(config.pixel_canvas, 1,
-                (pcx+(n*w),pcy+(y*h)), (pcx,pcy+(y*h)),
+                (pcx+(nx*w),pcy+(y*h)), (pcx,pcy+(y*h)),
                 xormode=True)
 
         config.menutitle_extra = str(pcx) + ", " + str(pcy) + ", " + str(w) + ", " + str(h)
