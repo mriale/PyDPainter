@@ -1451,8 +1451,14 @@ class DoBrush(ToolSingleAction):
 
     def selected(self, attrs):
         if attrs["rightclick"]:
-            config.menubar.menu_id("brush").menu_id("restore").action.selected("")
-            return
+            if config.tool_selected == self.id:
+                brush_req(config.pixel_req_canvas)
+                self.deselected(attrs)
+                config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
+                return
+            else:
+                config.menubar.menu_id("brush").menu_id("restore").action.selected("")
+                return
 
         config.brush.pen_down = False
         if config.tool_selected == self.id:

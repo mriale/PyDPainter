@@ -843,6 +843,28 @@ class Requestor(object):
                 return g
         return None
 
+    def sort_gadget_id(self, e):
+        #split gadget ID into y,x coords to sort
+        xy = e.id.split("_")
+        if len(xy) != 2:
+            x = -1
+            y = -1
+        else:
+            x = int(xy[0])
+            y = int(xy[1])
+        return f"{y:03} {x:03}"
+
+    def find_gadget(self, label, idx=0):
+        #sort gadget list y,x
+        self.gadgets.sort(key=self.sort_gadget_id)
+        for i in range(len(self.gadgets)):
+            g = self.gadgets[i]
+            if g.label == label:
+                targeti = i + idx
+                if targeti < len(self.gadgets)-1:
+                    return self.gadgets[targeti]
+        return None
+
 def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos, custom_gadget_type=Gadget, font=None):
     #Split into lines
     reqlines = reqstring.splitlines()

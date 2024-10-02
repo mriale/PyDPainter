@@ -405,8 +405,8 @@ def place_grid(gcoords):
         ret_coords.append(4)
     nx = ret_coords[4]
     ny = ret_coords[5]
-    point_coords = (0,0)
-    mpoint_coords = point_coords
+    p0 = (0,0)
+    p1 = (0,0)
     pixel_req_rect_bak = config.pixel_req_rect
     config.pixel_req_rect = None
     config.recompose()
@@ -422,38 +422,44 @@ def place_grid(gcoords):
         if event.type == pygame.NOEVENT and not first_time:
             event = config.xevent.wait()
 
+        if event.type == KEYDOWN:
+            if event.key == K_ESCAPE:
+                point_placed = True
+            elif event.key == K_x:
+                if event.mod & KMOD_SHIFT:
+                    if nx > 1:
+                        nx -= 1
+                else:
+                    nx += 1
+            elif event.key == K_y:
+                if event.mod & KMOD_SHIFT:
+                    if ny > 1:
+                        ny -= 1
+                else:
+                    ny += 1
+
         mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
-        if not dragging:
-            point_coords = (mouseX-(nx*w), mouseY-(ny*h))
-            mpoint_coords = (mouseX, mouseY)
-        if event.type == MOUSEMOTION:
-            if dragging:
-                diffX = mouseX - mpoint_coords[0]
-                diffY = mouseY - mpoint_coords[1]
-                h = oh + (diffY // ny)
-                if h == 0:
-                    h = 1
-                w = ow + (diffX // nx)
-                if w == 0:
-                    w = 1
-        elif event.type == MOUSEBUTTONDOWN:
+        if dragging:
+            p1 = (mouseX, mouseY)
+            w = int(round((p1[0] - p0[0]) / nx))
+            h = int(round((p1[1] - p0[1]) / ny))
+            if h <= 0:
+                h = 1
+            if w <= 0:
+                w = 1
+        else:
+            p0 = (mouseX-(nx*w), mouseY-(ny*h))
+        if event.type == MOUSEBUTTONDOWN:
             dragging = True
         elif event.type == MOUSEBUTTONUP:
             point_placed = True
             wnew = int(abs(w))
             hnew = int(abs(h))
-            ret_coords = list([point_coords[0]%wnew, point_coords[1]%hnew, wnew, hnew, nx, ny])
-        elif event.type == KEYDOWN:
-            if event.key == K_ESCAPE:
-                point_placed = True
-            elif event.key == K_x:
-                nx += 1
-            elif event.key == K_y:
-                ny += 1
+            ret_coords = list([p0[0]%wnew, p0[1]%hnew, wnew, hnew, nx, ny])
 
         config.clear_pixel_draw_canvas()
 
-        pcx,pcy = point_coords
+        pcx,pcy = p0
         for x in range(0,nx+1):
             drawline(config.pixel_canvas, 1,
                 (pcx+(x*w),pcy), (pcx+(x*w),pcy+(ny*h)),
@@ -463,16 +469,93 @@ def place_grid(gcoords):
                 (pcx+(nx*w),pcy+(y*h)), (pcx,pcy+(y*h)),
                 xormode=True)
 
-        config.menutitle_extra = str(pcx) + ", " + str(pcy) + ", " + str(w) + ", " + str(h)
+        config.menubar.title_right = str(pcx%w) + "," + str(pcy%h) + " " + str(w) + "x" + str(h)
         config.recompose()
         first_time = False
 
-    config.menutitle_extra = ""
+    config.menubar.title_right = ""
     config.pixel_req_rect = pixel_req_rect_bak
     config.clear_pixel_draw_canvas()
     config.recompose()
 
     return ret_coords
+
+def brush_req(screen):
+    req = str2req("Brush Grid", """
+          X     Y
+Offset: _____ _____
+Size:   _____ _____
+Number: _____ _____
+[Visual]
+[Cancel][OK]
+""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    offsetXg = req.find_gadget("Offset:", 1)
+    offsetYg = req.find_gadget("Offset:", 2)
+    sizeXg = req.find_gadget("Size:", 1)
+    sizeYg = req.find_gadget("Size:", 2)
+    numberXg = req.find_gadget("Number:", 1)
+    numberYg = req.find_gadget("Number:", 2)
+    visualg = req.find_gadget("Visual")
+
+    offsetXg.value = str(config.grid_offset[0])
+    offsetXg.numonly = True
+    offsetYg.value = str(config.grid_offset[1])
+    offsetYg.numonly = True
+    sizeXg.value = str(config.grid_size[0])
+    sizeXg.numonly = True
+    sizeYg.value = str(config.grid_size[1])
+    sizeYg.numonly = True
+    numberXg.value = str(4)
+    numberXg.numonly = True
+    numberYg.value = str(4)
+    numberYg.numonly = True
+
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = config.xevent.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK" and not req.has_error():
+                    config.grid_size = (int(sizeXg.value), int(sizeYg.value))
+                    config.grid_offset = (int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value))
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0 
+                elif ge.gadget == visualg and not req.has_error():
+                    gcoords = place_grid((int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value), int(sizeXg.value), int(sizeYg.value), int(numberXg.value), int(numberYg.value)))
+                    offsetXg.value = str(gcoords[0])
+                    offsetXg.need_redraw = True
+                    offsetYg.value = str(gcoords[1])
+                    offsetYg.need_redraw = True
+                    sizeXg.value = str(gcoords[2])
+                    sizeXg.need_redraw = True
+                    sizeYg.value = str(gcoords[3])
+                    sizeYg.need_redraw = True
+                    numberXg.value = str(gcoords[4])
+                    numberXg.need_redraw = True
+                    numberYg.value = str(gcoords[5])
+                    numberYg.need_redraw = True
+                    req.draw(screen)
+
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
+    return
 
 def grid_req(screen):
     req = str2req("Grid", """
