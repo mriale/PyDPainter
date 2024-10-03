@@ -480,12 +480,53 @@ def place_grid(gcoords):
 
     return ret_coords
 
+class BrushReqProps(object):
+    J_LEFT = 0
+    J_RIGHT = 1
+    J_CENTER_X = 2
+    J_TOP = 3
+    J_BOTTOM = 4
+    J_CENTER_Y = 5
+
+    J_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
+
+    def __init__(self):
+        self.offset = [0,0]
+        self.size = [10,10]
+        self.number = [4,4]
+        self.strict = [True,True]
+        self.justify = [self.J_LEFT, self.J_TOP]
+
+    def copy(self):
+        brp = BrushReqProps()
+        brp.offset = list(self.offset)
+        brp.size = list(self.size)
+        brp.number = list(self.number)
+        brp.strict = list(self.strict)
+        brp.justify = list(self.justify)
+        return brp
+
+    def next_justify(self, xy):
+        jx,jy = self.justify
+        if xy == 0:
+            jx += 1
+            if jx > self.J_CENTER_X:
+                jx = self.J_LEFT
+            self.justify[0] = jx
+        else:
+            jy += 1
+            if jy > self.J_CENTER_Y:
+                jy = self.J_TOP
+            self.justify[1] = jy
+
 def brush_req(screen):
     req = str2req("Brush Grid", """
           X     Y
 Offset: _____ _____
 Size:   _____ _____
 Number: _____ _____
+Strict: [Yes] [Yes]
+Justify:[<> ] [^v ]
 [Visual]
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
@@ -498,20 +539,30 @@ Number: _____ _____
     sizeYg = req.find_gadget("Size:", 2)
     numberXg = req.find_gadget("Number:", 1)
     numberYg = req.find_gadget("Number:", 2)
+    strictXg = req.find_gadget("Strict:", 1)
+    strictYg = req.find_gadget("Strict:", 2)
+    justifyXg = req.find_gadget("Justify:", 1)
+    justifyYg = req.find_gadget("Justify:", 2)
     visualg = req.find_gadget("Visual")
 
-    offsetXg.value = str(config.grid_offset[0])
+    brp = config.brush_req_props.copy()
+
+    offsetXg.value = str(brp.offset[0])
     offsetXg.numonly = True
-    offsetYg.value = str(config.grid_offset[1])
+    offsetYg.value = str(brp.offset[1])
     offsetYg.numonly = True
-    sizeXg.value = str(config.grid_size[0])
+    sizeXg.value = str(brp.size[0])
     sizeXg.numonly = True
-    sizeYg.value = str(config.grid_size[1])
+    sizeYg.value = str(brp.size[1])
     sizeYg.numonly = True
-    numberXg.value = str(4)
+    numberXg.value = str(brp.number[0])
     numberXg.numonly = True
-    numberYg.value = str(4)
+    numberYg.value = str(brp.number[1])
     numberYg.numonly = True
+    strictXg.label = "Yes" if brp.strict[0] else "No"
+    strictYg.label = "Yes" if brp.strict[1] else "No"
+    justifyXg.label = brp.J_STR[brp.justify[0]]
+    justifyYg.label = brp.J_STR[brp.justify[1]]
 
     req.draw(screen)
     config.recompose()
@@ -547,6 +598,24 @@ Number: _____ _____
                     numberYg.value = str(gcoords[5])
                     numberYg.need_redraw = True
                     req.draw(screen)
+                elif ge.gadget == justifyXg:
+                    brp.next_justify(0)
+                    justifyXg.label = brp.J_STR[brp.justify[0]]
+                    justifyXg.need_redraw = True
+                    req.draw(screen)
+                elif ge.gadget == justifyYg:
+                    brp.next_justify(1)
+                    justifyYg.label = brp.J_STR[brp.justify[1]]
+                    justifyYg.need_redraw = True
+                    req.draw(screen)
+                elif ge.gadget == strictXg:
+                    brp.strict[0] = not brp.strict[0]
+                    strictXg.label = "Yes" if brp.strict[0] else "No"
+                    strictXg.need_redraw = True
+                elif ge.gadget == strictYg:
+                    brp.strict[1] = not brp.strict[1]
+                    strictYg.label = "Yes" if brp.strict[1] else "No"
+                    strictYg.need_redraw = True
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)

@@ -746,6 +746,7 @@ class pydpainter:
         self.SCANLINES_NOSMOOTH = 2
         self.scanlines = self.SCANLINES_ON
         self.brush = Brush()
+        self.brush_req_props = BrushReqProps()
 
         self.primprops = PrimProps()
         self.matte_erase = False
