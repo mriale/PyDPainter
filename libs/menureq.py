@@ -1302,7 +1302,7 @@ def stencil_req(screen):
 
         #Get color from pixel canvas
         buttons = config.get_mouse_pressed(event)
-        if event.type in [MOUSEBUTTONDOWN, MOUSEMOTION] and True in buttons:
+        if len(gevents) == 0 and event.type in [MOUSEBUTTONDOWN, MOUSEMOTION] and True in buttons:
             x,y = config.get_mouse_pixel_pos(event)
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)

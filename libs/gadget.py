@@ -761,6 +761,9 @@ class Requestor(object):
             if g.value == 1:
                 if event.type == MOUSEBUTTONUP and event.button == 1:
                     g.value = 0
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif event.type == MOUSEMOTION and g.value > 0:
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_MOUSEMOVE, event, g))
                 self.rect = (x-self.dragpos[0], y-self.dragpos[1], self.rect[2], self.rect[3])
                 self.need_redraw = True
 
