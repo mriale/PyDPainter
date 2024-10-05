@@ -495,7 +495,7 @@ class BrushReqProps(object):
         self.size = [10,10]
         self.number = [4,4]
         self.strict = [True,True]
-        self.justify = [self.J_LEFT, self.J_TOP]
+        self.align = [self.J_LEFT, self.J_TOP]
 
     def copy(self):
         brp = BrushReqProps()
@@ -503,30 +503,30 @@ class BrushReqProps(object):
         brp.size = list(self.size)
         brp.number = list(self.number)
         brp.strict = list(self.strict)
-        brp.justify = list(self.justify)
+        brp.align = list(self.align)
         return brp
 
-    def next_justify(self, xy):
-        jx,jy = self.justify
+    def next_align(self, xy):
+        jx,jy = self.align
         if xy == 0:
             jx += 1
             if jx > self.J_CENTER_X:
                 jx = self.J_LEFT
-            self.justify[0] = jx
+            self.align[0] = jx
         else:
             jy += 1
             if jy > self.J_CENTER_Y:
                 jy = self.J_TOP
-            self.justify[1] = jy
+            self.align[1] = jy
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
-          X     Y
-Offset: _____ _____
-Size:   _____ _____
-Number: _____ _____
-Strict: [Yes] [Yes]
-Justify:[<> ] [^v ]
+          X      Y
+Offset: _____~ _____~
+Size:   _____~ _____~
+Number: _____~ _____~
+Strict: [Yes  ][Yes  ]
+Align:  [<>   ][^v   ]
 [Visual]
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
@@ -534,35 +534,29 @@ Justify:[<> ] [^v ]
     config.pixel_req_rect = req.get_screen_rect()
 
     offsetXg = req.find_gadget("Offset:", 1)
-    offsetYg = req.find_gadget("Offset:", 2)
+    offsetYg = req.find_gadget("Offset:", 3)
     sizeXg = req.find_gadget("Size:", 1)
-    sizeYg = req.find_gadget("Size:", 2)
+    sizeYg = req.find_gadget("Size:", 3)
     numberXg = req.find_gadget("Number:", 1)
-    numberYg = req.find_gadget("Number:", 2)
+    numberYg = req.find_gadget("Number:", 3)
     strictXg = req.find_gadget("Strict:", 1)
     strictYg = req.find_gadget("Strict:", 2)
-    justifyXg = req.find_gadget("Justify:", 1)
-    justifyYg = req.find_gadget("Justify:", 2)
+    alignXg = req.find_gadget("Align:", 1)
+    alignYg = req.find_gadget("Align:", 2)
     visualg = req.find_gadget("Visual")
 
     brp = config.brush_req_props.copy()
 
     offsetXg.value = str(brp.offset[0])
-    offsetXg.numonly = True
     offsetYg.value = str(brp.offset[1])
-    offsetYg.numonly = True
     sizeXg.value = str(brp.size[0])
-    sizeXg.numonly = True
     sizeYg.value = str(brp.size[1])
-    sizeYg.numonly = True
     numberXg.value = str(brp.number[0])
-    numberXg.numonly = True
     numberYg.value = str(brp.number[1])
-    numberYg.numonly = True
     strictXg.label = "Yes" if brp.strict[0] else "No"
     strictYg.label = "Yes" if brp.strict[1] else "No"
-    justifyXg.label = brp.J_STR[brp.justify[0]]
-    justifyYg.label = brp.J_STR[brp.justify[1]]
+    alignXg.label = brp.J_STR[brp.align[0]]
+    alignYg.label = brp.J_STR[brp.align[1]]
 
     req.draw(screen)
     config.recompose()
@@ -598,15 +592,15 @@ Justify:[<> ] [^v ]
                     numberYg.value = str(gcoords[5])
                     numberYg.need_redraw = True
                     req.draw(screen)
-                elif ge.gadget == justifyXg:
-                    brp.next_justify(0)
-                    justifyXg.label = brp.J_STR[brp.justify[0]]
-                    justifyXg.need_redraw = True
+                elif ge.gadget == alignXg:
+                    brp.next_align(0)
+                    alignXg.label = brp.J_STR[brp.align[0]]
+                    alignXg.need_redraw = True
                     req.draw(screen)
-                elif ge.gadget == justifyYg:
-                    brp.next_justify(1)
-                    justifyYg.label = brp.J_STR[brp.justify[1]]
-                    justifyYg.need_redraw = True
+                elif ge.gadget == alignYg:
+                    brp.next_align(1)
+                    alignYg.label = brp.J_STR[brp.align[1]]
+                    alignYg.need_redraw = True
                     req.draw(screen)
                 elif ge.gadget == strictXg:
                     brp.strict[0] = not brp.strict[0]

@@ -138,10 +138,13 @@ class GadgetEvent(object):
         return "type={} gadgetid={} gadgettype={} event={}".format(self.typearray[self.type], self.gadget.id, self.gadget.typearray[self.gadget.type], self.event)
 
 class Gadget(object):
-    TYPE_BOOL, TYPE_IMAGE, TYPE_PROP, TYPE_PROP_VERT, TYPE_STRING, TYPE_CUSTOM, TYPE_LABEL = range(7)
-    typearray = ['TYPE_BOOL', 'TYPE_IMAGE', 'TYPE_PROP', 'TYPE_PROP_VERT', 'TYPE_STRING', 'TYPE_CUSTOM', 'TYPE_LABEL']
+    TYPE_BOOL, TYPE_IMAGE, TYPE_PROP, TYPE_PROP_VERT, TYPE_STRING, TYPE_SPINNER, TYPE_CUSTOM, TYPE_LABEL = range(8)
+    typearray = ['TYPE_BOOL', 'TYPE_IMAGE', 'TYPE_PROP', 'TYPE_PROP_VERT', 'TYPE_STRING', 'TYPE_SPINNER', 'TYPE_CUSTOM', 'TYPE_LABEL']
 
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, enabled=True):
+    spinner_arrowup_coords = np.array([[0,16], [16,0], [32,16]])
+    spinner_arrowdown_coords = np.array([[0,24], [32,24], [16,40]])
+
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, enabled=True, minvalue=None):
         self.type = type
         self.label = label
         self.rect = rect
@@ -152,6 +155,7 @@ class Gadget(object):
         self.pos = 0
         self.scrollpos = 0
         self.value = value
+        self.minvalue = minvalue
         self.maxvalue = maxvalue
         self.id = id
         self.enabled = enabled
@@ -176,6 +180,11 @@ class Gadget(object):
                 self.maxvalue = 1
         if id == None:
             self.id = str(rect[0]) + "_" + str(rect[1])
+        if self.type == Gadget.TYPE_SPINNER:
+            scaleX = rect[2] // 8
+            scaleY = rect[3] // 8
+            self.arrowup = self.spinner_arrowup_coords * np.array([scaleX/4,scaleY/4])
+            self.arrowdown = self.spinner_arrowdown_coords * np.array([scaleX/4,scaleY/4])
 
     def coords2prop(self, coords):
         x,y,w,h = self.screenrect
@@ -309,6 +318,16 @@ class Gadget(object):
                     self.error = False
             if self.error:
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
+        elif self.type == Gadget.TYPE_SPINNER:
+            self.need_redraw = False
+            upcolor = fgcolor
+            downcolor = fgcolor
+            if self.state == 1:
+                upcolor = hcolor
+            elif self.state == -1:
+                downcolor = hcolor
+            pygame.draw.polygon(screen, upcolor, self.arrowup + np.array([x+xo,y+yo]))
+            pygame.draw.polygon(screen, downcolor, self.arrowdown + np.array([x+xo,y+yo]))
         elif self.type == Gadget.TYPE_LABEL:
             font.blitstring(screen, (x+xo,y+yo+2), self.label, fgcolor, bgcolor)
         if not self.enabled:
@@ -323,6 +342,19 @@ class Gadget(object):
             screen.blit(fadesurf, self.screenrect)
 
         screen.set_clip(None)
+
+    def spinner_update(self, delta):
+        g = self
+        #get number from text gadget
+        if g.spinvalueg.value.isnumeric() and int(g.spinvalueg.value) >= g.minvalue and int(g.spinvalueg.value) <= g.maxvalue:
+            spinvalue = int(g.spinvalueg.value)
+        else:
+            spinvalue = 0
+        spinvalue += delta
+        if spinvalue >= g.minvalue and spinvalue <= g.maxvalue:
+            g.spinvalueg.value = str(spinvalue)
+            g.spinvalueg.need_redraw = True
+            g.need_redraw = True
 
     def process_event(self, screen, event, mouse_pixel_mapper):
         ge = []
@@ -365,25 +397,44 @@ class Gadget(object):
                         g.state = 1
                         g.pos = g.coords2char((x,y))
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
+                    elif g.type == Gadget.TYPE_SPINNER:
+                        gx,gy,gw,gh = g.screenrect
+                        pygame.time.set_timer(USEREVENT, 500)
+                        if y - gy < gh // 2:
+                            #up arrow
+                            g.state = 1
+                            delta = 1
+                        else:
+                            #down arrow
+                            g.state = -1
+                            delta = -1
+                        self.spinner_update(delta)
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
                     elif g.type == Gadget.TYPE_LABEL:
                         g.state = 1
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETDOWN, event, g))
                 #handle scroll up
-                elif event.type == MOUSEBUTTONDOWN and event.button == 4 and \
-                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4:
+                    if g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
                         if g.value + self.scrolldelta <= g.maxvalue-1 and \
                            g.value + self.scrolldelta >= 0:
                             g.need_redraw = True
                             g.value += self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                    elif g.type == Gadget.TYPE_SPINNER:
+                        self.spinner_update(1)
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 #handle scroll down
-                elif event.type == MOUSEBUTTONDOWN and event.button == 5 and \
-                     g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5:
+                    if g.type in [Gadget.TYPE_PROP, Gadget.TYPE_PROP_VERT]:
                         if g.value - self.scrolldelta <= g.maxvalue-1 and \
                            g.value - self.scrolldelta >= 0:
                             g.need_redraw = True
                             g.value -= self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                    elif g.type == Gadget.TYPE_SPINNER:
+                        self.spinner_update(-1)
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
             if event.type == KEYDOWN:
                 if event.key in [K_RETURN, K_KP_ENTER] and \
                    g.label in ["OK", "Yes"]:
@@ -472,6 +523,9 @@ class Gadget(object):
             elif g.type == Gadget.TYPE_LABEL:
                 g.state = 0
                 ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+            elif g.type == Gadget.TYPE_SPINNER and \
+                 event.type == MOUSEBUTTONUP and event.button == 1:
+                    pass
             elif event.type == MOUSEBUTTONUP and event.button == 1:
                 g.need_redraw = True
                 g.state = 0
@@ -487,6 +541,18 @@ class Gadget(object):
                 if event.type == MOUSEBUTTONUP and event.button == 1:
                     g.need_redraw = True
                     g.state = 0
+
+        #handle SPINNER
+        if g.type == Gadget.TYPE_SPINNER and g.state != 0:
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                g.need_redraw = True
+                g.state = 0
+                ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                pygame.time.set_timer(USEREVENT, TIMEROFF)
+            elif event.type == USEREVENT:
+                self.spinner_update(g.state)
+                pygame.time.set_timer(USEREVENT, 100)
+                ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
 
         return ge
 
@@ -882,6 +948,8 @@ def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos
     else:
         fontx = font.xsize
         fonty = int(font.ysize * 1.5)
+    px = fontx // 8
+    py = fonty // 12
 
     #Find X/Y size
     yo = 0
@@ -970,17 +1038,32 @@ def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos
         bstart = line.find("_")
         bend = bstart + 1
         while bstart >= 0:
+            has_spinner = False
             while bend < len(line) and line[bend] == "_":
                 bend += 1
-            bend -= 1
+            if bend < len(line) and line[bend] == "~":
+                has_spinner = True
+            else:
+                bend -= 1
 
             if bstart == 0:
                 reqlines[lineno] = (" " * (bend-bstart+1)) + reqlines[lineno][bend+1:]
             else:
                 reqlines[lineno] = reqlines[lineno][:bstart] + (" " * (bend-bstart+1)) + reqlines[lineno][bend+1:]
 
-            req.add(custom_gadget_type(Gadget.TYPE_STRING, "-", (bstart*fontx,yo+lineno*fonty, (bend-bstart+1)*fontx,fonty-1), maxvalue=bend-bstart, id=str(bstart)+"_"+str(lineno)))
-            #print("slider lineno={} bstart={} bend={}".format(lineno, bstart, bend))
+            if has_spinner:
+                bend -= 1
+
+            strg = custom_gadget_type(Gadget.TYPE_STRING, "-", (bstart*fontx,yo+lineno*fonty, (bend-bstart+1)*fontx,fonty-1), maxvalue=bend-bstart, id=str(bstart)+"_"+str(lineno))
+            req.add(strg)
+            #print("string lineno={} bstart={} bend={} has_spinner={}".format(lineno, bstart, bend, has_spinner))
+
+            if has_spinner:
+                sping = custom_gadget_type(Gadget.TYPE_SPINNER, "~", ((bend+1)*fontx,yo+lineno*fonty, 1*fontx+px,fonty-1), maxvalue=(10**(bend-bstart))-1, minvalue=0, id=str(bend)+"_"+str(lineno))
+                strg.numonly = True
+                sping.spinvalueg = strg
+                req.add(sping)
+                #print("spinner lineno={} bstart={} bend={} has_spinner={}".format(lineno, bstart, bend, has_spinner))
             bstart = line.find("_", bend+1)
             bend = bstart + 1
 
