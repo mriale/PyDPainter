@@ -421,8 +421,11 @@ class Gadget(object):
                             g.need_redraw = True
                             g.value += self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                    elif g.type == Gadget.TYPE_STRING and "spinnerg" in dir(g):
+                        g.spinnerg.spinner_update(1)
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g.spinnerg))
                     elif g.type == Gadget.TYPE_SPINNER:
-                        self.spinner_update(1)
+                        g.spinner_update(1)
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
                 #handle scroll down
                 elif event.type == MOUSEBUTTONDOWN and event.button == 5:
@@ -432,8 +435,11 @@ class Gadget(object):
                             g.need_redraw = True
                             g.value -= self.scrolldelta
                             ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                    elif g.type == Gadget.TYPE_STRING and "spinnerg" in dir(g):
+                        g.spinnerg.spinner_update(-1)
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g.spinnerg))
                     elif g.type == Gadget.TYPE_SPINNER:
-                        self.spinner_update(-1)
+                        g.spinner_update(-1)
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
             if event.type == KEYDOWN:
                 if event.key in [K_RETURN, K_KP_ENTER] and \
@@ -1061,6 +1067,7 @@ def str2req(title, reqstring, custom="", mouse_pixel_mapper=pygame.mouse.get_pos
             if has_spinner:
                 sping = custom_gadget_type(Gadget.TYPE_SPINNER, "~", ((bend+1)*fontx,yo+lineno*fonty, 1*fontx+px,fonty-1), maxvalue=(10**(bend-bstart))-1, minvalue=0, id=str(bend)+"_"+str(lineno))
                 strg.numonly = True
+                strg.spinnerg = sping
                 sping.spinvalueg = strg
                 req.add(sping)
                 #print("spinner lineno={} bstart={} bend={} has_spinner={}".format(lineno, bstart, bend, has_spinner))
