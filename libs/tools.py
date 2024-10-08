@@ -1538,23 +1538,39 @@ class DoBrush(ToolSingleAction):
             return True
         return False
 
+ant_offset = 0
+
 class DoBrushRect(ToolDragAction):
     """
     Brush tool - rectangle
     """
     def drawbefore(self, coords):
+        global ant_offset
         mouseX, mouseY = coords
-        drawxorcross(config.pixel_canvas, mouseX, mouseY)
+        if self.animbrush:
+            pygame.time.set_timer(config.TOOLEVENT, 100)
+            drawxorcross(config.pixel_canvas, mouseX, mouseY, step=4, offset=ant_offset)
+            ant_offset = (ant_offset + 1) % 4
+            drawxorcross(config.pixel_canvas, mouseX, mouseY, step=4, offset=ant_offset)
+        else:
+            drawxorcross(config.pixel_canvas, mouseX, mouseY)
 
     def drawrubber(self, coords, buttons):
+        global ant_offset
         coords = self.constrain_square(coords)
         if buttons[0] or buttons[2]:
-            drawrect(config.pixel_canvas, config.color, self.p1, coords, xormode=True, handlesymm=False)
+            if self.animbrush:
+                pygame.time.set_timer(config.TOOLEVENT, 100)
+                draw_ants(config.pixel_canvas, self.p1, coords, offset=ant_offset)
+                ant_offset = (ant_offset + 1) % 4
+            else:
+                drawrect(config.pixel_canvas, config.color, self.p1, coords, xormode=True, handlesymm=False)
 
     def drawfinal(self, coords, button, set_brush=True):
         config.brush.pen_down = True
         coords = self.constrain_square(coords)
         if button == 1 or button == 3:
+            pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
             bgcolor = config.bgcolor
             if config.auto_transp_on:
                 x1,y1 = self.p1

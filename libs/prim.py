@@ -1611,6 +1611,26 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
 
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, erase=erase)
 
+def draw_ants(screen, coordfrom, coordto, step=4, offset=0):
+    x1,y1 = coordfrom
+    x2,y2 = coordto
+
+    #swap so x1,y1 is upper left and x2,y2 is lower right
+    if x1 > x2:
+        x1,x2 = (x2,x1)
+    if y1 > y2:
+        y1,y2 = (y2,y1)
+
+    surf_array = pygame.surfarray.pixels2d(screen)
+    hline_XOR(surf_array, y1, x1+offset, x2, step=step)
+    hline_XOR(surf_array, y1, x1+offset+1, x2, step=step)
+    vline_XOR(surf_array, x1, y1+offset, y2, step=step)
+    vline_XOR(surf_array, x1, y1+offset+1, y2, step=step)
+    hline_XOR(surf_array, y2, x1+offset, x2, step=step)
+    hline_XOR(surf_array, y2, x1+offset+1, x2, step=step)
+    vline_XOR(surf_array, x2, y1+offset, y2, step=step)
+    vline_XOR(surf_array, x2, y1+offset+1, y2, step=step)
+    surf_array = None
 
 def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, erase=False):
     if filled:
@@ -1665,13 +1685,21 @@ def add_vline(y, xs1, xs2):
         else:
             vlines[x] = [[y,y]]
 
-def hline_XOR(surf_array, y, xs1, xs2):
+def hline_XOR(surf_array, y, xs1, xs2, step=1):
     if surf_array.dtype == np.uint8:
         #indexed color
-        surf_array[xs1:xs2,y] ^= config.NUM_COLORS-1
+        surf_array[xs1:xs2:step,y] ^= config.NUM_COLORS-1
     else:
         #true color
-        surf_array[xs1:xs2,y] ^= 0x00ffffff
+        surf_array[xs1:xs2:step,y] ^= 0x00ffffff
+
+def vline_XOR(surf_array, x, ys1, ys2, step=1):
+    if surf_array.dtype == np.uint8:
+        #indexed color
+        surf_array[x,ys1:ys2:step] ^= config.NUM_COLORS-1
+    else:
+        #true color
+        surf_array[x,ys1:ys2:step] ^= 0x00ffffff
 
 def hline_SOLID(surf_array, color, y, xs1, xs2):
     #don't draw if off screen
@@ -2144,7 +2172,7 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                     return
                 config.try_recompose()
 
-def drawxorcross(screen, x, y):
+def drawxorcross(screen, x, y, step=1, offset=0):
     #don't draw if off screen
     size = screen.get_size()
     if y<0 or y>=size[1] or x<0 or x>=size[0]:
@@ -2155,12 +2183,12 @@ def drawxorcross(screen, x, y):
 
     if surf_array.dtype == np.uint8:
         #indexed color
-        surf_array[0:size[0],y] ^= config.NUM_COLORS-1
-        surf_array[x,0:size[1]] ^= config.NUM_COLORS-1
+        surf_array[offset:size[0]:step,y] ^= config.NUM_COLORS-1
+        surf_array[x,offset:size[1]:step] ^= config.NUM_COLORS-1
     else:
         #true color
-        surf_array[0:size[0],y] ^= 0x00ffffff
-        surf_array[x,0:size[1]] ^= 0x00ffffff
+        surf_array[offset:size[0]:step,y] ^= 0x00ffffff
+        surf_array[x,offset:size[1]:step] ^= 0x00ffffff
 
     #free array and unlock surface
     surf_array = None
