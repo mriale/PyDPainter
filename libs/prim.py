@@ -1614,6 +1614,7 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
 def draw_ants(screen, coordfrom, coordto, step=4, offset=0):
     x1,y1 = coordfrom
     x2,y2 = coordto
+    offsetr = (step - offset) % step
 
     #swap so x1,y1 is upper left and x2,y2 is lower right
     if x1 > x2:
@@ -1624,10 +1625,10 @@ def draw_ants(screen, coordfrom, coordto, step=4, offset=0):
     surf_array = pygame.surfarray.pixels2d(screen)
     hline_XOR(surf_array, y1, x1+offset, x2, step=step)
     hline_XOR(surf_array, y1, x1+offset+1, x2, step=step)
-    vline_XOR(surf_array, x1, y1+offset, y2, step=step)
-    vline_XOR(surf_array, x1, y1+offset+1, y2, step=step)
-    hline_XOR(surf_array, y2, x1+offset, x2, step=step)
-    hline_XOR(surf_array, y2, x1+offset+1, x2, step=step)
+    vline_XOR(surf_array, x1, y1+offsetr, y2, step=step)
+    vline_XOR(surf_array, x1, y1+offsetr+1, y2, step=step)
+    hline_XOR(surf_array, y2, x1+offsetr, x2, step=step)
+    hline_XOR(surf_array, y2, x1+offsetr+1, x2, step=step)
     vline_XOR(surf_array, x2, y1+offset, y2, step=step)
     vline_XOR(surf_array, x2, y1+offset+1, y2, step=step)
     surf_array = None
@@ -2178,17 +2179,23 @@ def drawxorcross(screen, x, y, step=1, offset=0):
     if y<0 or y>=size[1] or x<0 or x>=size[0]:
         return
 
+    offsetr = (step - offset) % step
+
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)
 
     if surf_array.dtype == np.uint8:
         #indexed color
-        surf_array[offset:size[0]:step,y] ^= config.NUM_COLORS-1
-        surf_array[x,offset:size[1]:step] ^= config.NUM_COLORS-1
+        surf_array[offsetr:x:step,y] ^= config.NUM_COLORS-1
+        surf_array[x+offset:size[0]:step,y] ^= config.NUM_COLORS-1
+        surf_array[x,offsetr:y:step] ^= config.NUM_COLORS-1
+        surf_array[x,y+offset:size[1]:step] ^= config.NUM_COLORS-1
     else:
         #true color
-        surf_array[offset:size[0]:step,y] ^= 0x00ffffff
-        surf_array[x,offset:size[1]:step] ^= 0x00ffffff
+        surf_array[offsetr:x:step,y] ^= 0x00ffffff
+        surf_array[x+offset:size[0]:step,y] ^= 0x00ffffff
+        surf_array[x,offsetr:y:step] ^= 0x00ffffff
+        surf_array[x,y+offset:size[1]:step] ^= 0x00ffffff
 
     #free array and unlock surface
     surf_array = None
