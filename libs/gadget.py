@@ -315,7 +315,16 @@ class Gadget(object):
                     #numeric error
                     self.error = True
                 else:
-                    self.error = False
+                    if "spinnerg" in dir(self):
+                        if self.spinnerg is None:
+                            self.error = False
+                        elif int(self.value) >= self.spinnerg.minvalue and int(self.value) <= self.spinnerg.maxvalue:
+                            self.error = False
+                        else:
+                            self.error = True
+                    else:
+                        self.error = False
+ 
             if self.error:
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
         elif self.type == Gadget.TYPE_SPINNER:

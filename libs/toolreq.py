@@ -489,6 +489,7 @@ class BrushReqProps(object):
     J_CENTER_Y = 5
 
     J_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
+    J_NAME = ["J_LEFT", "J_RIGHT", "J_CENTER_X", "J_TOP", "J_BOTTOM", "J_CENTER_Y"]
 
     def __init__(self):
         self.offset = [0,0]
@@ -496,6 +497,10 @@ class BrushReqProps(object):
         self.number = [4,4]
         self.strict = [True,True]
         self.align = [self.J_LEFT, self.J_TOP]
+        self.numbersg = []
+
+    def __repr__(self):
+        return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
 
     def copy(self):
         brp = BrushReqProps()
@@ -519,6 +524,33 @@ class BrushReqProps(object):
                 jy = self.J_TOP
             self.align[1] = jy
 
+    def valid_number(self, g):
+        if re.fullmatch(r'^-?\d*\.?\d+$', g.value):
+            if g.spinnerg is None:
+                return True
+            elif int(g.value) >= g.spinnerg.minvalue and \
+                 int(g.value) <= g.spinnerg.maxvalue:
+                    return True
+        return False
+
+    def get_req_numbers(self):
+        if len(self.numbersg) > 0:
+            if self.valid_number(self.numbersg[0]):
+                self.offset[0] = int(self.numbersg[0].value)
+            if self.valid_number(self.numbersg[1]):
+                self.offset[1] = int(self.numbersg[1].value)
+            if self.valid_number(self.numbersg[2]):
+                self.size[0] = int(self.numbersg[2].value)
+            if self.valid_number(self.numbersg[3]):
+                self.size[1] = int(self.numbersg[3].value)
+            if self.valid_number(self.numbersg[4]):
+                self.number[0] = int(self.numbersg[4].value)
+            if self.valid_number(self.numbersg[5]):
+                self.number[1] = int(self.numbersg[5].value)
+
+def draw_brush_grid(screen, brp):
+    print(f"{brp=}")
+
 def brush_req(screen):
     req = str2req("Brush Grid", """
           X      Y
@@ -532,6 +564,7 @@ Align:  [<>   ][^v   ]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
+    req.draggable = True
 
     offsetXg = req.find_gadget("Offset:", 1)
     offsetYg = req.find_gadget("Offset:", 3)
@@ -546,13 +579,19 @@ Align:  [<>   ][^v   ]
     visualg = req.find_gadget("Visual")
 
     brp = config.brush_req_props.copy()
+    brp_numbersg = [offsetXg, offsetYg, sizeXg, sizeYg, numberXg, numberYg]
+    brp.numbersg = brp_numbersg
 
     offsetXg.value = str(brp.offset[0])
     offsetYg.value = str(brp.offset[1])
     sizeXg.value = str(brp.size[0])
+    sizeXg.spinnerg.minvalue = 1
     sizeYg.value = str(brp.size[1])
+    sizeYg.spinnerg.minvalue = 1
     numberXg.value = str(brp.number[0])
+    numberXg.spinnerg.minvalue = 1
     numberYg.value = str(brp.number[1])
+    numberYg.spinnerg.minvalue = 1
     strictXg.label = "Yes" if brp.strict[0] else "No"
     strictYg.label = "Yes" if brp.strict[1] else "No"
     alignXg.label = brp.J_STR[brp.align[0]]
@@ -610,8 +649,31 @@ Align:  [<>   ][^v   ]
                     brp.strict[1] = not brp.strict[1]
                     strictYg.label = "Yes" if brp.strict[1] else "No"
                     strictYg.need_redraw = True
+                else:
+                    brp.offset[0] = int(offsetXg.value)
+                    offsetYg.value = str(brp.offset[1])
+                    sizeXg.value = str(brp.size[0])
+                    sizeYg.value = str(brp.size[1])
+                    numberXg.value = str(brp.number[0])
+                    numberYg.value = str(brp.number[1])
+
+        brp.get_req_numbers()
+
+        draw_brush_grid(screen, brp)
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            #keep requestor within screen
+            (rx,ry,rw,rh) = req.rect
+            if ry < 14:
+                ry = 14
+            if ry > screen.get_height()-20:
+                ry = screen.get_height()-20
+            if rx < -rw+20:
+                rx = -rw+20
+            if rx > screen.get_width()-40:
+                rx = screen.get_width()-40
+            req.rect = (rx,ry,rw,rh)
+            config.pixel_req_rect = req.get_screen_rect()
             req.draw(screen)
             config.recompose()
 
