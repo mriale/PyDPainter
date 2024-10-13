@@ -498,9 +498,20 @@ class BrushReqProps(object):
         self.strict = [True,True]
         self.align = [self.J_LEFT, self.J_TOP]
         self.numbersg = []
+        self.handles = []
 
     def __repr__(self):
         return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
+
+    def __eq__(self, other):
+        if not isinstance(other, BrushReqProps):
+            return False
+
+        return self.offset == other.offset and \
+               self.size == other.size and \
+               self.number == other.number and \
+               self.strict == other.strict and \
+               self.align == other.align
 
     def copy(self):
         brp = BrushReqProps()
@@ -548,8 +559,46 @@ class BrushReqProps(object):
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
 
-def draw_brush_grid(screen, brp):
-    print(f"{brp=}")
+last_brp = None
+
+def draw_brush_grid(brp):
+    global last_brp
+    if brp == last_brp:
+        return
+
+    sm = config.display_info.get_id(config.display_mode)
+    px = sm.scaleX
+    py = sm.scaleY
+
+    last_brp = brp.copy()
+    ox,oy = brp.offset
+    sx,sy = brp.size
+    nx,ny = brp.number
+    gw = sx*nx
+    gh = sy*ny
+
+    config.clear_pixel_draw_canvas()
+
+    #draw grid
+    for x in range(ox, ox+gw+1, sx):
+        drawline(config.pixel_canvas, 1, (x, oy), (x, oy+gh), xormode=True)
+
+    for y in range(oy, oy+gh+1, sy):
+        drawline(config.pixel_canvas, 1, (ox, y), (ox+gw, y), xormode=True)
+
+    #draw handles
+    brp.handles = [
+        [(ox, oy), (ox+gw, oy+gh)],
+        [(ox, oy), (ox-8*px, oy-8*py)],
+        [(ox+gw, oy), (ox+gw+8*px, oy-8*py)],
+        [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)],
+        [(ox, oy+gh), (ox-8*px, oy+gh+8*py)],
+    ]
+    for handle in brp.handles[1:]:
+        drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
+
+    #drawrect(config.pixel_canvas, 1, (ox, oy), (ox-8*px, oy-8*py), handlesymm=False, xormode=True)
+    #drawrect(config.pixel_canvas, 1, (ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py), handlesymm=False, xormode=True)
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
@@ -559,12 +608,16 @@ Size:   _____~ _____~
 Number: _____~ _____~
 Strict: [Yes  ][Yes  ]
 Align:  [<>   ][^v   ]
-[Visual]
+
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
     req.draggable = True
+    (rx,ry,rw,rh) = req.rect
+
+    global last_brp
+    last_brp = None
 
     offsetXg = req.find_gadget("Offset:", 1)
     offsetYg = req.find_gadget("Offset:", 3)
@@ -576,7 +629,6 @@ Align:  [<>   ][^v   ]
     strictYg = req.find_gadget("Strict:", 2)
     alignXg = req.find_gadget("Align:", 1)
     alignYg = req.find_gadget("Align:", 2)
-    visualg = req.find_gadget("Visual")
 
     brp = config.brush_req_props.copy()
     brp_numbersg = [offsetXg, offsetYg, sizeXg, sizeYg, numberXg, numberYg]
@@ -597,6 +649,9 @@ Align:  [<>   ][^v   ]
     alignXg.label = brp.J_STR[brp.align[0]]
     alignYg.label = brp.J_STR[brp.align[1]]
 
+    clickXY = [-1,-1]
+    handle_num = -1
+
     req.draw(screen)
     config.recompose()
 
@@ -608,29 +663,55 @@ Align:  [<>   ][^v   ]
         if event.type == KEYDOWN and event.key == K_ESCAPE:
             running = 0 
 
+        #Get color from pixel canvas
+        buttons = config.get_mouse_pressed(event)
+        if len(gevents) == 0 and event.type == MOUSEBUTTONDOWN:
+            x,y = config.get_mouse_pixel_pos(event)
+            if x < rx or y < ry or x > rx+rw or y > ry+rh:
+                x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
+                print(f"mouse outside {x=},{y=} {x1=},{y1=}")
+                handle_num = -1
+                for i in range(len(brp.handles)):
+                    handle = brp.handles[i]
+                    if x1 >= handle[0][0] and x1 <= handle[1][0] and \
+                       y1 >= handle[0][1] and y1 <= handle[1][1]:
+                           handle_num = i
+                           break
+                if handle_num == 0: #drag grid
+                    print("clicked in grid")
+                    clickXY = (x1-brp.offset[0],y1-brp.offset[1])
+                elif handle_num == 3: #resize lower right
+                    print("clicked lower right")
+                    clickXY = (x1-brp.handles[3][0][0],y1-brp.handles[3][0][1])
+
+        if len(gevents) == 0 and event.type == MOUSEMOTION and buttons[0]:
+            if config.xevent.peek(MOUSEMOTION):
+                continue
+            x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
+            if handle_num == 0: #drag whole grid
+                offsetXg.value = str(max(0, x1-clickXY[0]))
+                offsetXg.need_redraw = True
+                offsetYg.value = str(max(0, y1-clickXY[1]))
+                offsetYg.need_redraw = True
+                brp.get_req_numbers()
+            elif handle_num == 3: #resize lower right
+                sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
+                sizeXg.need_redraw = True
+                sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
+                sizeYg.need_redraw = True
+                brp.get_req_numbers()
+
+        if event.type == MOUSEBUTTONUP:
+            handle_num = -1
+            clickXY = (-1,-1)
+
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
-                    config.grid_size = (int(sizeXg.value), int(sizeYg.value))
-                    config.grid_offset = (int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value))
+                    config.brush_req_props = brp.copy()
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
-                elif ge.gadget == visualg and not req.has_error():
-                    gcoords = place_grid((int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value), int(sizeXg.value), int(sizeYg.value), int(numberXg.value), int(numberYg.value)))
-                    offsetXg.value = str(gcoords[0])
-                    offsetXg.need_redraw = True
-                    offsetYg.value = str(gcoords[1])
-                    offsetYg.need_redraw = True
-                    sizeXg.value = str(gcoords[2])
-                    sizeXg.need_redraw = True
-                    sizeYg.value = str(gcoords[3])
-                    sizeYg.need_redraw = True
-                    numberXg.value = str(gcoords[4])
-                    numberXg.need_redraw = True
-                    numberYg.value = str(gcoords[5])
-                    numberYg.need_redraw = True
-                    req.draw(screen)
                 elif ge.gadget == alignXg:
                     brp.next_align(0)
                     alignXg.label = brp.J_STR[brp.align[0]]
@@ -649,17 +730,11 @@ Align:  [<>   ][^v   ]
                     brp.strict[1] = not brp.strict[1]
                     strictYg.label = "Yes" if brp.strict[1] else "No"
                     strictYg.need_redraw = True
-                else:
-                    brp.offset[0] = int(offsetXg.value)
-                    offsetYg.value = str(brp.offset[1])
-                    sizeXg.value = str(brp.size[0])
-                    sizeYg.value = str(brp.size[1])
-                    numberXg.value = str(brp.number[0])
-                    numberYg.value = str(brp.number[1])
 
-        brp.get_req_numbers()
+        if len(gevents) > 0:
+            brp.get_req_numbers()
 
-        draw_brush_grid(screen, brp)
+        draw_brush_grid(brp)
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
