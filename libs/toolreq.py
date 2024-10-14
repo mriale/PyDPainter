@@ -499,6 +499,8 @@ class BrushReqProps(object):
         self.align = [self.J_LEFT, self.J_TOP]
         self.numbersg = []
         self.handles = []
+        self.bcoords = []
+        self.last_brp = None
 
     def __repr__(self):
         return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
@@ -559,46 +561,40 @@ class BrushReqProps(object):
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
 
-last_brp = None
+    def draw(self):
+        if self == self.last_brp:
+            return
 
-def draw_brush_grid(brp):
-    global last_brp
-    if brp == last_brp:
-        return
+        sm = config.display_info.get_id(config.display_mode)
+        px = sm.scaleX
+        py = sm.scaleY
 
-    sm = config.display_info.get_id(config.display_mode)
-    px = sm.scaleX
-    py = sm.scaleY
+        last_brp = self.copy()
+        ox,oy = self.offset
+        sx,sy = self.size
+        nx,ny = self.number
+        gw = sx*nx
+        gh = sy*ny
 
-    last_brp = brp.copy()
-    ox,oy = brp.offset
-    sx,sy = brp.size
-    nx,ny = brp.number
-    gw = sx*nx
-    gh = sy*ny
+        config.clear_pixel_draw_canvas()
 
-    config.clear_pixel_draw_canvas()
+        #draw grid
+        for x in range(ox, ox+gw+1, sx):
+            drawline(config.pixel_canvas, 1, (x, oy), (x, oy+gh), xormode=True)
 
-    #draw grid
-    for x in range(ox, ox+gw+1, sx):
-        drawline(config.pixel_canvas, 1, (x, oy), (x, oy+gh), xormode=True)
+        for y in range(oy, oy+gh+1, sy):
+            drawline(config.pixel_canvas, 1, (ox, y), (ox+gw, y), xormode=True)
 
-    for y in range(oy, oy+gh+1, sy):
-        drawline(config.pixel_canvas, 1, (ox, y), (ox+gw, y), xormode=True)
-
-    #draw handles
-    brp.handles = [
-        [(ox, oy), (ox+gw, oy+gh)],
-        [(ox, oy), (ox-8*px, oy-8*py)],
-        [(ox+gw, oy), (ox+gw+8*px, oy-8*py)],
-        [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)],
-        [(ox, oy+gh), (ox-8*px, oy+gh+8*py)],
-    ]
-    for handle in brp.handles[1:]:
-        drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
-
-    #drawrect(config.pixel_canvas, 1, (ox, oy), (ox-8*px, oy-8*py), handlesymm=False, xormode=True)
-    #drawrect(config.pixel_canvas, 1, (ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py), handlesymm=False, xormode=True)
+        #draw handles
+        self.handles = [
+            [(ox, oy), (ox+gw, oy+gh)],
+            [(ox, oy), (ox-8*px, oy-8*py)],
+            [(ox+gw, oy), (ox+gw+8*px, oy-8*py)],
+            [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)],
+            [(ox, oy+gh), (ox-8*px, oy+gh+8*py)],
+        ]
+        for handle in self.handles[1:]:
+            drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
@@ -615,9 +611,6 @@ Align:  [<>   ][^v   ]
     config.pixel_req_rect = req.get_screen_rect()
     req.draggable = True
     (rx,ry,rw,rh) = req.rect
-
-    global last_brp
-    last_brp = None
 
     offsetXg = req.find_gadget("Offset:", 1)
     offsetYg = req.find_gadget("Offset:", 3)
@@ -734,7 +727,7 @@ Align:  [<>   ][^v   ]
         if len(gevents) > 0:
             brp.get_req_numbers()
 
-        draw_brush_grid(brp)
+        brp.draw()
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
