@@ -1358,10 +1358,53 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
             return
         drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase, animpaint=animpaint)
 
+def draw_vert_xor_line(screen, x, y, y2, skiplast):
+    w,h = screen.get_size()
+    if x < 0 or x >= w:
+        return
+    if (y < 0 and y2 < 0) or (y >= h and y2 >= h):
+        return
+    if skiplast:
+        y2 -= int(math.copysign(1, y2-y))
+    if y2 < y:
+        y,y2 = (y2,y)
+    if y < 0:
+        y = 0
+    elif y >= h:
+        y = h-1
+    surf_array = pygame.surfarray.pixels2d(screen)
+    vline_XOR(surf_array, x, y, y2+1)
+    surf_array = None
+
+def draw_horiz_xor_line(screen, y, x, x2, skiplast):
+    w,h = screen.get_size()
+    if y < 0 or y >= h:
+        return
+    if (x < 0 and x2 < 0) or (x >= w and x2 >= w):
+        return
+    if skiplast:
+        x2 -= int(math.copysign(1, x2-x))
+    if x2 < x:
+        x,x2 = (x2,x)
+    if x < 0:
+        x = 0
+    elif x >= w:
+        x = w-1
+    surf_array = pygame.surfarray.pixels2d(screen)
+    hline_XOR(surf_array, y, x, x2+1)
+    surf_array = None
 
 def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     x,y = int(coordfrom[0]), int(coordfrom[1])
     x2,y2 = int(coordto[0]), int(coordto[1])
+
+    if xormode:
+        if x == x2:
+            draw_vert_xor_line(screen, x, y, y2, skiplast)
+            return
+        elif y == y2:
+            draw_horiz_xor_line(screen, y, x, x2, skiplast)
+            return
 
     cl = CoordList(1)
 
