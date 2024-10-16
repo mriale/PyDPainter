@@ -857,6 +857,7 @@ Resize: [Yes~No]
     config.recompose()
 
     running = 1
+    ok_clicked = False
     while running:
         event = config.xevent.wait()
         gevents = req.process_event(screen, event)
@@ -868,6 +869,7 @@ Resize: [Yes~No]
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.size_canvas(int(widthg.value), int(heightg.value), resize_page)
+                    ok_clicked = True
                     running = 0
                 elif ge.gadget in gResize:
                     resize_page = (gResize.index(ge.gadget) == 1)
@@ -890,8 +892,11 @@ Resize: [Yes~No]
             config.recompose()
 
     config.pixel_req_rect = None
-    config.initialize_surfaces()
-    config.anim.show_curr_frame()
+    if ok_clicked:
+        config.initialize_surfaces()
+        config.anim.show_curr_frame()
+    else:
+        config.recompose()
 
     return
 
