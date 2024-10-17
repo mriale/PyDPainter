@@ -491,6 +491,8 @@ class BrushReqProps(object):
     J_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
     J_NAME = ["J_LEFT", "J_RIGHT", "J_CENTER_X", "J_TOP", "J_BOTTOM", "J_CENTER_Y"]
 
+    H_CENTER, H_TOP_LEFT, H_TOP, H_TOP_RIGHT, H_RIGHT, H_BOTTOM_RIGHT, H_BOTTOM, H_BOTTOM_LEFT, H_LEFT = range(9)
+
     def __init__(self):
         self.offset = [0,0]
         self.size = [10,10]
@@ -501,6 +503,7 @@ class BrushReqProps(object):
         self.handles = []
         self.bcoords = []
         self.last_brp = None
+        self.last_handle_num = -1
 
     def __repr__(self):
         return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
@@ -561,9 +564,12 @@ class BrushReqProps(object):
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
 
-    def draw(self):
-        if self == self.last_brp:
-            return
+    def draw(self, handle_num=-1):
+        if handle_num == self.last_handle_num:
+            if self == self.last_brp:
+                return
+
+        self.last_handle_num = handle_num
 
         sm = config.display_info.get_id(config.display_mode)
         px = sm.scaleX
@@ -589,12 +595,22 @@ class BrushReqProps(object):
         self.handles = [
             [(ox, oy), (ox+gw, oy+gh)],
             [(ox, oy), (ox-8*px, oy-8*py)],
+            [(ox, oy), (ox+gw, oy-8*py)],
             [(ox+gw, oy), (ox+gw+8*px, oy-8*py)],
+            [(ox+gw, oy), (ox+gw+8*px, oy+gh)],
             [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)],
+            [(ox+gw, oy+gh), (ox, oy+gh+8*py)],
             [(ox, oy+gh), (ox-8*px, oy+gh+8*py)],
+            [(ox, oy+gh), (ox-8*px, oy)],
         ]
-        for handle in self.handles[1:]:
+
+        if handle_num in [self.H_TOP, self.H_RIGHT, self.H_BOTTOM, self.H_LEFT]:
+            handle = self.handles[handle_num]
             drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
+        else:
+            for i in [self.H_TOP_LEFT, self.H_TOP_RIGHT, self.H_BOTTOM_RIGHT, self.H_BOTTOM_LEFT]:
+                handle = self.handles[i]
+                drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
@@ -670,24 +686,24 @@ Align:  [<>   ][^v   ]
                        y1 >= handle[0][1] and y1 <= handle[1][1]:
                            handle_num = i
                            break
-                if handle_num == 0: #drag grid
+                if handle_num == brp.H_CENTER:
                     print("clicked in grid")
                     clickXY = (x1-brp.offset[0],y1-brp.offset[1])
-                elif handle_num == 3: #resize lower right
+                elif handle_num == brp.H_BOTTOM_RIGHT:
                     print("clicked lower right")
-                    clickXY = (x1-brp.handles[3][0][0],y1-brp.handles[3][0][1])
+                    clickXY = (x1-brp.handles[handle_num][0][0],y1-brp.handles[handle_num][0][1])
 
         if len(gevents) == 0 and event.type == MOUSEMOTION and buttons[0]:
             if config.xevent.peek(MOUSEMOTION):
                 continue
             x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
-            if handle_num == 0: #drag whole grid
+            if handle_num == brp.H_CENTER:
                 offsetXg.value = str(max(0, x1-clickXY[0]))
                 offsetXg.need_redraw = True
                 offsetYg.value = str(max(0, y1-clickXY[1]))
                 offsetYg.need_redraw = True
                 brp.get_req_numbers()
-            elif handle_num == 3: #resize lower right
+            elif handle_num == brp.H_BOTTOM_RIGHT:
                 sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
                 sizeXg.need_redraw = True
                 sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
@@ -727,7 +743,7 @@ Align:  [<>   ][^v   ]
         if len(gevents) > 0:
             brp.get_req_numbers()
 
-        brp.draw()
+        brp.draw(handle_num)
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             #keep requestor within screen
