@@ -103,30 +103,25 @@ for r in range(2,30):
                                (g//2)*((g%2)*2-1), \
                                (b//2)*((b%2)*2-1)))
 
-colcache = {}
 def unique_palette(pal):
     newpal = []
     paldict = {}
     #print("len(pal): " + str(len(pal)))
     for i in range(0,len(pal)):
         col = pal[i]
-        if str(col) in colcache:
-            col = colcache[str(col)]
-        else:
-            j = 0
+        j = 0
+        out_of_range = False
+        #print("color[" + str(i) + "]: " + str(col))
+        while out_of_range or str(col) in paldict:
+            #print("dup color: " + str(col))
             out_of_range = False
-            #print("color[" + str(i) + "]: " + str(col))
-            while out_of_range or str(col) in paldict:
-                #print("dup color: " + str(col))
-                out_of_range = False
-                r = pal[i][0] + color_skew[j][0]
-                g = pal[i][1] + color_skew[j][1]
-                b = pal[i][2] + color_skew[j][2]
-                if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
-                    out_of_range = True
-                col = (r,g,b)
-                j = j + 1
-            colcache[str(col)]=col
+            r = pal[i][0] + color_skew[j][0]
+            g = pal[i][1] + color_skew[j][1]
+            b = pal[i][2] + color_skew[j][2]
+            if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+                out_of_range = True
+            col = (r,g,b)
+            j = j + 1
         newpal.append(col)
         paldict[str(col)] = 1
     #pal256.extend([pal[0]] * (256-len(pal)))
