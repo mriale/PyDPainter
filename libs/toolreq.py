@@ -501,7 +501,7 @@ class BrushReqProps(object):
         self.align = [self.J_LEFT, self.J_TOP]
         self.numbersg = []
         self.handles = []
-        self.bcoords = []
+        self.bcoords = None
         self.last_brp = None
         self.last_handle_num = -1
 
@@ -539,6 +539,16 @@ class BrushReqProps(object):
             if jy > self.J_CENTER_Y:
                 jy = self.J_TOP
             self.align[1] = jy
+
+    def get_handle_num(self, x, y):
+        handle_num = -1
+        for i in range(len(self.handles)):
+            handle = self.handles[i]
+            if x >= handle[0][0] and x <= handle[1][0] and \
+               y >= handle[0][1] and y <= handle[1][1]:
+                   handle_num = i
+                   break
+        return handle_num
 
     def valid_number(self, g):
         if re.fullmatch(r'^-?\d*\.?\d+$', g.value):
@@ -584,24 +594,63 @@ class BrushReqProps(object):
 
         config.clear_pixel_draw_canvas()
 
-        #draw grid
-        for x in range(ox, ox+gw+1, sx):
-            drawline(config.pixel_canvas, 1, (x, oy), (x, oy+gh), xormode=True)
+        bcoords = np.zeros((nx,ny,4), dtype=np.int32)
+        #calculate brush coords
+        if True: #self.strict == [True, True]:
+            #strict grid
+            gw = sx*nx
+            gh = sy*ny
+            yi = 0
+            for y in range(oy, oy+gh, sy):
+                xi = 0
+                for x in range(ox, ox+gw, sx):
+                    bcoords[xi,yi,:] = [x,y, x+sx, y+sy]
+                    xi += 1
+                yi += 1
 
-        for y in range(oy, oy+gh+1, sy):
-            drawline(config.pixel_canvas, 1, (ox, y), (ox+gw, y), xormode=True)
+        #draw vertical grid lines
+        if self.strict[0] == True:
+            nx0 = 0
+            if handle_num == self.H_LEFT:
+                nx0 = 1
+            for xi in range(nx0, nx):
+                x = bcoords[xi,0,0]
+                y1 = bcoords[xi,0,1]
+                y2 = bcoords[xi,ny-1,3]
+                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+            if handle_num != self.H_RIGHT:
+                x = bcoords[nx-1,0,2]
+                y1 = bcoords[nx-1,0,1]
+                y2 = bcoords[nx-1,ny-1,3]
+                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+
+        #draw horizontal grid lines
+        if self.strict[1] == True:
+            ny0 = 0
+            if handle_num == self.H_TOP:
+                ny0 = 1
+            for yi in range(ny0, ny):
+                y = bcoords[0,yi,1]
+                x1 = bcoords[0,yi,0]
+                x2 = bcoords[nx-1,yi,2]
+                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
+            if handle_num != self.H_BOTTOM:
+                y = bcoords[0,ny-1,3]
+                x1 = bcoords[0,ny-1,0]
+                x2 = bcoords[nx-1,ny-1,2]
+                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
 
         #draw handles
         self.handles = [
-            [(ox, oy), (ox+gw, oy+gh)],
-            [(ox, oy), (ox-8*px, oy-8*py)],
-            [(ox, oy), (ox+gw, oy-8*py)],
-            [(ox+gw, oy), (ox+gw+8*px, oy-8*py)],
-            [(ox+gw, oy), (ox+gw+8*px, oy+gh)],
-            [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)],
-            [(ox+gw, oy+gh), (ox, oy+gh+8*py)],
-            [(ox, oy+gh), (ox-8*px, oy+gh+8*py)],
-            [(ox, oy+gh), (ox-8*px, oy)],
+            [(ox, oy), (ox+gw, oy+gh)], #H_CENTER
+            [(ox-8*px, oy-8*py),(ox, oy)], #H_TOP_LEFT
+            [(ox, oy-8*py), (ox+gw, oy)], #H_TOP
+            [(ox+gw, oy-8*py), (ox+gw+8*px, oy)], #H_TOP_RIGHT
+            [(ox+gw, oy), (ox+gw+8*px, oy+gh)], #H_RIGHT
+            [(ox+gw, oy+gh), (ox+gw+8*px, oy+gh+8*py)], #H_BOTTOM_RIGHT
+            [(ox, oy+gh), (ox+gw, oy+gh+8*py)], #H_BOTTOM
+            [(ox-8*px, oy+gh), (ox, oy+gh+8*py)], #H_BOTTOM_LEFT
+            [(ox-8*px, oy), (ox, oy+gh)], #H_LEFT
         ]
 
         if handle_num in [self.H_TOP, self.H_RIGHT, self.H_BOTTOM, self.H_LEFT]:
@@ -611,6 +660,8 @@ class BrushReqProps(object):
             for i in [self.H_TOP_LEFT, self.H_TOP_RIGHT, self.H_BOTTOM_RIGHT, self.H_BOTTOM_LEFT]:
                 handle = self.handles[i]
                 drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
+
+        self.bcoords = bcoords
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
@@ -679,36 +730,48 @@ Align:  [<>   ][^v   ]
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
                 print(f"mouse outside {x=},{y=} {x1=},{y1=}")
-                handle_num = -1
-                for i in range(len(brp.handles)):
-                    handle = brp.handles[i]
-                    if x1 >= handle[0][0] and x1 <= handle[1][0] and \
-                       y1 >= handle[0][1] and y1 <= handle[1][1]:
-                           handle_num = i
-                           break
-                if handle_num == brp.H_CENTER:
-                    print("clicked in grid")
-                    clickXY = (x1-brp.offset[0],y1-brp.offset[1])
-                elif handle_num == brp.H_BOTTOM_RIGHT:
-                    print("clicked lower right")
+                handle_num = brp.get_handle_num(x1, y1)
+                if handle_num >= 0:
                     clickXY = (x1-brp.handles[handle_num][0][0],y1-brp.handles[handle_num][0][1])
+                else:
+                    clickXY = (-1,-1)
 
-        if len(gevents) == 0 and event.type == MOUSEMOTION and buttons[0]:
+        if len(gevents) == 0 and event.type == MOUSEMOTION:
             if config.xevent.peek(MOUSEMOTION):
                 continue
             x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
-            if handle_num == brp.H_CENTER:
-                offsetXg.value = str(max(0, x1-clickXY[0]))
-                offsetXg.need_redraw = True
-                offsetYg.value = str(max(0, y1-clickXY[1]))
-                offsetYg.need_redraw = True
-                brp.get_req_numbers()
-            elif handle_num == brp.H_BOTTOM_RIGHT:
-                sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
-                sizeXg.need_redraw = True
-                sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
-                sizeYg.need_redraw = True
-                brp.get_req_numbers()
+            if buttons[0]:
+                if handle_num == brp.H_CENTER:
+                    offsetXg.value = str(max(0, x1-clickXY[0]))
+                    offsetXg.need_redraw = True
+                    offsetYg.value = str(max(0, y1-clickXY[1]))
+                    offsetYg.need_redraw = True
+                    brp.get_req_numbers()
+                elif handle_num == brp.H_TOP_LEFT:
+                    sx,sy = brp.size
+                    ox = int(round((x1-clickXY[0]) / sx)+1) * sx
+                    oy = int(round((y1-clickXY[1]) / sy)+1) * sy
+                    offsetXg.value = str(max(0, ox))
+                    offsetXg.need_redraw = True
+                    offsetYg.value = str(max(0, oy))
+                    offsetYg.need_redraw = True
+                    brp.get_req_numbers()
+                elif handle_num == brp.H_RIGHT:
+                    sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
+                    sizeXg.need_redraw = True
+                    brp.get_req_numbers()
+                elif handle_num == brp.H_BOTTOM_RIGHT:
+                    sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
+                    sizeXg.need_redraw = True
+                    sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
+                    sizeYg.need_redraw = True
+                    brp.get_req_numbers()
+                elif handle_num == brp.H_BOTTOM:
+                    sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
+                    sizeYg.need_redraw = True
+                    brp.get_req_numbers()
+            else:
+                handle_num = brp.get_handle_num(x1, y1)
 
         if event.type == MOUSEBUTTONUP:
             handle_num = -1
