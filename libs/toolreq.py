@@ -670,7 +670,7 @@ class BrushReqProps(object):
         gh = sy*ny
 
         config.clear_pixel_draw_canvas()
-        brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, coordfrom=self.bcoords[0,0,0:2].tolist(), coordto=(self.bcoords[0,0,2:4]-[1,1]).tolist())
+        brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, coordfrom=self.bcoords[0,0,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[0,0,2:4]-[1,1]).tolist())
         brush.animbrush = True
 
         yi = 0
@@ -679,7 +679,7 @@ class BrushReqProps(object):
             if yi == 0:
                 xi = 1
             while xi < nx:
-                brush.add_frame(brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[xi,yi,0:2].tolist(), coordto=(self.bcoords[xi,yi,2:4]-[1,1]).tolist()))
+                brush.add_frame(brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[xi,yi,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[xi,yi,2:4]-[1,1]).tolist()))
                 xi += 1
             yi += 1
 
