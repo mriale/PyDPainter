@@ -212,6 +212,7 @@ class DoBIBrush(ToolAction):
         if was_custom:
             config.setDrawMode(DrawMode.COLOR)
             config.brush.handle_type = config.brush.CENTER
+            config.brush.animbrush = False
 
 class DoDot(ToolSingleAction):
     """
