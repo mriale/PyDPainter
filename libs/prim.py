@@ -495,6 +495,8 @@ class Brush:
         self.frame.append(BrushFrame(self, image))
 
     def save_frame(self):
+        if not self.animbrush:
+            return
         frameno = self.currframe
         if len(self.frame) > 0:
             self.frame[frameno].image = self.image
@@ -507,6 +509,8 @@ class Brush:
             self.frame[frameno].handle_frac = list(self.handle_frac)
 
     def set_frame(self, frameno, doAction=True):
+        if not self.animbrush:
+            return
         if frameno < 0:
             frameno = len(self.frame)-1
         elif frameno >= len(self.frame):

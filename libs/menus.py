@@ -483,6 +483,8 @@ class DoBrushRestore(MenuActionBrush):
         config.brush.image = backup
         config.brush.image_orig = backup
         config.brush.size = oh
+        if len(config.brush.frame) > 1:
+            config.brush.animbrush = True
         config.setDrawMode(DrawMode.MATTE)
 
 class DoBrushStretch(MenuAction):
