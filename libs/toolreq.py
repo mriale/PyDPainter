@@ -595,18 +595,17 @@ class BrushReqProps(object):
         config.clear_pixel_draw_canvas()
 
         bcoords = np.zeros((nx,ny,4), dtype=np.int32)
-        #calculate brush coords
-        if True: #self.strict == [True, True]:
-            #strict grid
-            gw = sx*nx
-            gh = sy*ny
-            yi = 0
-            for y in range(oy, oy+gh, sy):
-                xi = 0
-                for x in range(ox, ox+gw, sx):
-                    bcoords[xi,yi,:] = [x,y, x+sx, y+sy]
-                    xi += 1
-                yi += 1
+
+        #calculate starting brush grid coords
+        gw = sx*nx
+        gh = sy*ny
+        yi = 0
+        for y in range(oy, oy+gh, sy):
+            xi = 0
+            for x in range(ox, ox+gw, sx):
+                bcoords[xi,yi,:] = [x,y, x+sx, y+sy]
+                xi += 1
+            yi += 1
 
         #draw vertical grid lines
         if self.strict[0] == True:
@@ -662,6 +661,30 @@ class BrushReqProps(object):
                 drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
 
         self.bcoords = bcoords
+
+    def pickup(self):
+        ox,oy = self.offset
+        sx,sy = self.size
+        nx,ny = self.number
+        gw = sx*nx
+        gh = sy*ny
+
+        config.clear_pixel_draw_canvas()
+        brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, coordfrom=self.bcoords[0,0,0:2].tolist(), coordto=(self.bcoords[0,0,2:4]-[1,1]).tolist())
+        brush.animbrush = True
+
+        yi = 0
+        while yi < ny:
+            xi = 0
+            if yi == 0:
+                xi = 1
+            while xi < nx:
+                brush.add_frame(brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[xi,yi,0:2].tolist(), coordto=(self.bcoords[xi,yi,2:4]-[1,1]).tolist()))
+                xi += 1
+            yi += 1
+
+        return brush
+
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
@@ -741,6 +764,10 @@ Align:  [<>   ][^v   ]
                 continue
             x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
             if buttons[0]:
+                ox,oy = brp.offset
+                sx,sy = brp.size
+                nx,ny = brp.number
+                gw,gh = brp.bcoords[nx-1,ny-1,2:4]
                 if handle_num == brp.H_CENTER:
                     offsetXg.value = str(max(0, x1-clickXY[0]))
                     offsetXg.need_redraw = True
@@ -748,7 +775,6 @@ Align:  [<>   ][^v   ]
                     offsetYg.need_redraw = True
                     brp.get_req_numbers()
                 elif handle_num == brp.H_TOP_LEFT:
-                    sx,sy = brp.size
                     ox = int(round((x1-clickXY[0]) / sx)+1) * sx
                     oy = int(round((y1-clickXY[1]) / sy)+1) * sy
                     offsetXg.value = str(max(0, ox))
@@ -756,18 +782,27 @@ Align:  [<>   ][^v   ]
                     offsetYg.value = str(max(0, oy))
                     offsetYg.need_redraw = True
                     brp.get_req_numbers()
+                elif handle_num == brp.H_TOP:
+                    oy = int(round((y1-clickXY[1]) / sy)+1) * sy
+                    sy = ny * (y1-clickXY[1]-oy) // gh
+                    print(f"{sy=}")
+                    offsetYg.value = str(max(0, oy))
+                    offsetYg.need_redraw = True
+                    sizeYg.value = str(max(1, sy))
+                    sizeYg.need_redraw = True
+                    brp.get_req_numbers()
                 elif handle_num == brp.H_RIGHT:
-                    sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
+                    sizeXg.value = str(max(1, (x1-clickXY[0]-ox) // nx))
                     sizeXg.need_redraw = True
                     brp.get_req_numbers()
                 elif handle_num == brp.H_BOTTOM_RIGHT:
-                    sizeXg.value = str(max(1, (x1-clickXY[0]-brp.offset[0]) // brp.number[0]))
+                    sizeXg.value = str(max(1, (x1-clickXY[0]-ox) // nx))
                     sizeXg.need_redraw = True
-                    sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
+                    sizeYg.value = str(max(1, (y1-clickXY[1]-oy) // ny))
                     sizeYg.need_redraw = True
                     brp.get_req_numbers()
                 elif handle_num == brp.H_BOTTOM:
-                    sizeYg.value = str(max(1, (y1-clickXY[1]-brp.offset[1]) // brp.number[1]))
+                    sizeYg.value = str(max(1, (y1-clickXY[1]-oy) // ny))
                     sizeYg.need_redraw = True
                     brp.get_req_numbers()
             else:
@@ -781,6 +816,19 @@ Align:  [<>   ][^v   ]
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.brush_req_props = brp.copy()
+                    config.brush = brp.pickup()
+                    config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
+                    config.toolbar.tool_id("circle1").state = 0
+                    config.toolbar.tool_id("circle2").state = 0
+                    config.toolbar.tool_id("circle3").state = 0
+                    config.toolbar.tool_id("circle4").state = 0
+                    config.toolbar.tool_id("square1").state = 0
+                    config.toolbar.tool_id("square2").state = 0
+                    config.toolbar.tool_id("square3").state = 0
+                    config.toolbar.tool_id("square4").state = 0
+                    config.toolbar.tool_id("spray1").state = 0
+                    config.toolbar.tool_id("spray2").state = 0
+                    config.setDrawMode(DrawMode.MATTE)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
