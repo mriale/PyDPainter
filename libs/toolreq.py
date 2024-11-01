@@ -497,7 +497,7 @@ class BrushReqProps(object):
         self.offset = [0,0]
         self.size = [10,10]
         self.number = [4,4]
-        self.strict = [True,True]
+        self.flex = [False,False]
         self.align = [self.J_LEFT, self.J_TOP]
         self.numbersg = []
         self.handles = []
@@ -507,7 +507,7 @@ class BrushReqProps(object):
         self.bsize_max = [10,10]
 
     def __repr__(self):
-        return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
+        return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} flex={self.flex} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
 
     def __eq__(self, other):
         if not isinstance(other, BrushReqProps):
@@ -516,7 +516,7 @@ class BrushReqProps(object):
         return self.offset == other.offset and \
                self.size == other.size and \
                self.number == other.number and \
-               self.strict == other.strict and \
+               self.flex == other.flex and \
                self.align == other.align
 
     def copy(self):
@@ -524,7 +524,7 @@ class BrushReqProps(object):
         brp.offset = list(self.offset)
         brp.size = list(self.size)
         brp.number = list(self.number)
-        brp.strict = list(self.strict)
+        brp.flex = list(self.flex)
         brp.align = list(self.align)
         return brp
 
@@ -595,8 +595,8 @@ class BrushReqProps(object):
 
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
 
-        #calculate non-strict grid X coords
-        if self.strict[0] == False:
+        #calculate flex grid X coords
+        if self.flex[0]:
             for yi in range(ny):
                 for xi in range(nx):
                     x1,y1,x2,y2 = bcoords[xi,yi,:]
@@ -632,8 +632,8 @@ class BrushReqProps(object):
                         x -= 1
                         bcoords[xi,yi,0] = x
 
-        #calculate non-strict grid Y coords
-        if self.strict[1] == False:
+        #calculate flex grid Y coords
+        if self.flex[1]:
             for xi in range(nx):
                 for yi in range(ny):
                     x1,y1,x2,y2 = bcoords[xi,yi,:]
@@ -815,7 +815,7 @@ def brush_req(screen):
 Offset: _____~ _____~
 Size:   _____~ _____~
 Number: _____~ _____~
-Strict: [Yes  ][Yes  ]
+Flex:   [Yes  ][Yes  ]
 Align:  [<>   ][^v   ]
 
 [Cancel][OK]
@@ -831,8 +831,8 @@ Align:  [<>   ][^v   ]
     sizeYg = req.find_gadget("Size:", 3)
     numberXg = req.find_gadget("Number:", 1)
     numberYg = req.find_gadget("Number:", 3)
-    strictXg = req.find_gadget("Strict:", 1)
-    strictYg = req.find_gadget("Strict:", 2)
+    flexXg = req.find_gadget("Flex:", 1)
+    flexYg = req.find_gadget("Flex:", 2)
     alignXg = req.find_gadget("Align:", 1)
     alignYg = req.find_gadget("Align:", 2)
 
@@ -850,8 +850,8 @@ Align:  [<>   ][^v   ]
     numberXg.spinnerg.minvalue = 1
     numberYg.value = str(brp.number[1])
     numberYg.spinnerg.minvalue = 1
-    strictXg.label = "Yes" if brp.strict[0] else "No"
-    strictYg.label = "Yes" if brp.strict[1] else "No"
+    flexXg.label = "Yes" if brp.flex[0] else "No"
+    flexYg.label = "Yes" if brp.flex[1] else "No"
     alignXg.label = brp.J_STR[brp.align[0]]
     alignYg.label = brp.J_STR[brp.align[1]]
 
@@ -964,14 +964,14 @@ Align:  [<>   ][^v   ]
                     alignYg.label = brp.J_STR[brp.align[1]]
                     alignYg.need_redraw = True
                     req.draw(screen)
-                elif ge.gadget == strictXg:
-                    brp.strict[0] = not brp.strict[0]
-                    strictXg.label = "Yes" if brp.strict[0] else "No"
-                    strictXg.need_redraw = True
-                elif ge.gadget == strictYg:
-                    brp.strict[1] = not brp.strict[1]
-                    strictYg.label = "Yes" if brp.strict[1] else "No"
-                    strictYg.need_redraw = True
+                elif ge.gadget == flexXg:
+                    brp.flex[0] = not brp.flex[0]
+                    flexXg.label = "Yes" if brp.flex[0] else "No"
+                    flexXg.need_redraw = True
+                elif ge.gadget == flexYg:
+                    brp.flex[1] = not brp.flex[1]
+                    flexYg.label = "Yes" if brp.flex[1] else "No"
+                    flexYg.need_redraw = True
 
         if len(gevents) > 0:
             brp.get_req_numbers()
