@@ -575,6 +575,20 @@ class BrushReqProps(object):
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
 
+    def clip_bcoords(self, bcoord, size):
+        x1,y1,x2,y2 = bcoord[:]
+        w,h = size
+        #clip coords
+        if x1 < 0:
+            x1 = 0
+        if x2 >= w:
+            x2 = w-1
+        if y1 < 0:
+            y1 = 0
+        if y2 >= h:
+            y2 = h-1
+        return [x1,y1,x2,y2]
+
     def calc_bcoords(self):
         w,h = config.pixel_canvas.get_size()
         ox,oy = self.offset
@@ -599,16 +613,7 @@ class BrushReqProps(object):
         if self.flex[0]:
             for yi in range(ny):
                 for xi in range(nx):
-                    x1,y1,x2,y2 = bcoords[xi,yi,:]
-                    #clip coords
-                    if x1 < 0:
-                        x1 = 0
-                    if x2 >= w:
-                        x2 = w-1
-                    if y1 < 0:
-                        y1 = 0
-                    if y2 >= h:
-                        y2 = h-1
+                    x1,y1,x2,y2 = self.clip_bcoords(bcoords[xi,yi,:], [w,h])
 
                     #trim space on right side
                     x = x2
@@ -622,30 +627,21 @@ class BrushReqProps(object):
                         if xi < nx-1:
                             bcoords[xi+1,yi,0] = x
 
-                    #trim space on left side
-                    x = x1
-                    while x < x2 and not np.all(surf_array[x,y1:y2] == config.bgcolor):
-                        x += 1
-                    while x < x2 and np.all(surf_array[x,y1:y2] == config.bgcolor):
-                        x += 1
-                    if x < x2:
-                        x -= 1
-                        bcoords[xi,yi,0] = x
+                        #trim space on left side
+                        x = x1
+                        while x < x2 and not np.all(surf_array[x,y1:y2] == config.bgcolor):
+                            x += 1
+                        while x < x2 and np.all(surf_array[x,y1:y2] == config.bgcolor):
+                            x += 1
+                        if x < x2:
+                            x -= 1
+                            bcoords[xi,yi,0] = x
 
         #calculate flex grid Y coords
         if self.flex[1]:
             for xi in range(nx):
                 for yi in range(ny):
-                    x1,y1,x2,y2 = bcoords[xi,yi,:]
-                    #clip coords
-                    if x1 < 0:
-                        x1 = 0
-                    if x2 >= w:
-                        x2 = w-1
-                    if y1 < 0:
-                        y1 = 0
-                    if y2 >= h:
-                        y2 = h-1
+                    x1,y1,x2,y2 = self.clip_bcoords(bcoords[xi,yi,:], [w,h])
 
                     #trim space on bottom
                     y = y2
@@ -659,15 +655,15 @@ class BrushReqProps(object):
                         if yi < ny-1:
                             bcoords[xi,yi+1,1] = y
 
-                    #trim space on top
-                    y = y1
-                    while y < y2 and not np.all(surf_array[x1:x2,y] == config.bgcolor):
-                        y += 1
-                    while y < y2 and np.all(surf_array[x1:x2,y] == config.bgcolor):
-                        y += 1
-                    if y < y2:
-                        y -= 1
-                        bcoords[xi,yi,1] = y
+                        #trim space on top
+                        y = y1
+                        while y < y2 and not np.all(surf_array[x1:x2,y] == config.bgcolor):
+                            y += 1
+                        while y < y2 and np.all(surf_array[x1:x2,y] == config.bgcolor):
+                            y += 1
+                        if y < y2:
+                            y -= 1
+                            bcoords[xi,yi,1] = y
 
         surf_array = None
         self.bcoords = bcoords
@@ -684,6 +680,7 @@ class BrushReqProps(object):
         py = sm.scaleY
 
         self.last_brp = self.copy()
+        w,h = config.pixel_canvas.get_size()
         ox,oy = self.offset
         sx,sy = self.size
         nx,ny = self.number
@@ -695,34 +692,52 @@ class BrushReqProps(object):
         bcoords = self.bcoords
 
         #draw vertical grid lines
-        nx0 = 0
-        if handle_num == self.H_LEFT:
-            nx0 = 1
-        for xi in range(nx0, nx):
-            x = bcoords[xi,0,0]
-            y1 = bcoords[xi,0,1]
-            y2 = bcoords[xi,ny-1,3]
-            drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
-        if handle_num != self.H_RIGHT:
-            x = bcoords[nx-1,0,2]
-            y1 = bcoords[nx-1,0,1]
-            y2 = bcoords[nx-1,ny-1,3]
-            drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+        if self.flex[0]:
+            surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+            for yi in range(ny):
+                for xi in range(nx):
+                    x1,y1,x2,y2 = self.clip_bcoords(bcoords[xi,yi,:], [w,h])
+                    vline_XOR(surf_array, x1, y1, y2, step=2)
+                    vline_XOR(surf_array, x2, y1+1, y2, step=2)
+            surf_array = None
+        else:
+            nx0 = 0
+            if handle_num == self.H_LEFT:
+                nx0 = 1
+            for xi in range(nx0, nx):
+                x = bcoords[xi,0,0]
+                y1 = bcoords[xi,0,1]
+                y2 = bcoords[xi,ny-1,3]
+                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+            if handle_num != self.H_RIGHT:
+                x = bcoords[nx-1,0,2]
+                y1 = bcoords[nx-1,0,1]
+                y2 = bcoords[nx-1,ny-1,3]
+                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
 
         #draw horizontal grid lines
-        ny0 = 0
-        if handle_num == self.H_TOP:
-            ny0 = 1
-        for yi in range(ny0, ny):
-            y = bcoords[0,yi,1]
-            x1 = bcoords[0,yi,0]
-            x2 = bcoords[nx-1,yi,2]
-            drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
-        if handle_num != self.H_BOTTOM:
-            y = bcoords[0,ny-1,3]
-            x1 = bcoords[0,ny-1,0]
-            x2 = bcoords[nx-1,ny-1,2]
-            drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
+        if self.flex[1]:
+            surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+            for yi in range(ny):
+                for xi in range(nx):
+                    x1,y1,x2,y2 = self.clip_bcoords(bcoords[xi,yi,:], [w,h])
+                    hline_XOR(surf_array, y1, x1, x2, step=2)
+                    hline_XOR(surf_array, y2, x1+1, x2, step=2)
+            surf_array = None
+        else:
+            ny0 = 0
+            if handle_num == self.H_TOP:
+                ny0 = 1
+            for yi in range(ny0, ny):
+                y = bcoords[0,yi,1]
+                x1 = bcoords[0,yi,0]
+                x2 = bcoords[nx-1,yi,2]
+                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
+            if handle_num != self.H_BOTTOM:
+                y = bcoords[0,ny-1,3]
+                x1 = bcoords[0,ny-1,0]
+                x2 = bcoords[nx-1,ny-1,2]
+                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
 
         #draw handles
         self.handles = [
