@@ -504,6 +504,7 @@ class BrushReqProps(object):
         self.bcoords = None
         self.last_brp = None
         self.last_handle_num = -1
+        self.bsize_max = [10,10]
 
     def __repr__(self):
         return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} strict={self.strict} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
@@ -574,26 +575,11 @@ class BrushReqProps(object):
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
 
-    def draw(self, handle_num=-1):
-        if handle_num == self.last_handle_num:
-            if self == self.last_brp:
-                return
-
-        self.last_handle_num = handle_num
-
-        sm = config.display_info.get_id(config.display_mode)
-        px = sm.scaleX
-        py = sm.scaleY
-
-        last_brp = self.copy()
+    def calc_bcoords(self):
+        w,h = config.pixel_canvas.get_size()
         ox,oy = self.offset
         sx,sy = self.size
         nx,ny = self.number
-        gw = sx*nx
-        gh = sy*ny
-
-        config.clear_pixel_draw_canvas()
-
         bcoords = np.zeros((nx,ny,4), dtype=np.int32)
 
         #calculate starting brush grid coords
@@ -607,37 +593,136 @@ class BrushReqProps(object):
                 xi += 1
             yi += 1
 
+        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+
+        #calculate non-strict grid X coords
+        if self.strict[0] == False:
+            for yi in range(ny):
+                for xi in range(nx):
+                    x1,y1,x2,y2 = bcoords[xi,yi,:]
+                    #clip coords
+                    if x1 < 0:
+                        x1 = 0
+                    if x2 >= w:
+                        x2 = w-1
+                    if y1 < 0:
+                        y1 = 0
+                    if y2 >= h:
+                        y2 = h-1
+
+                    #trim space on right side
+                    x = x2
+                    while x > x1 and not np.all(surf_array[x,y1:y2] == config.bgcolor):
+                        x -= 1
+                    while x > x1 and np.all(surf_array[x,y1:y2] == config.bgcolor):
+                        x -= 1
+                    if x > x1:
+                        x += 1
+                        bcoords[xi,yi,2] = x
+                        if xi < nx-1:
+                            bcoords[xi+1,yi,0] = x
+
+                    #trim space on left side
+                    x = x1
+                    while x < x2 and not np.all(surf_array[x,y1:y2] == config.bgcolor):
+                        x += 1
+                    while x < x2 and np.all(surf_array[x,y1:y2] == config.bgcolor):
+                        x += 1
+                    if x < x2:
+                        x -= 1
+                        bcoords[xi,yi,0] = x
+
+        #calculate non-strict grid Y coords
+        if self.strict[1] == False:
+            for xi in range(nx):
+                for yi in range(ny):
+                    x1,y1,x2,y2 = bcoords[xi,yi,:]
+                    #clip coords
+                    if x1 < 0:
+                        x1 = 0
+                    if x2 >= w:
+                        x2 = w-1
+                    if y1 < 0:
+                        y1 = 0
+                    if y2 >= h:
+                        y2 = h-1
+
+                    #trim space on bottom
+                    y = y2
+                    while y > y1 and not np.all(surf_array[x1:x2,y] == config.bgcolor):
+                        y -= 1
+                    while y > y1 and np.all(surf_array[x1:x2,y] == config.bgcolor):
+                        y -= 1
+                    if y > y1:
+                        y += 1
+                        bcoords[xi,yi,3] = y
+                        if yi < ny-1:
+                            bcoords[xi,yi+1,1] = y
+
+                    #trim space on top
+                    y = y1
+                    while y < y2 and not np.all(surf_array[x1:x2,y] == config.bgcolor):
+                        y += 1
+                    while y < y2 and np.all(surf_array[x1:x2,y] == config.bgcolor):
+                        y += 1
+                    if y < y2:
+                        y -= 1
+                        bcoords[xi,yi,1] = y
+
+        surf_array = None
+        self.bcoords = bcoords
+
+    def draw(self, handle_num=-1):
+        if handle_num == self.last_handle_num:
+            if self == self.last_brp:
+                return
+
+        self.last_handle_num = handle_num
+
+        sm = config.display_info.get_id(config.display_mode)
+        px = sm.scaleX
+        py = sm.scaleY
+
+        self.last_brp = self.copy()
+        ox,oy = self.offset
+        sx,sy = self.size
+        nx,ny = self.number
+        gw = sx*nx
+        gh = sy*ny
+
+        config.clear_pixel_draw_canvas()
+        self.calc_bcoords()
+        bcoords = self.bcoords
+
         #draw vertical grid lines
-        if self.strict[0] == True:
-            nx0 = 0
-            if handle_num == self.H_LEFT:
-                nx0 = 1
-            for xi in range(nx0, nx):
-                x = bcoords[xi,0,0]
-                y1 = bcoords[xi,0,1]
-                y2 = bcoords[xi,ny-1,3]
-                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
-            if handle_num != self.H_RIGHT:
-                x = bcoords[nx-1,0,2]
-                y1 = bcoords[nx-1,0,1]
-                y2 = bcoords[nx-1,ny-1,3]
-                drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+        nx0 = 0
+        if handle_num == self.H_LEFT:
+            nx0 = 1
+        for xi in range(nx0, nx):
+            x = bcoords[xi,0,0]
+            y1 = bcoords[xi,0,1]
+            y2 = bcoords[xi,ny-1,3]
+            drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
+        if handle_num != self.H_RIGHT:
+            x = bcoords[nx-1,0,2]
+            y1 = bcoords[nx-1,0,1]
+            y2 = bcoords[nx-1,ny-1,3]
+            drawline(config.pixel_canvas, 1, (x,y1), (x,y2), xormode=True)
 
         #draw horizontal grid lines
-        if self.strict[1] == True:
-            ny0 = 0
-            if handle_num == self.H_TOP:
-                ny0 = 1
-            for yi in range(ny0, ny):
-                y = bcoords[0,yi,1]
-                x1 = bcoords[0,yi,0]
-                x2 = bcoords[nx-1,yi,2]
-                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
-            if handle_num != self.H_BOTTOM:
-                y = bcoords[0,ny-1,3]
-                x1 = bcoords[0,ny-1,0]
-                x2 = bcoords[nx-1,ny-1,2]
-                drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
+        ny0 = 0
+        if handle_num == self.H_TOP:
+            ny0 = 1
+        for yi in range(ny0, ny):
+            y = bcoords[0,yi,1]
+            x1 = bcoords[0,yi,0]
+            x2 = bcoords[nx-1,yi,2]
+            drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
+        if handle_num != self.H_BOTTOM:
+            y = bcoords[0,ny-1,3]
+            x1 = bcoords[0,ny-1,0]
+            x2 = bcoords[nx-1,ny-1,2]
+            drawline(config.pixel_canvas, 1, (x1,y), (x2,y), xormode=True)
 
         #draw handles
         self.handles = [
@@ -661,6 +746,38 @@ class BrushReqProps(object):
                 drawrect(config.pixel_canvas, 1, handle[0], handle[1], handlesymm=False, xormode=True)
 
         self.bcoords = bcoords
+        self.bsize_max = [np.amax(bcoords[:,:,2] - bcoords[:,:,0]),
+                          np.amax(bcoords[:,:,3] - bcoords[:,:,1])]
+
+    def align_image(self, image):
+        sx,sy = self.bsize_max
+        w,h = image.get_size()
+        if (sx,sy) == (w,h):
+            return image
+
+        #create larger image
+        aimage = pygame.Surface((sx, sy),0, config.pixel_canvas)
+        aimage.set_palette(config.pal)
+        aimage.fill(config.bgcolor)
+        aimage.set_colorkey(config.bgcolor)
+
+        #calculate offsets of smaller image into larger one
+        ox = 0
+        oy = 0
+        if self.align[0] == self.J_RIGHT:
+            ox = sx-w
+        elif self.align[0] == self.J_CENTER_X:
+            ox = (sx-w) // 2
+
+        if self.align[1] == self.J_BOTTOM:
+            oy = sy-h
+        elif self.align[1] == self.J_CENTER_Y:
+            oy = (sy-h) // 2
+
+        #blit smaller image onto larger one
+        aimage.blit(image, (ox,oy))
+
+        return aimage
 
     def pickup(self):
         ox,oy = self.offset
@@ -670,7 +787,13 @@ class BrushReqProps(object):
         gh = sy*ny
 
         config.clear_pixel_draw_canvas()
-        brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, coordfrom=self.bcoords[0,0,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[0,0,2:4]-[1,1]).tolist())
+
+        #Initial image for brush
+        brush = Brush()
+        image = brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[0,0,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[0,0,2:4]-[1,1]).tolist())
+        image = self.align_image(image)
+ 
+        brush = Brush(type=Brush.CUSTOM, screen=config.pixel_canvas, bgcolor=config.bgcolor, image=image)
         brush.animbrush = True
 
         yi = 0
@@ -679,7 +802,7 @@ class BrushReqProps(object):
             if yi == 0:
                 xi = 1
             while xi < nx:
-                brush.add_frame(brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[xi,yi,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[xi,yi,2:4]-[1,1]).tolist()))
+                brush.add_frame(self.align_image(brush.get_image_from_screen(config.pixel_canvas, coordfrom=self.bcoords[xi,yi,0:2].tolist(), bgcolor=config.bgcolor, coordto=(self.bcoords[xi,yi,2:4]-[1,1]).tolist())))
                 xi += 1
             yi += 1
 
@@ -746,13 +869,12 @@ Align:  [<>   ][^v   ]
         if event.type == KEYDOWN and event.key == K_ESCAPE:
             running = 0 
 
-        #Get color from pixel canvas
+        #Manipulate grid
         buttons = config.get_mouse_pressed(event)
         if len(gevents) == 0 and event.type == MOUSEBUTTONDOWN:
             x,y = config.get_mouse_pixel_pos(event)
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
-                print(f"mouse outside {x=},{y=} {x1=},{y1=}")
                 handle_num = brp.get_handle_num(x1, y1)
                 if handle_num >= 0:
                     clickXY = (x1-brp.handles[handle_num][0][0],y1-brp.handles[handle_num][0][1])
