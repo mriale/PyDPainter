@@ -481,15 +481,15 @@ def place_grid(gcoords):
     return ret_coords
 
 class BrushReqProps(object):
-    J_LEFT = 0
-    J_RIGHT = 1
-    J_CENTER_X = 2
-    J_TOP = 3
-    J_BOTTOM = 4
-    J_CENTER_Y = 5
+    A_LEFT = 0
+    A_RIGHT = 1
+    A_CENTER_X = 2
+    A_TOP = 3
+    A_BOTTOM = 4
+    A_CENTER_Y = 5
 
-    J_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
-    J_NAME = ["J_LEFT", "J_RIGHT", "J_CENTER_X", "J_TOP", "J_BOTTOM", "J_CENTER_Y"]
+    A_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
+    A_NAME = ["A_LEFT", "A_RIGHT", "A_CENTER_X", "A_TOP", "A_BOTTOM", "A_CENTER_Y"]
 
     H_CENTER, H_TOP_LEFT, H_TOP, H_TOP_RIGHT, H_RIGHT, H_BOTTOM_RIGHT, H_BOTTOM, H_BOTTOM_LEFT, H_LEFT = range(9)
 
@@ -498,7 +498,7 @@ class BrushReqProps(object):
         self.size = [10,10]
         self.number = [4,4]
         self.flex = [False,False]
-        self.align = [self.J_LEFT, self.J_TOP]
+        self.align = [self.A_LEFT, self.A_TOP]
         self.numbersg = []
         self.handles = []
         self.bcoords = None
@@ -507,7 +507,7 @@ class BrushReqProps(object):
         self.bsize_max = [10,10]
 
     def __repr__(self):
-        return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} flex={self.flex} align=[{self.J_NAME[self.align[0]]}, {self.J_NAME[self.align[1]]}]>"
+        return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} flex={self.flex} align=[{self.A_NAME[self.align[0]]}, {self.A_NAME[self.align[1]]}]>"
 
     def __eq__(self, other):
         if not isinstance(other, BrushReqProps):
@@ -532,13 +532,13 @@ class BrushReqProps(object):
         jx,jy = self.align
         if xy == 0:
             jx += 1
-            if jx > self.J_CENTER_X:
-                jx = self.J_LEFT
+            if jx > self.A_CENTER_X:
+                jx = self.A_LEFT
             self.align[0] = jx
         else:
             jy += 1
-            if jy > self.J_CENTER_Y:
-                jy = self.J_TOP
+            if jy > self.A_CENTER_Y:
+                jy = self.A_TOP
             self.align[1] = jy
 
     def get_handle_num(self, x, y):
@@ -764,14 +764,14 @@ class BrushReqProps(object):
         #calculate offsets of smaller image into larger one
         ox = 0
         oy = 0
-        if self.align[0] == self.J_RIGHT:
+        if self.align[0] == self.A_RIGHT:
             ox = sx-w
-        elif self.align[0] == self.J_CENTER_X:
+        elif self.align[0] == self.A_CENTER_X:
             ox = (sx-w) // 2
 
-        if self.align[1] == self.J_BOTTOM:
+        if self.align[1] == self.A_BOTTOM:
             oy = sy-h
-        elif self.align[1] == self.J_CENTER_Y:
+        elif self.align[1] == self.A_CENTER_Y:
             oy = (sy-h) // 2
 
         #blit smaller image onto larger one
@@ -852,8 +852,8 @@ Align:  [<>   ][^v   ]
     numberYg.spinnerg.minvalue = 1
     flexXg.label = "Yes" if brp.flex[0] else "No"
     flexYg.label = "Yes" if brp.flex[1] else "No"
-    alignXg.label = brp.J_STR[brp.align[0]]
-    alignYg.label = brp.J_STR[brp.align[1]]
+    alignXg.label = brp.A_STR[brp.align[0]]
+    alignYg.label = brp.A_STR[brp.align[1]]
 
     clickXY = [-1,-1]
     handle_num = -1
@@ -956,12 +956,12 @@ Align:  [<>   ][^v   ]
                     running = 0 
                 elif ge.gadget == alignXg:
                     brp.next_align(0)
-                    alignXg.label = brp.J_STR[brp.align[0]]
+                    alignXg.label = brp.A_STR[brp.align[0]]
                     alignXg.need_redraw = True
                     req.draw(screen)
                 elif ge.gadget == alignYg:
                     brp.next_align(1)
-                    alignYg.label = brp.J_STR[brp.align[1]]
+                    alignYg.label = brp.A_STR[brp.align[1]]
                     alignYg.need_redraw = True
                     req.draw(screen)
                 elif ge.gadget == flexXg:
