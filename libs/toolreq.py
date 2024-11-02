@@ -871,6 +871,8 @@ Align:  [<>   ][^v   ]
     alignYg.label = brp.A_STR[brp.align[1]]
 
     clickXY = [-1,-1]
+    click_offset = [-1,-1]
+    click_size = [-1,-1]
     handle_num = -1
 
     req.draw(screen)
@@ -893,8 +895,12 @@ Align:  [<>   ][^v   ]
                 handle_num = brp.get_handle_num(x1, y1)
                 if handle_num >= 0:
                     clickXY = (x1-brp.handles[handle_num][0][0],y1-brp.handles[handle_num][0][1])
+                    click_offset = list(brp.offset)
+                    click_size = list(brp.size)
                 else:
                     clickXY = (-1,-1)
+                    click_offset = [-1,-1]
+                    click_size = [-1,-1]
 
         if len(gevents) == 0 and event.type == MOUSEMOTION:
             if config.xevent.peek(MOUSEMOTION):
@@ -920,9 +926,9 @@ Align:  [<>   ][^v   ]
                     offsetYg.need_redraw = True
                     brp.get_req_numbers()
                 elif handle_num == brp.H_TOP:
-                    oy = int(round((y1-clickXY[1]) / sy)+1) * sy
-                    sy = ny * (y1-clickXY[1]-oy) // gh
-                    print(f"{sy=}")
+                    y_offset = y1+clickXY[1]-click_offset[1]
+                    oy = click_offset[1] + (y_offset // ny * ny)
+                    sy = click_size[1] - (y_offset // ny)
                     offsetYg.value = str(max(0, oy))
                     offsetYg.need_redraw = True
                     sizeYg.value = str(max(1, sy))
