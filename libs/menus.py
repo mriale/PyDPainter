@@ -1176,6 +1176,42 @@ class DoAnimControlPingPong(MenuAction):
         if not attrs is None and "menu1" in attrs:
             config.anim.play(ping_pong=True)
 
+class DoAnimBrushOpen(MenuAction):
+    def selected(self, attrs):
+        global progress_req
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
+            try:
+                brush_config = copy.copy(config)
+                brush_config.anim = Animation()
+                newimage = load_pic(filename, brush_config, is_anim=True, status_func=load_progress)
+                close_progress_req(progress_req)
+                i=0
+                for brush_frame in brush_config.anim.frame:
+                    reduced = brush_frame.image.copy()
+                    pal = config.pal
+                    reduced.set_palette(pal)
+                    surf_array = pygame.surfarray.pixels2d(reduced)
+                    surf_array &= config.NUM_COLORS-1
+                    surf_array = None
+                    if i==0:
+                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=config.bgcolor, pal=brush_config.pal, animbrush=True)
+                    else:
+                        config.brush.add_frame(reduced)
+                    i += 1
+                config.setDrawMode(DrawMode.MATTE)
+            except:
+                close_progress_req(progress_req)
+                io_error_req("Load Error", "Unable to open animbrush:\n%s", filename)
+        config.doKeyAction()
+
+class DoAnimBrushPickup(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.toolbar.click(config.toolbar.tool_id("brush"), MOUSEBUTTONDOWN, attrlist=[["animbrush",True]])
+
 class DoAnimBrushPrevious(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
@@ -1185,11 +1221,6 @@ class DoAnimBrushNext(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
             config.brush.next_frame()
-
-class DoAnimBrushPickup(MenuAction):
-    def selected(self, attrs):
-        if not attrs is None and "menu1" in attrs:
-            config.toolbar.click(config.toolbar.tool_id("brush"), MOUSEBUTTONDOWN, attrlist=[["animbrush",True]])
 
 class DoStencilMake(MenuActionMulti):
     def is_ask_multi(self):
@@ -1516,7 +1547,7 @@ def init_menubar(config_in):
                 ["Ping-pong", "6", DoAnimControlPingPong],
             ]],
             ["Anim Brush", [
-                ["!Open...", " ", DoAnimOpen],
+                ["Open...", " ", DoAnimBrushOpen],
                 ["!Save...", " ", DoAnimSave],
                 ["Pick Up", "alt-b", DoAnimBrushPickup],
                 ["!Settings...", " ", DoAnimSave],
