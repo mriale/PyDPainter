@@ -304,6 +304,7 @@ def load_anim(filename, config, ifftype, status_func=None):
     #initialize anim header
     anim_mode, anim_mask, anim_w, anim_h, anim_x, anim_y, anim_abstime, anim_reltime, anim_interleave, anim_pad0, anim_bits, anim_pad8a, anim_pad8b = (0,0,0,0,0,0,0,0,0,0,0,0,0)
     dpan_version, dpan_numframes, dpan_global_fps, dpan_global_delay = (0,0,0,0)
+    xor_anim = False
 
     try:
         filesize = os.path.getsize(filename)
@@ -337,6 +338,10 @@ def load_anim(filename, config, ifftype, status_func=None):
                 display_mode = unpack(">I", camg_bytes)[0]
                 if display_mode & config.MODE_HAM:
                     raise Exception("HAM mode not supported")
+            elif chunk.getname() == b'GRAB':
+                #brush specific chunk
+                grab_bytes = chunk.read()
+                xor_anim = True
             elif chunk.getname() == b'DPAN':
                 #Deluxe Paint specific chunk
                 dpan_bytes = chunk.read()
@@ -450,7 +455,10 @@ def load_anim(filename, config, ifftype, status_func=None):
                                     if p+count >= len(dlta_bytes):
                                         count = len(dlta_bytes)-p
                                     #print(f"{p:5d}: {pp:5d} uniq {count=} {dlta_bytes[p:p+count]=}")
-                                    planes[pp:pp+count, pli, colno] = list(dlta_bytes[p:p+count])
+                                    if xor_anim:
+                                        planes[pp:pp+count, pli, colno] ^= np.array(list(dlta_bytes[p:p+count]), dtype='uint8')
+                                    else:
+                                        planes[pp:pp+count, pli, colno] = list(dlta_bytes[p:p+count])
                                     p += count
                                     pp += count
                                 #Skip
@@ -470,7 +478,10 @@ def load_anim(filename, config, ifftype, status_func=None):
                                         break
                                     value = dlta_bytes[p]
                                     #print(f"{p:5d}: {pp:5d} same {count=} {value=}")
-                                    planes[pp:pp+count, pli, colno] = value
+                                    if xor_anim:
+                                        planes[pp:pp+count, pli, colno] ^= value
+                                    else:
+                                        planes[pp:pp+count, pli, colno] = value
                                     pp += count
                                     p+=1
                                 opcount -= 1
