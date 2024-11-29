@@ -854,7 +854,8 @@ class DoBrushRemap(MenuActionBrush):
             return
         config.brush.image.set_palette(config.brush.pal)
         newimage = convert8(config.brush.image.convert(), config.pal)
-        config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=config.pal)
+        config.brush.image = newimage
+        config.brush.image_orig = newimage
 
 class DoBrushChangeTransp(MenuActionBrush):
     def selectedMulti(self, attrs):

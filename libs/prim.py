@@ -495,6 +495,14 @@ class Brush:
             self.__type = type
             self.size = self.__size  #recalc handle and wipe cache
 
+    def set_palettes(self, pal):
+        if self.type != Brush.CUSTOM:
+            return
+        self.image.set_palette(pal)
+        for frame in self.frame:
+            frame.image.set_palette(pal)
+        self.cache = BrushCache()
+
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
 

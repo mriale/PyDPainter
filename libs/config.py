@@ -978,9 +978,7 @@ class pydpainter:
                 config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
                 config.proj[i].layers.set_palette(pal)
 
-        if config.brush.image != None:
-            config.brush.image.set_palette(pal)
-        config.brush.cache = BrushCache()
+        config.brush.set_palettes(pal)
 
         for img in config.undo_image:
             img.set_palette(pal)
