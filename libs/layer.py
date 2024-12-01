@@ -59,6 +59,7 @@ class LayerStack:
         self.indicatorx = indicatorx
         self.repeat = False
         self.current_layer_name = current_layer_name
+        self.config = config
 
     def copy(self):
         ls = LayerStack(indicatorx=self.indicatorx, current_layer_name=self.current_layer_name)
@@ -183,9 +184,11 @@ class LayerStack:
                 xpos += pw*len(layer.indicator)
 
     def get_flattened(self, exclude=[]):
-        pic = config.pixel_canvas.copy()
-        pic.set_palette(self.get_palette())
-        self.blit(pic, exclude=exclude)
+        pic = self.config.pixel_canvas.copy()
+        pal = self.get_palette()
+        if not pal is None:
+            pic.set_palette(pal)
+            self.blit(pic, exclude=exclude)
         return pic
 
     def process_layertoolbar_events(self, mta_list, event):

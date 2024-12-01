@@ -446,6 +446,8 @@ class DoBrushOpen(MenuAction):
 
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
+        if config.brush.type != config.brush.CUSTOM:
+            return
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
@@ -1208,6 +1210,35 @@ class DoAnimBrushOpen(MenuAction):
                 io_error_req("Load Error", "Unable to open animbrush:\n%s", filename)
         config.doKeyAction()
 
+class DoAnimBrushSave(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != config.brush.CUSTOM:
+            return
+        if not config.brush.animbrush:
+            return
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        if filename != (()) and filename != "":
+            brush_config = copy.copy(config)
+            brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
+            brush_config.anim = Animation()
+            brush_config.anim.convert_animbrush(brush_config)
+            try:
+                if not save_anim(filename, brush_config, overwrite=False, transparent_color=config.brush.bgcolor):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                            save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
+                    else:
+                        return
+            except:
+                io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+                return
+
 class DoAnimBrushPickup(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
@@ -1549,7 +1580,7 @@ def init_menubar(config_in):
             ]],
             ["Anim Brush", [
                 ["Open...", " ", DoAnimBrushOpen],
-                ["!Save...", " ", DoAnimSave],
+                ["Save...", " ", DoAnimBrushSave],
                 ["Pick Up", "alt-b", DoAnimBrushPickup],
                 ["!Settings...", " ", DoAnimSave],
                 ["Previous", "7", DoAnimBrushPrevious],

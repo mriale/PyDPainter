@@ -18,6 +18,8 @@ config = None
 
 anim_filetype_list = np.array([
 ["ANIM", "Amiga IFF anim"],
+["ANBR", "Amiga IFF animbrush"],
+["ANMB", "Amiga IFF animbrush"],
 ["GIF", "Animated GIF"],
 ])
 
@@ -222,6 +224,17 @@ class Animation:
         config.save_undo()
         if doAction:
             config.doKeyAction()
+
+    def convert_animbrush(self, config):
+        self.frame = list()
+        self.num_frames = 0
+        self.global_palette = True
+        for bframe in config.brush.frame:
+            frame = Frame(bframe.image.copy())
+            frame.layers.set("canvas", bframe.image.copy())
+            frame.layers.config = config
+            self.frame.append(frame)
+            self.num_frames += 1
 
     def first_frame(self):
         if self.num_frames == 1:
