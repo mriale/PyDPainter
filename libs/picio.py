@@ -161,9 +161,8 @@ class Chunk(object):
             self.iff_file.seek(1, 1) #make sure word-aligned
 
 #read in an IFF file
-def load_iff(filename, config, ifftype):
+def load_iff(filename, config, ifftype, pic = None):
     cranges = []
-    pic = None
     display_mode = -1
     try:
         iff_file = open(filename,'rb')
@@ -591,7 +590,7 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
 
     iffinfo_file = re.sub(r"\.[^.]+$", ".iffinfo", filename)
     if pic_type(iffinfo_file) == "ILBM":
-        load_iff(iffinfo_file, config, "ILBM")
+        load_iff(iffinfo_file, config, "ILBM", pic)
     else:
         config.display_mode = -1
 
