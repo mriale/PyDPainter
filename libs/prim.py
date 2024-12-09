@@ -383,6 +383,18 @@ class Brush:
         image.blit(screen, (0,0), (x1,y1,w,h))
         image.set_colorkey(bgcolor)
 
+        # Handle stencil masking
+        if config.stencil.enable:
+            brush_pixels = pygame.surfarray.pixels2d(image)
+            m = np.array(config.stencil.mask).transpose()
+            m -= [x1, y1]
+            m = m[ (m[:,0] >= 0) & (m[:,0] <= (w-1)) &
+                   (m[:,1] >= 0) & (m[:,1] <= (h-1)) ]
+            m = m.transpose()
+            m = tuple(m)
+            brush_pixels[m] = bgcolor
+            brush_pixels = None
+
         # Handle polygon masking
         if polylist != None:
             # Adjust polylist to brush coords
