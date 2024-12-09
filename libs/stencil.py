@@ -117,8 +117,8 @@ class Stencil:
             m += offset
 
             #clip mask to drawing area
-            m = m[ (m[:,0] >= offset[0]) & (m[:,0] <= screen_size[0]) &
-                   (m[:,1] >= offset[1]) & (m[:,1] <= screen_size[1]) ]
+            m = m[ (m[:,0] >= 0) & (m[:,0] <= screen_size[0]) &
+                   (m[:,1] >= 0) & (m[:,1] <= screen_size[1]) ]
             m = m.transpose()
             mask_offset = tuple(m)
 
