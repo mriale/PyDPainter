@@ -351,6 +351,8 @@ class Brush:
             self.pal = pal
 
     def get_image_from_screen(self, screen, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False):
+        exclbrush = config.grid_on and config.exclbrush
+
         # Get bounds of polygon brush
         if polylist != None:
             minx = min(polylist,key=itemgetter(0))[0];
@@ -365,6 +367,7 @@ class Brush:
                 coordfrom = (0,0)
             if coordto == None:
                 coordto = (screen.get_width()-1, screen.get_height()-1)
+                exclbrush = False
 
         x1,y1 = coordfrom
         x2,y2 = coordto
@@ -375,8 +378,12 @@ class Brush:
         if y1 > y2:
             y1, y2 = y2, y1
 
-        w = x2-x1+1
-        h = y2-y1+1
+        w = x2-x1
+        h = y2-y1
+
+        if not exclbrush:
+            w += 1
+            h += 1
 
         image = pygame.Surface((w, h),0, config.pixel_canvas)
         image.set_palette(config.pal)

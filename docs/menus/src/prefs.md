@@ -7,6 +7,7 @@ Changes are effective immediately. They will not be remembered the next time **P
 An active setting is preceded by a checkmark &check;.
 
 - [Auto Transparency](#autotransp)
+- [ExclBrush](#exclbrush)
 - [Hide Menus](#hide-menus)
 - [Force 1:1 Pixels](#force-11-pixels)
 - [True Symmmetry](#true-symmetry)
@@ -20,6 +21,14 @@ If the four corners are the same color, that color becomes the transparent color
 Example: the palette background color is set to black. But with AutoTransp active, the brush takes this dark red as transparency.
 
 ![](Autotransp.jpg)
+
+## ExclBrush
+If you pick up a brush with ExclBrush (and the Grid) selected, you will exclude
+a one-pixel border on the right and bottom edges of your brush. This is useful
+if your brush has a colored border around it and you want to use the brush to
+create a pattern fill or perspective fill (using the Fill Type requester). When
+PyDPainter creates your pattern, the border will be uniform throughout instead
+of being twice as wide where one copy of the brush is placed next to another.
 
 ## Hide Menus
 Menus at the top no longer appear automatically when the mouse is positioned over them. This emulates the way the Amiga menus did not appear until the right mouse button was pressed.

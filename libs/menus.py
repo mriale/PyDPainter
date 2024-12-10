@@ -1422,6 +1422,14 @@ class DoPrefsMultiCycle(MenuAction):
         config.multicycle = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsExclBrush(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.exclbrush = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsHideMenus(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1611,6 +1619,7 @@ def init_menubar(config_in):
         ["Prefs", [
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             ["/MultiCycle", " ", DoPrefsMultiCycle],
+            ["/ExclBrush", " ", DoPrefsExclBrush],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],
