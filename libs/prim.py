@@ -2333,12 +2333,13 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
             current_color = surf_array[x,y]
             if bounds_color < 0:
                 if fill_color == current_color:
+                    crange = config.get_range(fill_color)
                     if config.fillmode.value == FillMode.SOLID:
                         continue
+                    elif not crange is None:
+                        fill_color = crange.next_color(fill_color)
                     else:
-                        for crange in config.cranges:
-                            if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
-                                fill_color = crange.next_color(fill_color)
+                        continue
             elif current_color == bounds_color:
                 continue
 
