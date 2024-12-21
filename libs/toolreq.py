@@ -1335,6 +1335,12 @@ def spacing_req(screen):
 
 class FillGadget(Gadget):
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+        if label == "^":
+            scaleX = rect[2] // 16
+            scaleY = rect[3] // 8
+            scaledown = 4 // min(scaleX,scaleY)
+            self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
+            value = 0
         super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
@@ -1381,8 +1387,58 @@ class FillGadget(Gadget):
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
+            elif self.label == "^": # direction arrow
+                pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
+                if self.value == 0:
+                    return
+                if self.state == 0:
+                    pygame.draw.rect(screen, fgcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+                else:
+                    pygame.draw.rect(screen, hcolor, (x+xo+1,y+yo,w-1,h), 1)
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
+                    pygame.draw.line(screen, fgcolor, (x+xo+1,y+yo), (x+xo+1,y+yo+h-1))
+
+                ah = self.crng_arrows.get_height()
+                aw = self.crng_arrows.get_width() // 4
+
+                if self.value == 1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
+                elif self.value == -1:
+                    screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
         else:
             super(FillGadget, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+
+        #disabled gadget
+        if not g.enabled:
+            return ge
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    if g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if abs(g.value) == 1:
+                            g.value = -g.value
+                    g.state = 0
+                    g.need_redraw = True
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+        else:
+            ge.extend(super(FillGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
 
 prev_fillmode = None
 prev_color = -1
@@ -1443,6 +1499,12 @@ def draw_fill_indicator(screen):
         prev_fill_image.set_palette(config.pal)
         screen.blit(prev_fill_image, (px*180, py))
 
+def get_dither_dir():
+    crange = config.get_range(config.color)
+    if crange is None:
+        return 0
+    return crange.get_dir()
+
 def fill_req(screen):
     config.stop_cycling()
     req = str2req("Fill Type", """
@@ -1454,9 +1516,9 @@ def fill_req(screen):
 [Smooth]    ###########
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
-Dither:----------------00
+Dither:--------------00^^
 [Cancel][OK]
-""", "%#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
+""", "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -1465,17 +1527,21 @@ Dither:----------------00
         if g.label == str(config.fillmode):
             g.state = 1
 
-    ditherg = req.gadget_id("7_8")
+    ditherg = req.find_gadget("Dither:", 1)
     ditherg.maxvalue = 22
     ditherg.value = config.fillmode.gradient_dither + 1
     ditherg.need_redraw = True
 
-    dithervalg = req.gadget_id("23_8")
+    dithervalg = req.find_gadget("Dither:", 2)
     if ditherg.value > 0:
         dithervalg.label = "%2d" % (ditherg.value-1)
     else:
         dithervalg.label = "\x99\x9a"
     dithervalg.need_redraw = True
+
+    ditherdirg = req.find_gadget("Dither:", 3)
+    ditherdirg.value = get_dither_dir()
+    ditherdirg.need_redraw = True
 
     dithersampleg = req.gadget_id("12_0")
     dithersampleg.value = config.fillmode.gradient_dither
@@ -1516,6 +1582,11 @@ Dither:----------------00
                 dithervalg.need_redraw = True
                 dithersampleg.value = ditherg.value - 1
                 dithersampleg.need_redraw = True
+            elif ge.gadget == ditherdirg:
+                crange = config.get_range(config.color)
+                if not crange is None:
+                    crange.set_dir(ditherdirg.value)
+                    dithersampleg.need_redraw = True
 
         if len(gevents) == 0:
             if event.type == MOUSEBUTTONDOWN:
@@ -1524,10 +1595,14 @@ Dither:----------------00
                     palg = config.toolbar.tool_id("palette")
                     palg.process_event(screen, event, config.get_mouse_pointer_pos)
                     dithersampleg.need_redraw = True
+                    ditherdirg.value = get_dither_dir()
+                    ditherdirg.need_redraw = True
                 elif not req.is_inside((mouseX, mouseY)):
                     mouseX2, mouseY2 = config.get_mouse_pixel_pos(event)
                     config.color = config.pixel_canvas.get_at_mapped((mouseX2, mouseY2))
                     dithersampleg.need_redraw = True
+                    ditherdirg.value = get_dither_dir()
+                    ditherdirg.need_redraw = True
 
         for g in req.gadgets:
             if g.label == FillMode.LABEL_STR[fillmode_value]:

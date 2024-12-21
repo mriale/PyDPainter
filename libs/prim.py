@@ -1985,15 +1985,15 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                     dither = 0
                 if pointspercolor > 0:
                     if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                        colori = int(int(x2-(x+dither)) / pointspercolor)
+                        colori = int(int((x+dither)-x1) / pointspercolor)
                     elif primprops.fillmode.value == FillMode.VERTICAL:
-                        colori = int(int(y2-(y+dither)) / pointspercolor)
+                        colori = int(int((y+dither)-y1) / pointspercolor)
                     if primprops.fillmode.gradient_dither < 0:
                         if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x2-x) / pointspercolor)%16):
+                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x-x1) / pointspercolor)%16):
                                 colori += 1
                         elif primprops.fillmode.value == FillMode.VERTICAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y2-y) / pointspercolor)%16):
+                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
                                 colori += 1
                     if colori >= len(arange):
                         colori = len(arange) - 1
@@ -2078,7 +2078,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
         #Map counts to colors in the range
         max_pixels = np.amax(surf_array)
-        if cur_crange.get_dir() == -1:
+        if cur_crange.get_dir() == 1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
         surf_array *= numcolors * 256   # multiply for more precision
         surf_array //= max_pixels + 1
@@ -2233,9 +2233,9 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                         else:
                             dither = 0
                         if pointspercolor > 0:
-                            colori = int(int(y2-(y+dither)) / pointspercolor)
+                            colori = int(int((y+dither)-y1) / pointspercolor)
                             if primprops.fillmode.gradient_dither < 0:
-                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y2-y) // pointspercolor)%16):
+                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
                                     colori += 1
                             if colori >= len(arange):
                                 colori = len(arange) - 1
