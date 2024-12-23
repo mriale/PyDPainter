@@ -297,7 +297,10 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False, image=None):
-        self.handle_type = self.CENTER
+        if "grid_on" in dir(config) and config.grid_on:
+            self.handle_type = self.CORNER_UL
+        else:
+            self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if image is None:
                 self.image = self.get_image_from_screen(screen, bgcolor=bgcolor, coordfrom=coordfrom, coordto=coordto, pal=pal, polylist=polylist, animbrush=animbrush)

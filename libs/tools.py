@@ -1730,6 +1730,9 @@ class DoGrid(ToolAction):
     def selected(self, attrs):
         if attrs["rightclick"]:
             grid_req(config.pixel_req_canvas)
+        elif attrs["subtool"] and attrs["eventtype"] == KEYDOWN:
+            config.grid_offset = config.get_mouse_pixel_pos()
+            config.grid_on = True
         else:
             config.grid_on = True
 
@@ -2091,7 +2094,7 @@ def init_toolbar(config_in):
         ["poly",     ToolGadget.TT_GROUP,  "wW", DoPoly],
         ["brush",    ToolGadget.TT_GROUP,  "b", DoBrush],
         ["text",     ToolGadget.TT_GROUP,  "t", DoText],
-        ["grid",     ToolGadget.TT_TOGGLE, "g", DoGrid],
+        ["grid",     ToolGadget.TT_TOGGLE, "gG", DoGrid],
         ["symm",     ToolGadget.TT_TOGGLE, "/", DoSymm],
         ["magnify",  ToolGadget.TT_TOGGLE, "m", DoMagnify],
         ["zoom",     ToolGadget.TT_SINGLE, "> <", DoZoom],
