@@ -227,6 +227,18 @@ class Gadget(object):
         else:
             return False
 
+    def draw_ghost(self, screen, fgcolor, bgcolor):
+        (xxo,yyo,w,h) = self.screenrect
+        for i in range(xxo, xxo+w+1, 2):
+            for j in range(yyo, yyo+h+1, 4):
+                pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
+        for i in range(xxo+1, xxo+w+1, 2):
+            for j in range(yyo+2, yyo+h+1, 4):
+                pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
+        fadesurf = pygame.Surface((w,h), SRCALPHA)
+        fadesurf.fill((bgcolor[0],bgcolor[1],bgcolor[2],128))
+        screen.blit(fadesurf, self.screenrect)
+
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
         x,y,w,h = self.rect
@@ -340,15 +352,7 @@ class Gadget(object):
         elif self.type == Gadget.TYPE_LABEL:
             font.blitstring(screen, (x+xo,y+yo+2), self.label, fgcolor, bgcolor)
         if not self.enabled:
-            for i in range(x+xo, x+xo+w+1, 2):
-                for j in range(y+yo, y+yo+h+1, 4):
-                    pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
-            for i in range(x+xo+1, x+xo+w+1, 2):
-                for j in range(y+yo+2, y+yo+h+1, 4):
-                    pygame.draw.rect(screen, bgcolor, (i,j,1,1), 0)
-            fadesurf = pygame.Surface((w,h), SRCALPHA)
-            fadesurf.fill((bgcolor[0],bgcolor[1],bgcolor[2],128))
-            screen.blit(fadesurf, self.screenrect)
+            self.draw_ghost(screen, fgcolor, bgcolor)
 
         screen.set_clip(None)
 

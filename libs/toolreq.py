@@ -1389,8 +1389,6 @@ class FillGadget(Gadget):
                         self.need_redraw = True
             elif self.label == "^": # direction arrow
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
-                if self.value == 0:
-                    return
                 if self.state == 0:
                     pygame.draw.rect(screen, fgcolor, (x+xo+1,y+yo,w-1,h), 1)
                     pygame.draw.line(screen, hcolor, (x+xo+1,y+yo), (x+xo+w-2,y+yo))
@@ -1405,8 +1403,12 @@ class FillGadget(Gadget):
 
                 if self.value == 1:
                     screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*0,0,aw,ah))
-                elif self.value == -1:
+                else:
                     screen.blit(self.crng_arrows, (x+xo+4,y+yo+1), (aw*1,0,aw,ah))
+
+                if self.enabled == False:
+                    self.draw_ghost(screen, fgcolor, bgcolor)
+
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
@@ -1505,6 +1507,28 @@ def get_dither_dir():
         return 0
     return crange.get_dir()
 
+def range_enable(req):
+    ditherdir = get_dither_dir()
+
+    ditherg = req.find_gadget("Dither:", 1)
+    dithervalg = req.find_gadget("Dither:", 2)
+    ditherdirg = req.find_gadget("Dither:", 3)
+    dithersampleg = req.gadget_id("12_0")
+
+    renabled = False
+    if ditherdir != 0 and \
+       dithersampleg.fillmode_value in [FillMode.VERTICAL, FillMode.VERT_FIT,
+                           FillMode.HORIZONTAL, FillMode.HORIZ_FIT,
+                           FillMode.BOTH_FIT]:
+        renabled = True
+
+    ditherg.enabled = renabled
+    ditherg.need_redraw = True
+    dithervalg.enabled = renabled
+    dithervalg.need_redraw = True
+    ditherdirg.enabled = renabled
+    ditherdirg.need_redraw = True
+
 def fill_req(screen):
     config.stop_cycling()
     req = str2req("Fill Type", """
@@ -1534,7 +1558,7 @@ Dither:--------------00^^
 
     dithervalg = req.find_gadget("Dither:", 2)
     if ditherg.value > 0:
-        dithervalg.label = "%2d" % (ditherg.value-1)
+        dithervalg.label = "%d " % (ditherg.value-1)
     else:
         dithervalg.label = "\x99\x9a"
     dithervalg.need_redraw = True
@@ -1549,6 +1573,7 @@ Dither:--------------00^^
     dithersampleg.need_redraw = True
 
     fillmode_value = config.fillmode.value
+    range_enable(req)
     req.draw(screen)
     config.recompose()
 
@@ -1574,9 +1599,10 @@ Dither:--------------00^^
                     fillmode_value = FillMode.LABEL_STR.index(ge.gadget.label)
                     dithersampleg.fillmode_value = fillmode_value
                     dithersampleg.need_redraw = True
+                    range_enable(req)
             elif ge.gadget == ditherg:
                 if ditherg.value > 0:
-                    dithervalg.label = "%2d" % (ditherg.value-1)
+                    dithervalg.label = "%d " % (ditherg.value-1)
                 else:
                     dithervalg.label = "\x99\x9a"
                 dithervalg.need_redraw = True
@@ -1597,12 +1623,14 @@ Dither:--------------00^^
                     dithersampleg.need_redraw = True
                     ditherdirg.value = get_dither_dir()
                     ditherdirg.need_redraw = True
+                    range_enable(req)
                 elif not req.is_inside((mouseX, mouseY)):
                     mouseX2, mouseY2 = config.get_mouse_pixel_pos(event)
                     config.color = config.pixel_canvas.get_at_mapped((mouseX2, mouseY2))
                     dithersampleg.need_redraw = True
                     ditherdirg.value = get_dither_dir()
                     ditherdirg.need_redraw = True
+                    range_enable(req)
 
         for g in req.gadgets:
             if g.label == FillMode.LABEL_STR[fillmode_value]:
