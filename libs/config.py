@@ -674,6 +674,7 @@ class pydpainter:
 
     def initialize(self):
         self.clock = pygame.time.Clock()
+        self.debug = False
 
         self.MODE_LACE               = 0x0004
         self.MODE_EXTRA_HALFBRIGHT   = 0x0080
@@ -1890,6 +1891,7 @@ class pydpainter:
                 elif e.key == K_F12:
                     print("\n***********Debug************")
                     print(f"{config.layers=}")
+                    config.debug = not config.debug
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
