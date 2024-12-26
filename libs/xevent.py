@@ -23,6 +23,16 @@ class Xevent(object):
 
     ANIM_KEYS = [K_RALT, K_LALT, K_RMETA, K_LMETA, K_LSUPER, K_RSUPER]
 
+    MOD_BITS = [KMOD_LSHIFT, KMOD_RSHIFT, KMOD_SHIFT,
+                KMOD_LCTRL, KMOD_RCTRL, KMOD_CTRL, KMOD_LALT, KMOD_RALT,
+                KMOD_ALT, KMOD_LMETA, KMOD_RMETA, KMOD_META, KMOD_CAPS,
+                KMOD_NUM, KMOD_MODE]
+
+    MOD_BIT_STRINGS = ["KMOD_LSHIFT", "KMOD_RSHIFT", "KMOD_SHIFT",
+            "KMOD_LCTRL", "KMOD_RCTRL", "KMOD_CTRL", "KMOD_LALT", "KMOD_RALT",
+            "KMOD_ALT", "KMOD_LMETA", "KMOD_RMETA", "KMOD_META", "KMOD_CAPS",
+            "KMOD_NUM", "KMOD_MODE"]
+
     def __init__(self):
         self.last_key = None
         self.xq = []
@@ -31,6 +41,12 @@ class Xevent(object):
     def dedup_new(self, new_xevents):
         for e in list(new_xevents):
             if e.type == KEYDOWN:
+                print(e)
+                i=0
+                for modb in self.MOD_BITS:
+                    if e.mod & modb == modb:
+                        print(self.MOD_BIT_STRINGS[i])
+                    i += 1
                 if not e.key in self.keys_down:
                     self.keys_down.append(e.key)
                 if e.key == self.last_key and e.key in self.MOD_KEYS:
