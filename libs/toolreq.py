@@ -1038,9 +1038,9 @@ Offset: ____~ ____~
     visualg = req.gadget_id("0_3")
 
     sizeXg.value = str(config.grid_size[0])
-    sizeXg.numonly = True
+    sizeXg.spinnerg.minvalue = 1
     sizeYg.value = str(config.grid_size[1])
-    sizeYg.numonly = True
+    sizeYg.spinnerg.minvalue = 1
     offsetXg.value = str(config.grid_offset[0])
     offsetXg.numonly = True
     offsetYg.value = str(config.grid_offset[1])
