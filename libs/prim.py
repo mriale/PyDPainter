@@ -2332,33 +2332,23 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
         if onscreen((x,y)):
             surface_bak = surface.copy()
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
+            surf_array16 = surf_array.astype(np.int16) # Create deeper copy to fill 
             maxx, maxy = config.pixel_width, config.pixel_height
             current_color = surf_array[x,y]
-            if bounds_color < 0:
-                if fill_color == current_color:
-                    crange = config.get_range(fill_color)
-                    if config.fillmode.value == FillMode.SOLID:
-                        continue
-                    elif not crange is None:
-                        fill_color = crange.next_color(fill_color)
-                    else:
-                        continue
-            elif current_color == bounds_color:
-                continue
 
             frontier = [(x,y)]
             while len(frontier) > 0:
                 x, y = frontier.pop()
                 if x >= 0 and x < maxx and y >= 0 and y < maxy:
                     if bounds_color < 0:
-                        if surf_array[x, y] != current_color:
+                        if surf_array16[x, y] != current_color:
                             continue
                     else:
-                        if surf_array[x, y] == bounds_color or has_sl(sl,x,y):
+                        if surf_array16[x, y] == bounds_color or has_sl(sl,x,y):
                             continue
                 else:
                     continue
-                surf_array[x, y] = fill_color
+                surf_array16[x, y] = -1
                 add_bounds((x,y))
 
                 # append coords to scanline lists
@@ -2392,6 +2382,7 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
                 frontier.append((x, y - 1))  # Up.
 
             surf_array = None
+            surf_array16 = None
 
             for y in sl:
                 #collapse scanline fragments
@@ -2409,14 +2400,11 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
                             j += 1
 
             start_shape()
-            if config.fillmode.value != FillMode.SOLID:
-                #Restore pre-filled state
-                surface.blit(surface_bak, (0,0))
-                for y in sorted (sl.keys()):
-                    #draw scanline fragments
-                    for frag in sl[y]:
-                        hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
-                    config.try_recompose()
+            for y in sorted (sl.keys()):
+                #draw scanline fragments
+                for frag in sl[y]:
+                    hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
+                config.try_recompose()
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
