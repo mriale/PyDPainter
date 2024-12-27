@@ -1594,7 +1594,7 @@ class DoBrushRect(ToolDragAction):
         if button == 1:
             pass
         elif button == 3:
-            drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=True, handlesymm=False)
+            fillrect(config.pixel_canvas, config.bgcolor, self.p1, coords, primprops=PrimProps())
         if button == 1 or button == 3:
             config.save_undo()
             config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
