@@ -325,7 +325,6 @@ class DoPictureRemap(MenuActionMulti):
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
 
         #Back up current canvas
         config.anim.save_curr_frame()
@@ -336,6 +335,7 @@ class DoSpareSwap(MenuAction):
         config.proj[i].modified_count = config.modified_count
         config.proj[i].anim = config.anim
         config.proj[i].layers = config.layers
+        config.proj[i].stencil = config.stencil
         config.proj[i].indicators = config.menubar.indicators
 
         #Switch to new canvas
@@ -347,11 +347,7 @@ class DoSpareSwap(MenuAction):
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
         config.layers = config.proj[i].layers
-
-        if config.layers.has_key("fg"):
-            config.stencil = config.layers.get("fg").image
-        else:
-            config.stencil = Stencil()
+        config.stencil = config.proj[i].stencil
 
         if config.proj[i].indicators is None:
             config.menubar.indicators = {}

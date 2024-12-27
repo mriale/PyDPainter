@@ -158,6 +158,7 @@ class Project:
         self.modified_count = -1
         self.anim = None
         self.layers = None
+        self.stencil = None
         self.indicators = None
 
 class pydpainter:
@@ -820,6 +821,8 @@ class pydpainter:
         self.proj[1].anim = Animation()
         self.proj[0].layers = self.layers
         self.proj[1].layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
+        self.proj[0].stencil = self.stencil
+        self.proj[1].stencil = Stencil()
 
         self.cycling = False
         self.cycle_handled = False
