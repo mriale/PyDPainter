@@ -505,7 +505,7 @@ class Brush:
                 if size == 1:
                     self.calc_handle(1, 1)
                 else:
-                    self.calc_handle(size*2*ax, size*2*ay)
+                    self.calc_handle(size*2*ax-1, size*2*ay-1)
 
     @property
     def type(self):
@@ -640,7 +640,7 @@ class Brush:
                     image.set_colorkey(0)
                 image.fill(color)
             else:
-                image = pygame.Surface((self.size*ax*2+1, self.size*ay*2+1),0, config.pixel_canvas)
+                image = pygame.Surface((self.size*ax*2-1, self.size*ay*2-1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
                 if color == 0:
                     image.fill(1)
@@ -649,9 +649,9 @@ class Brush:
                     image.set_colorkey(0)
                 primprops = PrimProps()
                 if ax == ay == 1:
-                    fillcircle(image, color, (self.size, self.size), self.size-1, primprops=primprops)
+                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops)
                 else:
-                    pygame.draw.ellipse(image, color, (1,1,self.size*ax*2-1, self.size*ay*2-1))
+                    pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
             return image
         elif self.type == Brush.SQUARE:
             image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)

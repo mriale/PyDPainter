@@ -1023,9 +1023,9 @@ Align:  [<>   ][^v   ]
 def grid_req(screen):
     req = str2req("Grid", """
           X     Y
-Size:   _____ _____
-Offset: _____ _____
-[Visual]
+Size:   ____~ ____~
+Offset: ____~ ____~
+[Visual][From Brush]
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
@@ -1065,6 +1065,11 @@ Offset: _____ _____
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
+                elif ge.gadget.label == "From Brush":
+                    sizeXg.value = str(config.brush.rect[2])
+                    sizeXg.need_redraw = True
+                    sizeYg.value = str(config.brush.rect[3])
+                    sizeYg.need_redraw = True
                 elif ge.gadget == visualg and not req.has_error():
                     gcoords = place_grid((int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value), int(sizeXg.value), int(sizeYg.value)))
                     offsetXg.value = str(gcoords[0])
