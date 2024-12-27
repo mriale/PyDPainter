@@ -76,6 +76,7 @@ class DoDummy(MenuAction):
 class DoNew(MenuAction):
     def selected(self, attrs):
         config.stencil.enable = False
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
