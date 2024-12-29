@@ -1236,10 +1236,16 @@ class DoAnimBrushSave(MenuAction):
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
 
-class DoAnimBrushPickup(MenuAction):
+class DoAnimBrushGrabFrames(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
+            if config.tool_selected == "brush":
+                config.tool_selected = "dot"
             config.toolbar.click(config.toolbar.tool_id("brush"), MOUSEBUTTONDOWN, attrlist=[["animbrush",True]])
+
+class DoAnimBrushGrabGrid(MenuAction):
+    def selected(self, attrs):
+        libs.toolreq.brush_req(config.pixel_req_canvas)
 
 class DoAnimBrushPrevious(MenuAction):
     def selected(self, attrs):
@@ -1586,7 +1592,8 @@ def init_menubar(config_in):
             ["Anim Brush", [
                 ["Open...", " ", DoAnimBrushOpen],
                 ["Save...", " ", DoAnimBrushSave],
-                ["Pick Up", "alt-b", DoAnimBrushPickup],
+                ["Grab Frames", "alt-b", DoAnimBrushGrabFrames],
+                ["Grab Grid", "alt-g", DoAnimBrushGrabGrid],
                 ["!Settings...", " ", DoAnimSave],
                 ["Previous", "7", DoAnimBrushPrevious],
                 ["Next", "8", DoAnimBrushNext],

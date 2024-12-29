@@ -494,17 +494,18 @@ class BrushReqProps(object):
     H_CENTER, H_TOP_LEFT, H_TOP, H_TOP_RIGHT, H_RIGHT, H_BOTTOM_RIGHT, H_BOTTOM, H_BOTTOM_LEFT, H_LEFT = range(9)
 
     def __init__(self):
-        self.offset = [0,0]
-        self.size = [10,10]
-        self.number = [4,4]
+        self.offset = [10,20]
+        self.size = [16,16]
+        self.number = [3,1]
         self.flex = [False,False]
         self.align = [self.A_LEFT, self.A_TOP]
         self.numbersg = []
+        self.gadgets = {}
         self.handles = []
         self.bcoords = None
         self.last_brp = None
         self.last_handle_num = -1
-        self.bsize_max = [10,10]
+        self.bsize_max = [16,16]
 
     def __repr__(self):
         return f"BrushReqProps <{hex(id(self))}: offset={self.offset} size={self.size} number={self.number} flex={self.flex} align=[{self.A_NAME[self.align[0]]}, {self.A_NAME[self.align[1]]}]>"
@@ -574,6 +575,25 @@ class BrushReqProps(object):
                 self.number[0] = int(self.numbersg[4].value)
             if self.valid_number(self.numbersg[5]):
                 self.number[1] = int(self.numbersg[5].value)
+
+    def set_req_values(self):
+        self.gadgets["offset"][0].value = str(self.offset[0])
+        self.gadgets["offset"][1].value = str(self.offset[1])
+        self.gadgets["size"][0].value = str(self.size[0])
+        self.gadgets["size"][0].spinnerg.minvalue = 1
+        self.gadgets["size"][1].value = str(self.size[1])
+        self.gadgets["size"][1].spinnerg.minvalue = 1
+        self.gadgets["number"][0].value = str(self.number[0])
+        self.gadgets["number"][0].spinnerg.minvalue = 1
+        self.gadgets["number"][1].value = str(self.number[1])
+        self.gadgets["number"][1].spinnerg.minvalue = 1
+        self.gadgets["flex"][0].label = "Yes" if self.flex[0] else "No"
+        self.gadgets["flex"][1].label = "Yes" if self.flex[1] else "No"
+        self.gadgets["align"][0].label = self.A_STR[self.align[0]]
+        self.gadgets["align"][1].label = self.A_STR[self.align[1]]
+        for gl in self.gadgets:
+            for g in self.gadgets[gl]:
+                g.need_redraw = True
 
     def clip_bcoords(self, bcoord, size):
         x1,y1,x2,y2 = bcoord[:]
@@ -826,14 +846,14 @@ class BrushReqProps(object):
 
 def brush_req(screen):
     req = str2req("Brush Grid", """
-          X      Y
+[Reset]   X      Y
 Offset: _____~ _____~
 Size:   _____~ _____~
 Number: _____~ _____~
 Flex:   [Yes  ][Yes  ]
 Align:  [<>   ][^v   ]
 
-[Cancel][OK]
+[Cancel][OK][Grab]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -854,21 +874,14 @@ Align:  [<>   ][^v   ]
     brp = config.brush_req_props.copy()
     brp_numbersg = [offsetXg, offsetYg, sizeXg, sizeYg, numberXg, numberYg]
     brp.numbersg = brp_numbersg
-
-    offsetXg.value = str(brp.offset[0])
-    offsetYg.value = str(brp.offset[1])
-    sizeXg.value = str(brp.size[0])
-    sizeXg.spinnerg.minvalue = 1
-    sizeYg.value = str(brp.size[1])
-    sizeYg.spinnerg.minvalue = 1
-    numberXg.value = str(brp.number[0])
-    numberXg.spinnerg.minvalue = 1
-    numberYg.value = str(brp.number[1])
-    numberYg.spinnerg.minvalue = 1
-    flexXg.label = "Yes" if brp.flex[0] else "No"
-    flexYg.label = "Yes" if brp.flex[1] else "No"
-    alignXg.label = brp.A_STR[brp.align[0]]
-    alignYg.label = brp.A_STR[brp.align[1]]
+    brp_gadgets = {"offset": [offsetXg,offsetYg],
+                   "size":   [sizeXg,sizeYg],
+                   "number": [numberXg,numberYg],
+                   "flex":   [flexXg,flexYg],
+                   "align":  [alignXg,alignYg],
+                  }
+    brp.gadgets = brp_gadgets
+    brp.set_req_values()
 
     clickXY = [-1,-1]
     click_offset = [-1,-1]
@@ -876,6 +889,7 @@ Align:  [<>   ][^v   ]
     handle_num = -1
 
     req.draw(screen)
+    brp.draw(0)
     config.recompose()
 
     running = 1
@@ -916,38 +930,31 @@ Align:  [<>   ][^v   ]
                     offsetXg.need_redraw = True
                     offsetYg.value = str(max(0, y1-clickXY[1]))
                     offsetYg.need_redraw = True
-                    brp.get_req_numbers()
-                elif handle_num == brp.H_TOP_LEFT:
-                    ox = int(round((x1-clickXY[0]) / sx)+1) * sx
-                    oy = int(round((y1-clickXY[1]) / sy)+1) * sy
+                if handle_num in [brp.H_TOP_LEFT, brp.H_LEFT, brp.H_BOTTOM_LEFT]:
+                    x_offset = x1+clickXY[0]-click_offset[0]
+                    sx = click_size[0] - (x_offset // nx)
+                    if sx >= 1:
+                        ox = click_offset[0] + (x_offset // nx * nx)
                     offsetXg.value = str(max(0, ox))
                     offsetXg.need_redraw = True
-                    offsetYg.value = str(max(0, oy))
-                    offsetYg.need_redraw = True
-                    brp.get_req_numbers()
-                elif handle_num == brp.H_TOP:
+                    sizeXg.value = str(max(1, sx))
+                    sizeXg.need_redraw = True
+                if handle_num in [brp.H_TOP_LEFT, brp.H_TOP, brp.H_TOP_RIGHT]:
                     y_offset = y1+clickXY[1]-click_offset[1]
-                    oy = click_offset[1] + (y_offset // ny * ny)
                     sy = click_size[1] - (y_offset // ny)
+                    if sy >= 1:
+                        oy = click_offset[1] + (y_offset // ny * ny)
                     offsetYg.value = str(max(0, oy))
                     offsetYg.need_redraw = True
                     sizeYg.value = str(max(1, sy))
                     sizeYg.need_redraw = True
-                    brp.get_req_numbers()
-                elif handle_num == brp.H_RIGHT:
+                if handle_num in [brp.H_TOP_RIGHT, brp.H_RIGHT, brp.H_BOTTOM_RIGHT]:
                     sizeXg.value = str(max(1, (x1-clickXY[0]-ox) // nx))
                     sizeXg.need_redraw = True
-                    brp.get_req_numbers()
-                elif handle_num == brp.H_BOTTOM_RIGHT:
-                    sizeXg.value = str(max(1, (x1-clickXY[0]-ox) // nx))
-                    sizeXg.need_redraw = True
+                if handle_num in [brp.H_BOTTOM_LEFT, brp.H_BOTTOM, brp.H_BOTTOM_RIGHT]:
                     sizeYg.value = str(max(1, (y1-clickXY[1]-oy) // ny))
                     sizeYg.need_redraw = True
-                    brp.get_req_numbers()
-                elif handle_num == brp.H_BOTTOM:
-                    sizeYg.value = str(max(1, (y1-clickXY[1]-oy) // ny))
-                    sizeYg.need_redraw = True
-                    brp.get_req_numbers()
+                brp.get_req_numbers()
             else:
                 handle_num = brp.get_handle_num(x1, y1)
 
@@ -957,7 +964,7 @@ Align:  [<>   ][^v   ]
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
-                if ge.gadget.label == "OK" and not req.has_error():
+                if ge.gadget.label == "Grab" and not req.has_error():
                     config.brush_req_props = brp.copy()
                     config.brush = brp.pickup()
                     config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
@@ -973,8 +980,16 @@ Align:  [<>   ][^v   ]
                     config.toolbar.tool_id("spray2").state = 0
                     config.setDrawMode(DrawMode.MATTE)
                     running = 0
+                elif ge.gadget.label == "OK" and not req.has_error():
+                    config.brush_req_props = brp.copy()
+                    running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
+                elif ge.gadget.label == "Reset":
+                    brp = BrushReqProps()
+                    brp.numbersg = brp_numbersg
+                    brp.gadgets = brp_gadgets
+                    brp.set_req_values()
                 elif ge.gadget == alignXg:
                     brp.next_align(0)
                     alignXg.label = brp.A_STR[brp.align[0]]
@@ -1016,6 +1031,7 @@ Align:  [<>   ][^v   ]
             config.recompose()
 
     config.pixel_req_rect = None
+    config.clear_pixel_draw_canvas()
     config.recompose()
 
     return

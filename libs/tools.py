@@ -1452,14 +1452,8 @@ class DoBrush(ToolSingleAction):
 
     def selected(self, attrs):
         if attrs["rightclick"]:
-            if config.tool_selected == self.id:
-                brush_req(config.pixel_req_canvas)
-                self.deselected(attrs)
-                config.toolbar.click(config.toolbar.tool_id("dot"), MOUSEBUTTONDOWN)
-                return
-            else:
-                config.menubar.menu_id("brush").menu_id("restore").action.selected("")
-                return
+            config.menubar.menu_id("brush").menu_id("restore").action.selected("")
+            return
 
         config.brush.pen_down = False
         if config.tool_selected == self.id:
@@ -1730,6 +1724,9 @@ class DoGrid(ToolAction):
     def selected(self, attrs):
         if attrs["rightclick"]:
             grid_req(config.pixel_req_canvas)
+        elif K_LALT in config.xevent.keys_down:
+            config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN, attrs)
+            return
         elif attrs["subtool"] and attrs["eventtype"] == KEYDOWN:
             config.grid_offset = config.get_mouse_pixel_pos()
             config.grid_on = True
