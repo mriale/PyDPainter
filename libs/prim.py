@@ -590,10 +590,6 @@ class Brush:
                 framelist.extend(list(range(numframes-2,0,-1)))
         else:
             framelist = list(range(0,numframes))
-            framelist.extend(list(range(0,numframes)))
-            framelist.extend(list(range(0,numframes)))
-            framelist.extend(list(range(0,numframes)))
-            random.shuffle(framelist)
 
         return framelist
 
@@ -606,11 +602,17 @@ class Brush:
         self.set_framei(frameno, doAction)
 
     def next_frame(self, doAction=True):
-        frameno = self.currframei + (len(self.framelist) / self.duration)
+        if self.direction == 0:
+            frameno = random.randint(0, len(self.framelist)-1)
+        else:
+            frameno = self.currframei + (len(self.framelist) / self.duration)
         self.set_framei(frameno, doAction)
 
     def prev_frame(self, doAction=True):
-        frameno = self.currframei - (len(self.framelist) / self.duration)
+        if self.direction == 0:
+            frameno = random.randint(0, len(self.framelist)-1)
+        else:
+            frameno = self.currframei - (len(self.framelist) / self.duration)
         self.set_framei(frameno, doAction)
 
     def iter_progress_anim(self, percent):
