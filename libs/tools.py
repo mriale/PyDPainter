@@ -405,7 +405,7 @@ class DoLine(ToolDragAction):
         config.brush.pen_down = False
         self.move(coords)
         if set_brush:
-            config.brush.set_frame(config.brush.endframe, doAction=False)
+            config.brush.set_framei(config.brush.endframe, doAction=False)
 
 class DoCurve(ToolSingleAction):
     """
@@ -711,7 +711,7 @@ class DoRect(ToolDragAction):
         if config.subtool_selected:
             cycle()
         if set_brush:
-            config.brush.set_frame(config.brush.endframe, doAction=False)
+            config.brush.set_framei(config.brush.endframe, doAction=False)
 
 class DoCircle(ToolDragAction):
     """
@@ -775,7 +775,7 @@ class DoCircle(ToolDragAction):
         if config.subtool_selected:
             cycle()
         if set_brush:
-            config.brush.set_frame(config.brush.endframe, doAction=False)
+            config.brush.set_framei(config.brush.endframe, doAction=False)
 
 class DoEllipse(ToolDragAction):
     """
@@ -1121,7 +1121,7 @@ class DoPolyLine(DoPoly):
                     self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
-                config.brush.set_frame(config.brush.endframe, doAction=False)
+                config.brush.set_framei(config.brush.endframe, doAction=False)
             elif button == 3:
                 config.clear_pixel_draw_canvas()
                 if len(self.polylist) > 0:
@@ -1135,7 +1135,7 @@ class DoPolyLine(DoPoly):
                     self.click_ticks[button][1] - self.click_ticks[button][0] < DBL_CLICK:
                     config.brush.pen_down = False
                     self.polylist = []
-                config.brush.set_frame(config.brush.endframe, doAction=False)
+                config.brush.set_framei(config.brush.endframe, doAction=False)
             self.move(coords)
         self.hidden = False
 
@@ -1604,7 +1604,7 @@ class DoBrushRect(ToolDragAction):
             config.toolbar.tool_id("spray2").state = 0
             config.setDrawMode(DrawMode.MATTE)
         if set_brush:
-            config.brush.set_frame(config.brush.endframe, doAction=False)
+            config.brush.set_framei(config.brush.endframe, doAction=False)
 
 class DoBrushPoly(DoBrush):
     """

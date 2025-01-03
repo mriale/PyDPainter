@@ -345,8 +345,12 @@ class Brush:
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
         self.currframe = 0
+        self.currframei = 0.0
         self.startframe = 0
         self.endframe = 0
+        self.duration = len(self.frame)
+        self.direction = 1
+        self.framelist = self.calc_framelist()
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -527,6 +531,8 @@ class Brush:
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
+        self.duration = len(self.frame)
+        self.framelist = self.calc_framelist()
 
     def save_frame(self):
         if not self.animbrush:
@@ -542,13 +548,16 @@ class Brush:
             self.frame[frameno].rect = list(self.rect)
             self.frame[frameno].handle_frac = list(self.handle_frac)
 
+    def set_framei(self, framei, doAction=True):
+        if not self.animbrush:
+            return
+        framei = framei % len(self.framelist)
+        self.currframei = framei
+        self.set_frame(self.framelist[int(framei)], doAction=doAction)
+
     def set_frame(self, frameno, doAction=True):
         if not self.animbrush:
             return
-        if frameno < 0:
-            frameno = len(self.frame)-1
-        elif frameno >= len(self.frame):
-            frameno = 0
 
         self.save_frame()
         self.currframe = frameno
@@ -566,21 +575,43 @@ class Brush:
         if doAction:
             config.doKeyAction()
 
+    def calc_framelist(self, direction=None):
+        if direction is None:
+            direction = self.direction
+        framelist = list()
+        numframes = len(self.frame)
+        if direction == 1:
+            framelist = list(range(0,numframes))
+        elif direction == -1:
+            framelist = list(range(numframes-1,-1,-1))
+        elif abs(direction) == 2:
+            framelist = list(range(0,numframes))
+            if numframes > 2:
+                framelist.extend(list(range(numframes-2,0,-1)))
+        else:
+            framelist = list(range(0,numframes))
+            framelist.extend(list(range(0,numframes)))
+            framelist.extend(list(range(0,numframes)))
+            framelist.extend(list(range(0,numframes)))
+            random.shuffle(framelist)
+
+        return framelist
+
     def first_frame(self, doAction=True):
         frameno = 0
-        self.set_frame(frameno, doAction)
+        self.set_framei(frameno, doAction)
 
     def last_frame(self, doAction=True):
-        frameno = -1
-        self.set_frame(frameno, doAction)
+        frameno = len(self.framelist) - 1
+        self.set_framei(frameno, doAction)
 
     def next_frame(self, doAction=True):
-        frameno = self.currframe + 1
-        self.set_frame(frameno, doAction)
+        frameno = self.currframei + (len(self.framelist) / self.duration)
+        self.set_framei(frameno, doAction)
 
     def prev_frame(self, doAction=True):
-        frameno = self.currframe - 1
-        self.set_frame(frameno, doAction)
+        frameno = self.currframei - (len(self.framelist) / self.duration)
+        self.set_framei(frameno, doAction)
 
     def iter_progress_anim(self, percent):
         curr_time = pygame.time.get_ticks()
@@ -977,14 +1008,14 @@ class Brush:
 
     def set_startframe(self, startframe=-1):
         if startframe < 0:
-            self.startframe = self.currframe
+            self.startframe = self.currframei
         else:
             self.startframe = startframe
 
     def reset_stroke(self):
         self.smear_count = 0
-        self.endframe = self.currframe
-        self.set_frame(self.startframe, doAction=False)
+        self.endframe = self.currframei
+        self.set_framei(self.startframe, doAction=False)
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""

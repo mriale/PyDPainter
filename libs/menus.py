@@ -1247,6 +1247,10 @@ class DoAnimBrushGrabGrid(MenuAction):
     def selected(self, attrs):
         libs.toolreq.brush_req(config.pixel_req_canvas)
 
+class DoAnimBrushSettings(MenuAction):
+    def selected(self, attrs):
+        animbrush_settings_req(config.pixel_req_canvas)
+
 class DoAnimBrushPrevious(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
@@ -1593,8 +1597,8 @@ def init_menubar(config_in):
                 ["Open...", " ", DoAnimBrushOpen],
                 ["Save...", " ", DoAnimBrushSave],
                 ["Grab Frames", "alt-b", DoAnimBrushGrabFrames],
-                ["Grab Grid", "alt-g", DoAnimBrushGrabGrid],
-                ["!Settings...", " ", DoAnimSave],
+                ["Grab Grid...", "alt-g", DoAnimBrushGrabGrid],
+                ["Settings...", " ", DoAnimBrushSettings],
                 ["Previous", "7", DoAnimBrushPrevious],
                 ["Next", "8", DoAnimBrushNext],
             ]],

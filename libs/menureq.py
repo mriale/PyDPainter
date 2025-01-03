@@ -1411,3 +1411,139 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
     config.recompose()
 
     return button_clicked
+
+def animbrush_settings_req(screen):
+    if len(config.brush.frame) < 2:
+        dummy = question_req(screen,
+                             "Animbrush Settings",
+                             "Need at least 2 brush frames.",
+                             ["OK"],
+                             [K_RETURN])
+        return
+
+    req = str2req("Animbrush Settings", """
+
+Frame count: XXXX
+Random:  [Yes~No]
+Duration: _____~
+Current:  _____~
+Direction:[xx~xx~\x8C\x8D]
+
+[Cancel][OK]
+""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+    req.center(screen)
+    config.pixel_req_rect = req.get_screen_rect()
+
+    duration = config.brush.duration
+    numframes = len(config.brush.framelist)
+
+    numframesg = req.find_gadget("XXXX")
+    randomyg = req.find_gadget("Random:", 1)
+    randomng = req.find_gadget("Random:", 2)
+    durationg = req.find_gadget("Duration:", 1)
+    durationg.spinnerg.minvalue = 1
+    currentg = req.find_gadget("Current:", 1)
+    currentg.value = str(int(config.brush.currframei) + 1)
+    currentg.spinnerg.minvalue = 1
+    direction1g = req.find_gadget("Direction:",1)
+    direction1g.label = "\x94"
+    direction2g = req.find_gadget("Direction:",2)
+    direction2g.label = "\x97"
+    direction3g = req.find_gadget("Direction:",3)
+
+    ordered_gadgets = [durationg, currentg, direction1g, direction2g, direction3g]
+
+    direction = config.brush.direction
+
+    if direction == 1:
+        direction1g.state = 1
+    elif direction == -1:
+        direction2g.state = 1
+    elif abs(direction) == 2:
+        direction3g.state = 1
+
+    randomyg.state = 1 if direction == 0 else 0
+    randomng.state = 1 if direction != 0 else 0
+
+    def enable_gadgets(gadgets, enabled):
+        for g in gadgets:
+            g.enabled = enabled
+            g.need_redraw = True
+            if "spinnerg" in dir(g):
+                g.spinnerg.enabled = enabled
+                g.spinnerg.need_redraw = True
+
+    enable_gadgets(ordered_gadgets, (direction != 0))
+
+    def set_num_values():
+        numframes = len(config.brush.calc_framelist(direction))
+        if direction == 0:
+            numframesg.label = "%-4d" % (len(config.brush.frame))
+        else:
+            numframesg.label = "%-4d" % (numframes)
+        numframesg.need_redraw = True
+        durationg.value = str(duration)
+        durationg.need_redraw = True
+        currentg.spinnerg.maxvalue = numframes
+        currentg.need_redraw = True
+
+    set_num_values()
+    req.draw(screen)
+    config.recompose()
+
+    running = 1
+    while running:
+        event = config.xevent.wait()
+        gevents = req.process_event(screen, event)
+
+        if event.type == KEYDOWN and event.key == K_ESCAPE:
+            running = 0 
+
+        for ge in gevents:
+            if ge.gadget.type == Gadget.TYPE_BOOL:
+                if ge.gadget.label == "OK" and not req.has_error():
+                    config.brush.duration = int(durationg.value)
+                    config.brush.direction = direction
+                    config.brush.framelist = config.brush.calc_framelist()
+                    config.brush.set_framei(int(currentg.value) - 1)
+                    running = 0
+                elif ge.gadget.label == "Cancel":
+                    running = 0 
+                elif ge.gadget in [randomyg, randomng]:
+                    if ge.gadget == randomyg:
+                        direction = 0
+                        currentg.value = "1"
+                    else:
+                        direction = 1
+                    enable_gadgets(ordered_gadgets, (direction != 0))
+                    duration = len(config.brush.calc_framelist(direction))
+                    set_num_values()
+                elif ge.gadget in [direction1g, direction2g, direction3g]:
+                    if ge.gadget == direction1g:
+                        direction = 1
+                    elif ge.gadget == direction2g:
+                        direction = -1
+                    else:
+                        direction = 2
+                    duration = len(config.brush.calc_framelist(direction))
+                    set_num_values()
+
+        if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            if direction == 1:
+                direction1g.state = 1
+            elif direction == -1:
+                direction2g.state = 1
+            elif abs(direction) == 2:
+                direction3g.state = 1
+
+            if direction == 0:
+                randomyg.state = 1
+            else:
+                randomng.state = 1
+ 
+            req.draw(screen)
+            config.recompose()
+
+    config.pixel_req_rect = None
+    config.recompose()
+
