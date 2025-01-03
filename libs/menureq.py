@@ -1424,7 +1424,7 @@ def animbrush_settings_req(screen):
     req = str2req("Animbrush Settings", """
 
 Frame count: XXXX
-Random:  [Yes~No]
+Random:   [Yes~No]
 Duration: _____~
 Current:  _____~
 Direction:[xx~xx~\x8C\x8D]
