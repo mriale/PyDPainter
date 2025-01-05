@@ -826,7 +826,7 @@ class ListGadget(Gadget):
 
 
 class Requestor(object):
-    def __init__(self, label, rect, mouse_pixel_mapper=pygame.mouse.get_pos, fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), font=None, window_shade=False):
+    def __init__(self, label, rect, mouse_pixel_mapper=pygame.mouse.get_pos, fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), font=None):
         self.label = label
         self.rect = rect
         self.mouse_pixel_mapper = mouse_pixel_mapper
@@ -835,8 +835,9 @@ class Requestor(object):
         self.hcolor = hcolor
         self.draggable = False
         self.dragpos = None
-        self.window_shade = window_shade
+        self.window_shade = False
         self.window_shade_state = 1
+        self.window_shade_height = 0
         self.gadgets = []
         if font == None:
             self.font = PixelFont("jewel32.png", 8)
@@ -849,16 +850,37 @@ class Requestor(object):
         x,y,w,h = self.rect
         if self.label != "":
             self.gadgets.append(Gadget(Gadget.TYPE_LABEL, "", (x-2, y-2, w+1, self.fonty), id="__reqtitle"))
-        if self.window_shade:
-            self.gadgets.append(Gadget(Gadget.TYPE_BOOL, "-", (x-self.fontx-self.fontx, y-2, self.fontx, self.fonty), id="__window_shade"))
 
     def add(self, gadget):
         self.gadgets.append(gadget)
 
     def process_event(self, screen, event):
         ge = []
-        for g in self.gadgets:
-            ge.extend(g.process_event(screen, event, self.mouse_pixel_mapper))
+        if self.window_shade_state == 1:
+            for g in self.gadgets:
+                ge.extend(g.process_event(screen, event, self.mouse_pixel_mapper))
+        else:
+            for g in self.gadgets:
+                if g.id in ["__reqtitle", "__window_shade"]:
+                    ge.extend(g.process_event(screen, event, self.mouse_pixel_mapper))
+
+        #handle window shade click
+        for e in ge:
+            if e.gadget.id == "__window_shade" and self.draggable and \
+               e.type == GadgetEvent.TYPE_GADGETDOWN:
+                if self.window_shade_state == 1:
+                    self.window_shade_state = 0
+                    e.gadget.label = "\x9C"
+                    e.gadget.need_redraw = True
+                    self.window_shade_height = self.rect[3]
+                    self.rect = (self.rect[0], self.rect[1], self.rect[2], int(self.font.ysize * 1.125))
+                    self.need_redraw = True
+                else:
+                    self.window_shade_state = 1
+                    e.gadget.label = "\x9B"
+                    e.gadget.need_redraw = True
+                    self.rect = (self.rect[0], self.rect[1], self.rect[2], self.window_shade_height)
+                    self.need_redraw = True
 
         if self.label != "" and self.draggable:
             x,y = self.mouse_pixel_mapper()
@@ -922,6 +944,11 @@ class Requestor(object):
         xo, yo = offset
         self.offsetx = xo
         self.offsety = yo
+
+	# Add window shade to draggable requestors
+        if self.draggable and not self.window_shade:
+            self.gadgets.append(Gadget(Gadget.TYPE_LABEL, "\x9B", (w-self.fontx, -2, self.fontx, self.fonty), id="__window_shade"))
+            self.window_shade = True
 
         if self.need_redraw:
             self.need_redraw = False
