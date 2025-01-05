@@ -60,6 +60,15 @@ class MenuActionMulti(MenuAction):
         config.save_undo()
         config.doKeyAction()
 
+class MenuActionBrush(MenuAction):
+    def selected(self, attrs):
+        if len(config.brush.frame) > 1:
+            for frame_no in config.brush:
+                self.selectedMulti(attrs)
+        else:
+            self.selectedMulti(attrs)
+        config.doKeyAction()
+
 class DoDummy(MenuAction):
     def selected(self, attrs):
         pass
@@ -67,6 +76,7 @@ class DoDummy(MenuAction):
 class DoNew(MenuAction):
     def selected(self, attrs):
         config.stencil.enable = False
+        config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
@@ -315,7 +325,6 @@ class DoPictureRemap(MenuActionMulti):
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
 
         #Back up current canvas
         config.anim.save_curr_frame()
@@ -326,6 +335,7 @@ class DoSpareSwap(MenuAction):
         config.proj[i].modified_count = config.modified_count
         config.proj[i].anim = config.anim
         config.proj[i].layers = config.layers
+        config.proj[i].stencil = config.stencil
         config.proj[i].indicators = config.menubar.indicators
 
         #Switch to new canvas
@@ -337,11 +347,7 @@ class DoSpareSwap(MenuAction):
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
         config.layers = config.proj[i].layers
-
-        if config.layers.has_key("fg"):
-            config.stencil = config.layers.get("fg").image
-        else:
-            config.stencil = Stencil()
+        config.stencil = config.proj[i].stencil
 
         if config.proj[i].indicators is None:
             config.menubar.indicators = {}
@@ -437,6 +443,8 @@ class DoBrushOpen(MenuAction):
 
 class DoBrushSaveAs(MenuAction):
     def selected(self, attrs):
+        if config.brush.type != config.brush.CUSTOM:
+            return
         config.stop_cycling()
         filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
@@ -458,8 +466,8 @@ class DoBrushSaveAs(MenuAction):
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
 
-class DoBrushRestore(MenuAction):
-    def selected(self, attrs):
+class DoBrushRestore(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != config.brush.CUSTOM:
             if not "image_backup" in dir(config.brush):
                 return
@@ -474,8 +482,9 @@ class DoBrushRestore(MenuAction):
         config.brush.image = backup
         config.brush.image_orig = backup
         config.brush.size = oh
+        if len(config.brush.frame) > 1:
+            config.brush.animbrush = True
         config.setDrawMode(DrawMode.MATTE)
-        config.doKeyAction()
 
 class DoBrushStretch(MenuAction):
     def selected(self, attrs):
@@ -523,53 +532,51 @@ class DoBrushStretch(MenuAction):
             config.recompose()
             first_time = False
 
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = config.brush.size
+        aspect = config.brush.aspect
+        size = config.brush.size
+        for frame_no in config.brush:
+            config.brush.aspect = aspect
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.size = size
+
         config.doKeyAction()
 
-
-class DoBrushHalve(MenuAction):
-    def selected(self, attrs):
+class DoBrushHalve(MenuActionBrush):
+    def selectedMulti(self, attrs):
         config.brush.size //= 2
-        config.doKeyAction()
 
-class DoBrushDouble(MenuAction):
-    def selected(self, attrs):
+class DoBrushDouble(MenuActionBrush):
+    def selectedMulti(self, attrs):
         config.brush.size *= 2
-        config.doKeyAction()
 
-class DoBrushDoubleHoriz(MenuAction):
-    def selected(self, attrs):
+class DoBrushDoubleHoriz(MenuActionBrush):
+    def selectedMulti(self, attrs):
         config.brush.aspect *= 2.0
         config.brush.size = config.brush.size
-        config.doKeyAction()
 
-class DoBrushDoubleVert(MenuAction):
-    def selected(self, attrs):
+class DoBrushDoubleVert(MenuActionBrush):
+    def selectedMulti(self, attrs):
         config.brush.aspect /= 2.0
         config.brush.size *= 2
-        config.doKeyAction()
 
-class DoBrushFlipX(MenuAction):
-    def selected(self, attrs):
+class DoBrushFlipX(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.flip(config.brush.image, True, False)
             config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, True, False)
             config.brush.handle_frac[0] = 1 - config.brush.handle_frac[0]
             config.brush.size = config.brush.size
-            config.doKeyAction()
 
-class DoBrushFlipY(MenuAction):
-    def selected(self, attrs):
+class DoBrushFlipY(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.flip(config.brush.image, False, True)
             config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, False, True)
             config.brush.handle_frac[1] = 1 - config.brush.handle_frac[1]
             config.brush.size = config.brush.size
-            config.doKeyAction()
 
-class DoBrushOutline(MenuAction):
-    def selected(self, attrs):
+class DoBrushOutline(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         if config.color == config.brush.bgcolor:
@@ -606,10 +613,9 @@ class DoBrushOutline(MenuAction):
         config.brush.image_orig = newimage
         config.brush.aspect = 1
         config.brush.size = h+2
-        config.doKeyAction()
 
-class DoBrushTrim(MenuAction):
-    def selected(self, attrs):
+class DoBrushTrim(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         w,h = config.brush.image.get_size()
@@ -644,21 +650,19 @@ class DoBrushTrim(MenuAction):
         config.brush.image_orig = newimage
         config.brush.aspect = 1
         config.brush.size = h-2
-        config.doKeyAction()
 
-class DoBrushRotate90(MenuAction):
-    def selected(self, attrs):
+class DoBrushRotate90(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
             config.brush.image = pygame.transform.rotate(config.brush.image, -90)
             config.brush.image_orig = pygame.transform.rotate(config.brush.image_orig, -90)
-            config.brush.handle_frac = [1-config.brush.handle_frac[1], config.brush.handle_frac[0]]
+            config.brush.handle_frac = list([1-config.brush.handle_frac[1], config.brush.handle_frac[0]])
             config.brush.aspect = 1.0 / config.brush.aspect
             bx,by,bw,bh = config.brush.rect
-            config.brush.rect = [by,bx,bh,bw]
+            config.brush.rect = list([by,bx,bh,bw])
             config.brush.size = bw
             config.brush.cache = BrushCache()
             config.brush.size = config.brush.size
-            config.doKeyAction()
 
 class DoBrushRotateAny(MenuAction):
     def selected(self, attrs):
@@ -674,6 +678,7 @@ class DoBrushRotateAny(MenuAction):
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
         rotimage = config.brush.image
+        angle = 0
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
@@ -708,11 +713,15 @@ class DoBrushRotateAny(MenuAction):
             first_time = False
 
         config.menubar.title_right = ""
-        config.brush.image = rotimage
-        config.brush.image_orig = rotimage
-        config.brush.aspect = 1.0
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = rotimage.get_height()
+
+        for frame_no in config.brush:
+            rotimage = pygame.transform.rotate(config.brush.image, angle)
+            config.brush.image = rotimage.copy()
+            config.brush.image_orig = rotimage.copy()
+            config.brush.aspect = 1.0
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.size = rotimage.get_height()
+
         config.doKeyAction()
 
 class DoBrushShear(MenuAction):
@@ -728,7 +737,9 @@ class DoBrushShear(MenuAction):
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
-        shearimage = config.brush.image
+        imgXoffset = 0
+        shearimage = config.brush.image.copy()
+        clist = drawline(config.pixel_canvas, 1, (0,0), (0,h), coordsonly=True)
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
@@ -776,15 +787,24 @@ class DoBrushShear(MenuAction):
             first_time = False
 
         config.menubar.title_right = ""
-        config.brush.image = shearimage
-        config.brush.image_orig = shearimage
-        config.brush.aspect = 1.0
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = shearimage.get_height()
+
+        for frame_no in config.brush:
+            shearimage.fill(config.brush.bgcolor)
+            prevy = -1
+            for coord in clist:
+                if prevy != coord[1]:
+                    shearimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
+                    prevy = coord[1]
+            config.brush.image = shearimage.copy()
+            config.brush.image_orig = shearimage.copy()
+            config.brush.aspect = 1.0
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.size = shearimage.get_height()
+
         config.doKeyAction()
 
-class DoBrushBG2FG(MenuAction):
-    def selected(self, attrs):
+class DoBrushBG2FG(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         if config.color == config.brush.bgcolor:
@@ -803,10 +823,9 @@ class DoBrushBG2FG(MenuAction):
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
         config.brush.size = h
-        config.doKeyAction()
 
-class DoBrushBGxFG(MenuAction):
-    def selected(self, attrs):
+class DoBrushBGxFG(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         if config.color == config.brush.bgcolor:
@@ -827,19 +846,18 @@ class DoBrushBGxFG(MenuAction):
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
         config.brush.size = h
-        config.doKeyAction()
 
-class DoBrushRemap(MenuAction):
-    def selected(self, attrs):
+class DoBrushRemap(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         config.brush.image.set_palette(config.brush.pal)
         newimage = convert8(config.brush.image.convert(), config.pal)
-        config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=config.pal)
-        config.doKeyAction()
+        config.brush.image = newimage
+        config.brush.image_orig = newimage
 
-class DoBrushChangeTransp(MenuAction):
-    def selected(self, attrs):
+class DoBrushChangeTransp(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         config.brush.image.set_colorkey(config.bgcolor)
@@ -847,7 +865,6 @@ class DoBrushChangeTransp(MenuAction):
         config.brush.bgcolor_orig = config.bgcolor
         config.brush.image_orig = config.brush.image
         config.brush.size = config.brush.size
-        config.doKeyAction()
 
 class DoBrushBendX(MenuAction):
     def selected(self, attrs):
@@ -862,7 +879,9 @@ class DoBrushBendX(MenuAction):
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
-        bendimage = config.brush.image
+        bendimage = config.brush.image.copy()
+        clist = list([drawline(config.pixel_canvas, 1, (0,0), (0,h), coordsonly=True)])
+        imgXoffset = 0
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
@@ -916,11 +935,21 @@ class DoBrushBendX(MenuAction):
             first_time = False
 
         config.menubar.title_right = ""
-        config.brush.image = bendimage
-        config.brush.image_orig = bendimage
-        config.brush.aspect = 1.0
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = bendimage.get_height()
+
+        for frame_no in config.brush:
+            bendimage.fill(config.brush.bgcolor)
+            prevy = -1
+            for seg in clist:
+                for coord in seg:
+                    if prevy != coord[1]:
+                        bendimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
+                        prevy = coord[1]
+            config.brush.image = bendimage.copy()
+            config.brush.image_orig = bendimage.copy()
+            config.brush.aspect = 1.0
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.size = bendimage.get_height()
+
         config.doKeyAction()
 
 class DoBrushBendY(MenuAction):
@@ -936,7 +965,9 @@ class DoBrushBendY(MenuAction):
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
         config.recompose()
-        bendimage = config.brush.image
+        bendimage = config.brush.image.copy()
+        clist = list([drawline(config.pixel_canvas, 1, (0,0), (w,0), coordsonly=True)])
+        imgYoffset = 0
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
         while wait_for_mouseup:
@@ -990,27 +1021,35 @@ class DoBrushBendY(MenuAction):
             first_time = False
 
         config.menubar.title_right = ""
-        config.brush.image = bendimage
-        config.brush.image_orig = bendimage
-        config.brush.aspect = 1.0
-        config.brush.handle_type = config.brush.CENTER
-        config.brush.size = bendimage.get_height()
+
+        for frame_no in config.brush:
+            bendimage.fill(config.brush.bgcolor)
+            prevx = -1
+            for seg in clist:
+                for coord in seg:
+                    if prevx != coord[0]:
+                        bendimage.blit(config.brush.image, (coord[0],imgYoffset+coord[1]), area=(coord[0],0,1,h))
+                        prevx = coord[0]
+            config.brush.image = bendimage.copy()
+            config.brush.image_orig = bendimage.copy()
+            config.brush.aspect = 1.0
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.size = bendimage.get_height()
+
         config.doKeyAction()
 
-class DoBrushHandleCenter(MenuAction):
-    def selected(self, attrs):
+class DoBrushHandleCenter(MenuActionBrush):
+    def selectedMulti(self, attrs):
         config.brush.handle_type = config.brush.CENTER
         config.brush.size = config.brush.size
-        config.doKeyAction()
 
-class DoBrushHandleCorner(MenuAction):
-    def selected(self, attrs):
+class DoBrushHandleCorner(MenuActionBrush):
+    def selectedMulti(self, attrs):
         if config.brush.handle_type >= config.brush.CORNER_UL and config.brush.handle_type < config.brush.CORNER_LL:
             config.brush.handle_type += 1
         else:
             config.brush.handle_type = config.brush.CORNER_UL
         config.brush.size = config.brush.size
-        config.doKeyAction()
 
 class DoBrushHandlePlace(MenuAction):
     def selected(self, attrs):
@@ -1049,9 +1088,11 @@ class DoBrushHandlePlace(MenuAction):
         byo = point_coords[1]-config.brush.handle[1]
         bw,bh = config.brush.get_wh()
 
-        config.brush.handle_type = config.brush.PLACE
-        config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
-        config.brush.size = config.brush.size
+        for frame_no in config.brush:
+            config.brush.handle_type = config.brush.PLACE
+            config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
+            config.brush.size = config.brush.size
+
         config.doKeyAction()
 
 class DoMode(MenuAction):
@@ -1134,6 +1175,91 @@ class DoAnimControlPingPong(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
             config.anim.play(ping_pong=True)
+
+class DoAnimBrushOpen(MenuAction):
+    def selected(self, attrs):
+        global progress_req
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename)
+        if filename != (()) and filename != "":
+            progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
+            try:
+                brush_config = copy.copy(config)
+                brush_config.anim = Animation()
+                newimage = load_pic(filename, brush_config, is_anim=True, status_func=load_progress)
+                close_progress_req(progress_req)
+                i=0
+                for brush_frame in brush_config.anim.frame:
+                    reduced = brush_frame.image.copy()
+                    pal = config.pal
+                    reduced.set_palette(pal)
+                    surf_array = pygame.surfarray.pixels2d(reduced)
+                    surf_array &= config.NUM_COLORS-1
+                    surf_array = None
+                    if i==0:
+                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=config.bgcolor, pal=brush_config.pal, animbrush=True)
+                    else:
+                        config.brush.add_frame(reduced)
+                    i += 1
+                config.setDrawMode(DrawMode.MATTE)
+            except:
+                close_progress_req(progress_req)
+                io_error_req("Load Error", "Unable to open animbrush:\n%s", filename)
+        config.doKeyAction()
+
+class DoAnimBrushSave(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != config.brush.CUSTOM:
+            return
+        if not config.brush.animbrush:
+            return
+        config.stop_cycling()
+        filename = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        if filename != (()) and filename != "":
+            brush_config = copy.copy(config)
+            brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
+            brush_config.anim = Animation()
+            brush_config.anim.convert_animbrush(brush_config)
+            try:
+                if not save_anim(filename, brush_config, overwrite=False, transparent_color=config.brush.bgcolor):
+                    answer = question_req(config.pixel_req_canvas,
+                             "File Exists",
+                             "Overwrite this file?",
+                             ["Yes","No"],
+                             [K_RETURN, K_ESCAPE])
+                    if answer == 0:
+                            save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
+                    else:
+                        return
+            except:
+                io_error_req("Save Error", "Unable to save brush:\n%s", filename)
+                return
+
+class DoAnimBrushGrabFrames(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            if config.tool_selected == "brush":
+                config.tool_selected = "dot"
+            config.toolbar.click(config.toolbar.tool_id("brush"), MOUSEBUTTONDOWN, attrlist=[["animbrush",True]])
+
+class DoAnimBrushGrabGrid(MenuAction):
+    def selected(self, attrs):
+        libs.toolreq.brush_req(config.pixel_req_canvas)
+
+class DoAnimBrushSettings(MenuAction):
+    def selected(self, attrs):
+        animbrush_settings_req(config.pixel_req_canvas)
+
+class DoAnimBrushPrevious(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.brush.prev_frame()
+
+class DoAnimBrushNext(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            config.brush.next_frame()
 
 class DoStencilMake(MenuActionMulti):
     def is_ask_multi(self):
@@ -1303,6 +1429,14 @@ class DoPrefsMultiCycle(MenuAction):
         config.multicycle = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsExclBrush(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.exclbrush = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsHideMenus(MenuAction):
     def selected(self, attrs):
         if not self.gadget.enabled:
@@ -1459,7 +1593,15 @@ def init_menubar(config_in):
                 ["Play once", "5", DoAnimControlPlayOnce],
                 ["Ping-pong", "6", DoAnimControlPingPong],
             ]],
-            ["Anim Brush"],
+            ["Anim Brush", [
+                ["Open...", " ", DoAnimBrushOpen],
+                ["Save...", " ", DoAnimBrushSave],
+                ["Grab Frames", "alt-b", DoAnimBrushGrabFrames],
+                ["Grab Grid...", "alt-g", DoAnimBrushGrabGrid],
+                ["Settings...", " ", DoAnimBrushSettings],
+                ["Previous", "7", DoAnimBrushPrevious],
+                ["Next", "8", DoAnimBrushNext],
+            ]],
         ]])
 
     menubar.add_menu(
@@ -1485,6 +1627,7 @@ def init_menubar(config_in):
         ["Prefs", [
             ["/AutoTransp", " ", DoPrefsAutoTransp],
             ["/MultiCycle", " ", DoPrefsMultiCycle],
+            ["/ExclBrush", " ", DoPrefsExclBrush],
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],

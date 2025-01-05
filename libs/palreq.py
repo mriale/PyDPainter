@@ -279,7 +279,7 @@ def palette_req(screen):
 _______[Pick]^^ A^^
 [Spread]   [Ex~Copy]
 [Range][1~2~3~4~5~6]
-Speed---------___^^
+Speed---------000^^
 [Cancel] [Undo] [OK]
 """, "%#:^", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=PPGadget, font=config.font)
 
@@ -344,9 +344,9 @@ Speed---------___^^
     speed_dirg.value = config.cranges[current_range].get_dir()
     speed_numg = req.gadget_id("14_11")
     if config.cranges[current_range].is_active():
-        speed_numg.value = str(speedg.value)
+        speed_numg.label = str(speedg.value)+" "
     else:
-        speed_numg.value = ""
+        speed_numg.label = "   "
         speedg.enabled = False
         speed_numg.enabled = False
         speed_dirg.enabled = False
@@ -447,12 +447,12 @@ Speed---------___^^
                     speedg.value = config.cranges[current_range].get_hz()
                     speedg.need_redraw = True
                     if config.cranges[current_range].is_active():
-                        speed_numg.value = str(speedg.value)
+                        speed_numg.label = str(speedg.value)+" "
                         speedg.enabled = True
                         speed_numg.enabled = True
                         speed_dirg.enabled = True
                     else:
-                        speed_numg.value = ""
+                        speed_numg.label = "   "
                         speedg.enabled = False
                         speed_numg.enabled = False
                         speed_dirg.enabled = False
@@ -503,12 +503,12 @@ Speed---------___^^
                                 speedg.value = config.cranges[current_range].get_hz()
                                 speedg.need_redraw = True
                                 if config.cranges[current_range].is_active():
-                                    speed_numg.value = str(speedg.value)
+                                    speed_numg.label = str(speedg.value)+" "
                                     speedg.enabled = True
                                     speed_numg.enabled = True
                                     speed_dirg.enabled = True
                                 else:
-                                    speed_numg.value = ""
+                                    speed_numg.label = "   "
                                     speedg.enabled = False
                                     speed_numg.enabled = False
                                     speed_dirg.enabled = False
@@ -553,7 +553,7 @@ Speed---------___^^
                         if ge.event.type in [MOUSEBUTTONDOWN, MOUSEMOTION]:
                             config.start_cycling()
                         config.cranges[current_range].set_hz(ge.gadget.value)
-                        speed_numg.value = str(speedg.value)
+                        speed_numg.label = str(speedg.value)+" "
                         speed_numg.need_redraw = True
                     else:
                         speedg.value = 0

@@ -18,6 +18,8 @@ config = None
 
 anim_filetype_list = np.array([
 ["ANIM", "Amiga IFF anim"],
+["ANBR", "Amiga IFF animbrush"],
+["ANMB", "Amiga IFF animbrush"],
 ["GIF", "Animated GIF"],
 ])
 
@@ -222,6 +224,17 @@ class Animation:
         config.save_undo()
         if doAction:
             config.doKeyAction()
+
+    def convert_animbrush(self, config):
+        self.frame = list()
+        self.num_frames = 0
+        self.global_palette = True
+        for bframe in config.brush.frame:
+            frame = Frame(bframe.image.copy())
+            frame.layers.set("canvas", bframe.image.copy())
+            frame.layers.config = config
+            self.frame.append(frame)
+            self.num_frames += 1
 
     def first_frame(self):
         if self.num_frames == 1:
@@ -506,9 +519,9 @@ class Animation:
                 elif event.key == K_6:
                     self.play(ping_pong=True)
                 elif event.key == K_7:
-                    pass #animbrush prev
+                    config.brush.prev_frame()
                 elif event.key == K_8:
-                    pass #animbrush next
+                    config.brush.next_frame()
                 elif self.playing and (event.key == K_ESCAPE or event.key == K_SPACE):
                     self.play(stop=True)
                 elif event.key == K_PAGEUP:
@@ -529,9 +542,9 @@ class Animation:
                 elif event.key == K_6:
                     self.play(ping_pong=True)
                 elif event.key == K_7:
-                    pass #animbrush first
+                    config.brush.first_frame()
                 elif event.key == K_8:
-                    pass #animbrush last
+                    config.brush.last_frame()
             elif not event.mod & KMOD_SHIFT and event.mod & KMOD_CTRL:
                 if event.key == K_HOME:
                     self.first_frame()

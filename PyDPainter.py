@@ -102,8 +102,9 @@ def check_recover():
             buttons = []
             pics = []
             for dir_name in sorted(dir_list):
-                pics.append(tk.PhotoImage(file=os.path.join(recover_path, dir_name, "recover.png")).subsample(4, 4))
-                buttons.append(tk.Button(root, text=dir_name, image=pics[-1], compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
+                if os.path.exists(os.path.join(recover_path, dir_name, "recover.png")):
+                    pics.append(tk.PhotoImage(file=os.path.join(recover_path, dir_name, "recover.png")).subsample(4, 4))
+                    buttons.append(tk.Button(root, text=dir_name, image=pics[-1], compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
 
             buttons.append(tk.Button(root, text="Delete all", command=remove_files))
             buttons.append(tk.Button(root, text="Continue without recovering", command=root.destroy))

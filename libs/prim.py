@@ -8,6 +8,7 @@ import os.path
 import random
 import copy
 import colorsys
+from libs.menureq import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -153,6 +154,7 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                 xf,yf = x,y
                 for i in range(config.symm_num-1):
                     if interrupt and config.has_event(8):
+                        config.drawing_interrupted = True
                         newcoords.append((int(round(x)), int(round(y))))
                     else:
                         xyvect = np.matmul(np.matrix([[xf,yf,1]]),symm_mat)
@@ -270,6 +272,17 @@ class BrushCache:
             self.type.append(-1)
             self.bgcolor.append(-1)
 
+class BrushFrame:
+    def __init__(self, brush, image):
+        self.image = image.copy()
+        self.image_orig = image.copy()
+        self.image_backup = image.copy()
+        self.cache = BrushCache()
+        self.size = brush.size
+        self.aspect = brush.aspect
+        self.rect = brush.rect
+        self.handle_frac = brush.handle_frac
+
 class Brush:
     """This class models a brush that can be stamped on the screen"""
     CUSTOM = 0
@@ -284,62 +297,18 @@ class Brush:
     CORNER_LL = 4
     PLACE = 5
 
-    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None):
-        self.handle_type = self.CENTER
+    def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False, image=None):
+        if "grid_on" in dir(config) and config.grid_on:
+            self.handle_type = self.CORNER_UL
+        else:
+            self.handle_type = self.CENTER
         if type == Brush.CUSTOM:
-            # Get bounds of polygon brush
-            if polylist != None:
-                minx = min(polylist,key=itemgetter(0))[0];
-                maxx = max(polylist,key=itemgetter(0))[0];
-                miny = min(polylist,key=itemgetter(1))[1];
-                maxy = max(polylist,key=itemgetter(1))[1];
-                coordfrom = (minx, miny)
-                coordto = (maxx, maxy)
+            if image is None:
+                self.image = self.get_image_from_screen(screen, bgcolor=bgcolor, coordfrom=coordfrom, coordto=coordto, pal=pal, polylist=polylist, animbrush=animbrush)
             else:
-                # Rectangle brush
-                if coordfrom == None:
-                    coordfrom = (0,0)
-                if coordto == None:
-                    coordto = (screen.get_width()-1, screen.get_height()-1)
+                self.image = image.copy()
 
-            x1,y1 = coordfrom
-            x2,y2 = coordto
-
-            if x1 > x2:
-                x1, x2 = x2, x1
-
-            if y1 > y2:
-                y1, y2 = y2, y1
-
-            w = x2-x1+1
-            h = y2-y1+1
-
-            self.image = pygame.Surface((w, h),0, config.pixel_canvas)
-            self.image.set_palette(config.pal)
-            self.image.blit(screen, (0,0), (x1,y1,w,h))
-            self.image.set_colorkey(bgcolor)
-
-            # Handle polygon masking
-            if polylist != None:
-                # Adjust polylist to brush coords
-                pl = []
-                for x,y in polylist:
-                    pl.append((x-x1,y-y1))
-
-                # Create image same size as brush and draw poly into it
-                polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
-                primprops = PrimProps()
-                fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
-
-                # Create numpy mask out of poly and apply to brush
-                surf_array_poly = pygame.surfarray.pixels2d(polyimage)
-                poly_mask = np.where(surf_array_poly == 0)
-                surf_array_brush = pygame.surfarray.pixels2d(self.image)
-                surf_array_brush[poly_mask] = bgcolor
-                surf_array_brush = None
-                surf_array_poly = None
-                polyimage = None
-
+            w,h = self.image.get_size()
             self.__type = type
             self.bgcolor = bgcolor
             self.image_orig = self.image.copy()
@@ -348,6 +317,8 @@ class Brush:
             self.__size = h
             self.aspect = 1.0
             self.calc_handle(w, h)
+            self.frame = list([BrushFrame(self, self.image)])
+            self.animbrush = animbrush
         else:
             self.image = None
             self.rect = [0,0,size,size]
@@ -358,6 +329,8 @@ class Brush:
             self.__size = size
             self.aspect = 1.0
             self.calc_handle(size, size)
+            self.frame = []
+            self.animbrush = False
 
         self.cache = BrushCache()
         self.smear_stencil = None
@@ -372,11 +345,92 @@ class Brush:
         self.cycle_trans_back = np.arange(0,256, dtype=np.uint8)
         self.blend_trans = np.empty((256,256), dtype=np.uint8)
         self.tint_trans = np.empty((256), dtype=np.uint8)
+        self.currframe = 0
+        self.currframei = 0.0
+        self.startframe = 0
+        self.endframe = 0
+        self.duration = len(self.frame)
+        self.direction = 1
+        self.framelist = self.calc_framelist()
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
         else:
             self.pal = pal
+
+    def get_image_from_screen(self, screen, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False):
+        exclbrush = config.grid_on and config.exclbrush
+
+        # Get bounds of polygon brush
+        if polylist != None:
+            minx = min(polylist,key=itemgetter(0))[0];
+            maxx = max(polylist,key=itemgetter(0))[0];
+            miny = min(polylist,key=itemgetter(1))[1];
+            maxy = max(polylist,key=itemgetter(1))[1];
+            coordfrom = (minx, miny)
+            coordto = (maxx, maxy)
+        else:
+            # Rectangle brush
+            if coordfrom == None:
+                coordfrom = (0,0)
+            if coordto == None:
+                coordto = (screen.get_width()-1, screen.get_height()-1)
+                exclbrush = False
+
+        x1,y1 = coordfrom
+        x2,y2 = coordto
+
+        if x1 > x2:
+            x1, x2 = x2, x1
+
+        if y1 > y2:
+            y1, y2 = y2, y1
+
+        w = x2-x1
+        h = y2-y1
+
+        if not exclbrush:
+            w += 1
+            h += 1
+
+        image = pygame.Surface((w, h),0, config.pixel_canvas)
+        image.set_palette(config.pal)
+        image.blit(screen, (0,0), (x1,y1,w,h))
+        image.set_colorkey(bgcolor)
+
+        # Handle stencil masking
+        if config.stencil.enable:
+            brush_pixels = pygame.surfarray.pixels2d(image)
+            m = np.array(config.stencil.mask).transpose()
+            m -= [x1, y1]
+            m = m[ (m[:,0] >= 0) & (m[:,0] <= (w-1)) &
+                   (m[:,1] >= 0) & (m[:,1] <= (h-1)) ]
+            m = m.transpose()
+            m = tuple(m)
+            brush_pixels[m] = bgcolor
+            brush_pixels = None
+
+        # Handle polygon masking
+        if polylist != None:
+            # Adjust polylist to brush coords
+            pl = []
+            for x,y in polylist:
+                pl.append((x-x1,y-y1))
+
+            # Create image same size as brush and draw poly into it
+            polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
+            primprops = PrimProps()
+            fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+
+            # Create numpy mask out of poly and apply to brush
+            surf_array_poly = pygame.surfarray.pixels2d(polyimage)
+            poly_mask = np.where(surf_array_poly == 0)
+            surf_array_brush = pygame.surfarray.pixels2d(image)
+            surf_array_brush[poly_mask] = bgcolor
+            surf_array_brush = None
+            surf_array_poly = None
+            polyimage = None
+        return image
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
@@ -456,7 +510,7 @@ class Brush:
                 if size == 1:
                     self.calc_handle(1, 1)
                 else:
-                    self.calc_handle(size*2*ax, size*2*ay)
+                    self.calc_handle(size*2*ax-1, size*2*ay-1)
 
     @property
     def type(self):
@@ -467,6 +521,131 @@ class Brush:
         if type != self.__type:
             self.__type = type
             self.size = self.__size  #recalc handle and wipe cache
+
+    def set_palettes(self, pal):
+        if self.type != Brush.CUSTOM:
+            return
+        self.image.set_palette(pal)
+        for frame in self.frame:
+            frame.image.set_palette(pal)
+        self.cache = BrushCache()
+
+    def add_frame(self, image):
+        self.frame.append(BrushFrame(self, image))
+        self.duration = len(self.frame)
+        self.framelist = self.calc_framelist()
+
+    def save_frame(self):
+        if not self.animbrush:
+            return
+        frameno = self.currframe
+        if len(self.frame) > 0:
+            self.frame[frameno].image = self.image
+            self.frame[frameno].image_orig = self.image_orig
+            self.frame[frameno].image_backup = self.image_backup
+            self.frame[frameno].size = self.size
+            self.frame[frameno].aspect = self.aspect
+            self.frame[frameno].cache = self.cache
+            self.frame[frameno].rect = list(self.rect)
+            self.frame[frameno].handle_frac = list(self.handle_frac)
+
+    def set_framei(self, framei, doAction=True):
+        if not self.animbrush:
+            return
+        framei = framei % len(self.framelist)
+        self.currframei = framei
+        self.set_frame(self.framelist[int(framei)], doAction=doAction)
+
+    def set_frame(self, frameno, doAction=True):
+        if not self.animbrush:
+            return
+
+        self.save_frame()
+        self.currframe = frameno
+
+        if len(self.frame) > 0:
+            self.image = self.frame[frameno].image
+            self.image_orig = self.frame[frameno].image_orig
+            self.image_backup = self.frame[frameno].image_backup
+            self.cache = self.frame[frameno].cache
+            self.rect = list(self.frame[frameno].rect)
+            self.handle_frac = list(self.frame[frameno].handle_frac)
+            self.aspect = self.frame[frameno].aspect
+            self.__size = self.frame[frameno].size
+
+        if doAction:
+            config.doKeyAction()
+
+    def calc_framelist(self, direction=None):
+        if direction is None:
+            direction = self.direction
+        framelist = list()
+        numframes = len(self.frame)
+        if direction == 1:
+            framelist = list(range(0,numframes))
+        elif direction == -1:
+            framelist = list(range(numframes-1,-1,-1))
+        elif abs(direction) == 2:
+            framelist = list(range(0,numframes))
+            if numframes > 2:
+                framelist.extend(list(range(numframes-2,0,-1)))
+        else:
+            framelist = list(range(0,numframes))
+
+        return framelist
+
+    def first_frame(self, doAction=True):
+        frameno = 0
+        self.set_framei(frameno, doAction)
+
+    def last_frame(self, doAction=True):
+        frameno = len(self.framelist) - 1
+        self.set_framei(frameno, doAction)
+
+    def next_frame(self, doAction=True):
+        if self.direction == 0:
+            frameno = random.randint(0, len(self.framelist)-1)
+        elif self.duration > 0:
+            frameno = self.currframei + (len(self.framelist) / self.duration)
+        else:
+            frameno = self.currframei + 1
+        self.set_framei(frameno, doAction)
+
+    def prev_frame(self, doAction=True):
+        if self.direction == 0:
+            frameno = random.randint(0, len(self.framelist)-1)
+        elif self.duration > 0:
+            frameno = self.currframei - (len(self.framelist) / self.duration)
+        else:
+            frameno = self.currframei + 1
+        self.set_framei(frameno, doAction)
+
+    def iter_progress_anim(self, percent):
+        curr_time = pygame.time.get_ticks()
+        if curr_time - self.iter_prev_time > 33:
+            if self.iter_progress_req is None:
+                self.iter_progress_req = open_progress_req(config.pixel_req_canvas, "Processing...")
+            self.iter_prev_time = curr_time
+            update_progress_req(self.iter_progress_req, config.pixel_req_canvas, percent)
+
+    def __iter__(self):
+        self.iter_frames = [*range(0,len(self.frame))]
+        self.curr_frame_bak = self.currframe
+        self.iter_len = len(self.iter_frames)
+        self.iter_prev_time = pygame.time.get_ticks()
+        self.iter_progress_req = None
+        return self
+
+    def __next__(self):
+        if len(self.iter_frames) == 0:
+            self.set_frame(self.curr_frame_bak, doAction=False)
+            if self.iter_progress_req:
+                close_progress_req(self.iter_progress_req)
+            raise StopIteration
+        self.iter_progress_anim((self.iter_len-len(self.iter_frames)) / self.iter_len)
+        frame_no = self.iter_frames.pop(0)
+        self.set_frame(frame_no, doAction=False)
+        return frame_no
 
     def render_image(self, color):
         ax = config.aspectX
@@ -499,7 +678,7 @@ class Brush:
                     image.set_colorkey(0)
                 image.fill(color)
             else:
-                image = pygame.Surface((self.size*ax*2+1, self.size*ay*2+1),0, config.pixel_canvas)
+                image = pygame.Surface((self.size*ax*2-1, self.size*ay*2-1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
                 if color == 0:
                     image.fill(1)
@@ -508,9 +687,9 @@ class Brush:
                     image.set_colorkey(0)
                 primprops = PrimProps()
                 if ax == ay == 1:
-                    fillcircle(image, color, (self.size, self.size), self.size-1, primprops=primprops)
+                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops)
                 else:
-                    pygame.draw.ellipse(image, color, (1,1,self.size*ax*2-1, self.size*ay*2-1))
+                    pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
             return image
         elif self.type == Brush.SQUARE:
             image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)
@@ -831,8 +1010,19 @@ class Brush:
                 else:
                     screen.blit(image, (x - self.handle[0], y - self.handle[1]))
 
+        if self.pen_down and self.animbrush:
+            self.next_frame(doAction=False)
+
+    def set_startframe(self, startframe=-1):
+        if startframe < 0:
+            self.startframe = self.currframei
+        else:
+            self.startframe = startframe
+
     def reset_stroke(self):
         self.smear_count = 0
+        self.endframe = self.currframei
+        self.set_framei(self.startframe, doAction=False)
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -870,7 +1060,7 @@ class CoordList:
 
         if animpaint and config.anim.num_frames > 1 and \
            not xormode and \
-           (K_LSUPER in config.xevent.keys_down or K_LMETA in config.xevent.keys_down):
+           config.xevent.is_key_down(config.xevent.ANIM_KEYS):
                 if primprops.drawmode.spacing == DrawMode.CONTINUOUS:
                     primprops.drawmode.spacing = DrawMode.N_TOTAL
                     primprops.drawmode.n_total_value = config.anim.num_frames
@@ -896,8 +1086,9 @@ class CoordList:
             pointspercolor = numpoints / numcolors
 
         currpoint = -1
+        config.brush.set_startframe()
+        config.brush.reset_stroke()
         for i in range(0,self.numlists):
-            config.brush.reset_stroke()
             for c in self.coordlist[i]:
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
@@ -915,20 +1106,26 @@ class CoordList:
                         screen.set_at(c, screen.map_rgb(config.pixel_canvas.get_at(c))^(config.NUM_COLORS-1))
                 else:
                     if primprops.drawmode.spacing == DrawMode.AIRBRUSH:
-                        for j in range(primprops.drawmode.airbrush_value):
+                        if primprops.drawmode.airbrush_value >= 1.0:
+                            for j in range(int(primprops.drawmode.airbrush_value)):
+                                config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
+                        if random.random() < primprops.drawmode.airbrush_value % 1.0:
                             config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
                     else:
                         config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
 
-                if animpaint and not interrupt:
-                    config.save_undo()
-                    config.anim.next_frame(doAction=False)
-                    screen = config.pixel_canvas
+                    if animpaint and not interrupt:
+                        config.save_undo()
+                        config.anim.next_frame(doAction=False)
+                        screen = config.pixel_canvas
 
-                if interrupt and config.has_event():
-                    return
+                    if interrupt and config.has_event():
+                        config.brush.reset_stroke()
+                        config.drawing_interrupted = True
+                        return
 
                 config.try_recompose()
+        config.brush.reset_stroke()
 
 
 class DrawMode:
@@ -1069,6 +1266,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
         cl = CoordList(12)
         for j in range (0,12,3):
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             coordfrom = (ecurves[i][j][0], ecurves[i][j][1])
             coordto = (ecurves[i][j+1][0], ecurves[i][j+1][1])
@@ -1128,6 +1326,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
         for sly in sslk:
             hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -1155,6 +1354,7 @@ def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrup
 
         while x < y:
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             x = x + 1
             if err < 0:
@@ -1195,6 +1395,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
     coords_list = symm_coords(coords_in, handlesymm)
     for coords in coords_list:
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         x0,y0 = coords;
         x = 0
@@ -1224,6 +1425,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
             x1,x2 = xbounds[y]
             hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -1238,13 +1440,57 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
         coordto_list = symm_coords(coordto)
     for i in range(len(coordfrom_list)):
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase, animpaint=animpaint)
 
+def draw_vert_xor_line(screen, x, y, y2, skiplast):
+    w,h = screen.get_size()
+    if x < 0 or x >= w:
+        return
+    if (y < 0 and y2 < 0) or (y >= h and y2 >= h):
+        return
+    if skiplast:
+        y2 -= int(math.copysign(1, y2-y))
+    if y2 < y:
+        y,y2 = (y2,y)
+    if y < 0:
+        y = 0
+    elif y >= h:
+        y = h-1
+    surf_array = pygame.surfarray.pixels2d(screen)
+    vline_XOR(surf_array, x, y, y2+1)
+    surf_array = None
+
+def draw_horiz_xor_line(screen, y, x, x2, skiplast):
+    w,h = screen.get_size()
+    if y < 0 or y >= h:
+        return
+    if (x < 0 and x2 < 0) or (x >= w and x2 >= w):
+        return
+    if skiplast:
+        x2 -= int(math.copysign(1, x2-x))
+    if x2 < x:
+        x,x2 = (x2,x)
+    if x < 0:
+        x = 0
+    elif x >= w:
+        x = w-1
+    surf_array = pygame.surfarray.pixels2d(screen)
+    hline_XOR(surf_array, y, x, x2+1)
+    surf_array = None
 
 def drawline(screen, color, coordfrom, coordto, xormode=False, drawmode=-1, coordsonly=False, handlesymm=False, interrupt=False, skiplast=False, erase=False, animpaint=True):
     x,y = int(coordfrom[0]), int(coordfrom[1])
     x2,y2 = int(coordto[0]), int(coordto[1])
+
+    if xormode:
+        if x == x2:
+            draw_vert_xor_line(screen, x, y, y2, skiplast)
+            return
+        elif y == y2:
+            draw_horiz_xor_line(screen, y, x, x2, skiplast)
+            return
 
     cl = CoordList(1)
 
@@ -1409,6 +1655,7 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
     coordto_list = symm_coords(coordto, handlesymm)
     for j in range(len(coordfrom_list)):
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             if coordsonly:
                 return []
             else:
@@ -1494,6 +1741,27 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
 
         cl.draw(screen, color, drawmode=drawmode, handlesymm=False, interrupt=interrupt, erase=erase)
 
+def draw_ants(screen, coordfrom, coordto, step=4, offset=0):
+    x1,y1 = coordfrom
+    x2,y2 = coordto
+    offsetr = (step - offset) % step
+
+    #swap so x1,y1 is upper left and x2,y2 is lower right
+    if x1 > x2:
+        x1,x2 = (x2,x1)
+    if y1 > y2:
+        y1,y2 = (y2,y1)
+
+    surf_array = pygame.surfarray.pixels2d(screen)
+    hline_XOR(surf_array, y1, x1+offset, x2, step=step)
+    hline_XOR(surf_array, y1, x1+offset+1, x2, step=step)
+    vline_XOR(surf_array, x1, y1+offsetr, y2, step=step)
+    vline_XOR(surf_array, x1, y1+offsetr+1, y2, step=step)
+    hline_XOR(surf_array, y2, x1+offsetr, x2, step=step)
+    hline_XOR(surf_array, y2, x1+offsetr+1, x2, step=step)
+    vline_XOR(surf_array, x2, y1+offset, y2, step=step)
+    vline_XOR(surf_array, x2, y1+offset+1, y2, step=step)
+    surf_array = None
 
 def drawrect(screen, color, coordfrom, coordto, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, erase=False):
     if filled:
@@ -1519,6 +1787,7 @@ def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=T
     for i in range(1,len(rectlist_symm)):
         fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt, erase=erase)
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         config.try_recompose()
 
@@ -1548,13 +1817,21 @@ def add_vline(y, xs1, xs2):
         else:
             vlines[x] = [[y,y]]
 
-def hline_XOR(surf_array, y, xs1, xs2):
+def hline_XOR(surf_array, y, xs1, xs2, step=1):
     if surf_array.dtype == np.uint8:
         #indexed color
-        surf_array[xs1:xs2,y] ^= config.NUM_COLORS-1
+        surf_array[xs1:xs2:step,y] ^= config.NUM_COLORS-1
     else:
         #true color
-        surf_array[xs1:xs2,y] ^= 0x00ffffff
+        surf_array[xs1:xs2:step,y] ^= 0x00ffffff
+
+def vline_XOR(surf_array, x, ys1, ys2, step=1):
+    if surf_array.dtype == np.uint8:
+        #indexed color
+        surf_array[x,ys1:ys2:step] ^= config.NUM_COLORS-1
+    else:
+        #true color
+        surf_array[x,ys1:ys2:step] ^= 0x00ffffff
 
 def hline_SOLID(surf_array, color, y, xs1, xs2):
     #don't draw if off screen
@@ -1761,15 +2038,15 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                     dither = 0
                 if pointspercolor > 0:
                     if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                        colori = int(int(x2-(x+dither)) / pointspercolor)
+                        colori = int(int((x+dither)-x1) / pointspercolor)
                     elif primprops.fillmode.value == FillMode.VERTICAL:
-                        colori = int(int(y2-(y+dither)) / pointspercolor)
+                        colori = int(int((y+dither)-y1) / pointspercolor)
                     if primprops.fillmode.gradient_dither < 0:
                         if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x2-x) / pointspercolor)%16):
+                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x-x1) / pointspercolor)%16):
                                 colori += 1
                         elif primprops.fillmode.value == FillMode.VERTICAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y2-y) / pointspercolor)%16):
+                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
                                 colori += 1
                     if colori >= len(arange):
                         colori = len(arange) - 1
@@ -1846,6 +2123,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -1854,7 +2132,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
         #Map counts to colors in the range
         max_pixels = np.amax(surf_array)
-        if cur_crange.get_dir() == -1:
+        if cur_crange.get_dir() == 1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
         surf_array *= numcolors * 256   # multiply for more precision
         surf_array //= max_pixels + 1
@@ -1922,6 +2200,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 big_image = pygame.transform.scale2x(big_image)
                 #Interrupt if needed
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
@@ -1931,6 +2210,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -1939,6 +2219,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             i8 = new_image
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -2009,9 +2290,9 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                         else:
                             dither = 0
                         if pointspercolor > 0:
-                            colori = int(int(y2-(y+dither)) / pointspercolor)
+                            colori = int(int((y+dither)-y1) / pointspercolor)
                             if primprops.fillmode.gradient_dither < 0:
-                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y2-y) // pointspercolor)%16):
+                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
                                     colori += 1
                             if colori >= len(arange):
                                 colori = len(arange) - 1
@@ -2024,26 +2305,33 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
                 surf_array = None
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
-def drawxorcross(screen, x, y):
+def drawxorcross(screen, x, y, step=1, offset=0):
     #don't draw if off screen
     size = screen.get_size()
     if y<0 or y>=size[1] or x<0 or x>=size[0]:
         return
+
+    offsetr = (step - offset) % step
 
     #create array from the surface.
     surf_array = pygame.surfarray.pixels2d(screen)
 
     if surf_array.dtype == np.uint8:
         #indexed color
-        surf_array[0:size[0],y] ^= config.NUM_COLORS-1
-        surf_array[x,0:size[1]] ^= config.NUM_COLORS-1
+        surf_array[offsetr:x:step,y] ^= config.NUM_COLORS-1
+        surf_array[x+offset:size[0]:step,y] ^= config.NUM_COLORS-1
+        surf_array[x,offsetr:y:step] ^= config.NUM_COLORS-1
+        surf_array[x,y+offset:size[1]:step] ^= config.NUM_COLORS-1
     else:
         #true color
-        surf_array[0:size[0],y] ^= 0x00ffffff
-        surf_array[x,0:size[1]] ^= 0x00ffffff
+        surf_array[offsetr:x:step,y] ^= 0x00ffffff
+        surf_array[x+offset:size[0]:step,y] ^= 0x00ffffff
+        surf_array[x,offsetr:y:step] ^= 0x00ffffff
+        surf_array[x,y+offset:size[1]:step] ^= 0x00ffffff
 
     #free array and unlock surface
     surf_array = None
@@ -2067,6 +2355,7 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None,
         return
 
     if interrupt and config.has_event():
+        config.drawing_interrupted = True
         return
 
     if primprops.fillmode.value == FillMode.SOLID:
@@ -2077,6 +2366,7 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None,
         for y in range(y1, y2+1):
             hline(screen, color, y, x1, x2, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -2099,32 +2389,23 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
         if onscreen((x,y)):
             surface_bak = surface.copy()
             surf_array = pygame.surfarray.pixels2d(surface)  # Create an array from the surface.
+            surf_array16 = surf_array.astype(np.int16) # Create deeper copy to fill 
             maxx, maxy = config.pixel_width, config.pixel_height
             current_color = surf_array[x,y]
-            if bounds_color < 0:
-                if fill_color == current_color:
-                    if config.fillmode.value == FillMode.SOLID:
-                        continue
-                    else:
-                        for crange in config.cranges:
-                            if crange.is_active() and fill_color >= crange.low and fill_color <= crange.high:
-                                fill_color = crange.next_color(fill_color)
-            elif current_color == bounds_color:
-                continue
 
             frontier = [(x,y)]
             while len(frontier) > 0:
                 x, y = frontier.pop()
                 if x >= 0 and x < maxx and y >= 0 and y < maxy:
                     if bounds_color < 0:
-                        if surf_array[x, y] != current_color:
+                        if surf_array16[x, y] != current_color:
                             continue
                     else:
-                        if surf_array[x, y] == bounds_color or has_sl(sl,x,y):
+                        if surf_array16[x, y] == bounds_color or has_sl(sl,x,y):
                             continue
                 else:
                     continue
-                surf_array[x, y] = fill_color
+                surf_array16[x, y] = -1
                 add_bounds((x,y))
 
                 # append coords to scanline lists
@@ -2158,6 +2439,7 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
                 frontier.append((x, y - 1))  # Up.
 
             surf_array = None
+            surf_array16 = None
 
             for y in sl:
                 #collapse scanline fragments
@@ -2175,14 +2457,11 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
                             j += 1
 
             start_shape()
-            if config.fillmode.value != FillMode.SOLID:
-                #Restore pre-filled state
-                surface.blit(surface_bak, (0,0))
-                for y in sorted (sl.keys()):
-                    #draw scanline fragments
-                    for frag in sl[y]:
-                        hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
-                    config.try_recompose()
+            for y in sorted (sl.keys()):
+                #draw scanline fragments
+                for frag in sl[y]:
+                    hline(surface, fill_color, y, frag[0], frag[1], erase=erase)
+                config.try_recompose()
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
@@ -2214,6 +2493,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
         # Draw, scanning y
         for y in range(miny, maxy+1):
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             polyints = []
             for i in range(0, n):
@@ -2248,6 +2528,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
             for i in range(0, len(polyints), 2):
                 hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops, erase=erase)
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
@@ -2270,6 +2551,7 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
             lastcoord = []
             for coord in newcoords:
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 if len(lastcoord) != 0:
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast), erase=erase)

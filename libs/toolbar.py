@@ -297,9 +297,11 @@ class Toolbar:
         else:
             return False
 
-    def click(self, toolg, eventtype, subtool=False, rightclick=False):
+    def click(self, toolg, eventtype, subtool=False, rightclick=False, attrlist=[]):
         ge = []
         attrs = {"subtool":subtool, "rightclick":rightclick, "eventtype":eventtype}
+        for a in attrlist:
+            attrs[a[0]] = a[1]
         if toolg.tool_type == ToolGadget.TT_GROUP:
             if not rightclick:
                 toolg.state = 2 if subtool else 1

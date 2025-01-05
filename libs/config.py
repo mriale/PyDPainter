@@ -103,30 +103,25 @@ for r in range(2,30):
                                (g//2)*((g%2)*2-1), \
                                (b//2)*((b%2)*2-1)))
 
-colcache = {}
 def unique_palette(pal):
     newpal = []
     paldict = {}
     #print("len(pal): " + str(len(pal)))
     for i in range(0,len(pal)):
         col = pal[i]
-        if str(col) in colcache:
-            col = colcache[str(col)]
-        else:
-            j = 0
+        j = 0
+        out_of_range = False
+        #print("color[" + str(i) + "]: " + str(col))
+        while out_of_range or str(col) in paldict:
+            #print("dup color: " + str(col))
             out_of_range = False
-            #print("color[" + str(i) + "]: " + str(col))
-            while out_of_range or str(col) in paldict:
-                #print("dup color: " + str(col))
-                out_of_range = False
-                r = pal[i][0] + color_skew[j][0]
-                g = pal[i][1] + color_skew[j][1]
-                b = pal[i][2] + color_skew[j][2]
-                if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
-                    out_of_range = True
-                col = (r,g,b)
-                j = j + 1
-            colcache[str(col)]=col
+            r = pal[i][0] + color_skew[j][0]
+            g = pal[i][1] + color_skew[j][1]
+            b = pal[i][2] + color_skew[j][2]
+            if r < 0 or r > 255 or g < 0 or g > 255 or b < 0 or b > 255:
+                out_of_range = True
+            col = (r,g,b)
+            j = j + 1
         newpal.append(col)
         paldict[str(col)] = 1
     #pal256.extend([pal[0]] * (256-len(pal)))
@@ -163,6 +158,7 @@ class Project:
         self.modified_count = -1
         self.anim = None
         self.layers = None
+        self.stencil = None
         self.indicators = None
 
 class pydpainter:
@@ -287,12 +283,13 @@ class pydpainter:
 
         return s
 
-    def resize_display(self, resize_window=True, first_init=False, force=False):
+    def resize_display(self, resize_window=True, first_init=False, force=False, grab=True):
         if config.fullscreen:
             if force:
-                pygame.event.set_grab(True)
-                if "set_keyboard_grab" in dir(pygame.event):
-                    pygame.event.set_keyboard_grab(True)
+                if grab:
+                    pygame.event.set_grab(True)
+                    if "set_keyboard_grab" in dir(pygame.event):
+                        pygame.event.set_keyboard_grab(True)
                 config.scale_bak = config.scale
             pygame.display.set_mode((0,0), FULLSCREEN|HWSURFACE|DOUBLEBUF)
             config.screen = pygame.display.get_surface()
@@ -467,6 +464,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("coords").menu_id("1based").checked = self.coords_1based
         self.menubar.menu_id("prefs").menu_id("autotransp").checked = self.auto_transp_on
         self.menubar.menu_id("prefs").menu_id("multicycle").checked = self.multicycle
+        self.menubar.menu_id("prefs").menu_id("exclbrush").checked = self.exclbrush
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
@@ -593,6 +591,7 @@ class pydpainter:
             f.write("coords_1based=%s\n" % (self.coords_1based))
             f.write("auto_transp_on=%s\n" % (self.auto_transp_on))
             f.write("multicycle=%s\n" % (self.multicycle))
+            f.write("exclbrush=%s\n" % (self.exclbrush))
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
@@ -649,6 +648,8 @@ class pydpainter:
                         self.auto_transp_on = True if vars[1] == "True" else False
                     elif vars[0] == "multicycle":
                         self.multicycle = True if vars[1] == "True" else False
+                    elif vars[0] == "exclbrush":
+                        self.exclbrush = True if vars[1] == "True" else False
                     elif vars[0] == "hide_menus":
                         self.hide_menus = True if vars[1] == "True" else False
                     elif vars[0] == "force_1_to_1_pixels":
@@ -674,6 +675,7 @@ class pydpainter:
 
     def initialize(self):
         self.clock = pygame.time.Clock()
+        self.debug = False
 
         self.MODE_LACE               = 0x0004
         self.MODE_EXTRA_HALFBRIGHT   = 0x0080
@@ -745,6 +747,7 @@ class pydpainter:
         self.SCANLINES_NOSMOOTH = 2
         self.scanlines = self.SCANLINES_ON
         self.brush = Brush()
+        self.brush_req_props = BrushReqProps()
 
         self.primprops = PrimProps()
         self.matte_erase = False
@@ -753,6 +756,7 @@ class pydpainter:
         self.fillmode = self.primprops.fillmode
         self.color = 1
         self.bgcolor = 0
+        self.drawing_interrupted = False
 
         self.proj = [Project(), Project()]
         self.proj_index = 0
@@ -790,6 +794,7 @@ class pydpainter:
         self.coords_1based = False
         self.auto_transp_on = False
         self.multicycle = False
+        self.exclbrush = False
         self.hide_menus = False
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
@@ -817,6 +822,8 @@ class pydpainter:
         self.proj[1].anim = Animation()
         self.proj[0].layers = self.layers
         self.proj[1].layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
+        self.proj[0].stencil = self.stencil
+        self.proj[1].stencil = Stencil()
 
         self.cycling = False
         self.cycle_handled = False
@@ -981,9 +988,7 @@ class pydpainter:
                 config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
                 config.proj[i].layers.set_palette(pal)
 
-        if config.brush.image != None:
-            config.brush.image.set_palette(pal)
-        config.brush.cache = BrushCache()
+        config.brush.set_palettes(pal)
 
         for img in config.undo_image:
             img.set_palette(pal)
@@ -1802,7 +1807,11 @@ class pydpainter:
                         if self.airbrush_size > 50:
                             self.airbrush_size = 50
                     else:
-                        self.brush.size += 1
+                        if config.brush.type == Brush.CUSTOM:
+                            for frame_no in config.brush:
+                                self.brush.size += 1
+                        else:
+                            self.brush.size += 1
                         setBIBrush()
                 elif e.unicode == "-":
                     gotkey = True
@@ -1811,7 +1820,11 @@ class pydpainter:
                         if self.airbrush_size < 5:
                             self.airbrush_size = 5
                     else:
-                        self.brush.size -= 1
+                        if config.brush.type == Brush.CUSTOM:
+                            for frame_no in config.brush:
+                                self.brush.size -= 1
+                        else:
+                            self.brush.size -= 1
                         setBIBrush()
                 elif e.unicode == "]":
                     gotkey = True
@@ -1867,7 +1880,7 @@ class pydpainter:
                 elif e.key == K_F11:
                     config.fullscreen = not config.fullscreen
                     config.minitoolbar.tool_id("fullscreen").state = 1 if config.fullscreen else 0
-                    config.resize_display(force=True)
+                    config.resize_display(force=True, grab=(e.mod & KMOD_SHIFT == 0))
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
@@ -1882,6 +1895,7 @@ class pydpainter:
                 elif e.key == K_F12:
                     print("\n***********Debug************")
                     print(f"{config.layers=}")
+                    config.debug = not config.debug
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
