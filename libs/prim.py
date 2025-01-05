@@ -154,6 +154,7 @@ def symm_coords(coords, handlesymm=True, interrupt=False):
                 xf,yf = x,y
                 for i in range(config.symm_num-1):
                     if interrupt and config.has_event(8):
+                        config.drawing_interrupted = True
                         newcoords.append((int(round(x)), int(round(y))))
                     else:
                         xyvect = np.matmul(np.matrix([[xf,yf,1]]),symm_mat)
@@ -604,15 +605,19 @@ class Brush:
     def next_frame(self, doAction=True):
         if self.direction == 0:
             frameno = random.randint(0, len(self.framelist)-1)
-        else:
+        elif self.duration > 0:
             frameno = self.currframei + (len(self.framelist) / self.duration)
+        else:
+            frameno = self.currframei + 1
         self.set_framei(frameno, doAction)
 
     def prev_frame(self, doAction=True):
         if self.direction == 0:
             frameno = random.randint(0, len(self.framelist)-1)
-        else:
+        elif self.duration > 0:
             frameno = self.currframei - (len(self.framelist) / self.duration)
+        else:
+            frameno = self.currframei + 1
         self.set_framei(frameno, doAction)
 
     def iter_progress_anim(self, percent):
@@ -1101,7 +1106,10 @@ class CoordList:
                         screen.set_at(c, screen.map_rgb(config.pixel_canvas.get_at(c))^(config.NUM_COLORS-1))
                 else:
                     if primprops.drawmode.spacing == DrawMode.AIRBRUSH:
-                        for j in range(primprops.drawmode.airbrush_value):
+                        if primprops.drawmode.airbrush_value >= 1.0:
+                            for j in range(int(primprops.drawmode.airbrush_value)):
+                                config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
+                        if random.random() < primprops.drawmode.airbrush_value % 1.0:
                             config.brush.draw(screen, color, config.airbrush_coords(c[0],c[1]), handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
                     else:
                         config.brush.draw(screen, color, c, handlesymm=handlesymm, primprops=PrimProps(drawmode=drawmode), erase=erase)
@@ -1113,6 +1121,7 @@ class CoordList:
 
                     if interrupt and config.has_event():
                         config.brush.reset_stroke()
+                        config.drawing_interrupted = True
                         return
 
                 config.try_recompose()
@@ -1257,6 +1266,7 @@ def drawellipse (screen, color, coords, width, height, filled=0, drawmode=-1, in
         cl = CoordList(12)
         for j in range (0,12,3):
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             coordfrom = (ecurves[i][j][0], ecurves[i][j][1])
             coordto = (ecurves[i][j+1][0], ecurves[i][j+1][1])
@@ -1316,6 +1326,7 @@ def fillellipse (screen, color, coords, width, height, interrupt=False, primprop
         for sly in sslk:
             hline(screen, color, sly, sl[sly][0], sl[sly][1], primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -1343,6 +1354,7 @@ def drawcircle(screen, color, coords_in, radius, filled=0, drawmode=-1, interrup
 
         while x < y:
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             x = x + 1
             if err < 0:
@@ -1383,6 +1395,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
     coords_list = symm_coords(coords_in, handlesymm)
     for coords in coords_list:
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         x0,y0 = coords;
         x = 0
@@ -1412,6 +1425,7 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
             x1,x2 = xbounds[y]
             hline(screen, color, y, x1, x2, interrupt=interrupt, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -1426,6 +1440,7 @@ def drawline_symm(screen, color, coordfrom, coordto, xormode=False, drawmode=-1,
         coordto_list = symm_coords(coordto)
     for i in range(len(coordfrom_list)):
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         drawline(screen, color, coordfrom_list[i], coordto_list[i], xormode=xormode, drawmode=drawmode, coordsonly=False, handlesymm=False, interrupt=interrupt, skiplast=skiplast, erase=erase, animpaint=animpaint)
 
@@ -1640,6 +1655,7 @@ def drawcurve(screen, color, coordfrom, coordto, coordcontrol, drawmode=-1, coor
     coordto_list = symm_coords(coordto, handlesymm)
     for j in range(len(coordfrom_list)):
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             if coordsonly:
                 return []
             else:
@@ -1771,6 +1787,7 @@ def fillrect_symm(screen, color, coordfrom, coordto, xormode=False, handlesymm=T
     for i in range(1,len(rectlist_symm)):
         fillpoly(screen, color, rectlist_symm[i], handlesymm=False, interrupt=interrupt, erase=erase)
         if interrupt and config.has_event():
+            config.drawing_interrupted = True
             return
         config.try_recompose()
 
@@ -2106,6 +2123,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -2182,6 +2200,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 big_image = pygame.transform.scale2x(big_image)
                 #Interrupt if needed
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
@@ -2191,6 +2210,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -2199,6 +2219,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             i8 = new_image
             #Interrupt if needed
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
 
@@ -2284,6 +2305,7 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
                 surf_array = None
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
@@ -2333,6 +2355,7 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None,
         return
 
     if interrupt and config.has_event():
+        config.drawing_interrupted = True
         return
 
     if primprops.fillmode.value == FillMode.SOLID:
@@ -2343,6 +2366,7 @@ def fillrect(screen, color, coordfrom, coordto, interrupt=False, primprops=None,
         for y in range(y1, y2+1):
             hline(screen, color, y, x1, x2, primprops=primprops, erase=erase)
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
@@ -2469,6 +2493,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
         # Draw, scanning y
         for y in range(miny, maxy+1):
             if interrupt and config.has_event():
+                config.drawing_interrupted = True
                 return
             polyints = []
             for i in range(0, n):
@@ -2503,6 +2528,7 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
             for i in range(0, len(polyints), 2):
                 hline(screen, color, y, polyints[i], polyints[i+1], primprops=primprops, erase=erase)
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 config.try_recompose()
 
@@ -2525,6 +2551,7 @@ def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handle
             lastcoord = []
             for coord in newcoords:
                 if interrupt and config.has_event():
+                    config.drawing_interrupted = True
                     return
                 if len(lastcoord) != 0:
                     drawline(screen, color, lastcoord, coord, xormode, drawmode=drawmode, handlesymm=False, interrupt=interrupt, skiplast=(xormode or skiplast), erase=erase)

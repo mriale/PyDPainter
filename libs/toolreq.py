@@ -1278,9 +1278,9 @@ def symmetry_req(screen):
 
 def spacing_req(screen):
     req = str2req("Spacing", """
-[N Total]      ____
-[Every Nth dot]____
-[Airbrush]     ____
+[N Total]      ____~
+[Every Nth dot]____~
+[Airbrush]     ____~
 [Continuous]
 [Cancel][OK]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
@@ -1289,18 +1289,18 @@ def spacing_req(screen):
 
     n_totalg = req.gadget_id("0_0")
     n_total_valueg = req.gadget_id("15_0")
-    n_total_valueg.numonly = True
+    n_total_valueg.spinnerg.minvalue = 2
     n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
 
     every_ng = req.gadget_id("0_1")
     every_n_valueg = req.gadget_id("15_1")
-    every_n_valueg.numonly = True
+    every_n_valueg.spinnerg.minvalue = 1
     every_n_valueg.value = str(config.primprops.drawmode.every_n_value)
 
     airbrushg = req.gadget_id("0_2")
     airbrush_valueg = req.gadget_id("15_2")
-    airbrush_valueg.numonly = True
-    airbrush_valueg.value = str(config.primprops.drawmode.airbrush_value)
+    airbrush_valueg.spinnerg.numprecision = 2
+    airbrush_valueg.value = airbrush_valueg.format_float(config.primprops.drawmode.airbrush_value,2)
 
     continuousg = req.gadget_id("0_3")
 
@@ -1325,15 +1325,9 @@ def spacing_req(screen):
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.primprops.drawmode.spacing = spacing
-                    config.primprops.drawmode.n_total_value = int(n_total_valueg.value)
-                    config.primprops.drawmode.every_n_value = int(every_n_valueg.value)
-                    config.primprops.drawmode.airbrush_value = int(airbrush_valueg.value)
-                    if config.primprops.drawmode.n_total_value < 2:
-                        config.primprops.drawmode.n_total_value = 2
-                    if config.primprops.drawmode.every_n_value < 1:
-                        config.primprops.drawmode.every_n_value = 1
-                    if config.primprops.drawmode.airbrush_value < 1:
-                        config.primprops.drawmode.airbrush_value = 1
+                    config.primprops.drawmode.n_total_value = int(float(n_total_valueg.value))
+                    config.primprops.drawmode.every_n_value = int(float(every_n_valueg.value))
+                    config.primprops.drawmode.airbrush_value = float(airbrush_valueg.value)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 

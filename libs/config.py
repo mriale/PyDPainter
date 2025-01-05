@@ -756,6 +756,7 @@ class pydpainter:
         self.fillmode = self.primprops.fillmode
         self.color = 1
         self.bgcolor = 0
+        self.drawing_interrupted = False
 
         self.proj = [Project(), Project()]
         self.proj_index = 0

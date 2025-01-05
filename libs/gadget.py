@@ -162,6 +162,7 @@ class Gadget(object):
         self.offsetx = 0
         self.offsety = 0
         self.numonly = False
+        self.numprecision = 0
         self.fontx = fontx
         self.fonty = fonty
         self.fonth = int(fonty / 1.5)
@@ -330,7 +331,7 @@ class Gadget(object):
                     if "spinnerg" in dir(self):
                         if self.spinnerg is None:
                             self.error = False
-                        elif int(self.value) >= self.spinnerg.minvalue and int(self.value) <= self.spinnerg.maxvalue:
+                        elif float(self.value) >= self.spinnerg.minvalue and float(self.value) <= self.spinnerg.maxvalue:
                             self.error = False
                         else:
                             self.error = True
@@ -356,16 +357,38 @@ class Gadget(object):
 
         screen.set_clip(None)
 
+    def format_float(self, num, precision):
+        if num.is_integer() or precision == 0:
+            return f"{int(num)}"
+        else:
+            if num >= 1.0:
+                fstr = f"{num:.{precision}f}"
+            else:
+                fstr = f"{num:.{precision}f}"[1:]
+            fstr = fstr.rstrip("0")
+            return fstr
+
     def spinner_update(self, delta):
         g = self
         #get number from text gadget
-        if g.spinvalueg.value.isnumeric() and int(g.spinvalueg.value) >= g.minvalue and int(g.spinvalueg.value) <= g.maxvalue:
-            spinvalue = int(g.spinvalueg.value)
+        if re.fullmatch(r'^-?\d*\.?\d+$', g.spinvalueg.value) and \
+           float(g.spinvalueg.value) >= g.minvalue and \
+           float(g.spinvalueg.value) <= g.maxvalue:
+            spinvalue = float(g.spinvalueg.value)
         else:
             spinvalue = 0
-        spinvalue += delta
+        if g.numprecision > 0 and spinvalue <= 1.0 and g.minvalue == 0:
+            if delta < 0:
+                spinvalue /= 2.0
+            else:
+                spinvalue *= 2.0
+                if spinvalue > 1.0 and spinvalue < 2.0:
+                    spinvalue = 1.0
+        else:
+            spinvalue += delta
+
         if spinvalue >= g.minvalue and spinvalue <= g.maxvalue:
-            g.spinvalueg.value = str(spinvalue)
+            g.spinvalueg.value = self.format_float(spinvalue, g.numprecision)
             g.spinvalueg.need_redraw = True
             g.need_redraw = True
 
@@ -803,7 +826,7 @@ class ListGadget(Gadget):
 
 
 class Requestor(object):
-    def __init__(self, label, rect, mouse_pixel_mapper=pygame.mouse.get_pos, fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), font=None):
+    def __init__(self, label, rect, mouse_pixel_mapper=pygame.mouse.get_pos, fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), font=None, window_shade=False):
         self.label = label
         self.rect = rect
         self.mouse_pixel_mapper = mouse_pixel_mapper
@@ -812,6 +835,8 @@ class Requestor(object):
         self.hcolor = hcolor
         self.draggable = False
         self.dragpos = None
+        self.window_shade = window_shade
+        self.window_shade_state = 1
         self.gadgets = []
         if font == None:
             self.font = PixelFont("jewel32.png", 8)
@@ -824,6 +849,8 @@ class Requestor(object):
         x,y,w,h = self.rect
         if self.label != "":
             self.gadgets.append(Gadget(Gadget.TYPE_LABEL, "", (x-2, y-2, w+1, self.fonty), id="__reqtitle"))
+        if self.window_shade:
+            self.gadgets.append(Gadget(Gadget.TYPE_BOOL, "-", (x-self.fontx-self.fontx, y-2, self.fontx, self.fonty), id="__window_shade"))
 
     def add(self, gadget):
         self.gadgets.append(gadget)
