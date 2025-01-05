@@ -358,7 +358,7 @@ class Gadget(object):
         screen.set_clip(None)
 
     def format_float(self, num, precision):
-        if precision == 0:
+        if num % 1.0 == 0.0 or precision == 0:
             return f"{int(num)}"
         else:
             if num >= 1.0:
