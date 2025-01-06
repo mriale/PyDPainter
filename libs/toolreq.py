@@ -1300,6 +1300,7 @@ def spacing_req(screen):
     airbrushg = req.gadget_id("0_2")
     airbrush_valueg = req.gadget_id("15_2")
     airbrush_valueg.spinnerg.numprecision = 2
+    airbrush_valueg.spinnerg.minvalue = 0.01
     airbrush_valueg.value = airbrush_valueg.format_float(config.primprops.drawmode.airbrush_value,2)
 
     continuousg = req.gadget_id("0_3")

@@ -332,11 +332,17 @@ class Gadget(object):
                         if self.spinnerg is None:
                             self.error = False
                         elif float(self.value) >= self.spinnerg.minvalue and float(self.value) <= self.spinnerg.maxvalue:
-                            self.error = False
+                            if self.spinnerg.numprecision == 0 and float(self.value) % 1.0 != 0.0:
+                                self.error = True
+                            else:
+                                self.error = False
                         else:
                             self.error = True
                     else:
-                        self.error = False
+                        if float(self.value) % 1.0 != 0.0:
+                            self.error = True
+                        else:
+                            self.error = False
  
             if self.error:
                 font.blitstring(screen, (x+xo+w-self.fontx-px,y+yo+py+py), "!", hcolor, (255,0,0))
@@ -377,7 +383,7 @@ class Gadget(object):
             spinvalue = float(g.spinvalueg.value)
         else:
             spinvalue = 0
-        if g.numprecision > 0 and spinvalue <= 1.0 and g.minvalue == 0:
+        if g.numprecision > 0 and spinvalue <= 1.0 and g.minvalue >= 0:
             if delta < 0:
                 spinvalue /= 2.0
             else:
@@ -386,6 +392,9 @@ class Gadget(object):
                     spinvalue = 1.0
         else:
             spinvalue += delta
+
+        if spinvalue < g.minvalue:
+            spinvalue = g.minvalue
 
         if spinvalue >= g.minvalue and spinvalue <= g.maxvalue:
             g.spinvalueg.value = self.format_float(spinvalue, g.numprecision)
