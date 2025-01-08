@@ -1589,6 +1589,7 @@ class DoBrushRect(ToolDragAction):
         config.brush.pen_down = True
         coords = self.constrain_square(coords)
         if button == 1 or button == 3:
+            config.clear_pixel_draw_canvas()
             pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
             bgcolor = config.bgcolor
             if config.auto_transp_on:

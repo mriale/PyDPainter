@@ -1167,63 +1167,6 @@ def anim5_col_diff(diffmap, col_data):
 
     return (opcount, ops)
 
-def anim5_col_diff_xor(diffmap, col0_data, col_data):
-    MSKIP, MUNIQ = range(2)
-    MAXRUN = 127
-    opcount = 0
-    ops = b''
-    row = 0
-    start_row = row
-    mode = MSKIP
-    same_val = 0
-    #print(f"{diffmap=}")
-    while row < len(col_data):
-        #print(f"{row=}")
-        if mode == MSKIP:
-            if diffmap[row]:
-                if row != start_row:
-                    #write out skip op
-                    #print("SKIP " + str(row-start_row))
-                    ops += pack(">b", row-start_row)
-                    opcount += 1
-                #what op is next?
-                start_row = row
-                mode = MUNIQ
-            else:
-                if row-start_row >= MAXRUN:
-                    #write out skip op and continue
-                    #print("SKIP " + str(MAXRUN))
-                    ops += pack(">b", MAXRUN)
-                    opcount += 1
-                    start_row += MAXRUN
-        if mode == MUNIQ:
-            if diffmap[row]:
-                if row-start_row >= MAXRUN:
-                    #write out uniq op and continue
-                    #print("UNIQ " + str(MAXRUN))
-                    ops += pack(">B", 128 + MAXRUN)
-                    ops += bytes(col0_data[start_row:row] ^ col_data[start_row:row])
-                    opcount += 1
-                    start_row += MAXRUN
-            else:
-                #write out uniq op
-                #print("UNIQ " + str(row-start_row))
-                ops += pack(">B", 128 + (row-start_row))
-                ops += bytes(col0_data[start_row:row] ^ col_data[start_row:row])
-                opcount += 1
-                start_row = row
-                mode = MSKIP
-        row += 1
-    # write out final op
-    if mode == MUNIQ:
-        #write out uniq op
-        #print("UNIQ " + str(row-start_row))
-        ops += pack(">B", 128 + (row-start_row))
-        ops += bytes(col_data[start_row:row])
-        opcount += 1
-
-    return (opcount, ops)
-
 def anim5_plane_diff(plane0, plane1, anim_xor):
     pl_diff = b''
     # set up column counts
@@ -1245,7 +1188,7 @@ def anim5_plane_diff(plane0, plane1, anim_xor):
         else:
             #diff one column
             if anim_xor:
-                opcount, ops = anim5_col_diff_xor(diffmap[:,col], plane0[:,col], plane1[:,col])
+                opcount, ops = anim5_col_diff(diffmap[:,col], plane0[:,col] ^ plane1[:,col])
             else:
                 opcount, ops = anim5_col_diff(diffmap[:,col], plane1[:,col])
         pl_diff += pack(">B", opcount)
