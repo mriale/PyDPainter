@@ -1092,12 +1092,14 @@ class DoPolyLine(DoPoly):
                     config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
+                    self.draw_p1()
                 elif button == 3:
                     config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                     config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
+                    self.draw_p1()
         self.hidden = False
 
     def drag(self, coords, buttons):
