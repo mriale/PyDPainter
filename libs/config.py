@@ -1490,6 +1490,7 @@ class pydpainter:
 
     def clear_pixel_draw_canvas(self):
         self.pixel_canvas.blit(self.undo_image[self.undo_index],(0,0))
+        self.drawing_interrupted = False
 
     def stop_cycling(self):
         if self.cycling:
