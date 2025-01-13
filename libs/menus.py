@@ -427,9 +427,9 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
-                newimage = load_pic(filename, brush_config)
+                newimage = load_pic(filename, brush_config, is_brush=True)
                 newimage.set_palette(config.pal)
-                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
+                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
                 surf_array = pygame.surfarray.pixels2d(reduced)
                 surf_array &= config.NUM_COLORS-1
@@ -449,10 +449,11 @@ class DoBrushSaveAs(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
-            brush_config.pixel_canvas = config.brush.image
+            brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             try:
-                if not save_pic(filename, brush_config, overwrite=False):
+                if not save_pic(filename, brush_config, overwrite=False, bgcolor=config.brush.bgcolor):
                     answer = question_req(config.pixel_req_canvas,
                              "File Exists",
                              "Overwrite this file?",
