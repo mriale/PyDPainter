@@ -357,6 +357,8 @@ def load_anim(filename, config, ifftype, status_func=None):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
+                if masking == 2:
+                    config.bgcolor = transparentColor
             elif chunk.getname() == b'CMAP':
                 #color map header
                 num_CMAP += 1
@@ -757,6 +759,15 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 config.anim.curr_frame = 1
                 config.anim.num_frames = len(gif.frames)
                 config.anim.global_palette = (num_CMAP <= 1)
+            if "comment" in gif.frames[0]:
+                if gif.frames[0]['comment'].startswith("PyDPainter options:"):
+                    options = gif.frames[0]['comment'].split(":")
+                    for option in options[1:]:
+                        optkey,optval = option.split("=")
+                        if optkey == "bgcolor":
+                            config.bgcolor = int(optval)
+            elif is_brush and gif.frames[0]["transparency"]:
+                config.bgcolor = gif.frames[0]["transparent_color_index"]
             config.display_mode = -1
             config.cranges = 6 * [colorrange(0,1,0,0)]
         elif pictype != "NONE":
@@ -1015,6 +1026,11 @@ def save_gif(filename, config, bgcolor=-1):
     frame = {"local_palette": None,
              "image_data": surf_array,
     }
+
+    if bgcolor >= 0:
+        frame["transparency"] = True
+        frame["transparent_color_index"] = bgcolor
+
     gif = GIFWriter(filename, header, config.truepal)
     gif.write_frame(frame)
     surf_array = None
@@ -1382,7 +1398,7 @@ def save_iff_anim(filename, config, status_func=None, animbrush=False, transpare
     end_FORM(newfile)
     newfile.close()
 
-def save_gif_anim(filename, config, status_func=None):
+def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
     header = {
         "width": config.pixel_width,
         "height": config.pixel_height,
@@ -1467,6 +1483,10 @@ def save_gif_anim(filename, config, status_func=None):
                  "image_width": image_width,
                  "image_height": image_height,
         }
+
+        if i == 0 and transparent_color >= 0:
+            frame["comment"] = f"PyDPainter options:bgcolor={transparent_color}"
+
         gif.write_frame(frame)
         surf_array = None
         if status_func:
@@ -1487,7 +1507,7 @@ def save_anim(filename, config, status_func=None, overwrite=True, transparent_co
     elif (len(filename) > 5 and filename[-5:].lower() == ".anmb"):
         save_iff_anim(filename, config, status_func=status_func, animbrush=True, transparent_color=transparent_color)
     elif len(filename) > 4 and filename[-4:].lower() == ".gif":
-        save_gif_anim(filename, config, status_func=status_func)
+        save_gif_anim(filename, config, status_func=status_func, transparent_color=transparent_color)
     else:
         raise Exception("Unrecognized anim format")
 

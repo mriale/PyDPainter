@@ -460,7 +460,7 @@ class DoBrushSaveAs(MenuAction):
                              ["Yes","No"],
                              [K_RETURN, K_ESCAPE])
                     if answer == 0:
-                            save_pic(filename, brush_config, overwrite=True)
+                            save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
                     else:
                         return
             except:
@@ -1198,7 +1198,7 @@ class DoAnimBrushOpen(MenuAction):
                     surf_array &= config.NUM_COLORS-1
                     surf_array = None
                     if i==0:
-                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=config.bgcolor, pal=brush_config.pal, animbrush=True)
+                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=brush_config.bgcolor, pal=brush_config.pal, animbrush=True)
                     else:
                         config.brush.add_frame(reduced)
                     i += 1
@@ -1219,6 +1219,7 @@ class DoAnimBrushSave(MenuAction):
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)
