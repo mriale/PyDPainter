@@ -1,18 +1,21 @@
-#for Windows
-Run:
+PyDPainter requires:
+- Python 3 with these Python modules:
+  - Tk (usually installed with Python)
+  - PyGame
+  - NumPy
+
+To install on Windows run this script:
   install_pygame.bat
-OR
+Or type this from the command prompt:
   python3 -m pip install -U pygame --user
   python3 -m pip install -U numpy --user
 
-#for Ubuntu 19.10 and below
-sudo apt install python3-pip
-sudo pip3 install pygame
-sudo pip3 install numpy
+For Ubuntu, type this from the terminal:
+  sudo apt install python3-pygame
 
-#for Ubuntu 20.04 and above
-sudo apt install python3-pygame
+For Mac and other Linux distros, type this from the terminal:
+  sudo pip3 install pygame
+  sudo pip3 install numpy
 
-#for Mac and other Linux distros:
-sudo pip3 install pygame
-sudo pip3 install numpy
+There is also a Flatpak for easy installation on Linux:
+  https://flathub.org/apps/org.pydpainter.PyDPainter
