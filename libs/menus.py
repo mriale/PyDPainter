@@ -75,7 +75,6 @@ class DoDummy(MenuAction):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
@@ -108,7 +107,6 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -173,7 +171,6 @@ class DoRevert(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = config.filename
         if filename != "":
             if config.modified_count >= 1:
@@ -214,7 +211,7 @@ class DoPictureFlipX(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
+        config.stencil.free()
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
 
 class DoPictureFlipY(MenuActionMulti):
@@ -223,7 +220,7 @@ class DoPictureFlipY(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
+        config.stencil.free()
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
 
 class DoPalette(MenuAction):
@@ -284,7 +281,8 @@ class DoPictureBG2FG(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         #replace FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -299,7 +297,8 @@ class DoPictureBGxFG(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -316,7 +315,8 @@ class DoPictureRemap(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
@@ -398,7 +398,6 @@ class DoMergeBack(MenuActionMulti):
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         page_size_req(config.pixel_req_canvas)
 
 class DoShowPage(MenuAction):
@@ -409,7 +408,6 @@ class DoShowPage(MenuAction):
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         screen_format_req(config.pixel_req_canvas)
 
 class DoAbout(MenuAction):
