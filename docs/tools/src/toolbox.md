@@ -15,25 +15,40 @@ providing a variant - usually the same shape, but filled in.
 These options are backed up by very short keyboard shortcuts (a single letter),
 the capital letter of which brings up the variant or the options.
 
-- [Default brushes](#default-brushes)
-- [Dot tool](#dot-tool)
-- [Draw/Area tool](#drawarea-tool)
-- [Line tool](#line-tool)
-- [Curve tool](#curve-tool)
-- [Fill tool](#fill-tool)
-- [Airbrush tool](#airbrush-tool)
-- [Rectangle tool](#rectangle-tool)
-- [Circle tool](#circle-tool)
-- [Ellipse tool](#ellipse-tool)
-- [Polygon tool](#polygon-tool)
-- [Brush tool](#brush-tool)
-- [Text tool](#text-tool)
-- [Grid](#grid)
-- [Symmetry](#symmetry)
-- [Magnifier](#magnifier)
-- [Zoom magnifier in/out](#zoom-magnifier-inout)
-- [Undo/redo](#undoredo)
-- [Clear canvas](#clear-canvas)
+- [Toolbox](#toolbox)
+  - [Default brushes](#default-brushes)
+  - [Dot tool](#dot-tool)
+  - [Draw/Area tool](#drawarea-tool)
+    - [Filled Area (freehand filled shapes)](#filled-area-freehand-filled-shapes)
+  - [Line tool](#line-tool)
+  - [Curve tool](#curve-tool)
+  - [Fill tool](#fill-tool)
+  - [Airbrush tool](#airbrush-tool)
+  - [Rectangle tool](#rectangle-tool)
+  - [Circle tool](#circle-tool)
+  - [Ellipse tool](#ellipse-tool)
+  - [Polygon tool](#polygon-tool)
+  - [Brush tool](#brush-tool)
+    - [Transparency of brushes](#transparency-of-brushes)
+  - [Text tool](#text-tool)
+  - [Grid](#grid)
+    - [Size X,Y](#size-xy)
+    - [Offset X,Y](#offset-xy)
+    - [Visual](#visual)
+    - [From Brush](#from-brush)
+    - [Examples](#examples)
+  - [Symmetry](#symmetry)
+    - [Point Symmetry](#point-symmetry)
+      - [Order](#order)
+      - [X Y values](#x-y-values)
+      - [Center](#center)
+      - [Place](#place)
+    - [Tile Symmetry](#tile-symmetry)
+  - [Magnifier](#magnifier)
+  - [Zoom magnifier in/out](#zoom-magnifier-inout)
+  - [Undo/redo](#undoredo)
+  - [Clear canvas](#clear-canvas)
+          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 ## Default brushes
 
@@ -380,10 +395,11 @@ Key: `t`
 
 The Grid constrains the action of **all painting tools**:
 ![](grid.png)
+*V.2.1.0 added number spinners to increase/decreae value with a mouse click. Keep the mouse button down to change values faster.*
 
 ### Size X,Y
 
-Pixel length and height of the grid. This means that, for example, a line or a drawing can only be drawn at the same pixel spacing.
+Pixel length and height of the grid. This means that, for example, a line or a drawing can only be drawn at the same pixel spacing. If you're creating tiles for a video game, this size will be the size of your tiles (e.g. 16x16 px). This allows you to create a reference grid. Desactivate the grid tool as you draw (same icon).
 
 ### Offset X,Y
 
@@ -394,6 +410,11 @@ Offset from origin (0,0) at top right of work screen.
 Show a visual grid on the screen which you can resize and position with the mouse to set the grid parameters.
 
 ![](grid-visual.png)
+
+### From Brush
+This takes the current brush size and copies it to the grid size. It's very convenient to test the placement of your tiles (grabbed with [Brush](#brush-tool)) side by side effortlessly. Maybe use `Handle Corner` multiple times to handle the brush by the most convenient corner.
+
+### Examples
 
 The grid can help you quickly draw geometric shapes, spritesheets templates, regular shapes and dot grids. Experiment with different tools, in conjunction with the `SHIFT` and `CTRL` keys!
 
