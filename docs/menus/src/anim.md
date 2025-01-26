@@ -349,3 +349,5 @@ Key `7`
 **Next** moves the anim brush to the next frame.
 
 Key `8`
+
+###### Documentation written by Stephane Anquetil
