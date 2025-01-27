@@ -28,6 +28,6 @@ Table of Contents
 - [Plasma Texture Tutorial](tutorials/src/plasma/Plasma.md)
 - [Planet Tutorial](tutorials/src/planet/Planet.md)
 - [Galaxy Tutorial](tutorials/src/galaxy/Galaxy.md)
-- [Animpainting Tutorial "Bouncing balls"](tutorials/src/animpainting/animpainting.md)
-- [Animbrush Tutorial "Sparkling Stars"](tutorials/src/animbrush/animbrush.md)
+- [Anim Painting Tutorial "Bouncing balls"](tutorials/src/animpainting/animpainting.md)
+- [Anim Brush Tutorial "Sparkling Stars"](tutorials/src/animbrush/animbrush.md)
 

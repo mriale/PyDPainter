@@ -22,8 +22,9 @@ enhance it with some features to help it better coexist in the modern world.
 Latest Release (with Windows EXE): https://github.com/mriale/PyDPainter/releases/latest
 
 YouTube videos:
-* [Quick PyDPainter Demo](https://youtu.be/GGfsSvbrb4o)
+* [Quick PyDPainter Demo](https://youtu.be/XwagsCdMj74)
 * [PyDPainter 2.0 Trailer](https://youtu.be/l385Z7_CRB0)
+* [PyDPainter tutorial playlist](https://www.youtube.com/playlist?list=PLhgHYZ9fWyHjocfn8Syo3kfIXT5irI-GC)
 
 Ko-fi donation page:
 https://ko-fi.com/mriale
@@ -36,5 +37,5 @@ See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current pro
 
 Documentation: [Table of Contents](docs/TOC.md)
 
-**PyDPainter Copyright (C) 2019-2024 Mark Riale**<br>
+**PyDPainter Copyright (C) 2019-2025 Mark Riale**<br>
 This program is licensed under the GPLv3 or later. See [LICENSE](LICENSE) file for more details.
