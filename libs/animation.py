@@ -190,7 +190,8 @@ class Animation:
 
     def save_curr_frame(self):
         f = self.curr_frame-1
-        self.frame[f].image = config.undo_image[config.undo_index].copy()
+        config.clear_pixel_draw_canvas()
+        self.frame[f].image = config.pixel_canvas.copy()
         self.frame[f].pal = list(config.pal)
         self.frame[f].truepal = list(config.truepal)
         self.frame[f].loadpal = list(config.loadpal)
