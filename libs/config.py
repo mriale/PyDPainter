@@ -455,6 +455,7 @@ class pydpainter:
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
         self.stencil.clear()
+        self.stencil.free()
 
         self.perspective = Perspective()
 
@@ -1490,6 +1491,7 @@ class pydpainter:
 
     def clear_pixel_draw_canvas(self):
         self.pixel_canvas.blit(self.undo_image[self.undo_index],(0,0))
+        self.drawing_interrupted = False
 
     def stop_cycling(self):
         if self.cycling:
@@ -1629,7 +1631,6 @@ class pydpainter:
                 filename = e.file
                 if filename != (()) and filename != "":
                     global progress_req
-                    config.stencil.enable = False
                     progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
                     try:
                         config.pixel_canvas = load_pic(filename, config, status_func=drop_load_progress, cmd_load=True)

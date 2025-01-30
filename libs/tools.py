@@ -143,7 +143,6 @@ class ToolDragAction(ToolAction):
         config.cycle_handled = True
         config.clear_pixel_draw_canvas()
         if buttons[0] or buttons[2]:
-            config.drawing_interrupted = False
             self.drawrubber(coords, buttons)
 
     def mouseup(self, coords, button):
@@ -429,16 +428,18 @@ class DoCurve(ToolSingleAction):
         self.button = None
 
     def move(self, coords):
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
         config.clear_pixel_draw_canvas()
         if self.line_end == None:
             config.brush.draw(config.pixel_canvas, config.color, coords)
         else:
-            config.drawing_interrupted = False
             if self.button == 1:
-                drawcurve(config.pixel_canvas, config.color, self.line_start, self.line_end, coords, interrupt=True)
+                drawcurve(config.pixel_canvas, config.color, self.line_start, self.line_end, coords, interrupt=interrupt)
             elif self.button == 3:
-                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, interrupt=True, erase=True)
-        self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
+                drawcurve(config.pixel_canvas, config.bgcolor, self.line_start, self.line_end, coords, interrupt=interrupt, erase=True)
+            self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def mousedown(self, coords, button):
         if not button in [1,3]:
@@ -477,6 +478,8 @@ class DoCurve(ToolSingleAction):
                 if pygame.key.get_mods() & pygame.KMOD_CTRL:
                         button = 1 if buttons[0] else 3 if buttons[2] else 0
                         if button != 0:
+                            if config.drawing_interrupted:
+                                return False
                             config.save_undo()
                             self.last_trace_time = t
                             return True
@@ -488,14 +491,17 @@ class DoCurve(ToolSingleAction):
         if not (buttons[0] or buttons[2]):
             return
 
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
+
         config.cycle_handled = True
         if self.line_start:
             config.clear_pixel_draw_canvas()
-            config.drawing_interrupted = False
             if buttons[0]:
-                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
+                drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=interrupt)
             elif buttons[2]:
-                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=True, erase=True)
+                drawline_symm(config.pixel_canvas, config.bgcolor, self.line_start, coords, interrupt=interrupt, erase=True)
             self.leave_trace(coords, buttons)
 
     def mouseup(self, coords, button):
@@ -504,7 +510,6 @@ class DoCurve(ToolSingleAction):
 
         config.cycle_handled = True
         if self.line_start:
-            config.drawing_interrupted = False
             config.clear_pixel_draw_canvas()
             if button == 1:
                 drawline_symm(config.pixel_canvas, config.color, self.line_start, coords, interrupt=True)
@@ -811,6 +816,9 @@ class DoEllipse(ToolDragAction):
 
     def move(self, coords):
         mouseX, mouseY = coords
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
         config.clear_pixel_draw_canvas()
         if self.state == self.ST_CENTER:
             drawxorcross(config.pixel_canvas, mouseX, mouseY)
@@ -821,9 +829,10 @@ class DoEllipse(ToolDragAction):
             radiusX = int(abs(mouseX-startX))
             radiusY = int(abs(mouseY-startY))
             if self.button == 1:
-                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt)
             elif self.button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, erase=True)
+            self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def leave_trace(self, coords, buttons):
         t = pygame.time.get_ticks()
@@ -832,6 +841,8 @@ class DoEllipse(ToolDragAction):
                 if pygame.key.get_mods() & pygame.KMOD_CTRL:
                         button = 1 if buttons[0] else 3 if buttons[2] else 0
                         if button != 0:
+                            if config.drawing_interrupted:
+                                return False
                             config.save_undo()
                             self.last_trace_time = t
                             return True
@@ -844,6 +855,9 @@ class DoEllipse(ToolDragAction):
             return
 
         config.cycle_handled = True
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
 
         if self.state == self.ST_CENTER:
             config.brush.pen_down = True
@@ -859,22 +873,24 @@ class DoEllipse(ToolDragAction):
             self.button = button
             self.state = self.ST_XY
         elif self.state == self.ST_XY:
-            config.clear_pixel_draw_canvas()
             self.p2 = coords
             mouseX, mouseY = coords
             startX, startY = self.p1
             radiusX = int(abs(mouseX-startX))
             radiusY = int(abs(mouseY-startY))
-            if button == 1:
-                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
-            elif button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
+            if config.drawing_interrupted:
+                config.clear_pixel_draw_canvas()
+                if button == 1:
+                    drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt)
+                elif button == 3:
+                    drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, erase=True)
             self.state = self.ST_ROTATE
         elif self.state == self.ST_ROTATE:
-            if button == 1:
-                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected)
-            elif button == 3:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, erase=True)
+            if config.drawing_interrupted:
+                if button == 1:
+                    drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected)
+                elif button == 3:
+                    drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, erase=True)
             config.save_undo()
             self.p1 = None
             self.p2 = None
@@ -889,6 +905,11 @@ class DoEllipse(ToolDragAction):
 
         if self.leave_trace(coords, buttons):
             return
+
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
+
         config.cycle_handled = True
         if self.state == self.ST_XY:
             config.clear_pixel_draw_canvas()
@@ -897,9 +918,9 @@ class DoEllipse(ToolDragAction):
             radiusX = int(abs(mouseX-startX))
             radiusY = int(abs(mouseY-startY))
             if buttons[0]:
-                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True)
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt)
             elif buttons[2]:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, erase=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, erase=True)
         elif self.state == self.ST_ROTATE:
             config.clear_pixel_draw_canvas()
             ax = config.aspectX
@@ -912,18 +933,32 @@ class DoEllipse(ToolDragAction):
             angle0 = math.atan2((p2y-p1y)/ay, (p2x-p1x)/ax) * (180.0/math.pi)
             angle = math.atan2((mouseY-p1y)/ay, (mouseX-p1x)/ax) * (180.0/math.pi) - angle0
             config.menubar.title_right = ("%d"+chr(0xB0))%((angle))
-            config.drawing_interrupted = False
             if buttons[0]:
-                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle)
+                drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, angle=angle)
             elif buttons[2]:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=True, angle=angle, erase=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, angle=angle, erase=True)
 
     def mouseup(self, coords, button):
         if not button in [1,3]:
             return
 
+        interrupt = True
+        if pygame.key.get_mods() & pygame.KMOD_CTRL:
+            interrupt = False
+
         config.cycle_handled = True
-        if self.state == self.ST_ROTATE:
+        if self.state == self.ST_XY:
+            if config.drawing_interrupted:
+                config.clear_pixel_draw_canvas()
+                mouseX, mouseY = coords
+                startX, startY = self.p1
+                radiusX = int(abs(mouseX-startX))
+                radiusY = int(abs(mouseY-startY))
+                if button == 1:
+                    drawellipse(config.pixel_canvas, config.color, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt)
+                elif button == 3:
+                    drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusX, radiusY, filled=config.subtool_selected, interrupt=interrupt, erase=True)
+        elif self.state == self.ST_ROTATE:
             ax = config.aspectX
             ay = config.aspectY
             p2x, p2y = self.p2
@@ -1073,7 +1108,6 @@ class DoPolyLine(DoPoly):
     def move(self, coords):
         self.p1w,self.p1h = (config.brush.rect[2]//2+2, config.brush.rect[3]//2+2)
         config.clear_pixel_draw_canvas()
-        config.drawing_interrupted = False
         if len(self.polylist) > 0:
             drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, handlesymm=True, interrupt=True)
             self.draw_p1()
@@ -1084,7 +1118,6 @@ class DoPolyLine(DoPoly):
     def mousedown(self, coords, button):
         self.click_ticks[button] = [self.click_ticks[button][1], pygame.time.get_ticks()]
         if button in [1,3]:
-            config.drawing_interrupted = False
             if len(self.polylist) == 0:
                 if button == 1:
                     config.brush.pen_down = True
@@ -1092,17 +1125,18 @@ class DoPolyLine(DoPoly):
                     config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
+                    self.draw_p1()
                 elif button == 3:
                     config.brush.pen_down = True
                     config.brush.draw(config.pixel_canvas, config.bgcolor, coords, erase=True)
                     config.brush.prev_frame(doAction=False)
                     self.polylist.append(coords)
                     self.last_coords = coords
+                    self.draw_p1()
         self.hidden = False
 
     def drag(self, coords, buttons):
         if buttons[0]:
-            config.drawing_interrupted = False
             config.clear_pixel_draw_canvas()
             if len(self.polylist) > 0:
                 drawline_symm(config.pixel_canvas, config.color, self.polylist[-1], coords, handlesymm=True, interrupt=True)
@@ -1589,6 +1623,7 @@ class DoBrushRect(ToolDragAction):
         config.brush.pen_down = True
         coords = self.constrain_square(coords)
         if button == 1 or button == 3:
+            config.clear_pixel_draw_canvas()
             pygame.time.set_timer(config.TOOLEVENT, TIMEROFF)
             bgcolor = config.bgcolor
             if config.auto_transp_on:

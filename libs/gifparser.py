@@ -84,6 +84,10 @@ class GIFParser:
                 "delay_time": struct.unpack("<H", chunk[1:3])[0],
                 "transparent_color_index": int(chunk[3]),
             }
+        elif ext_id == COMMENT_EXTENSION:
+            chunk_len = int(self.file.read(1)[0])
+            chunk = self.file.read(chunk_len)
+            blocks["comment"] = chunk.decode('utf-8')
         #ignore other extensions
         else:
             chunk_len = int(self.file.read(1)[0])

@@ -1,13 +1,20 @@
 # Spacing options
 
-- [N Total](#n-total)
-- [Every Nth dot](#every-nth-dot)
-- [Airbrush](#airbrush)
-- [Continuous](#continuous)
+- [Spacing options](#spacing-options)
+    - [New in version 2.1.0](#new-in-version-210)
+  - [N Total](#n-total)
+  - [Every Nth dot](#every-nth-dot)
+  - [Airbrush](#airbrush)
+    - [New decimal values in version 2.1.0](#new-decimal-values-in-version-210)
+  - [Continuous](#continuous)
 
 | ![Spacing](spacing.png) |
 | :-----: |
 |*Spacing options. These options make more sense with a custom brush, otherwise it just looks like dotted lines. **Continuous** is default drawing mode.* |
+
+### New in version 2.1.0 
+
+Number spinners: Click the up or down arrows to increment or decrement values. Holding the button causes them to repeat.
 
 ## N Total
 
@@ -26,14 +33,25 @@ Defines the regular pixel spacing between each time the current brush will be co
 *Note: The default spacing of 8 pixels can be covered by brushes larger than 8 pixels.*
 
 ## Airbrush
-
-Airbrush paints using the airbrush tool along the path defined by any tool affected by the Spacing requester. The number '16' sets the number of airbrush sprays to be applied at each pixel along the path. We recommend lowering it to 6 to 8 to better understand the effect. This creates a fuzzy line or shape. You can use this feature with the painting modes from the [Mode](../../menus/src/mode.md) menu to create interesting
+Airbrush paints using the airbrush tool along the path defined by any tool affected by the **Spacing** requester. The number '16' by default sets the number of airbrush sprays to be applied at each pixel along the path. We recommend lowering it to 1 to 8 to better understand the effect. This creates a fuzzy line or shape. You can use this feature with the painting modes from the [Mode](../../menus/src/mode.md) menu to create interesting
 effects. For example, using Smooth, Smear, Tint or Cycle with the Airbrush spacing can create interesting textured effects.
 
 ![](airbrush-spacing.png)
 
-## Continuous
+### New decimal values in version 2.1.0 
 
+Airbrush values between 0 and 1 are now accepted. The first aim is to be able to reduce the spray flow sufficiently to use the new Anim Brush function. But it can be useful with normal brushes too.
+
+![Airbrush Spacing](spacing-airbrush.png)
+
+Use the number spinners to decrement value to 1. Starting at 1, each click down will halve the value (0.5,0.25,0.12...). Each up-click doubles the value up to 1. Beyond 1, the 1-by-1 incrementing behavior returns.
+
+![Decimal Airbrush](decimal-airbrush.png)
+
+In the picture above on the right side, you see two examples of the "sparking-star" animbrush with Airbrush values of 0.25 and 0.12 using the circle, rectangle and line tools.
+On the left side, there are two examples with the default single pixel brush, at 1 then 0.5. You'll notice that this greatly reduces throughput.
+
+## Continuous
 Default operation. Brush paints continuously without spacing.
 
 ---

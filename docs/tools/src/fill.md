@@ -1,21 +1,28 @@
 # Fill Type
 
-- [Solid](#solid)
-- [Brush](#brush)
-- [Wrap](#wrap)
-- [Pattern](#pattern)
-- [Antialias](#antialias--smooth)
-- [Smooth](#antialias--smooth)
-- [Gradient](#gradient)
-- [Dithering](#dither)
+- [Fill Type](#fill-type)
+  - [Solid](#solid)
+  - [Brush](#brush)
+  - [Wrap](#wrap)
+  - [Pattern](#pattern)
+  - [AntiAlias \& Smooth](#antialias--smooth)
+  - [Gradient](#gradient)
+  - [Dither](#dither)
+    - [Ordered dithering](#ordered-dithering)
+    - [No dithering](#no-dithering)
+    - [1 to 20 dithering](#1-to-20-dithering)
+          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 Right-clicking the **Fill tool** <img src="t-fill.png" width="32"> or the lower-right half of most drawing tools displays this **Fill Type** requester: 
 
 <img src="fill-type.png" width="500">
 
 The options in the requester are explained in the following paragraphs.
-When you return to the painting screen after choosing a fill
-type, the current gradient (or pattern, if **Pattern** is selected) and its orientation are shown in the Color Fill box in the menu bar:
+When you return to the painting screen after choosing a fill type :
+- the current **Gradient** and its orientation,
+- current brush fill, if **Pattern** or **Wrap** are selected
+- **AntiAlias** or **Smooth** (**AA** or **SM**) type if choosen
+are shown in the Color Fill box in the menu bar:
 
 | ![](fill-status.png) |
 | :----: |
@@ -32,7 +39,7 @@ type, the current gradient (or pattern, if **Pattern** is selected) and its orie
 
 | <img src="fill-brush-ex.png" width="500"> |
 | :----: |
-| *The current defined brush is on the left. Examples of fills in a variety of shapes, from rectangles on the left, to polygons on the right, to circles and inclined ellipses.* |
+| *Three examples of defined brush are on the very left : checkerboard, vertical lines, A letter. Examples of fills in a variety of shapes, from rectangles on the left, to polygons on the right, to circles and inclined ellipses.* |
 
 ## Wrap
 **Wrap** fills with the current custom brush and adjusts it to the horizontal and vertical shape of the filled area. This gives the illusion of wrapping the brush around a 3D solid. The effect is most pronounced if you use it to fill a shape that is very different from the shape of the custom brush.
@@ -44,7 +51,7 @@ type, the current gradient (or pattern, if **Pattern** is selected) and its orie
 
 | <img src="brush-warp-pattern-fill.jpg" width="600"> |
 | :----: |
-| ***Brush*** *respects the original image of the brush.* ***Warp*** *gives interesting effects on rounded shapes. There are no predefined rules: it's up to you to experiment!* |
+| ***Brush*** *respects the original image of the brush.* ***Warp*** *gives interesting effects on rounded shapes. There are no predefined rules: it's up to you to experiment! You can try yourself loading this example file in: `iff_pics/fill-wrap-comp-ex.iff`* |
 
 ## AntiAlias & Smooth
 
@@ -63,15 +70,15 @@ If you're smoothing red on a black background, but no dark red/brown color is av
 
 ## Gradient
 
-**Gradient** Fills offer a host of creative uses. Their rendering will depend as much on the colors range chosen in the palette, the shapes drawn, as on the options selected here.
+**Gradient** Fills offer a host of creative uses. Their rendering will depend as much on the colors range chosen in the [palette](../../menus/src/palette.md), the shapes drawn, as on the options selected here.
 
 | ![](fill-ex.png) |
 | :----: |
 | *Examples with a suite of 6 colors (3 bright yellow, cyan, blue and 3 white), a 7-color orange gradient and the default grayscale (12 colors).* |
 
-**Remember to select one of the [Range](../../menus/src/palette.md#range) colors as foreground color to select your gradient and get this type of preview.**
+**Remember to select one of the [Range](../../menus/src/palette.md#range) colors as foreground color to select your gradient and get this type of preview. IE: any grey or the yellow in default screen.**
 
-Select one of the gradient options by clicking it with the left mouse button. Preview will update automatically.
+Select one of the gradient options by clicking it with the left mouse button. Preview will update automatically. 
 
 <img src="gradient-fill-v.png" width="500">
 
@@ -94,6 +101,9 @@ Select one of the gradient options by clicking it with the left mouse button. Pr
 **Vertical and Horizontal** fill paints the gradient from the inside out adjusting the gradient so that it follows the contours of the shape being filled.
 
 *The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen and any type of shape.*
+**New in PydPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the gradient orientation.
+<img src="fill-orientation.png" width="500">
+This orientation is first defined by the color order in the **Palette** (`P`). It can now be reversed with a click directly from here.
 
 ## Dither
 
@@ -125,6 +135,6 @@ Dither at 8. More of a mixture, it can be used as a base for coloring rocks or p
 
 <img src="Dithering-20.png" width="500">
 
-Max dithering (20). The gradient is barely recognizable. Can be used as a base before using other drawing modes such as Smooth or Blend.
+Max dithering (20). The gradient is barely recognizable. Can be used as a noise base before using other drawing modes such as Smooth or Blend.
 
 ###### Documentation written by Stephane Anquetil

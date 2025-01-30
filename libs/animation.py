@@ -190,7 +190,8 @@ class Animation:
 
     def save_curr_frame(self):
         f = self.curr_frame-1
-        self.frame[f].image = config.undo_image[config.undo_index].copy()
+        config.clear_pixel_draw_canvas()
+        self.frame[f].image = config.pixel_canvas.copy()
         self.frame[f].pal = list(config.pal)
         self.frame[f].truepal = list(config.truepal)
         self.frame[f].loadpal = list(config.loadpal)
@@ -403,7 +404,6 @@ class Animation:
     def open_file(self):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -426,9 +426,10 @@ class Animation:
     def import_frames(self):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
+            config.stencil.clear()
+            config.stencil.free()
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, import_frames=True)

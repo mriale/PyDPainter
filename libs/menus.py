@@ -75,7 +75,6 @@ class DoDummy(MenuAction):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
@@ -108,7 +107,6 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -173,7 +171,6 @@ class DoRevert(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        config.stencil.enable = False
         filename = config.filename
         if filename != "":
             if config.modified_count >= 1:
@@ -214,7 +211,7 @@ class DoPictureFlipX(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
+        config.stencil.free()
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
 
 class DoPictureFlipY(MenuActionMulti):
@@ -223,7 +220,7 @@ class DoPictureFlipY(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
-        config.stencil.enable = False
+        config.stencil.free()
         config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
 
 class DoPalette(MenuAction):
@@ -284,7 +281,8 @@ class DoPictureBG2FG(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         #replace FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -299,7 +297,8 @@ class DoPictureBGxFG(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         #swap FG color with BG color
         surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
         bgcolor = config.bgcolor
@@ -316,7 +315,8 @@ class DoPictureRemap(MenuActionMulti):
 
     def selectedMulti(self, attrs):
         config.stop_cycling()
-        config.stencil.enable = False
+        config.stencil.clear()
+        config.stencil.free()
         config.pixel_canvas.set_palette(config.loadpal)
         config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
         config.set_all_palettes(config.pal)
@@ -398,7 +398,6 @@ class DoMergeBack(MenuActionMulti):
 
 class DoPageSize(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         page_size_req(config.pixel_req_canvas)
 
 class DoShowPage(MenuAction):
@@ -409,7 +408,6 @@ class DoShowPage(MenuAction):
 
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
-        config.stencil.enable = False
         screen_format_req(config.pixel_req_canvas)
 
 class DoAbout(MenuAction):
@@ -427,9 +425,9 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
-                newimage = load_pic(filename, brush_config)
+                newimage = load_pic(filename, brush_config, is_brush=True)
                 newimage.set_palette(config.pal)
-                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=config.bgcolor, pal=brush_config.pal)
+                config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
                 surf_array = pygame.surfarray.pixels2d(reduced)
                 surf_array &= config.NUM_COLORS-1
@@ -449,17 +447,18 @@ class DoBrushSaveAs(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
-            brush_config.pixel_canvas = config.brush.image
+            brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             try:
-                if not save_pic(filename, brush_config, overwrite=False):
+                if not save_pic(filename, brush_config, overwrite=False, bgcolor=config.brush.bgcolor):
                     answer = question_req(config.pixel_req_canvas,
                              "File Exists",
                              "Overwrite this file?",
                              ["Yes","No"],
                              [K_RETURN, K_ESCAPE])
                     if answer == 0:
-                            save_pic(filename, brush_config, overwrite=True)
+                            save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
                     else:
                         return
             except:
@@ -1197,7 +1196,7 @@ class DoAnimBrushOpen(MenuAction):
                     surf_array &= config.NUM_COLORS-1
                     surf_array = None
                     if i==0:
-                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=config.bgcolor, pal=brush_config.pal, animbrush=True)
+                        config.brush = Brush(type=Brush.CUSTOM, screen=reduced, bgcolor=brush_config.bgcolor, pal=brush_config.pal, animbrush=True)
                     else:
                         config.brush.add_frame(reduced)
                     i += 1
@@ -1218,6 +1217,7 @@ class DoAnimBrushSave(MenuAction):
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
+            brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)

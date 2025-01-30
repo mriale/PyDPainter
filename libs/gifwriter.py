@@ -67,6 +67,14 @@ class GIFWriter:
             self.file.write(b"\x00") # End of blocks
             self.first_frame = False
 
+        if "comment" in self.frame:
+            comment = self.frame["comment"]
+            self.file.write(struct.pack("B", EXTENSION_INTRODUCER))
+            self.file.write(struct.pack("B", COMMENT_EXTENSION))
+            self.file.write(struct.pack("B", len(comment))) # length of comment
+            self.file.write(comment.encode()) # write the comment
+            self.file.write(b"\x00") # End of block
+
         self.file.write(struct.pack("B", EXTENSION_INTRODUCER))
         self.file.write(struct.pack("B", GRAPHIC_CONTROL))
         self.file.write(b"\x04") # 4 bytes to follow

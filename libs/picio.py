@@ -161,7 +161,7 @@ class Chunk(object):
             self.iff_file.seek(1, 1) #make sure word-aligned
 
 #read in an IFF file
-def load_iff(filename, config, ifftype, pic = None):
+def load_iff(filename, config, ifftype, pic=None, is_brush=False):
     cranges = []
     display_mode = -1
     try:
@@ -201,6 +201,8 @@ def load_iff(filename, config, ifftype, pic = None):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
+                if is_brush and masking == 2:
+                    config.bgcolor = transparentColor
                 #load 24-bit IFF using PyGame loader
                 if nPlanes > 8:
                     iff_file.close()
@@ -259,7 +261,7 @@ def load_iff(filename, config, ifftype, pic = None):
         newpic = pygame.Surface((w, h), 0, pic)
         newpic.set_palette(config.pal)
         newpic.blit(pic, (0,0))
-        return newpic
+        pic = newpic
 
     return pic
 
@@ -355,6 +357,8 @@ def load_anim(filename, config, ifftype, status_func=None):
                 bmhd_bytes = chunk.read()
                 (w,h,x,y,nPlanes,masking,compression,pad1,transparentColor,xAspect,yAspect,pageWidth,pageHeight) = unpack(">HHhhBBBBHBBhh", bmhd_bytes)
                 config.pal = config.pal[0:1<<nPlanes]
+                if masking == 2:
+                    config.bgcolor = transparentColor
             elif chunk.getname() == b'CMAP':
                 #color map header
                 num_CMAP += 1
@@ -607,7 +611,7 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     return pic
 
 
-def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False):
+def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False, is_brush=False):
     filename = filename_in
     pic = config.pixel_canvas
 
@@ -657,7 +661,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
 
     while pictype != "NONE":
         if pictype in ["ILBM", "PBM"] and not import_frames:
-            pic = load_iff(filename, config, pictype)
+            pic = load_iff(filename, config, pictype, is_brush=is_brush)
             config.pal = pal_power_2(config.pal)
             config.pal = config.quantize_palette(config.pal, config.color_depth)
             pic.set_palette(config.pal)
@@ -755,6 +759,15 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 config.anim.curr_frame = 1
                 config.anim.num_frames = len(gif.frames)
                 config.anim.global_palette = (num_CMAP <= 1)
+            if "comment" in gif.frames[0]:
+                if gif.frames[0]['comment'].startswith("PyDPainter options:"):
+                    options = gif.frames[0]['comment'].split(":")
+                    for option in options[1:]:
+                        optkey,optval = option.split("=")
+                        if optkey == "bgcolor":
+                            config.bgcolor = int(optval)
+            elif is_brush and gif.frames[0]["transparency"]:
+                config.bgcolor = gif.frames[0]["transparent_color_index"]
             config.display_mode = -1
             config.cranges = 6 * [colorrange(0,1,0,0)]
         elif pictype != "NONE":
@@ -930,7 +943,7 @@ def c2p(surf_array):
     return np.packbits(bits).reshape(h,8,w2b(w))[:,::-1,:]
 
 #save IFF file
-def save_iff(filename, config, ifftype):
+def save_iff(filename, config, ifftype, bgcolor=-1):
     nPlanes = int(math.log(len(config.pal),2))
     newfile = open(filename, 'wb')
     newfile.write(b'FORM\0\0\0\0')
@@ -944,15 +957,15 @@ def save_iff(filename, config, ifftype):
     else:
         newfile.write(b'ILBM')
         pal = config.truepal
-    
+ 
     write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
         config.pixel_width, config.pixel_height, \
         0,0, \
         nPlanes, \
-        0, \
+        2 if bgcolor>=0 else 0, \
         1, \
         0, \
-        0, \
+        max(0, bgcolor), \
         10, 11, \
         config.pixel_width, config.pixel_height
         ))
@@ -1002,7 +1015,7 @@ def save_iff(filename, config, ifftype):
     close_iff(newfile)
 
 
-def save_gif(filename, config):
+def save_gif(filename, config, bgcolor=-1):
     header = {
         "width": config.pixel_width,
         "height": config.pixel_height,
@@ -1013,12 +1026,17 @@ def save_gif(filename, config):
     frame = {"local_palette": None,
              "image_data": surf_array,
     }
+
+    if bgcolor >= 0:
+        frame["transparency"] = True
+        frame["transparent_color_index"] = bgcolor
+
     gif = GIFWriter(filename, header, config.truepal)
     gif.write_frame(frame)
     surf_array = None
 
 #save picture
-def save_pic(filename, config, overwrite=True):
+def save_pic(filename, config, overwrite=True, bgcolor=-1):
     if '.' not in filename:
         filename += ".iff"
 
@@ -1028,11 +1046,11 @@ def save_pic(filename, config, overwrite=True):
 
     if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
        (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
-        save_iff(filename, config, "ILBM")
+        save_iff(filename, config, "ILBM", bgcolor=bgcolor)
     elif len(filename) > 4 and filename[-4:].lower() == ".lbm":
-        save_iff(filename, config, "PBM")
+        save_iff(filename, config, "PBM", bgcolor=bgcolor)
     elif len(filename) > 4 and filename[-4:].lower() == ".gif":
-        save_gif(filename, config)
+        save_gif(filename, config, bgcolor=bgcolor)
     else:
         pygame.image.save(config.pixel_canvas, filename)
 
@@ -1167,63 +1185,6 @@ def anim5_col_diff(diffmap, col_data):
 
     return (opcount, ops)
 
-def anim5_col_diff_xor(diffmap, col0_data, col_data):
-    MSKIP, MUNIQ = range(2)
-    MAXRUN = 127
-    opcount = 0
-    ops = b''
-    row = 0
-    start_row = row
-    mode = MSKIP
-    same_val = 0
-    #print(f"{diffmap=}")
-    while row < len(col_data):
-        #print(f"{row=}")
-        if mode == MSKIP:
-            if diffmap[row]:
-                if row != start_row:
-                    #write out skip op
-                    #print("SKIP " + str(row-start_row))
-                    ops += pack(">b", row-start_row)
-                    opcount += 1
-                #what op is next?
-                start_row = row
-                mode = MUNIQ
-            else:
-                if row-start_row >= MAXRUN:
-                    #write out skip op and continue
-                    #print("SKIP " + str(MAXRUN))
-                    ops += pack(">b", MAXRUN)
-                    opcount += 1
-                    start_row += MAXRUN
-        if mode == MUNIQ:
-            if diffmap[row]:
-                if row-start_row >= MAXRUN:
-                    #write out uniq op and continue
-                    #print("UNIQ " + str(MAXRUN))
-                    ops += pack(">B", 128 + MAXRUN)
-                    ops += bytes(col0_data[start_row:row] ^ col_data[start_row:row])
-                    opcount += 1
-                    start_row += MAXRUN
-            else:
-                #write out uniq op
-                #print("UNIQ " + str(row-start_row))
-                ops += pack(">B", 128 + (row-start_row))
-                ops += bytes(col0_data[start_row:row] ^ col_data[start_row:row])
-                opcount += 1
-                start_row = row
-                mode = MSKIP
-        row += 1
-    # write out final op
-    if mode == MUNIQ:
-        #write out uniq op
-        #print("UNIQ " + str(row-start_row))
-        ops += pack(">B", 128 + (row-start_row))
-        ops += bytes(col_data[start_row:row])
-        opcount += 1
-
-    return (opcount, ops)
-
 def anim5_plane_diff(plane0, plane1, anim_xor):
     pl_diff = b''
     # set up column counts
@@ -1245,7 +1206,7 @@ def anim5_plane_diff(plane0, plane1, anim_xor):
         else:
             #diff one column
             if anim_xor:
-                opcount, ops = anim5_col_diff_xor(diffmap[:,col], plane0[:,col], plane1[:,col])
+                opcount, ops = anim5_col_diff(diffmap[:,col], plane0[:,col] ^ plane1[:,col])
             else:
                 opcount, ops = anim5_col_diff(diffmap[:,col], plane1[:,col])
         pl_diff += pack(">B", opcount)
@@ -1437,7 +1398,7 @@ def save_iff_anim(filename, config, status_func=None, animbrush=False, transpare
     end_FORM(newfile)
     newfile.close()
 
-def save_gif_anim(filename, config, status_func=None):
+def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
     header = {
         "width": config.pixel_width,
         "height": config.pixel_height,
@@ -1522,6 +1483,10 @@ def save_gif_anim(filename, config, status_func=None):
                  "image_width": image_width,
                  "image_height": image_height,
         }
+
+        if i == 0 and transparent_color >= 0:
+            frame["comment"] = f"PyDPainter options:bgcolor={transparent_color}"
+
         gif.write_frame(frame)
         surf_array = None
         if status_func:
@@ -1542,7 +1507,7 @@ def save_anim(filename, config, status_func=None, overwrite=True, transparent_co
     elif (len(filename) > 5 and filename[-5:].lower() == ".anmb"):
         save_iff_anim(filename, config, status_func=status_func, animbrush=True, transparent_color=transparent_color)
     elif len(filename) > 4 and filename[-4:].lower() == ".gif":
-        save_gif_anim(filename, config, status_func=status_func)
+        save_gif_anim(filename, config, status_func=status_func, transparent_color=transparent_color)
     else:
         raise Exception("Unrecognized anim format")
 

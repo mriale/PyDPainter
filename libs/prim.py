@@ -1127,6 +1127,10 @@ class CoordList:
                 config.try_recompose()
         config.brush.reset_stroke()
 
+        # For animpainting, make sure final shape is drawn
+        if animpaint and interrupt:
+            config.drawing_interrupted = True
+
 
 class DrawMode:
     """This class describes the drawing modes for line drawing"""
