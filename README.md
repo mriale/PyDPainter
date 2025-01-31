@@ -38,5 +38,7 @@ See [RoadMap](https://github.com/mriale/PyDPainter/wiki/RoadMap) for current pro
 
 Documentation: [Table of Contents](docs/TOC.md)
 
+External Resources: [External Links](docs/links.md)
+
 **PyDPainter Copyright (C) 2019-2025 Mark Riale**<br>
 This program is licensed under the GPLv3 or later. See [LICENSE](LICENSE) file for more details.
