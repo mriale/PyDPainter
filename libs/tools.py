@@ -1438,6 +1438,20 @@ class DoText(ToolSingleAction):
         if self.pos == None:
             return False
 
+        if mod & KMOD_CTRL and key == K_v:
+            clipboard_text = None
+            #clipboard_text = pygame.scrap.get('text/plain;charset=utf-8')
+            for t in pygame.scrap.get_types():
+                if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
+                    #clipboard_text = pygame.scrap.get(t).decode("utf-8")
+                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le")  # under windows its utf16-le! and NUL terminated..
+            if clipboard_text:
+                if clipboard_text.endswith('\x00'):
+                    clipboard_text = clipboard_text[:-1]
+
+            if clipboard_text:
+                self.text = self.text + clipboard_text  # This works ... but no preview on screen...
+
         if mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
 
