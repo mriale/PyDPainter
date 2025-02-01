@@ -8,6 +8,11 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+try:
+    import xerox  # NOTE use https://github.com/clach04/xerox/  -- python -m pip install git+https://github.com/clach04/xerox.git
+except ImportError:
+    xerox = None
+
 from libs.toolbar import *
 from libs.toolreq import *
 from libs.gadget import *
@@ -31,7 +36,9 @@ def clipboard_init():
         pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
 
 def clipboard_get_text():
-    if is_pygamece:
+    if xerox:
+        clipboard_text = xerox.paste()
+    elif is_pygamece:
         # pygame-ce
         clipboard_text = pygame.scrap.get_text()
     else:
