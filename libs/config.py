@@ -196,8 +196,7 @@ class pydpainter:
         #initialize system
         self.dinfo = pygame.display.Info()
         self.initialize()
-        pygame.scrap.init()
-        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+        clipboard_init()  # tools.clipboard_init()
 
         #load picture if recovered
         if do_recover != "":

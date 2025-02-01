@@ -2,6 +2,8 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import contextlib
+import sys
+
 with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
@@ -18,6 +20,36 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 DBL_CLICK = 500
+
+is_win = sys.platform.startswith('win')
+is_pygamece = getattr(pygame, "IS_CE", False)
+
+def clipboard_init():
+    if not is_pygamece:
+        # pygame
+        pygame.scrap.init()
+        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+
+def clipboard_get_text():
+    if is_pygamece:
+        # pygame-ce
+        print('pygame-ce')
+        clipboard_text = pygame.scrap.get_text()
+    else:
+        print('pygame')
+        # pygame
+        for t in pygame.scrap.get_types():
+            if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
+                if is_win:
+                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le")  # under windows its utf16-le! and null terminated..
+                else:
+                    clipboard_text = pygame.scrap.get(t).decode("utf-8")
+        if clipboard_text:
+            if clipboard_text.endswith('\x00'):
+                clipboard_text = clipboard_text[:-1]
+
+    return clipboard_text
+
 
 def cycle():
     if config.drawmode.value == DrawMode.CYCLE:
@@ -1439,7 +1471,7 @@ class DoText(ToolSingleAction):
             return False
 
         if mod & KMOD_CTRL and key == K_v:
-            clipboard_text = pygame.scrap.get_text()
+            clipboard_text = clipboard_get_text()
 
             if clipboard_text:
                 self.text = self.text + clipboard_text  # This works ... but get trailing squarebox
