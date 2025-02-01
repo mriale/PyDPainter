@@ -1475,11 +1475,11 @@ class DoText(ToolSingleAction):
         if self.pos == None:
             return False
 
-        if mod & KMOD_CTRL and key == K_v:
+        if (mod & KMOD_CTRL and key == K_v) or (mod & KMOD_SHIFT and key == K_INSERT):
             clipboard_text = clipboard_get_text()
 
             if clipboard_text:
-                self.text = self.text + clipboard_text  # This works ... but get trailing squarebox
+                self.text = self.text + clipboard_text  # This works ... but get trailing squarebox for CTRL-V, but not SHIFT-Insert
         elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
 
