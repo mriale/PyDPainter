@@ -1442,9 +1442,8 @@ class DoText(ToolSingleAction):
             clipboard_text = pygame.scrap.get_text()
 
             if clipboard_text:
-                self.text = self.text + clipboard_text  # This works ... but no preview on screen...
-
-        if mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
+                self.text = self.text + clipboard_text  # This works ... but get trailing squarebox
+        elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
 
         ax = 1
