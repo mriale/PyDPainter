@@ -4,7 +4,10 @@ PyDPainter requires:
   - PyGame
   - NumPy
 
-To install on Windows:
+To install on Windows run this script:
+  install_pygame.bat
+
+Or type this from the command prompt:
 
   python -m pip install -r requirements.txt
 
