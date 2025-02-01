@@ -33,10 +33,8 @@ def clipboard_init():
 def clipboard_get_text():
     if is_pygamece:
         # pygame-ce
-        print('pygame-ce')
         clipboard_text = pygame.scrap.get_text()
     else:
-        print('pygame')
         # pygame
         for t in pygame.scrap.get_types():
             if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
