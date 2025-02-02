@@ -1480,34 +1480,33 @@ class DoText(ToolSingleAction):
 
             if clipboard_text:
                 self.text = self.text + clipboard_text
-                unicode = ''  # avoid duplicate concat
         elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
-
-        ax = 1
-        ay = 1
-        if config.aspectX != config.aspectY:
-            if config.aspectX == 2:
-                ay = 2
-            else:
-                ax = 2
-
-        if key == K_BACKSPACE:
-            self.text = self.text[:-1]
-        elif key == K_RETURN:
-            pos = self.pos
-            self.stamptext()
-            self.pos = [pos[0], pos[1]+(self.fontsize[1]//ay)]
-        elif key == K_ESCAPE:
-            self.stamptext()
-            config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
-            return True
-        elif key == K_TAB:
-            pass
-        elif key == K_DELETE:
-            pass
         else:
-            self.text += unicode
+            ax = 1
+            ay = 1
+            if config.aspectX != config.aspectY:
+                if config.aspectX == 2:
+                    ay = 2
+                else:
+                    ax = 2
+
+            if key == K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif key == K_RETURN:
+                pos = self.pos
+                self.stamptext()
+                self.pos = [pos[0], pos[1]+(self.fontsize[1]//ay)]
+            elif key == K_ESCAPE:
+                self.stamptext()
+                config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
+                return True
+            elif key == K_TAB:
+                pass
+            elif key == K_DELETE:
+                pass
+            else:
+                self.text += unicode
 
         config.clear_pixel_draw_canvas()
         self.drawtext(self.pos)
