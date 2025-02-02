@@ -2,9 +2,16 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import contextlib
+import sys
+
 with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
+
+try:
+    import xerox  # NOTE use https://github.com/clach04/xerox/  -- python -m pip install git+https://github.com/clach04/xerox.git
+except ImportError:
+    xerox = None
 
 from libs.toolbar import *
 from libs.toolreq import *
@@ -18,6 +25,36 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 DBL_CLICK = 500
+
+is_win = sys.platform.startswith('win')
+is_pygamece = getattr(pygame, "IS_CE", False)
+
+def clipboard_init():
+    if not is_pygamece:
+        # pygame
+        pygame.scrap.init()
+        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
+
+def clipboard_get_text():
+    if xerox:
+        clipboard_text = xerox.paste()
+    elif is_pygamece:
+        # pygame-ce
+        clipboard_text = pygame.scrap.get_text()
+    else:
+        # pygame
+        for t in pygame.scrap.get_types():
+            if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
+                if is_win:
+                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le")  # under windows its utf16-le! and null terminated..
+                else:
+                    clipboard_text = pygame.scrap.get(t).decode("utf-8")
+        if clipboard_text:
+            if clipboard_text.endswith('\x00'):
+                clipboard_text = clipboard_text[:-1]
+
+    return clipboard_text
+
 
 def cycle():
     if config.drawmode.value == DrawMode.CYCLE:
@@ -1438,33 +1475,38 @@ class DoText(ToolSingleAction):
         if self.pos == None:
             return False
 
-        if mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
+        if (mod & KMOD_CTRL and key == K_v) or (mod & KMOD_SHIFT and key == K_INSERT):
+            clipboard_text = clipboard_get_text()
+
+            if clipboard_text:
+                self.text = self.text + clipboard_text
+        elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
-
-        ax = 1
-        ay = 1
-        if config.aspectX != config.aspectY:
-            if config.aspectX == 2:
-                ay = 2
-            else:
-                ax = 2
-
-        if key == K_BACKSPACE:
-            self.text = self.text[:-1]
-        elif key == K_RETURN:
-            pos = self.pos
-            self.stamptext()
-            self.pos = [pos[0], pos[1]+(self.fontsize[1]//ay)]
-        elif key == K_ESCAPE:
-            self.stamptext()
-            config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
-            return True
-        elif key == K_TAB:
-            pass
-        elif key == K_DELETE:
-            pass
         else:
-            self.text += unicode
+            ax = 1
+            ay = 1
+            if config.aspectX != config.aspectY:
+                if config.aspectX == 2:
+                    ay = 2
+                else:
+                    ax = 2
+
+            if key == K_BACKSPACE:
+                self.text = self.text[:-1]
+            elif key == K_RETURN:
+                pos = self.pos
+                self.stamptext()
+                self.pos = [pos[0], pos[1]+(self.fontsize[1]//ay)]
+            elif key == K_ESCAPE:
+                self.stamptext()
+                config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
+                return True
+            elif key == K_TAB:
+                pass
+            elif key == K_DELETE:
+                pass
+            else:
+                self.text += unicode
 
         config.clear_pixel_draw_canvas()
         self.drawtext(self.pos)

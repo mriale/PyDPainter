@@ -196,6 +196,7 @@ class pydpainter:
         #initialize system
         self.dinfo = pygame.display.Info()
         self.initialize()
+        clipboard_init()  # tools.clipboard_init()
 
         #load picture if recovered
         if do_recover != "":
