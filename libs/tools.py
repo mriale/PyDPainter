@@ -1479,7 +1479,8 @@ class DoText(ToolSingleAction):
             clipboard_text = clipboard_get_text()
 
             if clipboard_text:
-                self.text = self.text + clipboard_text  # This works ... but get trailing squarebox for CTRL-V, but not SHIFT-Insert
+                self.text = self.text + clipboard_text
+                unicode = ''  # avoid duplicate concat
         elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
 
