@@ -1276,38 +1276,175 @@ def symmetry_req(screen):
 
     config.pixel_req_rect = None
 
+class EaseGadget(Gadget):
+    def __init__(self, type, label, rect, value=None, minvalue=None, maxvalue=None, id=None):
+        super(EaseGadget, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def ease_in_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        rx,ry,rw,rh = rect
+        p0 = [rx+1, ry+rh-1]
+        p1 = [rx+rw-1, ry+1]
+        cpx = rx+rw*(.5 + (.25 * value / 10))
+        cpy = ry+rh*(.5 + (.25 * value / 10))
+        return [p0, p1, [cpx, cpy]]
+
+    def ease_out_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        rx,ry,rw,rh = rect
+        p0 = [rx+1, ry+rh-1]
+        p1 = [rx+rw-1, ry+1]
+        cpx = rx+rw*(.5 - (.25 * value / 10))
+        cpy = ry+rh*(.5 - (.25 * value / 10))
+        return [p0, p1, [cpx, cpy]]
+
+    def ease_in_out_coords(self, rect, value=None):
+        rx,ry,rw,rh = rect
+        rect_in = [rx,ry+rh//2-1, rw//2+1, rh//2+2]
+        p_in = self.ease_in_coords(rect_in, value)
+        rect_out = [rx+rw//2,ry, rw//2, rh//2]
+        p_out = self.ease_out_coords(rect_out, value)
+        p_all = list(p_in)
+        p_all.extend(p_out)
+        return p_all
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+        if self.maxvalue == None:
+            current_range = 1
+        else:
+            current_range = self.maxvalue
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+            if self.label == "#":
+                pygame.draw.rect(screen, bgcolor, self.screenrect)
+                if self.ease_in:
+                    if self.ease_out:
+                        p0_in, p1_in, cp_in, p0_out, p1_out, cp_out = self.ease_in_out_coords(self.screenrect)
+                        drawcurve(screen, 0, p0_in, p1_in, cp_in, handlesymm=False)
+                        drawcurve(screen, 0, p0_out, p1_out, cp_out, handlesymm=False)
+                    else:
+                        p0, p1, cp = self.ease_in_coords(self.screenrect)
+                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+                else:
+                    if self.ease_out:
+                        p0, p1, cp = self.ease_out_coords(self.screenrect)
+                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+                    else:
+                        p0, p1, cp = self.ease_in_coords(self.screenrect, 0)
+                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+
+                if self.enabled == False:
+                    self.draw_ghost(screen, fgcolor, bgcolor)
+
+        else:
+            super(EaseGadget, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    if g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if abs(g.value) == 1:
+                            g.value = -g.value
+                    g.state = 0
+                    g.need_redraw = True
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+        else:
+            ge.extend(super(EaseGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 def spacing_req(screen):
     req = str2req("Spacing", """
-[N Total]      ____~
+[Continuous]
 [Every Nth dot]____~
 [Airbrush]     ____~
-[Continuous]
+[N Total]      ____~
+############## Ease
+############## [In ]
+############## [Out]
+############## ___~
+##############
+##############
+##############
 [Cancel][OK]
-""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=EaseGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
-    n_totalg = req.gadget_id("0_0")
-    n_total_valueg = req.gadget_id("15_0")
-    n_total_valueg.spinnerg.minvalue = 2
-    n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
+    continuousg = req.find_gadget("Continuous")
 
-    every_ng = req.gadget_id("0_1")
-    every_n_valueg = req.gadget_id("15_1")
+    every_ng = req.find_gadget("Every Nth dot")
+    every_n_valueg = req.find_gadget("Every Nth dot",1)
     every_n_valueg.spinnerg.minvalue = 1
     every_n_valueg.value = str(config.primprops.drawmode.every_n_value)
 
-    airbrushg = req.gadget_id("0_2")
-    airbrush_valueg = req.gadget_id("15_2")
+    airbrushg = req.find_gadget("Airbrush")
+    airbrush_valueg = req.find_gadget("Airbrush",1)
     airbrush_valueg.spinnerg.numprecision = 2
     airbrush_valueg.spinnerg.minvalue = 0.01
     airbrush_valueg.value = airbrush_valueg.format_float(config.primprops.drawmode.airbrush_value,2)
 
-    continuousg = req.gadget_id("0_3")
+    n_totalg = req.find_gadget("N Total")
+    n_total_valueg = req.find_gadget("N Total", 1)
+    n_total_valueg.spinnerg.minvalue = 2
+    n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
+
+    ease_graphg = req.find_gadget("N Total", 3)
+    ease_graphg.value = 10
+    ease_graphg.ease_in = True
+    ease_graphg.ease_out = False
+
+    ease_ing = req.find_gadget("Ease",1)
+    ease_outg = req.find_gadget("Ease",2)
+    ease_valg = req.find_gadget("Ease",3)
+    ease_valg.value = "10"
+    ease_valg.spinnerg.minvalue = 0
+    ease_valg.spinnerg.maxvalue = 10
+
+    def ease_enable(enable):
+        ease_graphg.enabled = enable
+        ease_graphg.need_redraw = True
+        ease_ing.enabled = enable
+        ease_ing.need_redraw = True
+        ease_outg.enabled = enable
+        ease_outg.need_redraw = True
+        ease_valg.enabled = enable
+        ease_valg.need_redraw = True
+        ease_valg.spinnerg.enabled = enable
+        ease_valg.spinnerg.need_redraw = True
 
     spacing = config.primprops.drawmode.spacing
     button_list = [continuousg, n_totalg, every_ng, airbrushg]
     button_list[spacing].state = 1
+
+    if spacing != 1:
+        ease_enable(False)
 
     req.draw(screen)
     config.recompose()
@@ -1332,12 +1469,32 @@ def spacing_req(screen):
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
+                elif ge.gadget.label == "In ":
+                    ease_graphg.ease_in = not ease_graphg.ease_in
+                    ease_graphg.need_redraw = True
+                elif ge.gadget.label == "Out":
+                    ease_graphg.ease_out = not ease_graphg.ease_out
+                    ease_graphg.need_redraw = True
                 elif ge.gadget in button_list:
                     button_list[spacing].state = 0
                     button_list[spacing].need_redraw = True
                     spacing = button_list.index(ge.gadget)
                     ge.gadget.state = 1
                     ge.gadget.need_redraw = True
+                    if spacing == 1:
+                        ease_enable(True)
+                    else:
+                        ease_enable(False)
+            if ge.gadget in [ease_valg, ease_valg.spinnerg]:
+                ease_graphg.value = int(ease_valg.value)
+                ease_graphg.need_redraw = True
+
+        if ease_graphg.ease_in:
+            ease_ing.state = 1
+            ease_ing.need_redraw = 1
+        if ease_graphg.ease_out:
+            ease_outg.state = 1
+            ease_outg.need_redraw = 1
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
