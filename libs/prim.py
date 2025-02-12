@@ -1080,25 +1080,57 @@ class CoordList:
 
         for i in range(0,self.numlists):
             numpoints += len(self.coordlist[i])
-        numpoints += 1
+
+        # put all coords into one list
+        coordsall = []
+        for i in range(0,self.numlists):
+            coordsall.extend(self.coordlist[i])
+
+        # pre-process coord list
+        if primprops.drawmode.spacing == DrawMode.EVERY_N:
+            coords = coordsall[::primprops.drawmode.every_n_value]
+        elif primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1:
+            coords = []
+            if primprops.ease_in:
+                if primprops.ease_out:
+                    numpoints2 = numpoints // 2
+                    ntotal2 = primprops.drawmode.n_total_value // 2
+                    coords_in = []
+                    coords_out = []
+                    for i in range(ntotal2):
+                        if primprops.drawmode.n_total_value % 2 == 1:
+                            coordi = int((numpoints2) * ((i/(ntotal2))**primprops.ease_value))
+                        else:
+                            coordi = int((numpoints2) * ((i/(ntotal2-.5))**primprops.ease_value))
+                        coords_in.append(coordsall[coordi])
+                        coords_out.insert(0, coordsall[-coordi-1])
+                    if primprops.drawmode.n_total_value % 2 == 1:
+                        coords = coords_in + [coordsall[numpoints2]] + coords_out
+                    else:
+                        coords = coords_in + coords_out
+                else:
+                    for i in range(primprops.drawmode.n_total_value):
+                        coords.append(coordsall[int((numpoints-1) * ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))])
+            else:
+                if primprops.ease_out:
+                    for i in range(primprops.drawmode.n_total_value-1,-1,-1):
+                        coords.append(coordsall[int((numpoints-1) * (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)))])
+                else:
+                    for i in range(primprops.drawmode.n_total_value):
+                        coords.append(coordsall[(numpoints-1) * i // (primprops.drawmode.n_total_value-1)])
+        else:
+            coords = coordsall
 
         if cyclemode:
-            pointspercolor = numpoints / numcolors
+            pointspercolor = len(coords) / numcolors
 
         currpoint = -1
         config.brush.set_startframe()
         config.brush.reset_stroke()
-        for i in range(0,self.numlists):
-            for c in self.coordlist[i]:
+        for c in coords:
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
                     color = arange[int(currpoint / pointspercolor)]
-                if primprops.continuous and primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1 and currpoint != 0 and int(currpoint / ((numpoints-1) / primprops.drawmode.n_total_value)) == int((currpoint-1) / ((numpoints-1) / primprops.drawmode.n_total_value)):
-                    continue
-                if not primprops.continuous and primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1 and currpoint != 0 and currpoint != numpoints-1 and int(currpoint / ((numpoints-1) / (primprops.drawmode.n_total_value-1))) == int((currpoint+1) / ((numpoints-1) / (primprops.drawmode.n_total_value-1))):
-                    continue
-                if primprops.drawmode.spacing == DrawMode.EVERY_N and currpoint % primprops.drawmode.every_n_value != 0:
-                    continue
 
                 if xormode:
                     if c[0] >= 0 and c[0] < screen.get_width() and \
@@ -1207,6 +1239,9 @@ class PrimProps:
         self.handlesymm = False
         self.interrupt = False
         self.continuous = False
+        self.ease_in = False
+        self.ease_out = False
+        self.ease_value = 2
 
 
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):

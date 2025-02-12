@@ -1285,32 +1285,84 @@ class EaseGadget(Gadget):
             value = self.value
 
         rx,ry,rw,rh = rect
-        p0 = [rx+1, ry+rh-1]
-        p1 = [rx+rw-1, ry+1]
-        cpx = rx+rw*(.5 + (.25 * value / 10))
-        cpy = ry+rh*(.5 + (.25 * value / 10))
-        return [p0, p1, [cpx, cpy]]
+        rx += 1
+        ry += 1
+        rw -= 2
+        rh -= 2
+        
+        coords = []
+        if value > 0.0:
+            t = value
+            x = 0.0
+            while x <= 1.0:
+                y = x**t
+                coords.append([int(round(rx+(x*rw))), int(round(ry+((1-y)*rh)))])
+                x += 1.0/rw
+        else:
+            x = 0.0
+            while x <= 1.0:
+                y = x
+                coords.append([int(round(rx+(x*rw))), int(round(ry+((1-y)*rh)))])
+                x += 1.0/rw
+
+        return coords
 
     def ease_out_coords(self, rect, value=None):
         if value is None:
             value = self.value
 
         rx,ry,rw,rh = rect
-        p0 = [rx+1, ry+rh-1]
-        p1 = [rx+rw-1, ry+1]
-        cpx = rx+rw*(.5 - (.25 * value / 10))
-        cpy = ry+rh*(.5 - (.25 * value / 10))
-        return [p0, p1, [cpx, cpy]]
+        rx += 1
+        ry += 1
+        rw -= 2
+        rh -= 2
+        
+        coords = []
+        if value > 0.0:
+            t = value
+            x = 1.0
+            while x >= 0.0:
+                y = x**t
+                coords.append([int(round(rx+((1-x)*rw))), int(round(ry+(y*rh)))])
+                x -= 1.0/rw
+        else:
+            x = 0.0
+            while x <= 1.0:
+                y = x
+                coords.append([int(round(rx+((1-x)*rw))), int(round(ry+(y*rh)))])
+                x += 1.0/rw
+
+        return coords
 
     def ease_in_out_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        if self.value == 1:
+            return self.ease_in_coords(self.screenrect, 1)
+
         rx,ry,rw,rh = rect
-        rect_in = [rx,ry+rh//2-1, rw//2+1, rh//2+2]
+        rect_in = [rx,ry+rh//2-1, rw//2+2, rh//2+2]
         p_in = self.ease_in_coords(rect_in, value)
         rect_out = [rx+rw//2,ry, rw//2, rh//2]
         p_out = self.ease_out_coords(rect_out, value)
         p_all = list(p_in)
         p_all.extend(p_out)
         return p_all
+
+    def draw_points(self, screen, coords, colori):
+        surf_array = pygame.surfarray.pixels2d(screen)
+        for i in range(len(coords)):
+            if i > 0:
+                y0 = coords[i-1][1]
+            else:
+                y0 = coords[0][1]
+            x,y = coords[i]
+            if y0 > y:
+                surf_array[x,y:y0] = colori
+            else:
+                surf_array[x,y] = colori
+        surf_array = None
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -1333,19 +1385,18 @@ class EaseGadget(Gadget):
                 pygame.draw.rect(screen, bgcolor, self.screenrect)
                 if self.ease_in:
                     if self.ease_out:
-                        p0_in, p1_in, cp_in, p0_out, p1_out, cp_out = self.ease_in_out_coords(self.screenrect)
-                        drawcurve(screen, 0, p0_in, p1_in, cp_in, handlesymm=False)
-                        drawcurve(screen, 0, p0_out, p1_out, cp_out, handlesymm=False)
+                        coords = self.ease_in_out_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
                     else:
-                        p0, p1, cp = self.ease_in_coords(self.screenrect)
-                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+                        coords = self.ease_in_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
                 else:
                     if self.ease_out:
-                        p0, p1, cp = self.ease_out_coords(self.screenrect)
-                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+                        coords = self.ease_out_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
                     else:
-                        p0, p1, cp = self.ease_in_coords(self.screenrect, 0)
-                        drawcurve(screen, 0, p0, p1, cp, handlesymm=False)
+                        coords = self.ease_in_coords(self.screenrect, 1)
+                        self.draw_points(screen, coords, 0)
 
                 if self.enabled == False:
                     self.draw_ghost(screen, fgcolor, bgcolor)
@@ -1416,15 +1467,20 @@ def spacing_req(screen):
     n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
 
     ease_graphg = req.find_gadget("N Total", 3)
-    ease_graphg.value = 10
-    ease_graphg.ease_in = True
-    ease_graphg.ease_out = False
+    ease_graphg.value = config.primprops.ease_value
+    ease_graphg.ease_in = config.primprops.ease_in
+    ease_graphg.ease_out = config.primprops.ease_out
 
     ease_ing = req.find_gadget("Ease",1)
+    ease_ing.label = "In"
+    if ease_graphg.ease_in:
+        ease_ing.state = 1
     ease_outg = req.find_gadget("Ease",2)
+    if ease_graphg.ease_out:
+        ease_outg.state = 1
     ease_valg = req.find_gadget("Ease",3)
-    ease_valg.value = "10"
-    ease_valg.spinnerg.minvalue = 0
+    ease_valg.value = str(config.primprops.ease_value)
+    ease_valg.spinnerg.minvalue = 1
     ease_valg.spinnerg.maxvalue = 10
 
     def ease_enable(enable):
@@ -1466,10 +1522,13 @@ def spacing_req(screen):
                     config.primprops.drawmode.n_total_value = int(float(n_total_valueg.value))
                     config.primprops.drawmode.every_n_value = int(float(every_n_valueg.value))
                     config.primprops.drawmode.airbrush_value = float(airbrush_valueg.value)
+                    config.primprops.ease_in = ease_graphg.ease_in
+                    config.primprops.ease_out = ease_graphg.ease_out
+                    config.primprops.ease_value = int(ease_valg.value)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
-                elif ge.gadget.label == "In ":
+                elif ge.gadget.label == "In":
                     ease_graphg.ease_in = not ease_graphg.ease_in
                     ease_graphg.need_redraw = True
                 elif ge.gadget.label == "Out":
@@ -1486,8 +1545,11 @@ def spacing_req(screen):
                     else:
                         ease_enable(False)
             if ge.gadget in [ease_valg, ease_valg.spinnerg]:
-                ease_graphg.value = int(ease_valg.value)
-                ease_graphg.need_redraw = True
+                if re.fullmatch(r'^\d+$', ease_valg.value) and \
+                   int(ease_valg.value) >= 1 and \
+                   int(ease_valg.value) <= 10:
+                    ease_graphg.value = int(ease_valg.value)
+                    ease_graphg.need_redraw = True
 
         if ease_graphg.ease_in:
             ease_ing.state = 1
