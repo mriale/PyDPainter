@@ -1242,6 +1242,10 @@ class PrimProps:
         self.ease_in = False
         self.ease_out = False
         self.ease_value = 2
+        self.size_from = 100
+        self.size_to = 100
+        self.rotate_from = 0
+        self.rotate_to = 0
 
 
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
