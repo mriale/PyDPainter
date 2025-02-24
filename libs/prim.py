@@ -1127,13 +1127,17 @@ class CoordList:
         if cyclemode:
             pointspercolor = len(coords) / numcolors
 
+        if len(coords) == 0:
+            return
+
         currpoint = -1
         config.brush.set_startframe()
         config.brush.reset_stroke()
         size_delta = (primprops.size_to - primprops.size_from) / len(coords)
         curr_size = primprops.size_from
         for c in coords:
-                config.brush.size = config.brush.size_orig * int(curr_size) // 100
+                if primprops.size_from != 100 or primprops.size_to != 100:
+                    config.brush.size = config.brush.size_orig * int(curr_size) // 100
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
                     color = arange[int(currpoint / pointspercolor)]
