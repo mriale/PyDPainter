@@ -353,6 +353,7 @@ class Brush:
         self.direction = 1
         self.framelist = self.calc_framelist()
         self.size_orig = self.__size
+        self.__rotate = 0
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -465,8 +466,9 @@ class Brush:
                     return (self.size*2*ax, self.size*2*ay)
 
 
-    def scale(self, image_in):
+    def rotscale(self, image_in):
         size = self.__size
+        rot = -self.__rotate
         image = image_in.copy()
         image.set_palette(config.pal)
         w,h = image.get_size()
@@ -475,6 +477,27 @@ class Brush:
             w = int(w*factor*self.aspect)
             h = int(h*factor)
             image = pygame.transform.scale(image, (w, h))
+        if rot != 0:
+            ax = config.aspectX
+            ay = config.aspectY
+            if ax == 2 or ay == 2:
+                image = pygame.transform.scale(image, (w*ay, h*ax))
+
+            image = pygame.transform.rotate(image, rot)
+
+            if ax == 2 or ay == 2:
+                vr1 = pygame.math.Vector2((w*ay,h*ax)).rotate(rot)
+                vr2 = pygame.math.Vector2((0,h*ax)).rotate(rot)
+                vr3 = pygame.math.Vector2((w*ay,0)).rotate(rot)
+                xmin = min(0, vr1[0], vr2[0], vr3[0])
+                xmax = max(0, vr1[0], vr2[0], vr3[0])
+                ymin = min(0, vr1[1], vr2[1], vr3[1])
+                ymax = max(0, vr1[1], vr2[1], vr3[1])
+                wr = (xmax-xmin) // ay
+                hr = (ymax-ymin) // ax
+                image = pygame.transform.scale(image, (wr, hr))
+ 
+        w,h = image.get_size()
         self.calc_handle(w,h)
         return image
 
@@ -491,7 +514,7 @@ class Brush:
                 size = 2000
             self.__size = size
             self.cache = BrushCache()
-            self.image = self.scale(self.image_orig)
+            self.image = None
         else:
             if size < 1:
                 size = 1
@@ -523,9 +546,27 @@ class Brush:
             self.__type = type
             self.size = self.__size  #recalc handle and wipe cache
 
+    @property
+    def rotate(self):
+        return self.__rotate
+
+    @rotate.setter
+    def rotate(self, rotate):
+        self.__rotate = rotate
+        if self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+            pass
+        elif self.type == Brush.SQUARE:
+            self.cache = BrushCache()
+            self.image = None
+        elif self.type == Brush.CUSTOM:
+            self.cache = BrushCache()
+            self.image = None
+
     def set_palettes(self, pal):
         if self.type != Brush.CUSTOM:
             return
+        if self.image == None:
+            self.image = self.render_image()
         self.image.set_palette(pal)
         for frame in self.frame:
             frame.image.set_palette(pal)
@@ -648,25 +689,26 @@ class Brush:
         self.set_frame(frame_no, doAction=False)
         return frame_no
 
-    def render_image(self, color):
+    def render_image(self, color=None):
         ax = config.aspectX
         ay = config.aspectY
 
         if self.type == Brush.CUSTOM:
-            #convert brush image to single color
-            image = self.scale(self.image_orig)
+            image = self.rotscale(self.image_orig)
             image.set_palette(config.pal)
-            surf_array = pygame.surfarray.pixels2d(image)
             bgcolor = self.bgcolor_orig
-            if bgcolor == color:
-                bgcolor = (color+1) % config.NUM_COLORS
-                tfarray = np.not_equal(surf_array, self.bgcolor_orig)
-                surf_array[tfarray] = color
-                surf_array[np.logical_not(tfarray)] = bgcolor
-            else:
-                surf_array[np.not_equal(surf_array, bgcolor)] = color
-            surf_array = None
-            self.color = color
+            if not color is None:
+                #convert brush image to single color
+                surf_array = pygame.surfarray.pixels2d(image)
+                if bgcolor == color:
+                    bgcolor = (color+1) % config.NUM_COLORS
+                    tfarray = np.not_equal(surf_array, self.bgcolor_orig)
+                    surf_array[tfarray] = color
+                    surf_array[np.logical_not(tfarray)] = bgcolor
+                else:
+                    surf_array[np.not_equal(surf_array, bgcolor)] = color
+                surf_array = None
+                self.color = color
             image.set_colorkey(bgcolor)
             return image
         elif self.type == Brush.CIRCLE:
@@ -700,6 +742,7 @@ class Brush:
             else:
                 image.set_colorkey(0)
             image.fill(color)
+            image = self.rotscale(image)
             return image
         elif self.type == Brush.SPRAY:
             image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
@@ -761,10 +804,14 @@ class Brush:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
+            if self.image == None:
+                self.image = self.render_image()
             if self.image != None:
                 image = self.image
                 image.set_colorkey(self.bgcolor_orig)
         elif drawmode == DrawMode.REPLACE:
+            if self.image == None:
+                self.image = self.render_image()
             if self.image != None:
                 if erase:
                     image = pygame.Surface(self.image.get_size(), 0, self.image)

@@ -1828,6 +1828,22 @@ class pydpainter:
                         else:
                             self.brush.size -= 1
                         setBIBrush()
+                elif e.unicode == "0":
+                    gotkey = True
+                    if config.brush.type == Brush.CUSTOM:
+                        for frame_no in config.brush:
+                            self.brush.rotate += 1
+                    else:
+                        self.brush.rotate += 1
+                    setBIBrush()
+                elif e.unicode == "9":
+                    gotkey = True
+                    if config.brush.type == Brush.CUSTOM:
+                        for frame_no in config.brush:
+                            self.brush.rotate -= 1
+                    else:
+                        self.brush.rotate -= 1
+                    setBIBrush()
                 elif e.unicode == "]":
                     gotkey = True
                     self.color = (self.color + 1) % config.NUM_COLORS

@@ -252,6 +252,7 @@ class DoBIBrush(ToolAction):
         name = self.id[0:-1]
         config.brush.type = DoBIBrush.brushnames[name]
         config.brush.size = size
+        config.brush.rotate = 0
         if was_custom:
             config.setDrawMode(DrawMode.COLOR)
             config.brush.handle_type = config.brush.CENTER
