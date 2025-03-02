@@ -569,7 +569,8 @@ class Brush:
             self.image = self.render_image()
         self.image.set_palette(pal)
         for frame in self.frame:
-            frame.image.set_palette(pal)
+            if frame.image != None:
+                frame.image.set_palette(pal)
         self.cache = BrushCache()
 
     def add_frame(self, image):
