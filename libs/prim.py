@@ -354,6 +354,7 @@ class Brush:
         self.framelist = self.calc_framelist()
         self.size_orig = self.__size
         self.__rotate = 0
+        self.rotate_orig = self.__rotate
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -1068,12 +1069,14 @@ class Brush:
         else:
             self.startframe = startframe
         self.size_orig = self.size
+        self.rotate_orig = self.rotate
 
     def reset_stroke(self):
         self.smear_count = 0
         self.endframe = self.currframei
         self.set_framei(self.startframe, doAction=False)
         self.size = self.size_orig
+        self.rotate = self.rotate_orig
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -1183,9 +1186,13 @@ class CoordList:
         config.brush.reset_stroke()
         size_delta = (primprops.size_to - primprops.size_from) / len(coords)
         curr_size = primprops.size_from
+        rotate_delta = (primprops.rotate_to - primprops.rotate_from) / len(coords)
+        curr_rotate = primprops.rotate_from
         for c in coords:
                 if primprops.size_from != 100 or primprops.size_to != 100:
                     config.brush.size = config.brush.size_orig * int(curr_size) // 100
+                if primprops.rotate_from != 0 or primprops.rotate_to != 100:
+                    config.brush.rotate = config.brush.rotate_orig + curr_rotate
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
                     color = arange[int(currpoint / pointspercolor)]
@@ -1215,6 +1222,7 @@ class CoordList:
                         return
 
                 curr_size += size_delta
+                curr_rotate += rotate_delta
                 config.try_recompose()
         config.brush.reset_stroke()
 
