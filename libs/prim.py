@@ -1184,9 +1184,13 @@ class CoordList:
         currpoint = -1
         config.brush.set_startframe()
         config.brush.reset_stroke()
-        size_delta = (primprops.size_to - primprops.size_from) / len(coords)
+        if len(coords) > 1:
+            size_delta = (primprops.size_to - primprops.size_from) / (len(coords)-1)
+            rotate_delta = (primprops.rotate_to - primprops.rotate_from) / (len(coords)-1)
+        else:
+            size_delta = 0
+            rotate_delta = 0
         curr_size = primprops.size_from
-        rotate_delta = (primprops.rotate_to - primprops.rotate_from) / len(coords)
         curr_rotate = primprops.rotate_from
         for c in coords:
                 if primprops.size_from != 100 or primprops.size_to != 100:
