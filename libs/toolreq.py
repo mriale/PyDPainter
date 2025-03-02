@@ -1547,7 +1547,7 @@ def spacing_req(screen):
        Start  End
 Size: %_____~ _____~
 Rotate:_____~ _____~
-[Cancel][OK]
+[Cancel][OK]  [Reset]
 """, "@#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=EaseGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
@@ -1653,6 +1653,34 @@ Rotate:_____~ _____~
                     config.primprops.size_from = int(size0_valueg.value)
                     config.primprops.size_to = int(size1_valueg.value)
                     running = 0
+                elif ge.gadget.label == "Reset":
+                    new_primprops = PrimProps()
+                    spacing = new_primprops.drawmode.spacing
+                    every_n_valueg.value = str(new_primprops.drawmode.every_n_value)
+                    airbrush_valueg.value = airbrush_valueg.format_float(new_primprops.drawmode.airbrush_value,2)
+                    n_total_valueg.value = str(new_primprops.drawmode.n_total_value)
+                    ease_graphg.value = new_primprops.ease_value
+                    ease_graphg.ease_in = new_primprops.ease_in
+                    ease_graphg.ease_out = new_primprops.ease_out
+                    if ease_graphg.ease_in:
+                        ease_ing.state = 1
+                    if ease_graphg.ease_out:
+                        ease_outg.state = 1
+                    ease_valg.value = str(new_primprops.ease_value)
+                    size0_valueg.value = str(new_primprops.size_from)
+                    size1_valueg.value = str(new_primprops.size_to)
+                    rot0_valueg.value = str(new_primprops.rotate_from)
+                    rot1_valueg.value = str(new_primprops.rotate_to)
+                    rot_graphg.rotate_from = int(rot0_valueg.value)
+                    rot_graphg.rotate_to = int(rot1_valueg.value)
+                    rot_graphg.size_from = int(size0_valueg.value)
+                    rot_graphg.size_to = int(size1_valueg.value)
+                    ease_enable(False)
+                    rot_graphg.need_redraw = True
+                    for g in button_list:
+                        g.state = 0
+                    button_list[spacing].state = 1
+                    req.need_redraw = True
                 elif ge.gadget.label == "Cancel":
                     running = 0 
                 elif ge.gadget.label == "In":
