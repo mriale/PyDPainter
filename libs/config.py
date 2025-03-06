@@ -284,6 +284,9 @@ class pydpainter:
 
         return s
 
+    def lerp(self, b, a, frac):
+        return a * frac + (1-frac) * b
+
     def resize_display(self, resize_window=True, first_init=False, force=False, grab=True):
         if config.fullscreen:
             if force:

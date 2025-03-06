@@ -503,6 +503,16 @@ class Brush:
         return image
 
     @property
+    def image(self):
+        if image is None:
+            self.render_image()
+        return self.__image
+
+    @image.setter
+    def image(self, image_in):
+        self.__image = image_in
+
+    @property
     def size(self):
         return self.__size
 
@@ -1139,41 +1149,79 @@ class CoordList:
         coordsall = []
         for i in range(0,self.numlists):
             coordsall.extend(self.coordlist[i])
+        numpoints = len(coordsall)
+
+        # make single pixel line in N Total mode draw all pixels
+        if numpoints == 1 and primprops.drawmode.spacing == DrawMode.N_TOTAL:
+            coordsall = coordsall * primprops.drawmode.n_total_value
+            numpoints = primprops.drawmode.n_total_value
+
+        # calculate linear interpolation for all coords
+        inter_all = []
+        if numpoints == 1:
+            inter_all = [1.0]
+        elif numpoints > 1:
+            for i in range(len(coordsall)):
+                inter_all.append(i / (numpoints-1))
 
         # pre-process coord list
         if primprops.drawmode.spacing == DrawMode.EVERY_N:
             coords = coordsall[::primprops.drawmode.every_n_value]
+            inter_list = inter_all[::primprops.drawmode.every_n_value]
         elif primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1:
             coords = []
+            inter_list = []
             if primprops.ease_in:
                 if primprops.ease_out:
                     numpoints2 = numpoints // 2
                     ntotal2 = primprops.drawmode.n_total_value // 2
                     coords_in = []
                     coords_out = []
+                    inter_in = []
+                    inter_out = []
                     for i in range(ntotal2):
                         if primprops.drawmode.n_total_value % 2 == 1:
-                            coordi = int((numpoints2) * ((i/(ntotal2))**primprops.ease_value))
+                            coordif = numpoints2 * ((i/(ntotal2))**primprops.ease_value)
+                            inter_value = ((i/(ntotal2))**primprops.ease_value) / 2
                         else:
-                            coordi = int((numpoints2) * ((i/(ntotal2-.5))**primprops.ease_value))
+                            coordif = numpoints2 * ((i/(ntotal2-.5))**primprops.ease_value)
+                            inter_value = ((i/(ntotal2-.5))**primprops.ease_value) / 2
+                        coordi = int(coordif)
                         coords_in.append(coordsall[coordi])
                         coords_out.insert(0, coordsall[-coordi-1])
+                        inter_in.append(inter_value)
+                        inter_out.insert(0, 1-inter_value)
                     if primprops.drawmode.n_total_value % 2 == 1:
                         coords = coords_in + [coordsall[numpoints2]] + coords_out
+                        inter_list = inter_in + [0.5] + inter_out
                     else:
                         coords = coords_in + coords_out
+                        inter_list = inter_in + inter_out
                 else:
                     for i in range(primprops.drawmode.n_total_value):
-                        coords.append(coordsall[int((numpoints-1) * ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))])
+                        coordif = (numpoints-1) * ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)
+                        inter_list.append(inter_value)
             else:
                 if primprops.ease_out:
                     for i in range(primprops.drawmode.n_total_value-1,-1,-1):
-                        coords.append(coordsall[int((numpoints-1) * (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)))])
+                        coordif = (numpoints-1) * (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))
+                        inter_list.append(inter_value)
                 else:
                     for i in range(primprops.drawmode.n_total_value):
-                        coords.append(coordsall[(numpoints-1) * i // (primprops.drawmode.n_total_value-1)])
+                        coordif = (numpoints-1) * i // (primprops.drawmode.n_total_value-1)
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = i / (primprops.drawmode.n_total_value-1)
+                        inter_list.append(inter_value)
         else:
             coords = coordsall
+            inter_list = inter_all
 
         if cyclemode:
             pointspercolor = len(coords) / numcolors
@@ -1192,11 +1240,13 @@ class CoordList:
             rotate_delta = 0
         curr_size = primprops.size_from
         curr_rotate = primprops.rotate_from
+        coordi = -1
         for c in coords:
+                coordi += 1
                 if primprops.size_from != 100 or primprops.size_to != 100:
-                    config.brush.size = config.brush.size_orig * int(curr_size) // 100
+                    config.brush.size = config.brush.size_orig * int(config.lerp(primprops.size_from, primprops.size_to, inter_list[coordi])) // 100
                 if primprops.rotate_from != 0 or primprops.rotate_to != 100:
-                    config.brush.rotate = config.brush.rotate_orig + curr_rotate
+                    config.brush.rotate = config.brush.rotate_orig + int(config.lerp(primprops.rotate_from, primprops.rotate_to, inter_list[coordi]))
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
                     color = arange[int(currpoint / pointspercolor)]
