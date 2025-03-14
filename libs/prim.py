@@ -504,7 +504,7 @@ class Brush:
 
     @property
     def image(self):
-        if image is None:
+        if self.__image is None:
             self.render_image()
         return self.__image
 

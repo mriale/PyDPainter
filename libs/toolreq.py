@@ -1545,8 +1545,8 @@ def spacing_req(screen):
 ###### [Out] @@@@@@@
 ###### ___~  @@@@@@@
        Start  End
-Size: %_____~ _____~
-Rotate:_____~ _____~
+Size  %_____~ _____~
+Rotate\xB0_____~ _____~
 [Cancel][OK]  [Reset]
 """, "@#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=EaseGadget, font=config.font)
     req.center(screen)
@@ -1599,18 +1599,18 @@ Rotate:_____~ _____~
         ease_valg.spinnerg.enabled = enable
         ease_valg.spinnerg.need_redraw = True
 
-    size0_valueg = req.find_gadget("Size:", 2)
+    size0_valueg = req.find_gadget("Size", 2)
     size0_valueg.spinnerg.minvalue = 1
     size0_valueg.value = str(config.primprops.size_from)
-    size1_valueg = req.find_gadget("Size:", 4)
+    size1_valueg = req.find_gadget("Size", 4)
     size1_valueg.spinnerg.minvalue = 1
     size1_valueg.value = str(config.primprops.size_to)
 
     rot_graphg = req.find_gadget("Ease", 1)
-    rot0_valueg = req.find_gadget("Rotate:", 1)
+    rot0_valueg = req.find_gadget("Rotate\xB0", 1)
     rot0_valueg.spinnerg.minvalue = -999
     rot0_valueg.value = str(config.primprops.rotate_from)
-    rot1_valueg = req.find_gadget("Rotate:", 3)
+    rot1_valueg = req.find_gadget("Rotate\xB0", 3)
     rot1_valueg.spinnerg.minvalue = -999
     rot1_valueg.value = str(config.primprops.rotate_to)
     rot_graphg.rotate_from = config.primprops.rotate_from
