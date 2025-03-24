@@ -30,7 +30,7 @@ is_win = sys.platform.startswith('win')
 is_pygamece = getattr(pygame, "IS_CE", False)
 
 def clipboard_init():
-    if not is_pygamece:
+    if not is_pygamece and "scrap" in dir(pygame) and "init" in dir(pygame.scrap):
         # pygame
         pygame.scrap.init()
         pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
@@ -375,7 +375,7 @@ class DoDraw(ToolSingleAction):
             if buttons[0]:
                 drawmode = config.drawmode.value
                 if drawmode == DrawMode.CYCLE:
-                    if config.brush.image is None or config.multicycle == False:
+                    if config.brush.type != Brush.CUSTOM or config.multicycle == False:
                         drawmode = DrawMode.COLOR
                 drawline_symm(config.pixel_canvas, config.color, self.last_coords, coords, drawmode=drawmode, animpaint=False)
                 self.last_coords = coords
