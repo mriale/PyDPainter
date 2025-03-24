@@ -761,7 +761,6 @@ class DoRect(ToolDragAction):
             drawrect(config.pixel_canvas, config.bgcolor, self.p1, coords, filled=config.subtool_selected, erase=True)
         config.save_undo()
         config.brush.pen_down = False
-        self.move(coords)
         if config.subtool_selected:
             cycle()
         if set_brush:
@@ -825,7 +824,6 @@ class DoCircle(ToolDragAction):
                 drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected, erase=True)
         config.save_undo()
         config.brush.pen_down = False
-        self.move(coords)
         if config.subtool_selected:
             cycle()
         if set_brush:
