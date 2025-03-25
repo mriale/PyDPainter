@@ -19,7 +19,7 @@ have become popular once again. Many tools to deal with this medium are either t
 or too crude. This project is an attempt to bring back an old but reliable tool and
 enhance it with some features to help it better coexist in the modern world.
 
-Latest Release (with Windows EXE): https://github.com/mriale/PyDPainter/releases/latest
+### [Download Latest Release](https://pydpainter.org/download.php)
 
 YouTube videos:
 * [Quick PyDPainter Demo](https://youtu.be/XwagsCdMj74)
