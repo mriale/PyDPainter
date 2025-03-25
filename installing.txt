@@ -11,10 +11,31 @@ Or type this from the command prompt:
 
   python -m pip install -r requirements.txt
 
+For Mac OS X:
+
+On the Mac it is advised to install a separate version of Python from your system version using Brew. Brew is a package manager that keeps packages separate from your System Packages and Application.
+
+To install Python, open Terminal.
+
+ 1. Update Brew - brew update && brew upgrade
+ 2. brew install python
+ 3. brew install git
+ 4. brew install python-tk
+ 5. cd ~
+ 6. mkdir PythonApps
+ 7. cd PythonApps
+ 8. git clone https://github.com/mriale/PyDPainter/
+ 9. cd PyDPainter
+10. python3 -m venv .venv
+11. source .venv/bin/activate
+12. pip install -r requirements.txt
+13. python3 PyDPainter.py
+
+
 For Ubuntu, type this from the terminal:
   sudo apt install python3-pygame
 
-For Mac and other Linux distros, type this from the terminal:
+For other Linux distros, type this from the terminal:
   sudo pip3 install -r requirements.txt
 
 There is also a Flatpak for easy installation on Linux:
