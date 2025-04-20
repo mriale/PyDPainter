@@ -20,6 +20,7 @@ class Stencil:
         self.is_color = None
         self.image = None
         self.mask = None
+        self.clear()
 
     def __repr__(self):
         return f"<Stencil {hex(id(self))}: __enable={self.__enable} is_color={self.is_color} image={self.image} mask=<{hex(id(self.mask))}> >"
