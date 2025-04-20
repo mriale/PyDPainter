@@ -1235,7 +1235,7 @@ class pydpainter:
         scaleX = config.fontx // 8
         scaleY = config.fonty // 12
 
-        config.layers.set("canvas", config.pixel_canvas)
+        config.layers.set("canvas", config.pixel_canvas, priority=1)
         config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
 
         screen_rgb = None
