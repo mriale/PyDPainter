@@ -314,6 +314,7 @@ class Brush:
             self.image_orig = self.image.copy()
             self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
+            self.__rotate = 0
             self.__size = h
             self.aspect = 1.0
             self.calc_handle(w, h)
@@ -326,12 +327,14 @@ class Brush:
             self.bgcolor = bgcolor
             self.image_orig = None
             self.bgcolor_orig = bgcolor
+            self.__rotate = 0
             self.__size = size
             self.aspect = 1.0
             self.calc_handle(size, size)
             self.frame = []
             self.animbrush = False
 
+        self.handle_frac_orig = list(self.handle_frac)
         self.cache = BrushCache()
         self.smear_stencil = None
         self.smear_image = None
@@ -353,7 +356,6 @@ class Brush:
         self.direction = 1
         self.framelist = self.calc_framelist()
         self.size_orig = self.__size
-        self.__rotate = 0
         self.rotate_orig = self.__rotate
 
         if pal == None and "pal" in dir(config):
@@ -437,15 +439,18 @@ class Brush:
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
-            self.handle_frac = [0.5, 0.5]
+            self.handle_frac_orig = [0.5, 0.5]
         elif self.handle_type == self.CORNER_UL:
-            self.handle_frac = [0.0, 0.0]
+            self.handle_frac_orig = [0.0, 0.0]
         elif self.handle_type == self.CORNER_UR:
-            self.handle_frac = [1.0, 0.0]
+            self.handle_frac_orig = [1.0, 0.0]
         elif self.handle_type == self.CORNER_LR:
-            self.handle_frac = [1.0, 1.0]
+            self.handle_frac_orig = [1.0, 1.0]
         elif self.handle_type == self.CORNER_LL:
-            self.handle_frac = [0.0, 1.0]
+            self.handle_frac_orig = [0.0, 1.0]
+
+        if self.__rotate == 0:
+            self.handle_frac = list(self.handle_frac_orig)
 
         self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
@@ -478,7 +483,10 @@ class Brush:
             w = int(w*factor*self.aspect)
             h = int(h*factor)
             image = pygame.transform.scale(image, (w, h))
-        if rot != 0:
+
+        if rot == 0:
+            self.handle_frac = list(self.handle_frac_orig)
+        else:
             ax = config.aspectX
             ay = config.aspectY
             if ax == 2 or ay == 2:
@@ -486,18 +494,29 @@ class Brush:
 
             image = pygame.transform.rotate(image, rot)
 
+            # calculate bounding rectangle
+            vr1 = pygame.math.Vector2((w*ay,h*ax)).rotate(rot)
+            vr2 = pygame.math.Vector2((0,h*ax)).rotate(rot)
+            vr3 = pygame.math.Vector2((w*ay,0)).rotate(rot)
+            xmin = min(0, vr1[0], vr2[0], vr3[0])
+            xmax = max(0, vr1[0], vr2[0], vr3[0])
+            ymin = min(0, vr1[1], vr2[1], vr3[1])
+            ymax = max(0, vr1[1], vr2[1], vr3[1])
+            wr = (xmax-xmin) // ay
+            hr = (ymax-ymin) // ax
+
             if ax == 2 or ay == 2:
-                vr1 = pygame.math.Vector2((w*ay,h*ax)).rotate(rot)
-                vr2 = pygame.math.Vector2((0,h*ax)).rotate(rot)
-                vr3 = pygame.math.Vector2((w*ay,0)).rotate(rot)
-                xmin = min(0, vr1[0], vr2[0], vr3[0])
-                xmax = max(0, vr1[0], vr2[0], vr3[0])
-                ymin = min(0, vr1[1], vr2[1], vr3[1])
-                ymax = max(0, vr1[1], vr2[1], vr3[1])
-                wr = (xmax-xmin) // ay
-                hr = (ymax-ymin) // ax
                 image = pygame.transform.scale(image, (wr, hr))
  
+            # calculate handle rotation
+            handle_fx, handle_fy = self.handle_frac_orig
+            handle_fx -= 0.5
+            handle_fy -= 0.5
+            vrh = pygame.math.Vector2((w*ay*handle_fx,h*ax*handle_fy)).rotate(-rot)
+            handle_x = (vrh[0] / ay) + (wr/2)
+            handle_y = (vrh[1] / ax) + (hr/2)
+            self.handle_frac = [handle_x/wr, handle_y/hr]
+
         w,h = image.get_size()
         self.calc_handle(w,h)
         return image
@@ -563,9 +582,15 @@ class Brush:
 
     @rotate.setter
     def rotate(self, rotate):
+        if rotate == self.__rotate:
+            return
+
         self.__rotate = rotate
-        if self.type == Brush.CIRCLE or self.type == Brush.SPRAY:
+        if self.type == Brush.SPRAY:
             pass
+        elif self.type == Brush.CIRCLE:
+            self.cache = BrushCache()
+            self.image = None
         elif self.type == Brush.SQUARE:
             self.cache = BrushCache()
             self.image = None
@@ -745,6 +770,7 @@ class Brush:
                     fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops)
                 else:
                     pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
+                image = self.rotscale(image)
             return image
         elif self.type == Brush.SQUARE:
             image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)

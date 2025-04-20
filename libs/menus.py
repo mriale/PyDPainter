@@ -1057,6 +1057,8 @@ class DoBrushHandlePlace(MenuAction):
         config.recompose()
         point_placed = False
         first_time = True
+        prev_rot = config.brush.rotate
+        config.brush.rotate = 0
         while not point_placed:
             event = config.xevent.poll()
             while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
@@ -1091,8 +1093,10 @@ class DoBrushHandlePlace(MenuAction):
         for frame_no in config.brush:
             config.brush.handle_type = config.brush.PLACE
             config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
+            config.brush.handle_frac_orig = list(config.brush.handle_frac)
             config.brush.size = config.brush.size
 
+        config.brush.rotate = prev_rot
         config.doKeyAction()
 
 class DoMode(MenuAction):

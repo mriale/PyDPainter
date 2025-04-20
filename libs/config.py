@@ -1831,21 +1831,31 @@ class pydpainter:
                         else:
                             self.brush.size -= 1
                         setBIBrush()
-                elif e.unicode == "0":
+                elif e.key == K_0 and not e.mod & KMOD_CTRL:
                     gotkey = True
+                    rot = self.brush.rotate
+                    if e.mod & KMOD_SHIFT:
+                        rot = 0
+                    else:
+                        rot += 1
                     if config.brush.type == Brush.CUSTOM:
                         for frame_no in config.brush:
-                            self.brush.rotate += 1
+                            self.brush.rotate = rot
                     else:
-                        self.brush.rotate += 1
+                        self.brush.rotate = rot
                     setBIBrush()
-                elif e.unicode == "9":
+                elif e.key == K_9 and not e.mod & KMOD_CTRL:
                     gotkey = True
+                    rot = self.brush.rotate
+                    if e.mod & KMOD_SHIFT:
+                        rot = 0
+                    else:
+                        rot -= 1
                     if config.brush.type == Brush.CUSTOM:
                         for frame_no in config.brush:
-                            self.brush.rotate -= 1
+                            self.brush.rotate = rot
                     else:
-                        self.brush.rotate -= 1
+                        self.brush.rotate = rot
                     setBIBrush()
                 elif e.unicode == "]":
                     gotkey = True
