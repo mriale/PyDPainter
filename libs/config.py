@@ -801,7 +801,7 @@ class pydpainter:
         self.true_symmetry = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
-        pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
+        pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))
         pygame.key.set_repeat(500, 50)
 
         self.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)

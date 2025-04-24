@@ -42,3 +42,12 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+app = BUNDLE(
+    exe,
+    name='PyDPainter.app',
+    icon='logo/logo1024.icns',
+    console=False,
+    bundle_identifier=None,
+)
+
