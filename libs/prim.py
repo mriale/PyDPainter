@@ -749,6 +749,8 @@ class Brush:
             image.set_colorkey(bgcolor)
             return image
         elif self.type == Brush.CIRCLE:
+            if color is None:
+                color = config.color
             if self.size == 1:
                 image = pygame.Surface((1,1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
@@ -767,12 +769,14 @@ class Brush:
                     image.set_colorkey(0)
                 primprops = PrimProps()
                 if ax == ay == 1:
-                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops)
+                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops, do_recompose=False)
                 else:
                     pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
                 image = self.rotscale(image)
             return image
         elif self.type == Brush.SQUARE:
+            if color is None:
+                color = config.color
             image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)
             image.set_palette(config.pal)
             if color == 0:
@@ -783,6 +787,8 @@ class Brush:
             image = self.rotscale(image)
             return image
         elif self.type == Brush.SPRAY:
+            if color is None:
+                color = config.color
             image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
             w,h = image.get_size()
             self.calc_handle(w,h)
@@ -1577,7 +1583,7 @@ def add_xbounds(xbounds, y, x1, x2):
     else:
         xbounds[y] = [x1, x2]
 
-def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False):
+def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False, do_recompose=True):
     handlesymm = True
     if primprops != None:
         handlesymm = primprops.handlesymm
@@ -1617,7 +1623,8 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if do_recompose:
+                config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
 
@@ -2047,7 +2054,7 @@ def hline_SOLID(surf_array, color, y, xs1, xs2):
         surf_array[xs1:xs2+1,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
 def hline_BRUSH(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 
@@ -2085,7 +2092,7 @@ def wrap_func(c, maxc):
         return maxc
 
 def hline_WRAP(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 
@@ -2107,7 +2114,7 @@ def hline_WRAP(surf_array, y, x1, x2, xs1, xs2):
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
 def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 
