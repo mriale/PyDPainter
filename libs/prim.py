@@ -772,7 +772,6 @@ class Brush:
                     fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops, do_recompose=False)
                 else:
                     pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
-                image = self.rotscale(image)
             return image
         elif self.type == Brush.SQUARE:
             if color is None:
@@ -822,8 +821,8 @@ class Brush:
     def draw(self, screen, color, coords, handlesymm=True, primprops=None, erase=False):
         if not rect_onscreen([coords[0]+self.rect[0],
                               coords[1]+self.rect[1],
-                              self.rect[2],
-                              self.rect[3]]):
+                              self.rect[2]-self.rect[0],
+                              self.rect[3]-self.rect[1]]):
             return
 
         image = None

@@ -491,6 +491,8 @@ class DoBrushStretch(MenuAction):
         if config.brush.type != Brush.CUSTOM:
             return
 
+        rot = config.brush.rotate
+        config.brush.rotate = 0
         sx, sy = (0,0)
         config.brush.handle_type = config.brush.CORNER_LR
         ow,oh = config.brush.image_orig.get_size()
@@ -537,6 +539,7 @@ class DoBrushStretch(MenuAction):
         for frame_no in config.brush:
             config.brush.aspect = aspect
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = rot
             config.brush.size = size
 
         config.doKeyAction()
@@ -562,18 +565,24 @@ class DoBrushDoubleVert(MenuActionBrush):
 class DoBrushFlipX(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.flip(config.brush.image, True, False)
-            config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, True, False)
+            w,h = config.brush.image.get_size()
+            newimage = pygame.transform.flip(config.brush.image.copy(), True, False)
+            config.brush.image = newimage
+            config.brush.image_orig = newimage
             config.brush.handle_frac[0] = 1 - config.brush.handle_frac[0]
-            config.brush.size = config.brush.size
+            config.brush.rotate = 0
+            config.brush.size = h
 
 class DoBrushFlipY(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.flip(config.brush.image, False, True)
-            config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, False, True)
+            w,h = config.brush.image.get_size()
+            newimage = pygame.transform.flip(config.brush.image.copy(), False, True)
+            config.brush.image = newimage
+            config.brush.image_orig = newimage
             config.brush.handle_frac[1] = 1 - config.brush.handle_frac[1]
-            config.brush.size = config.brush.size
+            config.brush.rotate = 0
+            config.brush.size = h
 
 class DoBrushOutline(MenuActionBrush):
     def selectedMulti(self, attrs):
@@ -612,6 +621,7 @@ class DoBrushOutline(MenuActionBrush):
         config.brush.image = newimage
         config.brush.image_orig = newimage
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h+2
 
 class DoBrushTrim(MenuActionBrush):
@@ -649,20 +659,13 @@ class DoBrushTrim(MenuActionBrush):
         config.brush.image = newimage
         config.brush.image_orig = newimage
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h-2
 
 class DoBrushRotate90(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.rotate(config.brush.image, -90)
-            config.brush.image_orig = pygame.transform.rotate(config.brush.image_orig, -90)
-            config.brush.handle_frac = list([1-config.brush.handle_frac[1], config.brush.handle_frac[0]])
-            config.brush.aspect = 1.0 / config.brush.aspect
-            bx,by,bw,bh = config.brush.rect
-            config.brush.rect = list([by,bx,bh,bw])
-            config.brush.size = bw
-            config.brush.cache = BrushCache()
-            config.brush.size = config.brush.size
+            config.brush.rotate = (config.brush.rotate + 90) % 360
 
 class DoBrushRotateAny(MenuAction):
     def selected(self, attrs):
@@ -675,9 +678,11 @@ class DoBrushRotateAny(MenuAction):
         config.cursor.shape = 5
         config.clear_pixel_draw_canvas()
         config.brush.size = config.brush.size
-        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
-        config.recompose()
         rotimage = config.brush.image
+        mouseX, mouseY = config.get_mouse_pixel_pos(ignore_grid=True)
+        config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
+        config.recompose()
+        start_brush_rot = config.brush.rotate
         angle = 0
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
@@ -695,10 +700,10 @@ class DoBrushRotateAny(MenuAction):
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
                     angle = int(mda - (math.atan2(mouseY-sy, mouseX-sx) * 180.0 / math.pi))
-                    rotimage = pygame.transform.rotate(config.brush.image, angle)
+                    rotimage = pygame.transform.rotate(config.brush.image_orig, angle-start_brush_rot)
                     rw,rh = rotimage.get_size()
                     config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
-                    config.menubar.title_right = "%d\xB0"%(-angle)
+                    config.menubar.title_right = "%d\xB0"%(start_brush_rot-angle)
                 else:
                     config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
@@ -715,12 +720,8 @@ class DoBrushRotateAny(MenuAction):
         config.menubar.title_right = ""
 
         for frame_no in config.brush:
-            rotimage = pygame.transform.rotate(config.brush.image, angle)
-            config.brush.image = rotimage.copy()
-            config.brush.image_orig = rotimage.copy()
-            config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
-            config.brush.size = rotimage.get_height()
+            config.brush.rotate = start_brush_rot-angle
 
         config.doKeyAction()
 
@@ -799,6 +800,7 @@ class DoBrushShear(MenuAction):
             config.brush.image_orig = shearimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = shearimage.get_height()
 
         config.doKeyAction()
@@ -948,6 +950,7 @@ class DoBrushBendX(MenuAction):
             config.brush.image_orig = bendimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = bendimage.get_height()
 
         config.doKeyAction()
@@ -1034,6 +1037,7 @@ class DoBrushBendY(MenuAction):
             config.brush.image_orig = bendimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = bendimage.get_height()
 
         config.doKeyAction()
