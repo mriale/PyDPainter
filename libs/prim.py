@@ -298,10 +298,12 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False, image=None):
+        if "menubar" in dir(config):
+            config.menubar.indicators["brush"] = self.draw_indicator
         if "grid_on" in dir(config) and config.grid_on:
-            self.handle_type = self.CORNER_UL
+            self.__handle_type = self.CORNER_UL
         else:
-            self.handle_type = self.CENTER
+            self.__handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if image is None:
                 self.image = self.get_image_from_screen(screen, bgcolor=bgcolor, coordfrom=coordfrom, coordto=coordto, pal=pal, polylist=polylist, animbrush=animbrush)
@@ -577,6 +579,16 @@ class Brush:
             self.size = self.__size  #recalc handle and wipe cache
 
     @property
+    def handle_type(self):
+        return self.__handle_type
+
+    @handle_type.setter
+    def handle_type(self, handle_type):
+        self.__handle_type = handle_type
+        w,h = self.image.get_size()
+        self.calc_handle(w, h)
+
+    @property
     def rotate(self):
         return self.__rotate
 
@@ -585,7 +597,7 @@ class Brush:
         if rotate == self.__rotate:
             return
 
-        self.__rotate = rotate
+        self.__rotate = rotate % 360
         if self.type == Brush.SPRAY:
             pass
         elif self.type == Brush.CIRCLE:
@@ -608,6 +620,32 @@ class Brush:
             if frame.image != None:
                 frame.image.set_palette(pal)
         self.cache = BrushCache()
+
+    def draw_indicator(self, screen):
+        if self.__rotate == 0:
+            return
+        if not "halfnumbers_image" in dir(self):
+            scaleX = config.sm.scaleX
+            scaleY = config.sm.scaleY
+            scaledown = config.sm.scaledown
+            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=scaleX, scaleY=scaleY)
+        px = config.font.xsize // 8
+        py = config.font.ysize // 8
+        nh = self.halfnumbers_image.get_height()
+        nw = self.halfnumbers_image.get_width() // 13
+ 
+        rot_str = str(self.rotate)
+        xpos = px*200
+        for c in rot_str:
+            noffset = self.halfnumbers_image.get_width() + 1
+            if c >= '0' and c <= '9':
+                noffset = (ord(c) - ord('0')) * nw
+            elif c == '-':
+                noffset = 11 * nw
+            screen.blit(self.halfnumbers_image, (xpos,py*2), (noffset,0,nw,nh))
+            xpos += nw
+
+            screen.blit(self.halfnumbers_image, (xpos,py*2), (10*nw,0,nw,nh))
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))

@@ -703,7 +703,7 @@ class DoBrushRotateAny(MenuAction):
                     rotimage = pygame.transform.rotate(config.brush.image_orig, angle-start_brush_rot)
                     rw,rh = rotimage.get_size()
                     config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
-                    config.menubar.title_right = "%d\xB0"%(start_brush_rot-angle)
+                    config.brush.rotate = start_brush_rot-angle
                 else:
                     config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
@@ -724,6 +724,44 @@ class DoBrushRotateAny(MenuAction):
             config.brush.rotate = start_brush_rot-angle
 
         config.doKeyAction()
+
+class DoBrushRotateRight(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = config.brush.rotate
+            rot += 1
+            if config.brush.type == Brush.CUSTOM:
+                for frame_no in config.brush:
+                    config.brush.rotate = rot
+            else:
+                config.brush.rotate = rot
+        else:
+            return False
+
+class DoBrushRotateLeft(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = config.brush.rotate
+            rot -= 1
+            if config.brush.type == Brush.CUSTOM:
+                for frame_no in config.brush:
+                    config.brush.rotate = rot
+            else:
+                config.brush.rotate = rot
+        else:
+            return False
+
+class DoBrushSet0(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = 0
+            if config.brush.type == Brush.CUSTOM:
+                for frame_no in config.brush:
+                    config.brush.rotate = rot
+            else:
+                config.brush.rotate = rot
+        else:
+            return False
 
 class DoBrushShear(MenuAction):
     def selected(self, attrs):
@@ -1547,6 +1585,9 @@ def init_menubar(config_in):
             ["Rotate", [
                 ["90 Degrees", "z", DoBrushRotate90],
                 ["Any Angle", " ", DoBrushRotateAny],
+                ["Right 1\xB0", "0", DoBrushRotateRight],
+                ["Left 1\xB0", "9", DoBrushRotateLeft],
+                ["Set to 0\xB0", "shift-0", DoBrushSet0],
                 ["Shear", " ", DoBrushShear],
                 ]],
             ["Change Color", [
