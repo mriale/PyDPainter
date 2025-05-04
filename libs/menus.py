@@ -862,6 +862,7 @@ class DoBrushBG2FG(MenuActionBrush):
         #put new image in brush
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h
 
 class DoBrushBGxFG(MenuActionBrush):
@@ -885,6 +886,7 @@ class DoBrushBGxFG(MenuActionBrush):
         #put new image in brush
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h
 
 class DoBrushRemap(MenuActionBrush):
@@ -900,11 +902,13 @@ class DoBrushChangeTransp(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
+        w,h = config.brush.image.get_size()
         config.brush.image.set_colorkey(config.bgcolor)
         config.brush.bgcolor = config.bgcolor
         config.brush.bgcolor_orig = config.bgcolor
         config.brush.image_orig = config.brush.image
-        config.brush.size = config.brush.size
+        config.brush.rotate = 0
+        config.brush.size = h
 
 class DoBrushBendX(MenuAction):
     def selected(self, attrs):
