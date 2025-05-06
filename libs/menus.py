@@ -534,33 +534,30 @@ class DoBrushStretch(MenuAction):
             config.recompose()
             first_time = False
 
-        aspect = config.brush.aspect
-        size = config.brush.size
-        for frame_no in config.brush:
-            config.brush.aspect = aspect
-            config.brush.handle_type = config.brush.CENTER
-            config.brush.rotate = rot
-            config.brush.size = size
-
+        config.brush.handle_type = config.brush.CENTER
         config.doKeyAction()
 
-class DoBrushHalve(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushHalve(MenuAction):
+    def selected(self, attrs):
         config.brush.size //= 2
+        config.doKeyAction()
 
-class DoBrushDouble(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDouble(MenuAction):
+    def selected(self, attrs):
         config.brush.size *= 2
+        config.doKeyAction()
 
-class DoBrushDoubleHoriz(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDoubleHoriz(MenuAction):
+    def selected(self, attrs):
         config.brush.aspect *= 2.0
         config.brush.size = config.brush.size
+        config.doKeyAction()
 
-class DoBrushDoubleVert(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDoubleVert(MenuAction):
+    def selected(self, attrs):
         config.brush.aspect /= 2.0
         config.brush.size *= 2
+        config.doKeyAction()
 
 class DoBrushFlipX(MenuActionBrush):
     def selectedMulti(self, attrs):
@@ -570,6 +567,7 @@ class DoBrushFlipX(MenuActionBrush):
             config.brush.image = newimage
             config.brush.image_orig = newimage
             config.brush.handle_frac[0] = 1 - config.brush.handle_frac[0]
+            config.brush.aspect = 1.0
             config.brush.rotate = 0
             config.brush.size = h
 
@@ -581,6 +579,7 @@ class DoBrushFlipY(MenuActionBrush):
             config.brush.image = newimage
             config.brush.image_orig = newimage
             config.brush.handle_frac[1] = 1 - config.brush.handle_frac[1]
+            config.brush.aspect = 1.0
             config.brush.rotate = 0
             config.brush.size = h
 
@@ -662,8 +661,8 @@ class DoBrushTrim(MenuActionBrush):
         config.brush.rotate = 0
         config.brush.size = h-2
 
-class DoBrushRotate90(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushRotate90(MenuAction):
+    def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
             config.brush.rotate = (config.brush.rotate + 90) % 360
 
@@ -719,9 +718,8 @@ class DoBrushRotateAny(MenuAction):
 
         config.menubar.title_right = ""
 
-        for frame_no in config.brush:
-            config.brush.handle_type = config.brush.CENTER
-            config.brush.rotate = start_brush_rot-angle
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.rotate = start_brush_rot-angle
 
         config.doKeyAction()
 
@@ -730,11 +728,7 @@ class DoBrushRotateRight(MenuAction):
         if not attrs is None and "menu1" in attrs:
             rot = config.brush.rotate
             rot += 1
-            if config.brush.type == Brush.CUSTOM:
-                for frame_no in config.brush:
-                    config.brush.rotate = rot
-            else:
-                config.brush.rotate = rot
+            config.brush.rotate = rot
         else:
             return False
 
@@ -743,11 +737,7 @@ class DoBrushRotateLeft(MenuAction):
         if not attrs is None and "menu1" in attrs:
             rot = config.brush.rotate
             rot -= 1
-            if config.brush.type == Brush.CUSTOM:
-                for frame_no in config.brush:
-                    config.brush.rotate = rot
-            else:
-                config.brush.rotate = rot
+            config.brush.rotate = rot
         else:
             return False
 
@@ -755,11 +745,7 @@ class DoBrushSet0(MenuAction):
     def selected(self, attrs):
         if not attrs is None and "menu1" in attrs:
             rot = 0
-            if config.brush.type == Brush.CUSTOM:
-                for frame_no in config.brush:
-                    config.brush.rotate = rot
-            else:
-                config.brush.rotate = rot
+            config.brush.rotate = rot
         else:
             return False
 
@@ -907,6 +893,7 @@ class DoBrushChangeTransp(MenuActionBrush):
         config.brush.bgcolor = config.bgcolor
         config.brush.bgcolor_orig = config.bgcolor
         config.brush.image_orig = config.brush.image
+        config.brush.aspect = 1.0
         config.brush.rotate = 0
         config.brush.size = h
 
