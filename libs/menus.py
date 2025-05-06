@@ -61,13 +61,21 @@ class MenuActionMulti(MenuAction):
         config.doKeyAction()
 
 class MenuActionBrush(MenuAction):
+    def preSelected(self, attrs):
+        pass
+
     def selected(self, attrs):
+        self.preSelected(attrs)
         if len(config.brush.frame) > 1:
             for frame_no in config.brush:
                 self.selectedMulti(attrs)
         else:
             self.selectedMulti(attrs)
+        self.postSelected(attrs)
         config.doKeyAction()
+
+    def postSelected(self, attrs):
+        pass
 
 class DoDummy(MenuAction):
     def selected(self, attrs):
@@ -584,12 +592,17 @@ class DoBrushFlipY(MenuActionBrush):
             config.brush.size = h
 
 class DoBrushOutline(MenuActionBrush):
+    init_size = None
+
+    def preSelected(self, attrs):
+        self.init_size = config.brush.image.get_size()
+
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         if config.color == config.brush.bgcolor:
             return
-        w,h = config.brush.image.get_size()
+        w,h = self.init_size
 
         #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
@@ -619,15 +632,23 @@ class DoBrushOutline(MenuActionBrush):
         #put new image in brush
         config.brush.image = newimage
         config.brush.image_orig = newimage
+
+    def postSelected(self, attrs):
+        w,h = self.init_size
         config.brush.aspect = 1
         config.brush.rotate = 0
         config.brush.size = h+2
 
 class DoBrushTrim(MenuActionBrush):
+    init_size = None
+
+    def preSelected(self, attrs):
+        self.init_size = config.brush.image.get_size()
+
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
-        w,h = config.brush.image.get_size()
+        w,h = self.init_size
         if w <= 2 or h <= 2:
             return
         #create surface to hold new brush
@@ -657,6 +678,9 @@ class DoBrushTrim(MenuActionBrush):
         #put new image in brush
         config.brush.image = newimage
         config.brush.image_orig = newimage
+
+    def postSelected(self, attrs):
+        w,h = self.init_size
         config.brush.aspect = 1
         config.brush.rotate = 0
         config.brush.size = h-2
