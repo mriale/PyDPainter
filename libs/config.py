@@ -1812,11 +1812,7 @@ class pydpainter:
                         if self.airbrush_size > 50:
                             self.airbrush_size = 50
                     else:
-                        if config.brush.type == Brush.CUSTOM:
-                            for frame_no in config.brush:
-                                self.brush.size += 1
-                        else:
-                            self.brush.size += 1
+                        self.brush.size += 1
                         setBIBrush()
                 elif e.unicode == "-":
                     gotkey = True
@@ -1825,11 +1821,7 @@ class pydpainter:
                         if self.airbrush_size < 5:
                             self.airbrush_size = 5
                     else:
-                        if config.brush.type == Brush.CUSTOM:
-                            for frame_no in config.brush:
-                                self.brush.size -= 1
-                        else:
-                            self.brush.size -= 1
+                        self.brush.size -= 1
                         setBIBrush()
                 elif e.key == K_0 and not e.mod & KMOD_CTRL:
                     gotkey = True
@@ -1838,12 +1830,7 @@ class pydpainter:
                         rot = 0
                     else:
                         rot += 1
-                    if config.brush.type == Brush.CUSTOM:
-                        for frame_no in config.brush:
-                            self.brush.rotate = rot
-                    else:
-                        self.brush.rotate = rot
-                    setBIBrush()
+                    self.brush.rotate = rot
                 elif e.key == K_9 and not e.mod & KMOD_CTRL:
                     gotkey = True
                     rot = self.brush.rotate
@@ -1851,12 +1838,7 @@ class pydpainter:
                         rot = 0
                     else:
                         rot -= 1
-                    if config.brush.type == Brush.CUSTOM:
-                        for frame_no in config.brush:
-                            self.brush.rotate = rot
-                    else:
-                        self.brush.rotate = rot
-                    setBIBrush()
+                    self.brush.rotate = rot
                 elif e.unicode == "]":
                     gotkey = True
                     self.color = (self.color + 1) % config.NUM_COLORS

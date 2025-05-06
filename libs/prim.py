@@ -278,8 +278,6 @@ class BrushFrame:
         self.image_orig = image.copy()
         self.image_backup = image.copy()
         self.cache = BrushCache()
-        self.size = brush.size
-        self.aspect = brush.aspect
         self.rect = brush.rect
         self.handle_frac = brush.handle_frac
 
@@ -517,7 +515,8 @@ class Brush:
             vrh = pygame.math.Vector2((w*ay*handle_fx,h*ax*handle_fy)).rotate(-rot)
             handle_x = (vrh[0] / ay) + (wr/2)
             handle_y = (vrh[1] / ax) + (hr/2)
-            self.handle_frac = [handle_x/wr, handle_y/hr]
+            if wr > 0 and hr > 0:
+                self.handle_frac = [handle_x/wr, handle_y/hr]
 
         w,h = image.get_size()
         self.calc_handle(w,h)
@@ -660,8 +659,6 @@ class Brush:
             self.frame[frameno].image = self.image
             self.frame[frameno].image_orig = self.image_orig
             self.frame[frameno].image_backup = self.image_backup
-            self.frame[frameno].size = self.size
-            self.frame[frameno].aspect = self.aspect
             self.frame[frameno].cache = self.cache
             self.frame[frameno].rect = list(self.rect)
             self.frame[frameno].handle_frac = list(self.handle_frac)
@@ -681,14 +678,12 @@ class Brush:
         self.currframe = frameno
 
         if len(self.frame) > 0:
-            self.image = self.frame[frameno].image
+            self.image = None
             self.image_orig = self.frame[frameno].image_orig
             self.image_backup = self.frame[frameno].image_backup
             self.cache = self.frame[frameno].cache
             self.rect = list(self.frame[frameno].rect)
             self.handle_frac = list(self.frame[frameno].handle_frac)
-            self.aspect = self.frame[frameno].aspect
-            self.__size = self.frame[frameno].size
 
         if doAction:
             config.doKeyAction()
