@@ -243,6 +243,8 @@ class DoBIBrush(ToolAction):
     brushnames["square"] = 2
     brushnames["spray"] = 3
     def selected(self, attrs):
+        if attrs["rightclick"]:
+            return
         if config.brush.type == Brush.CUSTOM:
             was_custom = True
         else:
