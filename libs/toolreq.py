@@ -972,12 +972,12 @@ Align:  [<>   ][^v   ]
                     config.toolbar.tool_id("circle2").state = 0
                     config.toolbar.tool_id("circle3").state = 0
                     config.toolbar.tool_id("circle4").state = 0
-                    config.toolbar.tool_id("square1").state = 0
                     config.toolbar.tool_id("square2").state = 0
                     config.toolbar.tool_id("square3").state = 0
                     config.toolbar.tool_id("square4").state = 0
-                    config.toolbar.tool_id("spray1").state = 0
+                    config.toolbar.tool_id("square5").state = 0
                     config.toolbar.tool_id("spray2").state = 0
+                    config.toolbar.tool_id("spray3").state = 0
                     config.setDrawMode(DrawMode.MATTE)
                     running = 0
                 elif ge.gadget.label == "OK" and not req.has_error():

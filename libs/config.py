@@ -892,6 +892,7 @@ class pydpainter:
         reinit = self.readConfig()
 
         self.initialize_surfaces(reinit=reinit, first_init=True)
+        self.brush = Brush()
         pygame.mouse.set_visible(False)
 
     def get_mouse_pressed(self, e=None):

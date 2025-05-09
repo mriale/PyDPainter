@@ -250,8 +250,9 @@ class DoBIBrush(ToolAction):
         config.brush.pen_down = False
         size = int(self.id[-1:])
         name = self.id[0:-1]
-        config.brush.type = DoBIBrush.brushnames[name]
+        btype = DoBIBrush.brushnames[name]
         config.brush.size = size
+        config.brush.type = btype
         config.brush.rotate = 0
         if was_custom:
             config.setDrawMode(DrawMode.COLOR)
@@ -1696,12 +1697,12 @@ class DoBrushRect(ToolDragAction):
             config.toolbar.tool_id("circle2").state = 0
             config.toolbar.tool_id("circle3").state = 0
             config.toolbar.tool_id("circle4").state = 0
-            config.toolbar.tool_id("square1").state = 0
             config.toolbar.tool_id("square2").state = 0
             config.toolbar.tool_id("square3").state = 0
             config.toolbar.tool_id("square4").state = 0
-            config.toolbar.tool_id("spray1").state = 0
+            config.toolbar.tool_id("square5").state = 0
             config.toolbar.tool_id("spray2").state = 0
+            config.toolbar.tool_id("spray3").state = 0
             config.setDrawMode(DrawMode.MATTE)
         if set_brush:
             config.brush.set_framei(config.brush.endframe, doAction=False)
@@ -1789,12 +1790,12 @@ class DoBrushPoly(DoBrush):
                 config.toolbar.tool_id("circle2").state = 0
                 config.toolbar.tool_id("circle3").state = 0
                 config.toolbar.tool_id("circle4").state = 0
-                config.toolbar.tool_id("square1").state = 0
                 config.toolbar.tool_id("square2").state = 0
                 config.toolbar.tool_id("square3").state = 0
                 config.toolbar.tool_id("square4").state = 0
-                config.toolbar.tool_id("spray1").state = 0
+                config.toolbar.tool_id("square5").state = 0
                 config.toolbar.tool_id("spray2").state = 0
+                config.toolbar.tool_id("spray3").state = 0
                 config.setDrawMode(DrawMode.MATTE)
             else:
                 if button == 1:
@@ -2205,13 +2206,13 @@ def init_toolbar(config_in):
         ( 9*scaleX,2*scaleY, 16*scaleX, 8*scaleY, "circle3", "", DoBIBrush),
         (15*scaleX,2*scaleY, 24*scaleX, 8*scaleY, "circle4", "", DoBIBrush),
 
-        (19*scaleX,9*scaleY, 23*scaleX,12*scaleY, "square1", "", DoBIBrush),
-        (14*scaleX,9*scaleY, 19*scaleX,13*scaleY, "square2", "", DoBIBrush),
-        ( 8*scaleX,9*scaleY, 14*scaleX,14*scaleY, "square3", "", DoBIBrush),
-        ( 2*scaleX,9*scaleY,  8*scaleX,15*scaleY, "square4", "", DoBIBrush),
+        (19*scaleX,9*scaleY, 23*scaleX,12*scaleY, "square2", "", DoBIBrush),
+        (14*scaleX,9*scaleY, 19*scaleX,13*scaleY, "square3", "", DoBIBrush),
+        ( 8*scaleX,9*scaleY, 14*scaleX,14*scaleY, "square4", "", DoBIBrush),
+        ( 2*scaleX,9*scaleY,  8*scaleX,15*scaleY, "square5", "", DoBIBrush),
 
-        ( 4*scaleX,15*scaleY, 9*scaleX,19*scaleY, "spray1", "", DoBIBrush),
-        (14*scaleX,13*scaleY,23*scaleX,20*scaleY, "spray2", "", DoBIBrush),
+        ( 4*scaleX,15*scaleY, 9*scaleX,19*scaleY, "spray2", "", DoBIBrush),
+        (14*scaleX,13*scaleY,23*scaleX,20*scaleY, "spray3", "", DoBIBrush),
         ], tool_type=ToolGadget.TT_GROUP)
 
     toolbar.tools.append(PalGadget(Gadget.TYPE_CUSTOM, "%",
@@ -2286,13 +2287,13 @@ def main():
         ( 9*scaleX,2*scaleY, 16*scaleX, 9*scaleY, "circle3"),
         (15*scaleX,2*scaleY, 24*scaleX, 9*scaleY, "circle4"),
 
-        (19*scaleX,9*scaleY, 23*scaleX,13*scaleY, "square1"),
-        (14*scaleX,9*scaleY, 19*scaleX,14*scaleY, "square2"),
-        ( 8*scaleX,9*scaleY, 14*scaleX,15*scaleY, "square3"),
-        ( 2*scaleX,9*scaleY,  8*scaleX,16*scaleY, "square4"),
+        (19*scaleX,9*scaleY, 23*scaleX,13*scaleY, "square2"),
+        (14*scaleX,9*scaleY, 19*scaleX,14*scaleY, "square3"),
+        ( 8*scaleX,9*scaleY, 14*scaleX,15*scaleY, "square4"),
+        ( 2*scaleX,9*scaleY,  8*scaleX,16*scaleY, "square5"),
 
-        ( 4*scaleX,15*scaleY, 9*scaleX,20*scaleY, "spray1"),
-        (14*scaleX,13*scaleY,23*scaleX,21*scaleY, "spray2"),
+        ( 4*scaleX,15*scaleY, 9*scaleX,20*scaleY, "spray2"),
+        (14*scaleX,13*scaleY,23*scaleX,21*scaleY, "spray3"),
         ], tool_type=ToolGadget.TT_GROUP)
 
     mytoolbar.draw()

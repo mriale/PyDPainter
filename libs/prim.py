@@ -547,7 +547,7 @@ class Brush:
             self.cache = BrushCache()
             self.image = None
         else:
-            if size < 1:
+            if size < 2:
                 size = 1
                 if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
                     self.__type = Brush.CIRCLE
@@ -620,9 +620,7 @@ class Brush:
                 frame.image.set_palette(pal)
         self.cache = BrushCache()
 
-    def draw_indicator(self, screen):
-        if self.__rotate == 0:
-            return
+    def draw_half_str(self, screen, xypos, text):
         if not "halfnumbers_image" in dir(self):
             scaleX = config.sm.scaleX
             scaleY = config.sm.scaleY
@@ -631,20 +629,49 @@ class Brush:
         px = config.font.xsize // 8
         py = config.font.ysize // 8
         nh = self.halfnumbers_image.get_height()
-        nw = self.halfnumbers_image.get_width() // 13
- 
-        rot_str = str(self.rotate)
-        xpos = px*200
-        for c in rot_str:
+        nw = self.halfnumbers_image.get_width() // 16
+        xpos = xypos[0] * px
+        ypos = xypos[1] * py
+
+        for c in text:
             noffset = self.halfnumbers_image.get_width() + 1
             if c >= '0' and c <= '9':
                 noffset = (ord(c) - ord('0')) * nw
+            elif c == 'o':
+                noffset = 10 * nw
             elif c == '-':
                 noffset = 11 * nw
-            screen.blit(self.halfnumbers_image, (xpos,py*2), (noffset,0,nw,nh))
+            elif c == '%':
+                noffset = 12 * nw
+            elif c == 'C':
+                noffset = 13 * nw
+            elif c == 'Q':
+                noffset = 14 * nw
+            elif c == 'S':
+                noffset = 15 * nw
+            screen.blit(self.halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
             xpos += nw
 
-            screen.blit(self.halfnumbers_image, (xpos,py*2), (10*nw,0,nw,nh))
+    def draw_indicator(self, screen):
+        if self.__rotate != 0:
+            self.draw_half_str(screen, (197,2), f"{self.rotate}o")
+
+        if self.type == Brush.CUSTOM:
+            orig_height = self.image_orig.get_height()
+            if self.__size != orig_height:
+                pct = 100 * self.__size // orig_height
+                self.draw_half_str(screen, (213,2), f"{pct}%")
+        elif self.size != 1:
+            size = self.size
+            btype_str = ""
+            if self.type == Brush.CIRCLE:
+                btype_str = "C"
+            elif self.type == Brush.SQUARE:
+                btype_str = "Q"
+            elif self.type == Brush.SPRAY:
+                btype_str = "S"
+            self.draw_half_str(screen, (213,2), f"{btype_str}")
+            self.draw_half_str(screen, (218,2), f"{size}")
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
@@ -821,7 +848,15 @@ class Brush:
         elif self.type == Brush.SPRAY:
             if color is None:
                 color = config.color
-            image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
+            if self.size <= 3:
+                small_size = self.size
+                if self.size == 2:
+                    small_size = 3
+                if self.size == 3:
+                    small_size = 7
+                image = pygame.Surface((small_size,small_size),0, config.pixel_canvas)
+            else:
+                image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
             w,h = image.get_size()
             self.calc_handle(w,h)
             image.set_palette(config.pal)
@@ -833,16 +868,18 @@ class Brush:
                 image.set_colorkey(0)
 
             if self.size == 1:
+                image.set_at((0,0), color)
+            elif self.size == 2:
                 image.set_at((0,1), color)
                 image.set_at((2,0), color)
                 image.set_at((2,2), color)
-            elif self.size == 2:
+            elif self.size == 3:
                 image.set_at((3,0), color)
                 image.set_at((0,2), color)
                 image.set_at((3,3), color)
                 image.set_at((6,3), color)
                 image.set_at((3,5), color)
-            elif self.size > 2:
+            elif self.size > 3:
                 old_state = random.getstate()
                 random.seed(self.size)
                 for i in range(0, self.size * 3):
