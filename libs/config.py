@@ -1776,7 +1776,7 @@ class pydpainter:
                 (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
-            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)):
+            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.toolbar.is_inside(self.get_mouse_pointer_pos(e)):
                 if e.button == 2: #middle drag
                     zoom_drag = self.get_mouse_pixel_pos(e)
                 elif e.button == 4: #scroll up
@@ -1792,6 +1792,17 @@ class pydpainter:
                 cx,cy = config.zoom.center
                 dx,dy = zoom_drag
                 config.zoom.center = (cx+dx-x,cy+dy-y)
+
+            #process mouse wheel in toolbar for brush size
+            if e.type == MOUSEBUTTONDOWN and e.button in [4,5] and self.toolbar.is_inside(self.get_mouse_pointer_pos(e)):
+                scaleY = config.fonty // 12
+                x,y = self.get_mouse_pixel_pos(e)
+                if y < self.toolbar.offset[1] + (22 * scaleY):
+                    if e.button == 4: #scroll up
+                        config.brush.size += 1
+                    elif e.button == 5: #scroll down
+                        config.brush.size -= 1
+                    setBIBrush()
 
             #process global keys
             if e.type == KEYDOWN:
