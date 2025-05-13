@@ -621,13 +621,10 @@ class Brush:
         self.cache = BrushCache()
 
     def draw_half_str(self, screen, xypos, text):
-        if not "halfnumbers_image" in dir(self):
-            scaleX = config.sm.scaleX
-            scaleY = config.sm.scaleY
-            scaledown = config.sm.scaledown
-            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=scaleX, scaleY=scaleY)
         px = config.font.xsize // 8
         py = config.font.ysize // 8
+        if not "halfnumbers_image" in dir(self):
+            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//py)
         nh = self.halfnumbers_image.get_height()
         nw = self.halfnumbers_image.get_width() // 16
         xpos = xypos[0] * px

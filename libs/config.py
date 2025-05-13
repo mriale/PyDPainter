@@ -475,6 +475,8 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.hide_menus = self.hide_menus
 
+        self.brush = Brush()
+
         self.clear_undo()
         config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
@@ -892,7 +894,6 @@ class pydpainter:
         reinit = self.readConfig()
 
         self.initialize_surfaces(reinit=reinit, first_init=True)
-        self.brush = Brush()
         pygame.mouse.set_visible(False)
 
     def get_mouse_pressed(self, e=None):
