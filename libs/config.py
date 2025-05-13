@@ -1867,6 +1867,11 @@ class pydpainter:
                 elif e.unicode == ",":
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
+                elif e.unicode == "\\":
+                    if config.minitoolbar.tool_id("expand").state == 1:
+                        config.minitoolbar.tool_id("expand").state = 0
+                    else:
+                        config.minitoolbar.tool_id("expand").state = 1
                 elif e.mod & KMOD_META:
                     ticks = pygame.time.get_ticks()
                     if ticks - config.last_mouse_nudge_time < 100:
