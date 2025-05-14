@@ -1809,7 +1809,13 @@ class pydpainter:
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.mod & KMOD_CTRL:
+                if e.mod & KMOD_CTRL and (e.unicode == "+" or e.unicode == "="):
+                    gotkey = True
+                    config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN)
+                elif e.mod & KMOD_CTRL and e.unicode == "-":
+                    gotkey = True
+                    config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN, subtool=True)
+                elif e.mod & KMOD_CTRL:
                     if e.key == K_RETURN:
                         config.perspective.do_mode()
                         gotkey = True
@@ -1868,6 +1874,7 @@ class pydpainter:
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
                 elif e.unicode == "\\":
+                    gotkey = True
                     if config.minitoolbar.tool_id("expand").state == 1:
                         config.minitoolbar.tool_id("expand").state = 0
                     else:
@@ -1924,9 +1931,12 @@ class pydpainter:
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
                 elif e.key == K_F12:
-                    print("\n***********Debug************")
-                    print(f"{config.layers=}")
-                    config.debug = not config.debug
+                    if e.mod & KMOD_SHIFT:
+                        print("\n***********Debug************")
+                        print(f"{config.layers=}")
+                        config.debug = not config.debug
+                    else:
+                        config.toolbar.click(config.minitoolbar.tool_id("scanlines"), MOUSEBUTTONDOWN)
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)
