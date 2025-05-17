@@ -1178,6 +1178,7 @@ class Brush:
             self.startframe = startframe
         self.size_orig = self.size
         self.rotate_orig = self.rotate
+        self.type_orig = self.type
 
     def reset_stroke(self):
         self.smear_count = 0
@@ -1185,6 +1186,7 @@ class Brush:
         self.set_framei(self.startframe, doAction=False)
         self.size = self.size_orig
         self.rotate = self.rotate_orig
+        self.type = self.type_orig
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -1343,6 +1345,7 @@ class CoordList:
                 coordi += 1
                 if primprops.size_from != 100 or primprops.size_to != 100:
                     config.brush.size = config.brush.size_orig * int(config.lerp(primprops.size_from, primprops.size_to, inter_list[coordi])) // 100
+                    config.brush.type = config.brush.type_orig
                 if primprops.rotate_from != 0 or primprops.rotate_to != 100:
                     config.brush.rotate = config.brush.rotate_orig + int(config.lerp(primprops.rotate_from, primprops.rotate_to, inter_list[coordi]))
                 currpoint += 1
