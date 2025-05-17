@@ -115,6 +115,7 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.clear_pixel_draw_canvas()
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -132,6 +133,7 @@ class DoOpen(MenuAction):
             except Exception as ex:
                 close_progress_req(progress_req)
                 io_error_req(str(ex), "Unable to open image:\n%s", filename)
+        config.doKeyAction()
 
 class DoSave(MenuAction):
     def selected(self, attrs):
@@ -1328,8 +1330,10 @@ class DoStencilMake(MenuActionMulti):
         return False
 
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
         if stencil_req(config.pixel_req_canvas):
             super().selected(attrs)
+        config.doKeyAction()
 
     def selectedMulti(self, attrs):
         config.stencil.remake(config.pixel_canvas)

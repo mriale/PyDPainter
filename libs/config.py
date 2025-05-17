@@ -1927,8 +1927,13 @@ class pydpainter:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
                     config.redo()
-                elif e.unicode == chr(178): #AZERTY backtick key
+                elif e.unicode == chr(178) or (e.key == 178 and not (e.mod & KMOD_SHIFT)): #AZERTY backtick key
+                    gotkey = True
                     config.stencil.enable = not config.stencil.enable
+                    config.doKeyAction()
+                elif e.key == 178 and e.mod & KMOD_SHIFT and e.unicode != "~": #AZERTY tilde key
+                    gotkey = True
+                    config.menubar.menu_id("effect").menu_id("stencil").menu_id("make").action.selected("")
                     config.doKeyAction()
                 elif e.key == K_F12:
                     if e.mod & KMOD_SHIFT:
