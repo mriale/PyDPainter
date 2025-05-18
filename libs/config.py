@@ -862,7 +862,7 @@ class pydpainter:
         self.modified_count = -1
         self.proj[0].modified_count = -1
         self.proj[1].modified_count = -1
-        self.UNDO_INDEX_MAX = 20
+        self.UNDO_INDEX_MAX = 256
         self.undo_image = []
         self.undo_index = -1
         self.suppress_undo = False
