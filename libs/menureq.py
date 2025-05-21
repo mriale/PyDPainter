@@ -3,6 +3,8 @@
 
 import os.path, colorsys
 
+from tkinter import filedialog as fd
+
 import libs.gadget
 from libs.gadget import *
 
@@ -208,6 +210,52 @@ Dir Name: ______________________
     return retval
 
 def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
+    if config.debug:
+        print(f"{title=}, {action_label=}, {filepath=}, {filename=}, {filetype_list=}")
+
+    if filetype_list is None:
+        has_type = False
+    else:
+        has_type = True
+
+    old_shape = config.cursor.shape
+    config.cursor.shape = 3
+    config.cursor.visible = False
+    w,h = screen.get_size()
+    screen.fill((128,128,128))
+    screen.blit(config.pixel_canvas, (config.screen_offset_x,config.screen_offset_y))
+    surf_array = pygame.surfarray.pixels2d(screen)
+    surf_array[0::2,0::2] = 0x88888888
+    surf_array[1::2,1::2] = 0x88888888
+    surf_array = None
+    config.pixel_req_rect = [0,0,w,h]
+    config.recompose()
+    pygame.mouse.set_visible(True)
+
+    filetypes = list()
+    if not filetype_list is None:
+        for (ext,desc) in filetype_list:
+            filetypes.append([desc, "*." + ext.upper()])
+            filetypes.append([desc, "*." + ext.lower()])
+
+    if action_label == "Open":
+        filename = fd.askopenfilename(title=title, initialdir=filepath, filetypes=filetypes)
+    else:
+        filename = fd.asksaveasfilename(title=title, initialdir=filepath, initialfile=os.path.basename(filename), filetypes=filetypes)
+
+    pygame.mouse.set_visible(False)
+    config.pixel_req_rect = None
+    config.cursor.shape = old_shape
+    config.cursor.visible = True
+
+    #Eat all events
+    event = config.xevent.poll()
+    while event.type != pygame.NOEVENT:
+        event = config.xevent.poll()
+
+    return filename
+
+def file_req_old(screen, title, action_label, filepath, filename, filetype_list=None):
     if filetype_list is None:
         has_type = False
     else:

@@ -161,16 +161,7 @@ class DoSaveAs(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
-                if not save_pic(filename, merge_config, overwrite=False):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                        save_pic(filename, merge_config, overwrite=True)
-                    else:
-                        return
+                save_pic(filename, merge_config, overwrite=True)
             except:
                 io_error_req("Save Error", "Unable to save image:\n%s", filename)
                 return
@@ -461,16 +452,7 @@ class DoBrushSaveAs(MenuAction):
             brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             try:
-                if not save_pic(filename, brush_config, overwrite=False, bgcolor=config.brush.bgcolor):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                            save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
-                    else:
-                        return
+                save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except:
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
@@ -1286,16 +1268,7 @@ class DoAnimBrushSave(MenuAction):
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)
             try:
-                if not save_anim(filename, brush_config, overwrite=False, transparent_color=config.brush.bgcolor):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                            save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
-                    else:
-                        return
+                save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except:
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
