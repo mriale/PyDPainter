@@ -149,7 +149,7 @@ class Menubar:
         self.fadesurf = None
         self.hide_menus = False
         self.button_down_ticks = 0
-        self.click_mode = True
+        self.click_mode = False
 
     def add_indicator(self, name, renderer):
         self.indicators[name] = renderer
@@ -379,7 +379,7 @@ class Menubar:
              (event.type == MOUSEBUTTONUP and event.button in [1,3]) or \
              event.type == KEYUP:
             if event.type == MOUSEBUTTONUP:
-                if pygame.time.get_ticks() - self.button_down_ticks < 500:
+                if self.is_inside((x,y)) and pygame.time.get_ticks() - self.button_down_ticks < 500:
                     self.click_mode = True
                     return ge
                 self.click_mode = False
