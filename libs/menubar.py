@@ -148,6 +148,8 @@ class Menubar:
         self.need_redraw = True
         self.fadesurf = None
         self.hide_menus = False
+        self.button_down_ticks = 0
+        self.click_mode = True
 
     def add_indicator(self, name, renderer):
         self.indicators[name] = renderer
@@ -354,7 +356,8 @@ class Menubar:
         x,y = mouse_pixel_mapper()
         #x -= self.offset[0]
         #y -= self.offset[1]
-        if self.visible and event.type == MOUSEBUTTONDOWN and event.button in [1,3]:
+        if not self.click_mode and self.visible and event.type == MOUSEBUTTONDOWN and event.button in [1,3]:
+            self.button_down_ticks = pygame.time.get_ticks()
             if event.button == 3:
                 rightclick = True
             if self.is_inside((x,y)):
@@ -372,9 +375,15 @@ class Menubar:
                         ge.extend(self.click(menug, event.type))
                     else:
                         ge.extend(menug.process_event(screen, event, mouse_pixel_mapper))
-        elif (event.type == MOUSEBUTTONUP and event.button in [1,3]) or \
+        elif (self.click_mode and event.type == MOUSEBUTTONDOWN and event.button in [1,3]) or \
+             (event.type == MOUSEBUTTONUP and event.button in [1,3]) or \
              event.type == KEYUP:
             if event.type == MOUSEBUTTONUP:
+                if pygame.time.get_ticks() - self.button_down_ticks < 500:
+                    self.click_mode = True
+                    return ge
+                self.click_mode = False
+                self.button_down_ticks = 0
                 self.wait_for_mouseup[event.button] = False
                 self.menus_on = False
                 attrs = {}
@@ -405,9 +414,9 @@ class Menubar:
         elif event.type == KEYDOWN:
             self.hotkey_map.press(event)
         elif event.type == MOUSEMOTION:
-            if event.buttons == (0,0,0):
+            if event.buttons == (0,0,0) and not self.click_mode:
                 self.wait_for_mouseup = [False, False, False, False]
-            if not self.hide_menus and self.is_inside((x,y)) and event.buttons == (0,0,0):
+            if not self.hide_menus and self.is_inside((x,y)) and event.buttons == (0,0,0) and not self.click_mode:
                 self.menus_on = True
                 for mg in self.menug_list:
                     if mg.pointin((x,y), mg.screenrect):
