@@ -210,9 +210,12 @@ Dir Name: ______________________
     return retval
 
 def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
-    if config.debug:
-        print(f"{title=}, {action_label=}, {filepath=}, {filename=}, {filetype_list=}")
+    if config.sys_file_dialog and not config.fullscreen:
+        return file_req_system(screen, title, action_label, filepath, filename, filetype_list)
+    else:
+        return file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
 
+def file_req_system(screen, title, action_label, filepath, filename, filetype_list=None):
     if filetype_list is None:
         has_type = False
     else:
@@ -255,7 +258,19 @@ def file_req(screen, title, action_label, filepath, filename, filetype_list=None
 
     return filename
 
-def file_req_old(screen, title, action_label, filepath, filename, filetype_list=None):
+def ask_overwrite(screen, filename):
+    retval = True
+    if os.path.isfile(filename):
+        answer = question_req(screen,
+                 "File Exists",
+                 "Overwrite this file?",
+                 ["Yes","No"],
+                 [K_RETURN, K_ESCAPE])
+        if answer == 1:
+            retval = False
+    return retval
+
+def file_req_custom(screen, title, action_label, filepath, filename, filetype_list=None):
     if filetype_list is None:
         has_type = False
     else:
@@ -352,6 +367,8 @@ File:___________________%s
                 if ge.gadget.label == action_label:
                     if file_nameg.value != "":
                         retval = os.path.join(filepath, file_nameg.value)
+                        if action_label == "Save" and not ask_overwrite(screen, retval):
+                            retval = ""
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0

@@ -473,6 +473,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
+        self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
         self.menubar.hide_menus = self.hide_menus
 
         self.brush = Brush()
@@ -602,6 +603,7 @@ class pydpainter:
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
+            f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
             f.close()
         except:
             pass
@@ -663,6 +665,8 @@ class pydpainter:
                         self.force_1_to_1_pixels = True if vars[1] == "True" else False
                     elif vars[0] == "true_symmetry":
                         self.true_symmetry = True if vars[1] == "True" else False
+                    elif vars[0] == "sys_file_dialog":
+                        self.sys_file_dialog = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -805,6 +809,7 @@ class pydpainter:
         self.hide_menus = False
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
+        self.sys_file_dialog = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))

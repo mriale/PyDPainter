@@ -1504,6 +1504,14 @@ class DoPrefsTrueSymmetry(MenuAction):
         config.true_symmetry = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsSysFileDialog(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.sys_file_dialog = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1672,6 +1680,7 @@ def init_menubar(config_in):
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],
+            ["/Sys File Dialog", " ", DoPrefsSysFileDialog],
             ["/Coords", [
                 ["/Show", "|", DoPrefsCoords],
                 ["/Flip", " ", DoPrefsFlipCoords],
