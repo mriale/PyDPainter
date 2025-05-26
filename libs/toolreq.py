@@ -1535,7 +1535,7 @@ class EaseGadget(Gadget):
         return ge
 
 def spacing_req(screen):
-    req = str2req("Brush Stroke", """
+    req = str2req("Brush Trails", """
 [Continuous]
 [Every Nth dot]____~
 [Airbrush]     ____~
