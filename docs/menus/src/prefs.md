@@ -13,13 +13,12 @@ An active setting is preceded by a checkmark &check;.
   - [Hide Menus](#hide-menus)
   - [Force 1:1 Pixels](#force-11-pixels)
   - [True Symmetry](#true-symmetry)
-  - [SySFileDialog](#sysfiledialog)
+  - [SysFileDialog](#sysfiledialog)
   - [Coords](#coords)
     - [Show](#show)
     - [Flip](#flip)
     - [1-based](#1-based)
   - [Save Config](#save-config)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 ## AutoTransp
 When this setting is on, PyDPainter ignores the current palette background color when grabbing a brush and uses instead the color of the 4 points at the corner of the brush capture rectangle.
@@ -32,10 +31,12 @@ Example: the palette background color is set to black. But with AutoTransp activ
 ## MultiCycle
 By default, Cycle mode `F7` uses the overall shape of the current brush, like in Color Mode, but cycles colors along the active range. Pixel colors in any custom brush are not taken into account.
 With this option ON, all brush pixels are taken into account, and if they are in a Range, their colors will cycle individually. If the brush contains pixels belonging to several Color Ranges, they will all cycle.
-![](multicyle-ex.png)
-In this example, we use the two default ranges when the PydPainter program opens. As you can see, Multicycle produces remarkable effects. Without, the whole shape turns red, then yellow, then green, or through greys and that's it.
 
-*Note: if a brush were to use both grey pixels from Range 1 and yellow or green pixels from Range 2, both would cycle.*
+![](multicyle-ex.png)
+
+In this example, we use the two default ranges when the PyDPainter program opens. As you can see, Multicycle produces remarkable effects. Without, the whole shape turns red, then yellow, then green, or through grays and that's it.
+
+*Note: if a brush were to use both gray pixels from Range 1 and yellow or green pixels from Range 2, both would cycle.*
 
 Follow thoses links if you're not familiar with [Color Range](mode.md#cycle-range) or [Cycle Mode](mode.md#cycle).
 
@@ -64,11 +65,13 @@ Screen sizes are usually even numbers (like 320x200) which means there is no tru
 This can be seen with a small 10x10 page size. On the left is regular symmetry and the on right is True Symmetry:<br>
 ![](true_symm.png)
 
-## SySFileDialog
-By default, PydPainter uses its own file requester, inspired by DeluxePaint. If retro nostalgia is okay, but you prefer your modern OS file request, you can check this option and and switch to your system's file directory. This works for all loading and saving. PydPainter will be completely frozen, waiting for the file request to be used. So to remind you of this, it displays a chessboard raster on top of the working screen.
+## SysFileDialog
+By default, PyDPainter uses its own file requester, inspired by Deluxe Paint. If you prefer your modern OS's file dialog window with support for thumbnail previews, shared drives, and different volumes, you can check this option. This works for all menu items that open and save. When the modern file dialog window is shown, PyDPainter will be completely frozen, waiting for you to pick a file or cancel. To remind you of this, it displays a checkerboard pattern on top of the canvas in PyDPainter.
+
 ![](open-picture-linux.png)<br>
-*Open Picture on a Linux OS*<br>
-*Note: to avoid any problems, like windows losts behind or PydPainter not showing up after file selection, full-screen mode 'F11' will always use the **PydPainter** query, whatever you choose. Sorry for the inconvenience, too many OS out there.*
+*Open Picture with the system file dialog on Linux*
+
+*Note: Because full screen mode (`F11`) takes over the screen, the system file dialog window can easily be lost behind the PyDPainter window with no easy way to get it back. Therefore, the SysFileDialog option will be ignored in full screen mode.*
 
 ## Coords
 Displays mouse x and y coordinates in the menu bar. When drawing rectangles, circles, ellipses and brushes selection, the coordinates are replaced by the distance in pixels between the point of origin and your mouse position.  
