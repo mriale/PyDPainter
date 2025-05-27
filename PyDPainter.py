@@ -41,6 +41,7 @@ After the modules are successfully installed, re-run PyDPainter.
 
 os.environ["SDL_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR"] = "0"
 os.environ["SDL_MOUSE_RELATIVE"] = "0"
+os.environ["TK_SILENCE_DEPRECATION"] = "1"
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
 import libs.pixelfont
@@ -88,12 +89,12 @@ def remove_files():
 
 def check_recover():
     global root
+    import tkinter as tk
+    root = tk.Tk()
     recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover")
     if os.path.exists(recover_path):
         dir_list = os.listdir(recover_path)
         if len(dir_list) >= 1:
-            import tkinter as tk
-            root = tk.Tk()
             root.title("Recovery")
             heading = tk.Label(root, text="PyDPainter Recovery", font="Helvetica 16 bold")
             heading.pack()
@@ -117,6 +118,8 @@ def check_recover():
 
             # keep the window displaying
             root.mainloop()
+    else:
+        root.withdraw
 
 if __name__ == "__main__":
     check_recover()
