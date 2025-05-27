@@ -1820,10 +1820,9 @@ class pydpainter:
                 elif e.mod & KMOD_CTRL and e.unicode == "-":
                     gotkey = True
                     config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN, subtool=True)
-                elif e.mod & KMOD_CTRL:
-                    if e.key == K_RETURN:
-                        config.perspective.do_mode()
-                        gotkey = True
+                elif e.mod & KMOD_CTRL and e.key == K_RETURN:
+                    config.perspective.do_mode()
+                    gotkey = True
                 elif e.key == K_KP_ENTER:
                     config.perspective.do_mode()
                     gotkey = True
