@@ -3,6 +3,7 @@
 
 import os.path, colorsys
 
+import tkinter as tk
 from tkinter import filedialog as fd
 
 import libs.gadget
@@ -240,6 +241,9 @@ def file_req_system(screen, title, action_label, filepath, filename, filetype_li
         for (ext,desc) in filetype_list:
             filetypes.append([desc, "*." + ext.upper()])
             filetypes.append([desc, "*." + ext.lower()])
+
+    root = tk.Tk()
+    root.withdraw()
 
     if action_label == "Open":
         filename = fd.askopenfilename(title=title, initialdir=filepath, filetypes=filetypes)
