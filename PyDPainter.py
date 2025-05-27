@@ -119,7 +119,7 @@ def check_recover():
             # keep the window displaying
             root.mainloop()
     else:
-        root.withdraw
+        root.withdraw()
 
 if __name__ == "__main__":
     check_recover()
