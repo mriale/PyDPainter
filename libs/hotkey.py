@@ -6,7 +6,7 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-import re
+import re, sys
 
 class HotKeyMap:
     def __init__(self):
@@ -127,7 +127,10 @@ class HotKey:
                 s += "\x84\x85"
                 c = c.upper()
             if self.mod & KMOD_CTRL:
-                s += "\x80\x81"
+                if sys.platform.startswith('darwin'):
+                    s += "\x9D"
+                else:
+                    s += "\x80\x81"
             if self.mod & KMOD_ALT:
                 s += "\x82\x83"
             return s+c
