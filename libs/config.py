@@ -450,6 +450,13 @@ class pydpainter:
         self.minitoolbar = init_minitoolbar(config)
         self.animtoolbar = init_animtoolbar(config)
         self.layertoolbar = init_layertoolbar(config)
+        self.all_toolbars = [
+            self.toolbar,
+            self.menubar,
+            self.minitoolbar,
+            self.animtoolbar,
+            self.layertoolbar,
+        ]
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
@@ -482,6 +489,14 @@ class pydpainter:
         config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
         config.save_undo()
+
+    def inside_toolbars(self, toolbar_list, coords):
+        inside = False
+        for tb in toolbar_list:
+            if tb.is_inside(coords):
+                inside = True
+                break
+        return inside
 
     def guess_color_depth(self, pal):
         # pictures with more than 32 colors are not Amiga OCS/ECS
