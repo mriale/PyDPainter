@@ -673,6 +673,7 @@ class DoBrushRotate90(MenuAction):
     def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
             config.brush.rotate = (config.brush.rotate + 90) % 360
+            config.doKeyAction()
 
 class DoBrushRotateAny(MenuAction):
     def selected(self, attrs):
