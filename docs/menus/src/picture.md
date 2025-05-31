@@ -23,8 +23,14 @@ Key: `CTRL-o`
 
 > Please note! The size of modern images may exceed **PyDPainter** built-in screen sizes, in which case they will be larger and continue beyond the screen displayed, below the interface. You can scroll them using cursors keys. [see Page Size](#page-size).
 
+New in 2.2.0 : standard file requester will be used for all load and save operation if **Sys File Dialog** is checked in the **Prefs** menu. While this system request is another task waiting for your input (choose a file or cancel), **PyDPainter** will be ‘frozen’. It will display a checkerboard pattern over the project to remind you.
+![Windows Filereq](open-picture-win10.png)
+*The French Windows File Dialog*
 
-The file query is inspired by **DeluxePaint** legacy. You can move up one level in the tree structure by clicking on `.. (parent dir)`
+![Linux Filereq](open-picture-linux.png)
+*A Linux File Dialog*
+
+The other file query is inspired by **DeluxePaint** legacy. You can move up one level in the tree structure by clicking on `.. (parent dir)`
 Above all, you can change the drive by directly typing its letter in the path:  
 `D:\`  
 `C:\Users\Utilisateur\Pictures\`
@@ -55,8 +61,8 @@ Key: `SHIFT-CTRL-s`
 Reloads the image as you last loaded or saved. Be careful, it will remove everything you've done since then. Handy if you want to try things out from within an image.
 
 Key: `CTRL-ALT-z`
-## Print...
-_not supported_
+
+---
 ## Flip
 Immediately performs an inversion on the entire image.
 
@@ -115,7 +121,7 @@ After rearranging the colors in the palette, you'd like to give your image, whic
 ## Spare
 You always have a draft page to work with. This `Spare` screen is there for scribbling, storing brushes, test filling, test tiling, etc., without destroying your current project. It can also be merged with your main project.
 
-*As long as you haven't saved a project or created an animation, the two are equivalent. The spare screen cannot be different in terms of screen format.*
+*As long as you haven't saved a project or created an animation, the two are equivalent. The spare screen cannot be different in terms of screen format. This screen is not saved when the main image or animation is saved. You can save it as an image under a different name.*
 
 ### Swap
 Toggles between the spare screen and the current project. When you first call it up, the spare page is the standard screen size, all black, with exactly the same color palette. If you wish to use a larger page size on the spare
