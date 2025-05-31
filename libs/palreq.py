@@ -351,6 +351,7 @@ Speed---------000^^
         speed_numg.enabled = False
         speed_dirg.enabled = False
 
+    #palg.maxvalue = current_range
     tool_palg = config.toolbar.tool_id("palette")
 
     config.cursor.shape = 1
