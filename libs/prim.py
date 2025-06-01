@@ -278,8 +278,6 @@ class BrushFrame:
         self.image_orig = image.copy()
         self.image_backup = image.copy()
         self.cache = BrushCache()
-        self.size = brush.size
-        self.aspect = brush.aspect
         self.rect = brush.rect
         self.handle_frac = brush.handle_frac
 
@@ -298,10 +296,12 @@ class Brush:
     PLACE = 5
 
     def __init__(self, type=CIRCLE, size=1, screen=None, bgcolor=0, coordfrom=None, coordto=None, pal=None, polylist=None, animbrush=False, image=None):
+        if "menubar" in dir(config):
+            config.menubar.indicators["brush"] = self.draw_indicator
         if "grid_on" in dir(config) and config.grid_on:
-            self.handle_type = self.CORNER_UL
+            self.__handle_type = self.CORNER_UL
         else:
-            self.handle_type = self.CENTER
+            self.__handle_type = self.CENTER
         if type == Brush.CUSTOM:
             if image is None:
                 self.image = self.get_image_from_screen(screen, bgcolor=bgcolor, coordfrom=coordfrom, coordto=coordto, pal=pal, polylist=polylist, animbrush=animbrush)
@@ -314,6 +314,7 @@ class Brush:
             self.image_orig = self.image.copy()
             self.image_backup = self.image.copy()
             self.bgcolor_orig = bgcolor
+            self.__rotate = 0
             self.__size = h
             self.aspect = 1.0
             self.calc_handle(w, h)
@@ -326,12 +327,14 @@ class Brush:
             self.bgcolor = bgcolor
             self.image_orig = None
             self.bgcolor_orig = bgcolor
+            self.__rotate = 0
             self.__size = size
             self.aspect = 1.0
             self.calc_handle(size, size)
             self.frame = []
             self.animbrush = False
 
+        self.handle_frac_orig = list(self.handle_frac)
         self.cache = BrushCache()
         self.smear_stencil = None
         self.smear_image = None
@@ -352,6 +355,8 @@ class Brush:
         self.duration = len(self.frame)
         self.direction = 1
         self.framelist = self.calc_framelist()
+        self.size_orig = self.__size
+        self.rotate_orig = self.__rotate
 
         if pal == None and "pal" in dir(config):
             self.pal = config.pal
@@ -434,15 +439,18 @@ class Brush:
 
     def calc_handle(self, w, h):
         if self.handle_type == self.CENTER:
-            self.handle_frac = [0.5, 0.5]
+            self.handle_frac_orig = [0.5, 0.5]
         elif self.handle_type == self.CORNER_UL:
-            self.handle_frac = [0.0, 0.0]
+            self.handle_frac_orig = [0.0, 0.0]
         elif self.handle_type == self.CORNER_UR:
-            self.handle_frac = [1.0, 0.0]
+            self.handle_frac_orig = [1.0, 0.0]
         elif self.handle_type == self.CORNER_LR:
-            self.handle_frac = [1.0, 1.0]
+            self.handle_frac_orig = [1.0, 1.0]
         elif self.handle_type == self.CORNER_LL:
-            self.handle_frac = [0.0, 1.0]
+            self.handle_frac_orig = [0.0, 1.0]
+
+        if self.__rotate == 0:
+            self.handle_frac = list(self.handle_frac_orig)
 
         self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
@@ -464,8 +472,9 @@ class Brush:
                     return (self.size*2*ax, self.size*2*ay)
 
 
-    def scale(self, image_in):
+    def rotscale(self, image_in):
         size = self.__size
+        rot = -self.__rotate
         image = image_in.copy()
         image.set_palette(config.pal)
         w,h = image.get_size()
@@ -474,8 +483,54 @@ class Brush:
             w = int(w*factor*self.aspect)
             h = int(h*factor)
             image = pygame.transform.scale(image, (w, h))
+
+        if rot == 0:
+            self.handle_frac = list(self.handle_frac_orig)
+        else:
+            ax = config.aspectX
+            ay = config.aspectY
+            if ax == 2 or ay == 2:
+                image = pygame.transform.scale(image, (w*ay, h*ax))
+
+            image = pygame.transform.rotate(image, rot)
+
+            # calculate bounding rectangle
+            vr1 = pygame.math.Vector2((w*ay,h*ax)).rotate(rot)
+            vr2 = pygame.math.Vector2((0,h*ax)).rotate(rot)
+            vr3 = pygame.math.Vector2((w*ay,0)).rotate(rot)
+            xmin = min(0, vr1[0], vr2[0], vr3[0])
+            xmax = max(0, vr1[0], vr2[0], vr3[0])
+            ymin = min(0, vr1[1], vr2[1], vr3[1])
+            ymax = max(0, vr1[1], vr2[1], vr3[1])
+            wr = (xmax-xmin) // ay
+            hr = (ymax-ymin) // ax
+
+            if ax == 2 or ay == 2:
+                image = pygame.transform.scale(image, (wr, hr))
+ 
+            # calculate handle rotation
+            handle_fx, handle_fy = self.handle_frac_orig
+            handle_fx -= 0.5
+            handle_fy -= 0.5
+            vrh = pygame.math.Vector2((w*ay*handle_fx,h*ax*handle_fy)).rotate(-rot)
+            handle_x = (vrh[0] / ay) + (wr/2)
+            handle_y = (vrh[1] / ax) + (hr/2)
+            if wr > 0 and hr > 0:
+                self.handle_frac = [handle_x/wr, handle_y/hr]
+
+        w,h = image.get_size()
         self.calc_handle(w,h)
         return image
+
+    @property
+    def image(self):
+        if self.__image is None:
+            self.__image = self.render_image()
+        return self.__image
+
+    @image.setter
+    def image(self, image_in):
+        self.__image = image_in
 
     @property
     def size(self):
@@ -490,9 +545,9 @@ class Brush:
                 size = 2000
             self.__size = size
             self.cache = BrushCache()
-            self.image = self.scale(self.image_orig)
+            self.image = None
         else:
-            if size < 1:
+            if size < 2:
                 size = 1
                 if self.type == Brush.SQUARE or self.type == Brush.SPRAY:
                     self.__type = Brush.CIRCLE
@@ -522,13 +577,98 @@ class Brush:
             self.__type = type
             self.size = self.__size  #recalc handle and wipe cache
 
+    @property
+    def handle_type(self):
+        return self.__handle_type
+
+    @handle_type.setter
+    def handle_type(self, handle_type):
+        self.__handle_type = handle_type
+        w,h = self.image.get_size()
+        self.calc_handle(w, h)
+
+    @property
+    def rotate(self):
+        return self.__rotate
+
+    @rotate.setter
+    def rotate(self, rotate):
+        if rotate == self.__rotate:
+            return
+
+        self.__rotate = rotate % 360
+        if self.type == Brush.SPRAY:
+            pass
+        elif self.type == Brush.CIRCLE:
+            self.cache = BrushCache()
+            self.image = None
+        elif self.type == Brush.SQUARE:
+            self.cache = BrushCache()
+            self.image = None
+        elif self.type == Brush.CUSTOM:
+            self.cache = BrushCache()
+            self.image = None
+
     def set_palettes(self, pal):
         if self.type != Brush.CUSTOM:
             return
+        if self.image == None:
+            self.image = self.render_image()
         self.image.set_palette(pal)
         for frame in self.frame:
-            frame.image.set_palette(pal)
+            if frame.image != None:
+                frame.image.set_palette(pal)
         self.cache = BrushCache()
+
+    def draw_half_str(self, screen, xypos, text):
+        px = config.font.xsize // 8
+        py = config.font.ysize // 8
+        if not "halfnumbers_image" in dir(self):
+            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
+        nh = self.halfnumbers_image.get_height()
+        nw = self.halfnumbers_image.get_width() // 16
+        xpos = xypos[0] * px
+        ypos = xypos[1] * py
+
+        for c in text:
+            noffset = self.halfnumbers_image.get_width() + 1
+            if c >= '0' and c <= '9':
+                noffset = (ord(c) - ord('0')) * nw
+            elif c == 'o':
+                noffset = 10 * nw
+            elif c == '-':
+                noffset = 11 * nw
+            elif c == '%':
+                noffset = 12 * nw
+            elif c == 'C':
+                noffset = 13 * nw
+            elif c == 'Q':
+                noffset = 14 * nw
+            elif c == 'S':
+                noffset = 15 * nw
+            screen.blit(self.halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
+            xpos += nw
+
+    def draw_indicator(self, screen):
+        if self.__rotate != 0:
+            self.draw_half_str(screen, (197,2), f"{self.rotate}o")
+
+        if self.type == Brush.CUSTOM:
+            orig_height = self.image_orig.get_height()
+            if self.__size != orig_height:
+                pct = 100 * self.__size // orig_height
+                self.draw_half_str(screen, (213,2), f"{pct}%")
+        elif self.size != 1:
+            size = self.size
+            btype_str = ""
+            if self.type == Brush.CIRCLE:
+                btype_str = "C"
+            elif self.type == Brush.SQUARE:
+                btype_str = "Q"
+            elif self.type == Brush.SPRAY:
+                btype_str = "S"
+            self.draw_half_str(screen, (213,2), f"{btype_str}")
+            self.draw_half_str(screen, (218,2), f"{size}")
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
@@ -543,8 +683,6 @@ class Brush:
             self.frame[frameno].image = self.image
             self.frame[frameno].image_orig = self.image_orig
             self.frame[frameno].image_backup = self.image_backup
-            self.frame[frameno].size = self.size
-            self.frame[frameno].aspect = self.aspect
             self.frame[frameno].cache = self.cache
             self.frame[frameno].rect = list(self.rect)
             self.frame[frameno].handle_frac = list(self.handle_frac)
@@ -564,14 +702,12 @@ class Brush:
         self.currframe = frameno
 
         if len(self.frame) > 0:
-            self.image = self.frame[frameno].image
+            self.image = None
             self.image_orig = self.frame[frameno].image_orig
             self.image_backup = self.frame[frameno].image_backup
             self.cache = self.frame[frameno].cache
             self.rect = list(self.frame[frameno].rect)
             self.handle_frac = list(self.frame[frameno].handle_frac)
-            self.aspect = self.frame[frameno].aspect
-            self.__size = self.frame[frameno].size
 
         if doAction:
             config.doKeyAction()
@@ -647,28 +783,31 @@ class Brush:
         self.set_frame(frame_no, doAction=False)
         return frame_no
 
-    def render_image(self, color):
+    def render_image(self, color=None):
         ax = config.aspectX
         ay = config.aspectY
 
         if self.type == Brush.CUSTOM:
-            #convert brush image to single color
-            image = self.scale(self.image_orig)
+            image = self.rotscale(self.image_orig)
             image.set_palette(config.pal)
-            surf_array = pygame.surfarray.pixels2d(image)
             bgcolor = self.bgcolor_orig
-            if bgcolor == color:
-                bgcolor = (color+1) % config.NUM_COLORS
-                tfarray = np.not_equal(surf_array, self.bgcolor_orig)
-                surf_array[tfarray] = color
-                surf_array[np.logical_not(tfarray)] = bgcolor
-            else:
-                surf_array[np.not_equal(surf_array, bgcolor)] = color
-            surf_array = None
-            self.color = color
+            if not color is None:
+                #convert brush image to single color
+                surf_array = pygame.surfarray.pixels2d(image)
+                if bgcolor == color:
+                    bgcolor = (color+1) % config.NUM_COLORS
+                    tfarray = np.not_equal(surf_array, self.bgcolor_orig)
+                    surf_array[tfarray] = color
+                    surf_array[np.logical_not(tfarray)] = bgcolor
+                else:
+                    surf_array[np.not_equal(surf_array, bgcolor)] = color
+                surf_array = None
+                self.color = color
             image.set_colorkey(bgcolor)
             return image
         elif self.type == Brush.CIRCLE:
+            if color is None:
+                color = config.color
             if self.size == 1:
                 image = pygame.Surface((1,1),0, config.pixel_canvas)
                 image.set_palette(config.pal)
@@ -687,11 +826,13 @@ class Brush:
                     image.set_colorkey(0)
                 primprops = PrimProps()
                 if ax == ay == 1:
-                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops)
+                    fillcircle(image, color, (self.size-1, self.size-1), self.size-1, primprops=primprops, do_recompose=False)
                 else:
                     pygame.draw.ellipse(image, color, (0,0,self.size*ax*2-1, self.size*ay*2-1))
             return image
         elif self.type == Brush.SQUARE:
+            if color is None:
+                color = config.color
             image = pygame.Surface((self.size*ax+1, self.size*ay+1),0, config.pixel_canvas)
             image.set_palette(config.pal)
             if color == 0:
@@ -699,9 +840,20 @@ class Brush:
             else:
                 image.set_colorkey(0)
             image.fill(color)
+            image = self.rotscale(image)
             return image
         elif self.type == Brush.SPRAY:
-            image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
+            if color is None:
+                color = config.color
+            if self.size <= 3:
+                small_size = self.size
+                if self.size == 2:
+                    small_size = 3
+                if self.size == 3:
+                    small_size = 7
+                image = pygame.Surface((small_size,small_size),0, config.pixel_canvas)
+            else:
+                image = pygame.Surface((self.size*3*ax+1, self.size*3*ay+1),0, config.pixel_canvas)
             w,h = image.get_size()
             self.calc_handle(w,h)
             image.set_palette(config.pal)
@@ -713,16 +865,18 @@ class Brush:
                 image.set_colorkey(0)
 
             if self.size == 1:
+                image.set_at((0,0), color)
+            elif self.size == 2:
                 image.set_at((0,1), color)
                 image.set_at((2,0), color)
                 image.set_at((2,2), color)
-            elif self.size == 2:
+            elif self.size == 3:
                 image.set_at((3,0), color)
                 image.set_at((0,2), color)
                 image.set_at((3,3), color)
                 image.set_at((6,3), color)
                 image.set_at((3,5), color)
-            elif self.size > 2:
+            elif self.size > 3:
                 old_state = random.getstate()
                 random.seed(self.size)
                 for i in range(0, self.size * 3):
@@ -734,8 +888,8 @@ class Brush:
     def draw(self, screen, color, coords, handlesymm=True, primprops=None, erase=False):
         if not rect_onscreen([coords[0]+self.rect[0],
                               coords[1]+self.rect[1],
-                              self.rect[2],
-                              self.rect[3]]):
+                              self.rect[2]-self.rect[0],
+                              self.rect[3]-self.rect[1]]):
             return
 
         image = None
@@ -760,10 +914,14 @@ class Brush:
             drawmode = DrawMode.COLOR
 
         if drawmode == DrawMode.MATTE:
+            if self.image == None:
+                self.image = self.render_image()
             if self.image != None:
                 image = self.image
                 image.set_colorkey(self.bgcolor_orig)
         elif drawmode == DrawMode.REPLACE:
+            if self.image == None:
+                self.image = self.render_image()
             if self.image != None:
                 if erase:
                     image = pygame.Surface(self.image.get_size(), 0, self.image)
@@ -1018,11 +1176,17 @@ class Brush:
             self.startframe = self.currframei
         else:
             self.startframe = startframe
+        self.size_orig = self.size
+        self.rotate_orig = self.rotate
+        self.type_orig = self.type
 
     def reset_stroke(self):
         self.smear_count = 0
         self.endframe = self.currframei
         self.set_framei(self.startframe, doAction=False)
+        self.size = self.size_orig
+        self.rotate = self.rotate_orig
+        self.type = self.type_orig
 
 class CoordList:
     """This class stores a list of coordinates and renders it in the selected drawmode"""
@@ -1080,25 +1244,113 @@ class CoordList:
 
         for i in range(0,self.numlists):
             numpoints += len(self.coordlist[i])
-        numpoints += 1
+
+        # put all coords into one list
+        coordsall = []
+        for i in range(0,self.numlists):
+            coordsall.extend(self.coordlist[i])
+        numpoints = len(coordsall)
+
+        # make single pixel line in N Total mode draw all pixels
+        if numpoints == 1 and primprops.drawmode.spacing == DrawMode.N_TOTAL:
+            coordsall = coordsall * primprops.drawmode.n_total_value
+            numpoints = primprops.drawmode.n_total_value
+
+        # calculate linear interpolation for all coords
+        inter_all = []
+        if numpoints == 1:
+            inter_all = [1.0]
+        elif numpoints > 1:
+            for i in range(len(coordsall)):
+                inter_all.append(i / (numpoints-1))
+
+        # pre-process coord list
+        if primprops.drawmode.spacing == DrawMode.EVERY_N:
+            coords = coordsall[::primprops.drawmode.every_n_value]
+            inter_list = inter_all[::primprops.drawmode.every_n_value]
+        elif primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1:
+            coords = []
+            inter_list = []
+            if primprops.ease_in:
+                if primprops.ease_out:
+                    numpoints2 = numpoints // 2
+                    ntotal2 = primprops.drawmode.n_total_value // 2
+                    coords_in = []
+                    coords_out = []
+                    inter_in = []
+                    inter_out = []
+                    for i in range(ntotal2):
+                        if primprops.drawmode.n_total_value % 2 == 1:
+                            coordif = numpoints2 * ((i/(ntotal2))**primprops.ease_value)
+                            inter_value = ((i/(ntotal2))**primprops.ease_value) / 2
+                        else:
+                            coordif = numpoints2 * ((i/(ntotal2-.5))**primprops.ease_value)
+                            inter_value = ((i/(ntotal2-.5))**primprops.ease_value) / 2
+                        coordi = int(coordif)
+                        coords_in.append(coordsall[coordi])
+                        coords_out.insert(0, coordsall[-coordi-1])
+                        inter_in.append(inter_value)
+                        inter_out.insert(0, 1-inter_value)
+                    if primprops.drawmode.n_total_value % 2 == 1:
+                        coords = coords_in + [coordsall[numpoints2]] + coords_out
+                        inter_list = inter_in + [0.5] + inter_out
+                    else:
+                        coords = coords_in + coords_out
+                        inter_list = inter_in + inter_out
+                else:
+                    for i in range(primprops.drawmode.n_total_value):
+                        coordif = (numpoints-1) * ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = ((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value)
+                        inter_list.append(inter_value)
+            else:
+                if primprops.ease_out:
+                    for i in range(primprops.drawmode.n_total_value-1,-1,-1):
+                        coordif = (numpoints-1) * (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = (1-((i/(primprops.drawmode.n_total_value-1))**primprops.ease_value))
+                        inter_list.append(inter_value)
+                else:
+                    for i in range(primprops.drawmode.n_total_value):
+                        coordif = (numpoints-1) * i // (primprops.drawmode.n_total_value-1)
+                        coordi = int(coordif)
+                        coords.append(coordsall[coordi])
+                        inter_value = i / (primprops.drawmode.n_total_value-1)
+                        inter_list.append(inter_value)
+        else:
+            coords = coordsall
+            inter_list = inter_all
 
         if cyclemode:
-            pointspercolor = numpoints / numcolors
+            pointspercolor = len(coords) / numcolors
+
+        if len(coords) == 0:
+            return
 
         currpoint = -1
         config.brush.set_startframe()
         config.brush.reset_stroke()
-        for i in range(0,self.numlists):
-            for c in self.coordlist[i]:
+        if len(coords) > 1:
+            size_delta = (primprops.size_to - primprops.size_from) / (len(coords)-1)
+            rotate_delta = (primprops.rotate_to - primprops.rotate_from) / (len(coords)-1)
+        else:
+            size_delta = 0
+            rotate_delta = 0
+        curr_size = primprops.size_from
+        curr_rotate = primprops.rotate_from
+        coordi = -1
+        for c in coords:
+                coordi += 1
+                if primprops.size_from != 100 or primprops.size_to != 100:
+                    config.brush.size = config.brush.size_orig * int(config.lerp(primprops.size_from, primprops.size_to, inter_list[coordi])) // 100
+                    config.brush.type = config.brush.type_orig
+                if primprops.rotate_from != 0 or primprops.rotate_to != 100:
+                    config.brush.rotate = config.brush.rotate_orig + int(config.lerp(primprops.rotate_from, primprops.rotate_to, inter_list[coordi]))
                 currpoint += 1
                 if cyclemode and pointspercolor > 0:
                     color = arange[int(currpoint / pointspercolor)]
-                if primprops.continuous and primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1 and currpoint != 0 and int(currpoint / ((numpoints-1) / primprops.drawmode.n_total_value)) == int((currpoint-1) / ((numpoints-1) / primprops.drawmode.n_total_value)):
-                    continue
-                if not primprops.continuous and primprops.drawmode.spacing == DrawMode.N_TOTAL and numpoints > 1 and currpoint != 0 and currpoint != numpoints-1 and int(currpoint / ((numpoints-1) / (primprops.drawmode.n_total_value-1))) == int((currpoint+1) / ((numpoints-1) / (primprops.drawmode.n_total_value-1))):
-                    continue
-                if primprops.drawmode.spacing == DrawMode.EVERY_N and currpoint % primprops.drawmode.every_n_value != 0:
-                    continue
 
                 if xormode:
                     if c[0] >= 0 and c[0] < screen.get_width() and \
@@ -1124,6 +1376,8 @@ class CoordList:
                         config.drawing_interrupted = True
                         return
 
+                curr_size += size_delta
+                curr_rotate += rotate_delta
                 config.try_recompose()
         config.brush.reset_stroke()
 
@@ -1207,6 +1461,13 @@ class PrimProps:
         self.handlesymm = False
         self.interrupt = False
         self.continuous = False
+        self.ease_in = False
+        self.ease_out = False
+        self.ease_value = 2
+        self.size_from = 100
+        self.size_to = 100
+        self.rotate_from = 0
+        self.rotate_to = 0
 
 
 def calc_ellipse_curves(coords, width, height, handlesymm=True, angle=0):
@@ -1391,7 +1652,7 @@ def add_xbounds(xbounds, y, x1, x2):
     else:
         xbounds[y] = [x1, x2]
 
-def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False):
+def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None, erase=False, do_recompose=True):
     handlesymm = True
     if primprops != None:
         handlesymm = primprops.handlesymm
@@ -1431,7 +1692,8 @@ def fillcircle(screen, color, coords_in, radius, interrupt=False, primprops=None
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if do_recompose:
+                config.try_recompose()
         end_shape(screen, color, interrupt=interrupt, primprops=primprops)
 
 
@@ -1861,7 +2123,7 @@ def hline_SOLID(surf_array, color, y, xs1, xs2):
         surf_array[xs1:xs2+1,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
 def hline_BRUSH(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 
@@ -1899,7 +2161,7 @@ def wrap_func(c, maxc):
         return maxc
 
 def hline_WRAP(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 
@@ -1921,7 +2183,7 @@ def hline_WRAP(surf_array, y, x1, x2, xs1, xs2):
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
 def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
-    if config.brush.image == None:
+    if config.brush.type != Brush.CUSTOM:
         hline_SOLID(surf_array, config.color, y, xs1, xs2)
         return
 

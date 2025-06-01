@@ -1,3 +1,8 @@
 __pycache__
 *.swp
 *.pyc
+.idea
+.DS_Store
+.venv
+build/
+dist/

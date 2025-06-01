@@ -972,12 +972,12 @@ Align:  [<>   ][^v   ]
                     config.toolbar.tool_id("circle2").state = 0
                     config.toolbar.tool_id("circle3").state = 0
                     config.toolbar.tool_id("circle4").state = 0
-                    config.toolbar.tool_id("square1").state = 0
                     config.toolbar.tool_id("square2").state = 0
                     config.toolbar.tool_id("square3").state = 0
                     config.toolbar.tool_id("square4").state = 0
-                    config.toolbar.tool_id("spray1").state = 0
+                    config.toolbar.tool_id("square5").state = 0
                     config.toolbar.tool_id("spray2").state = 0
+                    config.toolbar.tool_id("spray3").state = 0
                     config.setDrawMode(DrawMode.MATTE)
                     running = 0
                 elif ge.gadget.label == "OK" and not req.has_error():
@@ -1276,38 +1276,354 @@ def symmetry_req(screen):
 
     config.pixel_req_rect = None
 
+class EaseGadget(Gadget):
+    def __init__(self, type, label, rect, value=None, minvalue=None, maxvalue=None, id=None):
+        super(EaseGadget, self).__init__(type, label, rect, value, maxvalue, id)
+
+    def ease_in_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        rx,ry,rw,rh = rect
+        rx += 1
+        ry += 1
+        rw -= 2
+        rh -= 2
+        
+        coords = []
+        if value > 0.0:
+            t = value
+            x = 0.0
+            while x <= 1.0:
+                y = x**t
+                coords.append([int(round(rx+(x*rw))), int(round(ry+((1-y)*rh)))])
+                x += 1.0/rw
+        else:
+            x = 0.0
+            while x <= 1.0:
+                y = x
+                coords.append([int(round(rx+(x*rw))), int(round(ry+((1-y)*rh)))])
+                x += 1.0/rw
+
+        return coords
+
+    def ease_out_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        rx,ry,rw,rh = rect
+        rx += 1
+        ry += 1
+        rw -= 2
+        rh -= 2
+        
+        coords = []
+        if value > 0.0:
+            t = value
+            x = 1.0
+            while x >= 0.0:
+                y = x**t
+                coords.append([int(round(rx+((1-x)*rw))), int(round(ry+(y*rh)))])
+                x -= 1.0/rw
+        else:
+            x = 0.0
+            while x <= 1.0:
+                y = x
+                coords.append([int(round(rx+((1-x)*rw))), int(round(ry+(y*rh)))])
+                x += 1.0/rw
+
+        return coords
+
+    def ease_in_out_coords(self, rect, value=None):
+        if value is None:
+            value = self.value
+
+        if self.value == 1:
+            return self.ease_in_coords(self.screenrect, 1)
+
+        rx,ry,rw,rh = rect
+        rect_in = [rx,ry+rh//2-1, rw//2+2, rh//2+2]
+        p_in = self.ease_in_coords(rect_in, value)
+        rect_out = [rx+rw//2,ry, rw//2, rh//2]
+        p_out = self.ease_out_coords(rect_out, value)
+        p_all = list(p_in)
+        p_all.extend(p_out)
+        return p_all
+
+    def draw_points(self, screen, coords, colori):
+        surf_array = pygame.surfarray.pixels2d(screen)
+        for i in range(len(coords)):
+            if i > 0:
+                y0 = coords[i-1][1]
+            else:
+                y0 = coords[0][1]
+            x,y = coords[i]
+            if y0 > y:
+                surf_array[x,y:y0] = colori
+            else:
+                surf_array[x,y] = colori
+        surf_array = None
+
+    def draw_spiral(self, screen, color, arc_start, arc_end):
+        x,y,w,h = self.screenrect
+        win = w-2
+        hin = h-2
+        c = np.array([x+w/2.0,y+h/2.0])
+        xf = win/2.0
+        yf = 0.0
+        q = math.radians(-arc_start)
+        q1 = math.radians(1)
+        init_scale1   = np.matrix([[1/win, 0, 0],
+                                   [0, 1/hin, 0],
+                                   [0, 0, 1]])
+        init_rot0     = np.matrix([[ math.cos(q), math.sin(q), 0],
+                                   [-math.sin(q), math.cos(q), 0],
+                                   [           0,           0, 1]])
+        init_scale2   = np.matrix([[win, 0, 0],
+                                   [0, hin, 0],
+                                   [0, 0, 1]])
+        init_trans2   = np.matrix([[ 1, 0, 0],
+                                   [ 0, 1, 0],
+                                   [ c[0],  c[1], 1]])
+        init_spiral_mat = init_scale1 @ init_rot0 @ init_scale2 @ init_trans2
+
+        deg1_trans1   = np.matrix([[ 1, 0, 0],
+                                   [ 0, 1, 0],
+                                   [-c[0], -c[1], 1]])
+        deg1_scale1   = np.matrix([[1/win, 0, 0],
+                                   [0, 1/hin, 0],
+                                   [0, 0, 1]])
+        deg1_rot1     = np.matrix([[ math.cos(q1), math.sin(q1), 0],
+                                   [-math.sin(q1), math.cos(q1), 0],
+                                   [           0,           0, 1]])
+        deg1_scale2   = np.matrix([[win*0.9997, 0, 0],
+                                   [0, hin*0.9997, 0],
+                                   [0, 0, 1]])
+        deg1_trans2   = np.matrix([[ 1, 0, 0],
+                                   [ 0, 1, 0],
+                                   [ c[0],  c[1], 1]])
+        deg1_spiral_mat = deg1_trans1 @ deg1_scale1 @ deg1_rot1 @ deg1_scale2 @ deg1_trans2
+
+        xyvect = np.matmul(np.matrix([[xf,yf,1]]),init_spiral_mat)
+        xf = xyvect[0,0]
+        yf = xyvect[0,1]
+        x = int(round(xf))
+        y = int(round(yf))
+        screen.set_at((x,y), color)
+        coords = [(x,y)]
+        for i in range(arc_end, arc_start):
+            xyvect = np.matmul(np.matrix([[xf,yf,1]]),deg1_spiral_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            x = int(round(xf))
+            y = int(round(yf))
+            if i % 8 == 0:
+                pygame.draw.aaline(screen, color, coords[-1], (x,y))
+                coords.append((x,y))
+            if config.has_event():
+                self.need_redraw = True
+                return
+        pygame.draw.aaline(screen, color, coords[-1], (x,y))
+        
+    def draw_rotate(self, screen, color, rotate, size, linewidth):
+        arrowcoords = np.array([[0,4],[4,0],[1,0],[1,-4],[-1,-4],[-1,0],[-4,0]], dtype=np.float64)
+        newcoords = np.zeros(shape=(7,2), dtype=np.float64)
+        x,y,w,h = self.screenrect
+        c = np.array([x+w/2.0,y+h/2.0])
+
+        #initial scale
+        arrowcoords *= np.array([w/16.0,-h/10.0])
+
+        q = math.radians(rotate)
+        scale1   = np.matrix([[1/config.aspectX, 0, 0],
+                              [0, 1/config.aspectY, 0],
+                              [0, 0, 1]])
+        rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
+                              [-math.sin(q), math.cos(q), 0],
+                              [           0,           0, 1]])
+        scale2   = np.matrix([[config.aspectX*size/100, 0, 0],
+                              [0, config.aspectY*size/100, 0],
+                              [0, 0, 1]])
+        trans2   = np.matrix([[ 1, 0, 0],
+                              [ 0, 1, 0],
+                              [ c[0],  c[1], 1]])
+        arrow_mat = scale1 @ rot @ scale2 @ trans2
+
+        for i in range(arrowcoords.shape[0]):
+            xf,yf = arrowcoords[i]
+            xyvect = np.matmul(np.matrix([[xf,yf,1]]),arrow_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            newcoords[i] = [int(round(xf)),int(round(yf))]
+
+        pygame.draw.polygon(screen, color, newcoords, linewidth)
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        self.visible = True
+        x,y,w,h = self.rect
+        xo, yo = offset
+        self.offsetx = xo
+        self.offsety = yo
+        self.screenrect = (x+xo,y+yo,w,h)
+        if self.maxvalue == None:
+            current_range = 1
+        else:
+            current_range = self.maxvalue
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if not self.need_redraw:
+                return
+
+            self.need_redraw = False
+            if self.label == "#":
+                pygame.draw.rect(screen, bgcolor, self.screenrect)
+                if self.ease_in:
+                    if self.ease_out:
+                        coords = self.ease_in_out_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
+                    else:
+                        coords = self.ease_in_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
+                else:
+                    if self.ease_out:
+                        coords = self.ease_out_coords(self.screenrect)
+                        self.draw_points(screen, coords, 0)
+                    else:
+                        coords = self.ease_in_coords(self.screenrect, 1)
+                        self.draw_points(screen, coords, 0)
+
+                if self.enabled == False:
+                    self.draw_ghost(screen, fgcolor, bgcolor)
+            elif self.label == "@":
+                screen.set_clip(self.screenrect)
+                pygame.draw.rect(screen, bgcolor, self.screenrect)
+                self.draw_rotate(screen, fgcolor, self.rotate_from, self.size_from, 0)
+                self.draw_rotate(screen, hcolor, self.rotate_to, self.size_to, 1)
+                arc_start = 90 - self.rotate_from
+                arc_end = 90 - self.rotate_to
+                if self.rotate_from > self.rotate_to:
+                    arc_start, arc_end = arc_end, arc_start
+                self.draw_spiral(screen, fgcolor, arc_start, arc_end)
+                screen.set_clip(None)
+        else:
+            super(EaseGadget, self).draw(screen, font, offset)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        global palette_page
+        ge = []
+        x,y = mouse_pixel_mapper()
+        g = self
+        gx,gy,gw,gh = g.screenrect
+
+        if self.type == Gadget.TYPE_CUSTOM:
+            if g.pointin((x,y), g.screenrect):
+                #handle left button
+                if event.type == MOUSEBUTTONDOWN and event.button == 1:
+                    if g.label == "^":
+                        g.state = 1
+                        g.need_redraw = True
+            if event.type == MOUSEBUTTONUP and event.button == 1:
+                if g.label == "^":
+                    if g.pointin((x,y), g.screenrect) and g.state == 1:
+                        if abs(g.value) == 1:
+                            g.value = -g.value
+                    g.state = 0
+                    g.need_redraw = True
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+        else:
+            ge.extend(super(EaseGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 def spacing_req(screen):
-    req = str2req("Spacing", """
-[N Total]      ____~
+    req = str2req("Brush Trails", """
+[Continuous]
 [Every Nth dot]____~
 [Airbrush]     ____~
-[Continuous]
-[Cancel][OK]
-""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+[N Total]      ____~
+###### Ease  @@@@@@@
+###### [In ] @@@@@@@
+###### [Out] @@@@@@@
+###### ___~  @@@@@@@
+       Start  End
+Size  %_____~ _____~
+Rotate\xB0_____~ _____~
+[Cancel][OK]  [Reset]
+""", "@#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=EaseGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
-    n_totalg = req.gadget_id("0_0")
-    n_total_valueg = req.gadget_id("15_0")
-    n_total_valueg.spinnerg.minvalue = 2
-    n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
+    continuousg = req.find_gadget("Continuous")
 
-    every_ng = req.gadget_id("0_1")
-    every_n_valueg = req.gadget_id("15_1")
+    every_ng = req.find_gadget("Every Nth dot")
+    every_n_valueg = req.find_gadget("Every Nth dot",1)
     every_n_valueg.spinnerg.minvalue = 1
     every_n_valueg.value = str(config.primprops.drawmode.every_n_value)
 
-    airbrushg = req.gadget_id("0_2")
-    airbrush_valueg = req.gadget_id("15_2")
+    airbrushg = req.find_gadget("Airbrush")
+    airbrush_valueg = req.find_gadget("Airbrush",1)
     airbrush_valueg.spinnerg.numprecision = 2
     airbrush_valueg.spinnerg.minvalue = 0.01
     airbrush_valueg.value = airbrush_valueg.format_float(config.primprops.drawmode.airbrush_value,2)
 
-    continuousg = req.gadget_id("0_3")
+    n_totalg = req.find_gadget("N Total")
+    n_total_valueg = req.find_gadget("N Total", 1)
+    n_total_valueg.spinnerg.minvalue = 2
+    n_total_valueg.value = str(config.primprops.drawmode.n_total_value)
+
+    ease_graphg = req.find_gadget("N Total", 3)
+    ease_graphg.value = config.primprops.ease_value
+    ease_graphg.ease_in = config.primprops.ease_in
+    ease_graphg.ease_out = config.primprops.ease_out
+
+    ease_ing = req.find_gadget("In ",0)
+    ease_ing.label = "In"
+    if ease_graphg.ease_in:
+        ease_ing.state = 1
+    ease_outg = req.find_gadget("Out",0)
+    if ease_graphg.ease_out:
+        ease_outg.state = 1
+    ease_valg = req.find_gadget("Out",1)
+    ease_valg.value = str(config.primprops.ease_value)
+    ease_valg.spinnerg.minvalue = 1
+    ease_valg.spinnerg.maxvalue = 10
+
+    def ease_enable(enable):
+        ease_graphg.enabled = enable
+        ease_graphg.need_redraw = True
+        ease_ing.enabled = enable
+        ease_ing.need_redraw = True
+        ease_outg.enabled = enable
+        ease_outg.need_redraw = True
+        ease_valg.enabled = enable
+        ease_valg.need_redraw = True
+        ease_valg.spinnerg.enabled = enable
+        ease_valg.spinnerg.need_redraw = True
+
+    size0_valueg = req.find_gadget("Size", 2)
+    size0_valueg.spinnerg.minvalue = 1
+    size0_valueg.value = str(config.primprops.size_from)
+    size1_valueg = req.find_gadget("Size", 4)
+    size1_valueg.spinnerg.minvalue = 1
+    size1_valueg.value = str(config.primprops.size_to)
+
+    rot_graphg = req.find_gadget("Ease", 1)
+    rot0_valueg = req.find_gadget("Rotate\xB0", 1)
+    rot0_valueg.spinnerg.minvalue = -999
+    rot0_valueg.value = str(config.primprops.rotate_from)
+    rot1_valueg = req.find_gadget("Rotate\xB0", 3)
+    rot1_valueg.spinnerg.minvalue = -999
+    rot1_valueg.value = str(config.primprops.rotate_to)
+    rot_graphg.rotate_from = config.primprops.rotate_from
+    rot_graphg.rotate_to = config.primprops.rotate_to
+    rot_graphg.size_from = config.primprops.size_from
+    rot_graphg.size_to = config.primprops.size_to
 
     spacing = config.primprops.drawmode.spacing
     button_list = [continuousg, n_totalg, every_ng, airbrushg]
     button_list[spacing].state = 1
+
+    if spacing != 1:
+        ease_enable(False)
 
     req.draw(screen)
     config.recompose()
@@ -1329,15 +1645,86 @@ def spacing_req(screen):
                     config.primprops.drawmode.n_total_value = int(float(n_total_valueg.value))
                     config.primprops.drawmode.every_n_value = int(float(every_n_valueg.value))
                     config.primprops.drawmode.airbrush_value = float(airbrush_valueg.value)
+                    config.primprops.ease_in = ease_graphg.ease_in
+                    config.primprops.ease_out = ease_graphg.ease_out
+                    config.primprops.ease_value = int(ease_valg.value)
+                    config.primprops.rotate_from = int(rot0_valueg.value)
+                    config.primprops.rotate_to = int(rot1_valueg.value)
+                    config.primprops.size_from = int(size0_valueg.value)
+                    config.primprops.size_to = int(size1_valueg.value)
                     running = 0
+                elif ge.gadget.label == "Reset":
+                    new_primprops = PrimProps()
+                    spacing = new_primprops.drawmode.spacing
+                    every_n_valueg.value = str(new_primprops.drawmode.every_n_value)
+                    airbrush_valueg.value = airbrush_valueg.format_float(new_primprops.drawmode.airbrush_value,2)
+                    n_total_valueg.value = str(new_primprops.drawmode.n_total_value)
+                    ease_graphg.value = new_primprops.ease_value
+                    ease_graphg.ease_in = new_primprops.ease_in
+                    ease_graphg.ease_out = new_primprops.ease_out
+                    if ease_graphg.ease_in:
+                        ease_ing.state = 1
+                    if ease_graphg.ease_out:
+                        ease_outg.state = 1
+                    ease_valg.value = str(new_primprops.ease_value)
+                    size0_valueg.value = str(new_primprops.size_from)
+                    size1_valueg.value = str(new_primprops.size_to)
+                    rot0_valueg.value = str(new_primprops.rotate_from)
+                    rot1_valueg.value = str(new_primprops.rotate_to)
+                    rot_graphg.rotate_from = int(rot0_valueg.value)
+                    rot_graphg.rotate_to = int(rot1_valueg.value)
+                    rot_graphg.size_from = int(size0_valueg.value)
+                    rot_graphg.size_to = int(size1_valueg.value)
+                    ease_enable(False)
+                    rot_graphg.need_redraw = True
+                    for g in button_list:
+                        g.state = 0
+                    button_list[spacing].state = 1
+                    req.need_redraw = True
                 elif ge.gadget.label == "Cancel":
                     running = 0 
+                elif ge.gadget.label == "In":
+                    ease_graphg.ease_in = not ease_graphg.ease_in
+                    ease_graphg.need_redraw = True
+                elif ge.gadget.label == "Out":
+                    ease_graphg.ease_out = not ease_graphg.ease_out
+                    ease_graphg.need_redraw = True
                 elif ge.gadget in button_list:
                     button_list[spacing].state = 0
                     button_list[spacing].need_redraw = True
                     spacing = button_list.index(ge.gadget)
                     ge.gadget.state = 1
                     ge.gadget.need_redraw = True
+                    if spacing == 1:
+                        ease_enable(True)
+                    else:
+                        ease_enable(False)
+            if ge.gadget in [ease_valg, ease_valg.spinnerg]:
+                if re.fullmatch(r'^\d+$', ease_valg.value) and \
+                   int(ease_valg.value) >= 1 and \
+                   int(ease_valg.value) <= 10:
+                    ease_graphg.value = int(ease_valg.value)
+                    ease_graphg.need_redraw = True
+            elif ge.gadget in [rot0_valueg, rot0_valueg.spinnerg,
+                               rot1_valueg, rot1_valueg.spinnerg,
+                               size0_valueg, size0_valueg.spinnerg,
+                               size1_valueg, size1_valueg.spinnerg]:
+                if re.fullmatch(r'^-?\d+$', rot0_valueg.value) and \
+                   re.fullmatch(r'^-?\d+$', rot1_valueg.value) and \
+                   re.fullmatch(r'^-?\d+$', size0_valueg.value) and \
+                   re.fullmatch(r'^-?\d+$', size1_valueg.value):
+                    rot_graphg.rotate_from = int(rot0_valueg.value)
+                    rot_graphg.rotate_to = int(rot1_valueg.value)
+                    rot_graphg.size_from = int(size0_valueg.value)
+                    rot_graphg.size_to = int(size1_valueg.value)
+                    rot_graphg.need_redraw = True
+
+        if ease_graphg.ease_in:
+            ease_ing.state = 1
+            ease_ing.need_redraw = 1
+        if ease_graphg.ease_out:
+            ease_outg.state = 1
+            ease_outg.need_redraw = 1
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)

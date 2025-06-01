@@ -696,7 +696,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             surf_array[:] = gif.frames[0]["image_data"][:]
             surf_array = None
             if len(gif.frames) > 1:
-                config.anim.frame = [Frame(pic, delay=gif.frames[0]["delay_time"]*60//100, pal=config.pal, is_pal_key=True)]
+                config.anim.frame = [Frame(pic, delay=int(round(gif.frames[0]["delay_time"]*60/100)), pal=config.pal, is_pal_key=True)]
             for i in range(1,len(gif.frames)):
                 dx = gif.frames[i]["image_left_position"]
                 dy = gif.frames[i]["image_top_position"]
@@ -744,7 +744,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 else:
                     # Don't overlay previous frame
                     framepic = diffpic
-                delay = gif.frames[i]["delay_time"]*60//100
+                delay = int(round(gif.frames[i]["delay_time"]*60/100))
                 upal = config.unique_palette(pal)
                 is_pal_key = False
                 pal1 = pal
@@ -1474,7 +1474,7 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
         frame = {"local_palette": localpal,
                  "image_data": surf_array,
                  "image_data_lzh": image_data_lzh,
-                 "delay_time": 100 * config.anim.frame[i].delay // 60,
+                 "delay_time": int(round(100 * config.anim.frame[i].delay / 60)),
                  "disposal_method": disposal_method,
                  "transparency": transparency,
                  "transparent_color_index": transparent_color_index,

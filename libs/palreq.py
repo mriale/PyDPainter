@@ -351,17 +351,31 @@ Speed---------000^^
         speed_numg.enabled = False
         speed_dirg.enabled = False
 
+    palg.maxvalue = current_range
+    tool_palg = config.toolbar.tool_id("palette")
+
     config.cursor.shape = 1
     running = 1
 
+    def set_to_color(color):
+        global palette_page
+        palg.value = color
+        palg.need_redraw = True
+        colorg.value = color
+        colorg.need_redraw = True
+        palette_page = color // 32 * 32
+        palpageg.label = chr(65+(palette_page//32))
+        palpageg.need_redraw = True
+        set_rgb_sliders(config.pal[color], rg, gg, bg)
+        strg.value = rgb_to_hex(config.pal[color])
+        strg.need_redraw = True
+        set_hsv_sliders(config.pal[color], hg, sg, vg)
+        config.color = color
+        tool_palg.value = color
+        tool_palg.need_redraw = True
+
     color = config.color
-    colorg.value = color
-    palg.value = color
-    palg.maxvalue = current_range
-    set_rgb_sliders(config.pal[color], rg, gg, bg)
-    strg.value = rgb_to_hex(config.pal[color])
-    strg.need_redraw = True
-    set_hsv_sliders(config.pal[color], hg, sg, vg)
+    set_to_color(color)
     from_color = -1
     color_action = 0
     req.draw(screen)
@@ -379,7 +393,8 @@ Speed---------000^^
         #Get color from pixel canvas
         if event.type == MOUSEBUTTONUP and event.button == 1:
             config.stop_cycling()
-            x,y = config.get_mouse_pixel_pos(event)
+            color = palg.value
+            x,y = config.get_mouse_pointer_pos(event)
             if x < rx or y < ry or x > rx+rw or y > ry+rh:
                 x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
                 if x1 >= 0 and y1 >= 0 and \
@@ -391,19 +406,17 @@ Speed---------000^^
                         color = from_color
                         config.set_all_palettes(config.pal)
                         config.cursor.shape = config.cursor.NORMAL
-                    else:
+                    elif not config.inside_toolbars(config.all_toolbars, (x,y)):
                         color = config.pixel_canvas.get_at_mapped((x1,y1))
-                    palg.value = color
-                    palg.need_redraw = True
-                    colorg.value = color
-                    colorg.need_redraw = True
-                    palette_page = color // 32 * 32
-                    palpageg.label = chr(65+(palette_page//32))
-                    palpageg.need_redraw = True
-                    set_rgb_sliders(config.pal[color], rg, gg, bg)
-                    strg.value = rgb_to_hex(config.pal[color])
-                    strg.need_redraw = True
-                    set_hsv_sliders(config.pal[color], hg, sg, vg)
+                    set_to_color(color)
+
+        #Get color from toolbar palette
+        if event.type == MOUSEBUTTONDOWN and event.button == 1:
+            x,y = config.get_mouse_pointer_pos(event)
+            if config.toolbar.is_inside((x,y)):
+                ge = tool_palg.process_event(screen, event, config.get_mouse_pointer_pos)
+                if len(ge) > 0:
+                    set_to_color(tool_palg.value)
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
@@ -463,12 +476,7 @@ Speed---------000^^
                 if ge.gadget.label == "#":
                     if ge.gadget.value >= 0 and ge.gadget.value < len(config.pal):
                         color = ge.gadget.value
-                        colorg.value = color
-                        colorg.need_redraw = True
-                        set_rgb_sliders(config.pal[color], rg, gg, bg)
-                        strg.value = rgb_to_hex(config.pal[color])
-                        strg.need_redraw = True
-                        set_hsv_sliders(config.pal[color], hg, sg, vg)
+                        set_to_color(color)
                         to_color = color
                         if color_action >= 0:
                             if color < from_color and color_action in [CA_SPREAD, CA_RANGE]:

@@ -284,6 +284,9 @@ class pydpainter:
 
         return s
 
+    def lerp(self, b, a, frac):
+        return a * frac + (1-frac) * b
+
     def resize_display(self, resize_window=True, first_init=False, force=False, grab=True):
         if config.fullscreen:
             if force:
@@ -447,6 +450,13 @@ class pydpainter:
         self.minitoolbar = init_minitoolbar(config)
         self.animtoolbar = init_animtoolbar(config)
         self.layertoolbar = init_layertoolbar(config)
+        self.all_toolbars = [
+            self.toolbar,
+            self.menubar,
+            self.minitoolbar,
+            self.animtoolbar,
+            self.layertoolbar,
+        ]
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
@@ -470,12 +480,23 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("hidemenus").checked = self.hide_menus
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
+        self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
         self.menubar.hide_menus = self.hide_menus
+
+        self.brush = Brush()
 
         self.clear_undo()
         config.toolbar.click(config.toolbar.tool_id("draw"), MOUSEBUTTONDOWN)
         config.toolbar.click(config.toolbar.tool_id("circle1"), MOUSEBUTTONDOWN)
         config.save_undo()
+
+    def inside_toolbars(self, toolbar_list, coords):
+        inside = False
+        for tb in toolbar_list:
+            if tb.is_inside(coords):
+                inside = True
+                break
+        return inside
 
     def guess_color_depth(self, pal):
         # pictures with more than 32 colors are not Amiga OCS/ECS
@@ -597,6 +618,7 @@ class pydpainter:
             f.write("hide_menus=%s\n" % (config.menubar.hide_menus))
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
+            f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
             f.close()
         except:
             pass
@@ -658,6 +680,8 @@ class pydpainter:
                         self.force_1_to_1_pixels = True if vars[1] == "True" else False
                     elif vars[0] == "true_symmetry":
                         self.true_symmetry = True if vars[1] == "True" else False
+                    elif vars[0] == "sys_file_dialog":
+                        self.sys_file_dialog = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -800,9 +824,10 @@ class pydpainter:
         self.hide_menus = False
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
+        self.sys_file_dialog = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
-        pygame.display.set_icon(pygame.image.load(os.path.join('data', 'icon.png')))
+        pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))
         pygame.key.set_repeat(500, 50)
 
         self.pixel_canvas = pygame.Surface((self.pixel_width, self.pixel_height),0,8)
@@ -857,7 +882,7 @@ class pydpainter:
         self.modified_count = -1
         self.proj[0].modified_count = -1
         self.proj[1].modified_count = -1
-        self.UNDO_INDEX_MAX = 20
+        self.UNDO_INDEX_MAX = 256
         self.undo_image = []
         self.undo_index = -1
         self.suppress_undo = False
@@ -1232,7 +1257,7 @@ class pydpainter:
         scaleX = config.fontx // 8
         scaleY = config.fonty // 12
 
-        config.layers.set("canvas", config.pixel_canvas)
+        config.layers.set("canvas", config.pixel_canvas, priority=1)
         config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
 
         screen_rgb = None
@@ -1772,7 +1797,7 @@ class pydpainter:
                 (config.screen_offset_x, config.screen_offset_y) = (cx-dx+x, cy-dy+y)
 
             #process mouse wheel for zoom and pan
-            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)):
+            if config.zoom.on and e.type == MOUSEBUTTONDOWN and e.button in [2, 4,5] and not self.animtoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.layertoolbar.is_inside(self.get_mouse_pointer_pos(e)) and not self.toolbar.is_inside(self.get_mouse_pointer_pos(e)):
                 if e.button == 2: #middle drag
                     zoom_drag = self.get_mouse_pixel_pos(e)
                 elif e.button == 4: #scroll up
@@ -1789,14 +1814,30 @@ class pydpainter:
                 dx,dy = zoom_drag
                 config.zoom.center = (cx+dx-x,cy+dy-y)
 
+            #process mouse wheel in toolbar for brush size
+            if e.type == MOUSEBUTTONDOWN and e.button in [4,5] and self.toolbar.is_inside(self.get_mouse_pointer_pos(e)):
+                scaleY = config.fonty // 12
+                x,y = self.get_mouse_pixel_pos(e)
+                if y < self.toolbar.offset[1] + (22 * scaleY):
+                    if e.button == 4: #scroll up
+                        config.brush.size += 1
+                    elif e.button == 5: #scroll down
+                        config.brush.size -= 1
+                    setBIBrush()
+
             #process global keys
             if e.type == KEYDOWN:
                 self.cycle_handled = True
                 gotkey = False
-                if e.mod & KMOD_CTRL:
-                    if e.key == K_RETURN:
-                        config.perspective.do_mode()
-                        gotkey = True
+                if e.mod & KMOD_CTRL and (e.unicode == "+" or e.unicode == "="):
+                    gotkey = True
+                    config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN)
+                elif e.mod & KMOD_CTRL and e.unicode == "-":
+                    gotkey = True
+                    config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN, subtool=True)
+                elif e.mod & KMOD_CTRL and e.key == K_RETURN:
+                    config.perspective.do_mode()
+                    gotkey = True
                 elif e.key == K_KP_ENTER:
                     config.perspective.do_mode()
                     gotkey = True
@@ -1809,11 +1850,7 @@ class pydpainter:
                         if self.airbrush_size > 50:
                             self.airbrush_size = 50
                     else:
-                        if config.brush.type == Brush.CUSTOM:
-                            for frame_no in config.brush:
-                                self.brush.size += 1
-                        else:
-                            self.brush.size += 1
+                        self.brush.size += 1
                         setBIBrush()
                 elif e.unicode == "-":
                     gotkey = True
@@ -1822,12 +1859,24 @@ class pydpainter:
                         if self.airbrush_size < 5:
                             self.airbrush_size = 5
                     else:
-                        if config.brush.type == Brush.CUSTOM:
-                            for frame_no in config.brush:
-                                self.brush.size -= 1
-                        else:
-                            self.brush.size -= 1
+                        self.brush.size -= 1
                         setBIBrush()
+                elif e.key == K_0 and not e.mod & KMOD_CTRL:
+                    gotkey = True
+                    rot = self.brush.rotate
+                    if e.mod & KMOD_SHIFT:
+                        rot = 0
+                    else:
+                        rot += 1
+                    self.brush.rotate = rot
+                elif e.key == K_9 and not e.mod & KMOD_CTRL:
+                    gotkey = True
+                    rot = self.brush.rotate
+                    if e.mod & KMOD_SHIFT:
+                        rot = 0
+                    else:
+                        rot -= 1
+                    self.brush.rotate = rot
                 elif e.unicode == "]":
                     gotkey = True
                     self.color = (self.color + 1) % config.NUM_COLORS
@@ -1843,6 +1892,12 @@ class pydpainter:
                 elif e.unicode == ",":
                     gotkey = True
                     config.toolbar.tool_id('swatch').pick_color()
+                elif e.unicode == "\\":
+                    gotkey = True
+                    if config.minitoolbar.tool_id("expand").state == 1:
+                        config.minitoolbar.tool_id("expand").state = 0
+                    else:
+                        config.minitoolbar.tool_id("expand").state = 1
                 elif e.mod & KMOD_META:
                     ticks = pygame.time.get_ticks()
                     if ticks - config.last_mouse_nudge_time < 100:
@@ -1891,13 +1946,21 @@ class pydpainter:
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
                     config.redo()
-                elif e.unicode == chr(178): #AZERTY backtick key
+                elif e.unicode == chr(178) or (e.key == 178 and not (e.mod & KMOD_SHIFT)): #AZERTY backtick key
+                    gotkey = True
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
+                elif e.key == 178 and e.mod & KMOD_SHIFT and e.unicode != "~": #AZERTY tilde key
+                    gotkey = True
+                    config.menubar.menu_id("effect").menu_id("stencil").menu_id("make").action.selected("")
+                    config.doKeyAction()
                 elif e.key == K_F12:
-                    print("\n***********Debug************")
-                    print(f"{config.layers=}")
-                    config.debug = not config.debug
+                    if e.mod & KMOD_SHIFT:
+                        print("\n***********Debug************")
+                        print(f"{config.layers=}")
+                        config.debug = not config.debug
+                    else:
+                        config.toolbar.click(config.minitoolbar.tool_id("scanlines"), MOUSEBUTTONDOWN)
 
                 if config.zoom.on:
                     gotkey |= config.zoom.process_event(self.screen, e)

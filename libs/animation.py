@@ -482,18 +482,7 @@ class Animation:
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             try:
-                if not libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=False):
-                    close_progress_req(progress_req)
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                        progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
-                        libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=True)
-                    else:
-                        return
+                libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=True)
 
                 close_progress_req(progress_req)
                 config.filepath = os.path.dirname(filename)

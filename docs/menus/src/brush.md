@@ -48,6 +48,13 @@ Use the mouse to freely resize the brush. Proportions will be lost.
 
 ![stretch](stretch.png)<br>key: `SHIFT-Z`
 
+### Realtime resizing with shortkeys
+Please note you can use the `+` and `-` keys for resizing with an accuracy of 1 pixel for each press. Proportions are respected.
+A reminder in % of the original size is displayed in the menu bar.
+![resize ba](resize-bar.png)<br>
+It will be updated realtime. This is useful in conjunction with the repeated use of the `+` and `-` keys to enlarge or reduce the size. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/spacing.md) functions (formerly Spacing).
+Use **Restore Brush** if unhappy with the result.
+
 ### Halve
 
 Reduces brush size by half, without any anti-aliasing. 
@@ -99,6 +106,11 @@ larger contour, including by changing the color.
 
 ![](outline.png)<br>key: `o`
 
+Please note that as black (colour 0) is already the default transparency colour, adding an outline in this colour is not possible.
+If you need a black outline, redefine your brush on a reserved background such as pink 255,0,255. This trick will allow you to catch a sprite with the Brush tool with this pink background as transparency, and then use **Outline** to define a black outline.
+
+![](edge-pink-tip.png)
+
 ### Trim
 
 Removes a one-pixel edge around the brush. If the brush has holes (background
@@ -123,9 +135,26 @@ some variety using the same brush._
 
 ### Any Angle
 
-Use your mouse to rotate the brush freely. 
+Use your mouse to rotate the brush freely. The brush rotates around its centre.
 
 ![](rotate-any.png) _Use 23.4&deg; for Earth_ :smile:
+
+### Right 1°
+Rotate the Brush 1° clockwise around current handle. Note that the handle serves as the rotation point.
+key: `0`
+
+### Left 1°
+Rotate the Brush 1° anticlockwise around current handle. Note that the handle serves as the rotation point.
+key: `9`
+
+**New in 2.2**
+
+![](rotate-bar.png)<br>
+A reminder in degrees of the current rotation is displayed in the menu bar. It will be updated realtime. This is useful in conjunction with the repeated use of the `0` and `9` keys for rotation right or left. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/spacing.md) functions (formerly **Spacing**).
+
+### Set to 0°
+Reset the brush rotation to 0° (as grabbed, or loaded)
+`shift 0`
 
 ### Shear
 

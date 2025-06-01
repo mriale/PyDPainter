@@ -61,13 +61,21 @@ class MenuActionMulti(MenuAction):
         config.doKeyAction()
 
 class MenuActionBrush(MenuAction):
+    def preSelected(self, attrs):
+        pass
+
     def selected(self, attrs):
+        self.preSelected(attrs)
         if len(config.brush.frame) > 1:
             for frame_no in config.brush:
                 self.selectedMulti(attrs)
         else:
             self.selectedMulti(attrs)
+        self.postSelected(attrs)
         config.doKeyAction()
+
+    def postSelected(self, attrs):
+        pass
 
 class DoDummy(MenuAction):
     def selected(self, attrs):
@@ -107,6 +115,7 @@ class DoOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.clear_pixel_draw_canvas()
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -124,6 +133,7 @@ class DoOpen(MenuAction):
             except Exception as ex:
                 close_progress_req(progress_req)
                 io_error_req(str(ex), "Unable to open image:\n%s", filename)
+        config.doKeyAction()
 
 class DoSave(MenuAction):
     def selected(self, attrs):
@@ -151,16 +161,7 @@ class DoSaveAs(MenuAction):
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
-                if not save_pic(filename, merge_config, overwrite=False):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                        save_pic(filename, merge_config, overwrite=True)
-                    else:
-                        return
+                save_pic(filename, merge_config, overwrite=True)
             except:
                 io_error_req("Save Error", "Unable to save image:\n%s", filename)
                 return
@@ -451,16 +452,7 @@ class DoBrushSaveAs(MenuAction):
             brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             try:
-                if not save_pic(filename, brush_config, overwrite=False, bgcolor=config.brush.bgcolor):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                            save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
-                    else:
-                        return
+                save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except:
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
@@ -481,6 +473,7 @@ class DoBrushRestore(MenuActionBrush):
         config.brush.image = backup
         config.brush.image_orig = backup
         config.brush.size = oh
+        config.brush.rotate = 0
         if len(config.brush.frame) > 1:
             config.brush.animbrush = True
         config.setDrawMode(DrawMode.MATTE)
@@ -490,6 +483,8 @@ class DoBrushStretch(MenuAction):
         if config.brush.type != Brush.CUSTOM:
             return
 
+        rot = config.brush.rotate
+        config.brush.rotate = 0
         sx, sy = (0,0)
         config.brush.handle_type = config.brush.CORNER_LR
         ow,oh = config.brush.image_orig.get_size()
@@ -531,56 +526,67 @@ class DoBrushStretch(MenuAction):
             config.recompose()
             first_time = False
 
-        aspect = config.brush.aspect
-        size = config.brush.size
-        for frame_no in config.brush:
-            config.brush.aspect = aspect
-            config.brush.handle_type = config.brush.CENTER
-            config.brush.size = size
-
+        config.brush.handle_type = config.brush.CENTER
         config.doKeyAction()
 
-class DoBrushHalve(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushHalve(MenuAction):
+    def selected(self, attrs):
         config.brush.size //= 2
+        config.doKeyAction()
 
-class DoBrushDouble(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDouble(MenuAction):
+    def selected(self, attrs):
         config.brush.size *= 2
+        config.doKeyAction()
 
-class DoBrushDoubleHoriz(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDoubleHoriz(MenuAction):
+    def selected(self, attrs):
         config.brush.aspect *= 2.0
         config.brush.size = config.brush.size
+        config.doKeyAction()
 
-class DoBrushDoubleVert(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushDoubleVert(MenuAction):
+    def selected(self, attrs):
         config.brush.aspect /= 2.0
         config.brush.size *= 2
+        config.doKeyAction()
 
 class DoBrushFlipX(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.flip(config.brush.image, True, False)
-            config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, True, False)
+            w,h = config.brush.image.get_size()
+            newimage = pygame.transform.flip(config.brush.image.copy(), True, False)
+            config.brush.image = newimage
+            config.brush.image_orig = newimage
             config.brush.handle_frac[0] = 1 - config.brush.handle_frac[0]
-            config.brush.size = config.brush.size
+            config.brush.aspect = 1.0
+            config.brush.rotate = 0
+            config.brush.size = h
 
 class DoBrushFlipY(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.flip(config.brush.image, False, True)
-            config.brush.image_orig = pygame.transform.flip(config.brush.image_orig, False, True)
+            w,h = config.brush.image.get_size()
+            newimage = pygame.transform.flip(config.brush.image.copy(), False, True)
+            config.brush.image = newimage
+            config.brush.image_orig = newimage
             config.brush.handle_frac[1] = 1 - config.brush.handle_frac[1]
-            config.brush.size = config.brush.size
+            config.brush.aspect = 1.0
+            config.brush.rotate = 0
+            config.brush.size = h
 
 class DoBrushOutline(MenuActionBrush):
+    init_size = None
+
+    def preSelected(self, attrs):
+        self.init_size = config.brush.image.get_size()
+
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
         if config.color == config.brush.bgcolor:
             return
-        w,h = config.brush.image.get_size()
+        w,h = self.init_size
 
         #create surface to hold new brush
         newimage = pygame.Surface((w+2, h+2),0, config.pixel_canvas)
@@ -610,14 +616,23 @@ class DoBrushOutline(MenuActionBrush):
         #put new image in brush
         config.brush.image = newimage
         config.brush.image_orig = newimage
+
+    def postSelected(self, attrs):
+        w,h = self.init_size
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h+2
 
 class DoBrushTrim(MenuActionBrush):
+    init_size = None
+
+    def preSelected(self, attrs):
+        self.init_size = config.brush.image.get_size()
+
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
-        w,h = config.brush.image.get_size()
+        w,h = self.init_size
         if w <= 2 or h <= 2:
             return
         #create surface to hold new brush
@@ -647,21 +662,18 @@ class DoBrushTrim(MenuActionBrush):
         #put new image in brush
         config.brush.image = newimage
         config.brush.image_orig = newimage
+
+    def postSelected(self, attrs):
+        w,h = self.init_size
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h-2
 
-class DoBrushRotate90(MenuActionBrush):
-    def selectedMulti(self, attrs):
+class DoBrushRotate90(MenuAction):
+    def selected(self, attrs):
         if config.brush.type == Brush.CUSTOM:
-            config.brush.image = pygame.transform.rotate(config.brush.image, -90)
-            config.brush.image_orig = pygame.transform.rotate(config.brush.image_orig, -90)
-            config.brush.handle_frac = list([1-config.brush.handle_frac[1], config.brush.handle_frac[0]])
-            config.brush.aspect = 1.0 / config.brush.aspect
-            bx,by,bw,bh = config.brush.rect
-            config.brush.rect = list([by,bx,bh,bw])
-            config.brush.size = bw
-            config.brush.cache = BrushCache()
-            config.brush.size = config.brush.size
+            config.brush.rotate = (config.brush.rotate + 90) % 360
+            config.doKeyAction()
 
 class DoBrushRotateAny(MenuAction):
     def selected(self, attrs):
@@ -674,9 +686,11 @@ class DoBrushRotateAny(MenuAction):
         config.cursor.shape = 5
         config.clear_pixel_draw_canvas()
         config.brush.size = config.brush.size
-        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
-        config.recompose()
         rotimage = config.brush.image
+        mouseX, mouseY = config.get_mouse_pixel_pos(ignore_grid=True)
+        config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
+        config.recompose()
+        start_brush_rot = config.brush.rotate
         angle = 0
         first_time = True
         wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
@@ -694,10 +708,10 @@ class DoBrushRotateAny(MenuAction):
                 config.clear_pixel_draw_canvas()
                 if event.buttons[0] and wait_for_mouseup:
                     angle = int(mda - (math.atan2(mouseY-sy, mouseX-sx) * 180.0 / math.pi))
-                    rotimage = pygame.transform.rotate(config.brush.image, angle)
+                    rotimage = pygame.transform.rotate(config.brush.image_orig, angle-start_brush_rot)
                     rw,rh = rotimage.get_size()
                     config.pixel_canvas.blit(rotimage, (sx-rw//2,sy-rh//2))
-                    config.menubar.title_right = "%d\xB0"%(-angle)
+                    config.brush.rotate = start_brush_rot-angle
                 else:
                     config.pixel_canvas.blit(rotimage, (mouseX-w,mouseY-h))
             elif event.type == MOUSEBUTTONDOWN:
@@ -713,15 +727,36 @@ class DoBrushRotateAny(MenuAction):
 
         config.menubar.title_right = ""
 
-        for frame_no in config.brush:
-            rotimage = pygame.transform.rotate(config.brush.image, angle)
-            config.brush.image = rotimage.copy()
-            config.brush.image_orig = rotimage.copy()
-            config.brush.aspect = 1.0
-            config.brush.handle_type = config.brush.CENTER
-            config.brush.size = rotimage.get_height()
+        config.brush.handle_type = config.brush.CENTER
+        config.brush.rotate = start_brush_rot-angle
 
         config.doKeyAction()
+
+class DoBrushRotateRight(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = config.brush.rotate
+            rot += 1
+            config.brush.rotate = rot
+        else:
+            return False
+
+class DoBrushRotateLeft(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = config.brush.rotate
+            rot -= 1
+            config.brush.rotate = rot
+        else:
+            return False
+
+class DoBrushSet0(MenuAction):
+    def selected(self, attrs):
+        if not attrs is None and "menu1" in attrs:
+            rot = 0
+            config.brush.rotate = rot
+        else:
+            return False
 
 class DoBrushShear(MenuAction):
     def selected(self, attrs):
@@ -798,6 +833,7 @@ class DoBrushShear(MenuAction):
             config.brush.image_orig = shearimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = shearimage.get_height()
 
         config.doKeyAction()
@@ -821,6 +857,7 @@ class DoBrushBG2FG(MenuActionBrush):
         #put new image in brush
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h
 
 class DoBrushBGxFG(MenuActionBrush):
@@ -844,6 +881,7 @@ class DoBrushBGxFG(MenuActionBrush):
         #put new image in brush
         config.brush.image_orig = config.brush.image
         config.brush.aspect = 1
+        config.brush.rotate = 0
         config.brush.size = h
 
 class DoBrushRemap(MenuActionBrush):
@@ -859,11 +897,14 @@ class DoBrushChangeTransp(MenuActionBrush):
     def selectedMulti(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
+        w,h = config.brush.image.get_size()
         config.brush.image.set_colorkey(config.bgcolor)
         config.brush.bgcolor = config.bgcolor
         config.brush.bgcolor_orig = config.bgcolor
         config.brush.image_orig = config.brush.image
-        config.brush.size = config.brush.size
+        config.brush.aspect = 1.0
+        config.brush.rotate = 0
+        config.brush.size = h
 
 class DoBrushBendX(MenuAction):
     def selected(self, attrs):
@@ -947,6 +988,7 @@ class DoBrushBendX(MenuAction):
             config.brush.image_orig = bendimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = bendimage.get_height()
 
         config.doKeyAction()
@@ -1033,6 +1075,7 @@ class DoBrushBendY(MenuAction):
             config.brush.image_orig = bendimage.copy()
             config.brush.aspect = 1.0
             config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
             config.brush.size = bendimage.get_height()
 
         config.doKeyAction()
@@ -1056,6 +1099,8 @@ class DoBrushHandlePlace(MenuAction):
         config.recompose()
         point_placed = False
         first_time = True
+        prev_rot = config.brush.rotate
+        config.brush.rotate = 0
         while not point_placed:
             event = config.xevent.poll()
             while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
@@ -1090,8 +1135,10 @@ class DoBrushHandlePlace(MenuAction):
         for frame_no in config.brush:
             config.brush.handle_type = config.brush.PLACE
             config.brush.handle_frac = [(mouseX-bxo)/bw, (mouseY-byo)/bh]
+            config.brush.handle_frac_orig = list(config.brush.handle_frac)
             config.brush.size = config.brush.size
 
+        config.brush.rotate = prev_rot
         config.doKeyAction()
 
 class DoMode(MenuAction):
@@ -1222,16 +1269,7 @@ class DoAnimBrushSave(MenuAction):
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)
             try:
-                if not save_anim(filename, brush_config, overwrite=False, transparent_color=config.brush.bgcolor):
-                    answer = question_req(config.pixel_req_canvas,
-                             "File Exists",
-                             "Overwrite this file?",
-                             ["Yes","No"],
-                             [K_RETURN, K_ESCAPE])
-                    if answer == 0:
-                            save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
-                    else:
-                        return
+                save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except:
                 io_error_req("Save Error", "Unable to save brush:\n%s", filename)
                 return
@@ -1266,8 +1304,10 @@ class DoStencilMake(MenuActionMulti):
         return False
 
     def selected(self, attrs):
+        config.clear_pixel_draw_canvas()
         if stencil_req(config.pixel_req_canvas):
             super().selected(attrs)
+        config.doKeyAction()
 
     def selectedMulti(self, attrs):
         config.stencil.remake(config.pixel_canvas)
@@ -1465,6 +1505,14 @@ class DoPrefsTrueSymmetry(MenuAction):
         config.true_symmetry = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsSysFileDialog(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.sys_file_dialog = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1487,7 +1535,6 @@ def init_menubar(config_in):
             ["Save", "ctrl-s", DoSave],
             ["Save as...", "ctrl-S", DoSaveAs],
             ["Revert...", "ctrl-alt-z", DoRevert],
-            ["Print...", "ctrl-p"],
             ["---"],
             ["Flip", [
                 ["Horiz", " ", DoPictureFlipX],
@@ -1538,6 +1585,9 @@ def init_menubar(config_in):
             ["Rotate", [
                 ["90 Degrees", "z", DoBrushRotate90],
                 ["Any Angle", " ", DoBrushRotateAny],
+                ["Right 1\xB0", "0", DoBrushRotateRight],
+                ["Left 1\xB0", "9", DoBrushRotateLeft],
+                ["Set to 0\xB0", "shift-0", DoBrushSet0],
                 ["Shear", " ", DoBrushShear],
                 ]],
             ["Change Color", [
@@ -1631,6 +1681,7 @@ def init_menubar(config_in):
             ["/Hide Menus", " ", DoPrefsHideMenus],
             ["/Force 1:1 Pixels", " ", DoPrefsForce1To1Pixels],
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],
+            ["/Sys File Dialog", " ", DoPrefsSysFileDialog],
             ["/Coords", [
                 ["/Show", "|", DoPrefsCoords],
                 ["/Flip", " ", DoPrefsFlipCoords],

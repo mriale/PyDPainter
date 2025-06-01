@@ -6,7 +6,7 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-import re
+import re, sys
 
 class HotKeyMap:
     def __init__(self):
@@ -26,6 +26,8 @@ class HotKeyMap:
             if event.mod & KMOD_CTRL:
                 mod |= KMOD_CTRL
             if event.mod & KMOD_ALT:
+                mod |= KMOD_ALT
+            if event.mod & KMOD_META:
                 mod |= KMOD_ALT
 
             if event.unicode in self.hotkey_map:
@@ -61,6 +63,16 @@ class HotKey:
         "pgup": K_PAGEUP,
         "page down": K_PAGEDOWN,
         "pgdn": K_PAGEDOWN,
+        "0": K_0,
+        "1": K_1,
+        "2": K_2,
+        "3": K_3,
+        "4": K_4,
+        "5": K_5,
+        "6": K_6,
+        "7": K_7,
+        "8": K_8,
+        "9": K_9,
         "f1": K_F1,
         "f2": K_F2,
         "f3": K_F3,
@@ -115,7 +127,10 @@ class HotKey:
                 s += "\x84\x85"
                 c = c.upper()
             if self.mod & KMOD_CTRL:
-                s += "\x80\x81"
+                if sys.platform.startswith('darwin'):
+                    s += "\x9D"
+                else:
+                    s += "\x80\x81"
             if self.mod & KMOD_ALT:
                 s += "\x82\x83"
             return s+c
@@ -157,12 +172,15 @@ def main():
     testHotKey("ctrl-o")
     testHotKey("ctrl-O")
     testHotKey("<")
+    testHotKey("0")
+    testHotKey("shift-0")
 
     print("")
     hotkeymap = HotKeyMap()
     hotkeymap.add(HotKey(text="tab"))
     hotkeymap.add(HotKey(text="shift-tab"))
     hotkeymap.add(HotKey(text="<"))
+    hotkeymap.add(HotKey(text="shift-0"))
     print(hotkeymap)
 
 if __name__ == '__main__': main()

@@ -43,6 +43,8 @@ class Xevent(object):
     def dedup_new(self, new_xevents):
         for e in list(new_xevents):
             if e.type == KEYDOWN:
+                if e.mod & KMOD_META:
+                    e.mod = (e.mod & ~KMOD_META) | KMOD_LCTRL
                 if config.debug:
                     print(e)
                     i=0

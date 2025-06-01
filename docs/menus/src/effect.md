@@ -27,6 +27,8 @@ The `Make` menu item brings up `Make Stencil` requestor that allows you select w
 - The `Make` button creates the stencil.
 - `Cancel` leaves with no changes.
 
+Key: `~` or `SHIFT ²` (the ² key is at the very left, above the TAB key and below the ESC one)
+
 ### Remake
 
 The `Remake` menu item recreates the stencil from the current image. If you painted with some of the locked colors after you created a stencil, `Remake` will add these pixels to the stencil.
@@ -42,6 +44,8 @@ This reverses the current stencil so that every pixel that was locked will be un
 ### On/Off
 
 This temporarily disables the stencil so you can draw anywhere. It can be toggled back on by selecting the menu option again.
+
+Key: `²` (Key at the very left, above the TAB key and below the ESC one)
 
 ### Free
 
@@ -69,11 +73,17 @@ There are two background modes that are indicated in the title bar:
 
 - Opens a file requestor to allow you to load a reference image, which can be any resolution or color depth and does not effect the image you are editing.
 - Shows an `R` indicator in the title bar.
-- If you save the image with the reference image showing, only the image will be saved. Color zero will be saved where the reference image was.
+- If you save the Picture with the reference image showing, only the image will be saved. Color zero will be saved where the reference image was.
+- The Palette **Pick** button works on the reference image, allowing you to sample colours from this image for your project's indexed palette.
+
+![tuto](tuto-background.gif)
+Quick animated GIF tutorial
 
 ### On/Off
 
 - Toggles the background image so you only see what you've drawn over top the background.
+
+Key: `CTRL B`
 
 ### Free
 
