@@ -90,7 +90,7 @@ def remove_files():
 def check_recover():
     global root
     import tkinter as tk
-    root = tk.Tk()
+    #root = tk.Tk()
     recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover")
     if os.path.exists(recover_path):
         dir_list = os.listdir(recover_path)
@@ -119,7 +119,7 @@ def check_recover():
             # keep the window displaying
             root.mainloop()
     else:
-        root.withdraw()
+        pass #root.withdraw()
 
 if __name__ == "__main__":
     check_recover()

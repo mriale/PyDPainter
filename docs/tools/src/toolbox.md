@@ -120,7 +120,7 @@ Then both tools, drawing and fill, are drawn with the same shape you make on scr
 
 ![](ALT-areafill.png)
 
-Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](spacing.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Brush Trails](brushtrails.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
 
 
 Key: `D`
@@ -145,7 +145,7 @@ With the `CTRL` key held down, the tool leaves traces between the two clicks.
 
 Key: `v`
 
-Right-click tool to open [Spacing](spacing.md).
+Right-click tool to open [Brush Trails](brushtrails.md).
 
 ## Curve tool
 
@@ -167,7 +167,7 @@ drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 
 Key: `q`
 
-Right-click tool to open [Spacing](spacing.md).
+Right-click tool to open [Brush Trails](brushtrails.md).
 
 ## Fill tool
 
@@ -236,7 +236,7 @@ In any case, the rectangle is completed as soon as you release the button.
 
 Key: `r`
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key for a square drawing constraint.
 
@@ -258,7 +258,7 @@ of the circle.*
 
 Key: `c`
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key to start with the next circle center on your last click.
 
@@ -278,7 +278,7 @@ the mouse button and hold. Now you can rotate your ellipse until it has just the
 
 Key: `e`
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
 
 With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 Amazing results can be achieved easily:  
@@ -305,7 +305,7 @@ Quickly double-click to stop the shape immediately. In fill mode, the shape is a
 
 Key: `w`
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
 
 ## Brush tool
 

@@ -27,9 +27,12 @@ TIMEROFF = int((2**31)-1)
 DBL_CLICK = 500
 
 is_win = sys.platform.startswith('win')
+is_android = "getandroidapilevel" in dir(sys)
 is_pygamece = getattr(pygame, "IS_CE", False)
 
 def clipboard_init():
+    if is_android:
+        return
     if not is_pygamece and "scrap" in dir(pygame) and "init" in dir(pygame.scrap):
         # pygame
         pygame.scrap.init()
