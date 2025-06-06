@@ -91,25 +91,25 @@ The settings control the spacing of the brush trails:
 <tbody><tr>
   <td align="center">Off</td>
   <td align="center">Off</td>
-  <td style="background-color:black;"><img src="brushtrails-flat.png" alt=""></td>
+  <td bgcolor="black"><img src="brushtrails-flat.png" alt=""></td>
   <td>brushes are evenly spaced</td>
 </tr>
 <tr>
   <td align="center">On</td>
   <td align="center">Off</td>
-  <td style="background-color:black;"><img src="brushtrails-in.png" alt=""></td>
+  <td bgcolor="black"><img src="brushtrails-in.png" alt=""></td>
   <td>brushes start with narrow spacing and gradually get wider</td>
 </tr>
 <tr>
   <td align="center">Off</td>
   <td align="center">On</td>
-  <td style="background-color:black;"><img src="brushtrails-out.png" alt=""></td>
+  <td bgcolor="black"><img src="brushtrails-out.png" alt=""></td>
   <td>brushes start with wide spacing and gradually get narrower</td>
 </tr>
 <tr>
   <td align="center">On</td>
   <td align="center">On</td>
-  <td style="background-color:black;"><img src="brushtrails-inout.png" alt=""></td>
+  <td bgcolor="black"><img src="brushtrails-inout.png" alt=""></td>
   <td>brushes start with narrow spacing and gradually get wider until halfway when they gradually get narrower again</td>
 </tr>
 </tbody></table>
