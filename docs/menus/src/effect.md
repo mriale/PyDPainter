@@ -27,7 +27,7 @@ The `Make` menu item brings up `Make Stencil` requestor that allows you select w
 - The `Make` button creates the stencil.
 - `Cancel` leaves with no changes.
 
-Key: `~` or `SHIFT ²` (the ² key is at the very left, above the TAB key and below the ESC one)
+Key: `~` or AZERTY `SHIFT ²` (top left, below ESC)
 
 ### Remake
 
@@ -45,7 +45,7 @@ This reverses the current stencil so that every pixel that was locked will be un
 
 This temporarily disables the stencil so you can draw anywhere. It can be toggled back on by selecting the menu option again.
 
-Key: `²` (Key at the very left, above the TAB key and below the ESC one)
+Key: `` ` `` or AZERTY `²` (top left, below ESC)
 
 ### Free
 

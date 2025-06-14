@@ -1,6 +1,6 @@
 # Introduction to Move parameters Tutorial
 
-These new settings are hidden in the **Spacing** options.
+These new settings are hidden in the formerly **Spacing** options.
 They have two uses:
 - to manipulate the sizes and rotations of any brush (custom or in-built), as you draw.
 - add a way to create fluid animations (text effects, bounces, trajectories) using Animpainting.
@@ -54,10 +54,10 @@ We got this lovely rainbow with a Range 2 that includes it (the white bracket ne
 That's it, click OK to close the palette.
 It may have been a bit boring for the experienced, but it's going to be very cool. Let's get to work on those new Move settings!
 
-## New Move parameters in Spacing !
+## New Move parameters in Brush Trails !
 
 1. Open any **Spacing** parameters using the right-click on any drawing tool : line, curve, rectangle, circle, ellipse. All those drawing tools plus **Draw** shares the same options.
-It brings up the **Spacing** panel. Well, spacing is a rather limited term when you consider the scope of what we can do there now.
+It brings up the updated **Brush Trails** panel. Well, spacing was a rather limited term when you consider the scope of what we can do there now.
 
 Its parameters can be used with any drawing tool. Even in continuous **Draw**. But it can get chaotic fast. Just so you understand, we're going to make simple straight lines, and lines using a defined number of brush strokes along its length.
 
@@ -77,7 +77,7 @@ Let's start with a double effect for our current brush:
 5. Validate with **OK**.
 6. Click on **Line Tool**.
 Is our brush with Amiga text still there? Hit `B` to restore last Brush if not.
-7. Make sure Red color is selected and you are in **Cycle Mode** (`F7`).
+7. Make sure Red color is selected (or any color inside the **Range**) and you are in **Cycle Mode** (`F7`).
 8. Draw some lines to understand the effect.
    
 Each line has 14 steps of your brush, rotating completely around 360°, from a 25% size to it's full size and final orientation. Those
@@ -96,7 +96,7 @@ See also how the brush handling point (the orange dotted crosshair you have in t
 Let's end with an easy animation.
 
 1. Go to **Anim / Frames / Set #**...sub menu.
-2. **Set Frame Count** to 14 *(It's easier to have the same numbers of steps as set in **N total** **Spacing** settings)* and hit OK. You're now in the first frame of your 14 frames Animation. Check the navbar below the screen to control animation.
+2. **Set Frame Count** to 14 *(It's easier to have the same numbers of steps as set in **N total** **Brush Trails** settings)* and hit OK. You're now in the first frame of your 14 frames Animation. Check the navbar below the screen to control animation.
 3. Select the **Line Tool**.
 *You can use Cycle mode or not as you like.*
 4. Go tho the upper left of the screen.

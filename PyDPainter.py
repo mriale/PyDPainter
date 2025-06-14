@@ -44,6 +44,8 @@ os.environ["SDL_MOUSE_RELATIVE"] = "0"
 os.environ["TK_SILENCE_DEPRECATION"] = "1"
 os.chdir(os.path.realpath(os.path.dirname(__file__)))
 
+is_android = "getandroidapilevel" in dir(sys)
+
 import libs.pixelfont
 from libs.pixelfont import PixelFont
 
@@ -90,7 +92,8 @@ def remove_files():
 def check_recover():
     global root
     import tkinter as tk
-    root = tk.Tk()
+    if not is_android:
+        root = tk.Tk()
     recover_path = os.path.join(os.path.expanduser('~'), ".pydpainter-recover")
     if os.path.exists(recover_path):
         dir_list = os.listdir(recover_path)
@@ -119,7 +122,8 @@ def check_recover():
             # keep the window displaying
             root.mainloop()
     else:
-        root.withdraw()
+        if not is_android:
+            root.withdraw()
 
 if __name__ == "__main__":
     check_recover()

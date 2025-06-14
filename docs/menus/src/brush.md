@@ -52,7 +52,7 @@ Use the mouse to freely resize the brush. Proportions will be lost.
 Please note you can use the `+` and `-` keys for resizing with an accuracy of 1 pixel for each press. Proportions are respected.
 A reminder in % of the original size is displayed in the menu bar.
 ![resize ba](resize-bar.png)<br>
-It will be updated realtime. This is useful in conjunction with the repeated use of the `+` and `-` keys to enlarge or reduce the size. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/spacing.md) functions (formerly Spacing).
+It will be updated realtime. This is useful in conjunction with the repeated use of the `+` and `-` keys to enlarge or reduce the size. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/brushtrails.md) functions (formerly Spacing).
 Use **Restore Brush** if unhappy with the result.
 
 ### Halve
@@ -150,7 +150,7 @@ key: `9`
 **New in 2.2**
 
 ![](rotate-bar.png)<br>
-A reminder in degrees of the current rotation is displayed in the menu bar. It will be updated realtime. This is useful in conjunction with the repeated use of the `0` and `9` keys for rotation right or left. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/spacing.md) functions (formerly **Spacing**).
+A reminder in degrees of the current rotation is displayed in the menu bar. It will be updated realtime. This is useful in conjunction with the repeated use of the `0` and `9` keys for rotation right or left. This can also be useful for previewing your rotation settings so that you can use them in the new [Brush Trail](../../tools/src/brushtrails.md) functions (formerly **Spacing**).
 
 ### Set to 0°
 Reset the brush rotation to 0° (as grabbed, or loaded)

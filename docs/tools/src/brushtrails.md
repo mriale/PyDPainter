@@ -7,7 +7,8 @@
     - [New decimal values in version 2.1.0](#new-decimal-values-in-version-210)
     - [New 2.2.0 Size and Rotate values](#new-220-size-and-rotate-values)
   - [N Total](#n-total)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
+  - [Ease In/Out](#ease-inout)
+  - [Size and Rotate](#size-and-rotate)
 
 | ![New Brush Trails](brushtrails.png) |
 | :-----: |
@@ -63,5 +64,60 @@ Defines the total number of times the current brush will be copied along the pat
 From left to right, examples of the 4 default settings, with Circle, Rectangle and Line tools, each with a different brush (indicated in red).
 
 ![](Spacing-examples.png)
+
+## Ease In/Out
+
+![](brushtrails-ease.png)
+
+These settings allow you to apply acceleration or deceleration effects to a brush either
+by drawing on a static canvas or by animpainting across multiple frames in an animation.
+
+*Note: The Ease **In** and **Out** settings are enabled only when the **N Total** option is selected.*
+
+The graph to the left of the settings allows you visualize the affect on the brush trails.
+Think of time as going from left to right and position going from bottom to top.
+A line will show linear trails while a curve will show acceleration or deceleration.
+
+The settings control the spacing of the brush trails:
+| Ease In | Ease Out | Example<br>(left to right) | Description |
+|:-------:|:--------:| ------- | ----------- |
+| Off     | Off      | ![](brushtrails-flat.png)  | brushes are evenly spaced |
+| On      | Off      | ![](brushtrails-in.png)    | brushes start with narrow spacing and gradually get wider |
+| Off     | On       | ![](brushtrails-out.png)   | brushes start with wide spacing and gradually get narrower |
+| On      | On       | ![](brushtrails-inout.png) | brushes start with narrow spacing and gradually get wider until halfway when they gradually get narrower again |
+
+The number below the **Ease In** and **Ease Out** buttons controls how quickly the spacing or decreases. It's actually the exponent for the curve, so by adjusting it you can make the curve steeper or more gradual.
+
+## Size and Rotate
+
+![](brushtrails-size-rotate.png)
+
+The **Size** and **Rotate** settings apply changes to the current brush while painting or animpainting.
+They can be used to apply pseudo-3D transformations to text or other images.
+
+The **Size** and **Rotate** settings each have a **Start** and **End** parameter and a visualization using arrows and an arc. The *solid dark arrow* represents the start size and rotation, and the *outline light arrow* represents the end size and rotation. The *arc* around the outside shows the path of the rotation.
+
+The **Size Start** parameter (50% in the above screenshot) is the percentage size of the brush at the start of a brush trail, and **Size End** (100% in the above screenshot) is the percentage size of the brush at the end of the brush trail.
+In the same way, the **Rotate Start** parameter (-70 degrees in the above screenshot) is the rotation of the brush at the start of the brush trail, and **Rotate End** (70 degrees in the above screenshot) is the rotation of the brush at the end of the brush trail.
+
+### Example
+
+If you take this brush:
+
+![](brushtrails-size-rotate-example.png)
+
+and draw a line from left to right with 10 trails (N Total = 10) and the Size/Rotate parameters from above, you get this:
+
+![](brushtrails-size-rotate-example-line.png)
+
+Notice that the brush trails get larger from left to right as they rotate from -70 degrees to 70 degrees.
+
+### Tutorial
+
+Using animpainting and Brush Trails you can even make this effect:
+
+![](../../tutorials/src/move/text-move.gif)
+
+See the [move tutorial](../../tutorials/src/move/move.md) to learn how to create things like this yourself.
 
 ###### Documentation written by Stephane Anquetil
