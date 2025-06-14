@@ -8,6 +8,7 @@
     - [New 2.2.0 Size and Rotate values](#new-220-size-and-rotate-values)
   - [N Total](#n-total)
   - [Ease In/Out](#ease-inout)
+  - [Size and Rotate](#size-and-rotate)
 
 | ![New Brush Trails](brushtrails.png) |
 | :-----: |
@@ -78,44 +79,45 @@ Think of time as going from left to right and position going from bottom to top.
 A line will show linear trails while a curve will show acceleration or deceleration.
 
 The settings control the spacing of the brush trails:
-
-<table>
-<thead>
-<tr>
-  <th align="center">Ease In</th>
-  <th align="center">Ease Out</th>
-  <th>Example<br>(left to right)</th>
-  <th>Description</th>
-</tr>
-</thead>
-<tbody><tr>
-  <td align="center">Off</td>
-  <td align="center">Off</td>
-  <td bgcolor="black"><img src="brushtrails-flat.png" alt=""></td>
-  <td>brushes are evenly spaced</td>
-</tr>
-<tr>
-  <td align="center">On</td>
-  <td align="center">Off</td>
-  <td bgcolor="black"><img src="brushtrails-in.png" alt=""></td>
-  <td>brushes start with narrow spacing and gradually get wider</td>
-</tr>
-<tr>
-  <td align="center">Off</td>
-  <td align="center">On</td>
-  <td bgcolor="black"><img src="brushtrails-out.png" alt=""></td>
-  <td>brushes start with wide spacing and gradually get narrower</td>
-</tr>
-<tr>
-  <td align="center">On</td>
-  <td align="center">On</td>
-  <td bgcolor="black"><img src="brushtrails-inout.png" alt=""></td>
-  <td>brushes start with narrow spacing and gradually get wider until halfway when they gradually get narrower again</td>
-</tr>
-</tbody></table>
-
-
+| Ease In | Ease Out | Example<br>(left to right) | Description |
+|:-------:|:--------:| ------- | ----------- |
+| Off     | Off      | ![](brushtrails-flat.png)  | brushes are evenly spaced |
+| On      | Off      | ![](brushtrails-in.png)    | brushes start with narrow spacing and gradually get wider |
+| Off     | On       | ![](brushtrails-out.png)   | brushes start with wide spacing and gradually get narrower |
+| On      | On       | ![](brushtrails-inout.png) | brushes start with narrow spacing and gradually get wider until halfway when they gradually get narrower again |
 
 The number below the **Ease In** and **Ease Out** buttons controls how quickly the spacing or decreases. It's actually the exponent for the curve, so by adjusting it you can make the curve steeper or more gradual.
+
+## Size and Rotate
+
+![](brushtrails-size-rotate.png)
+
+The **Size** and **Rotate** settings apply changes to the current brush while painting or animpainting.
+They can be used to apply pseudo-3D transformations to text or other images.
+
+The **Size** and **Rotate** settings each have a **Start** and **End** parameter and a visualization using arrows and an arc. The *solid dark arrow* represents the start size and rotation, and the *outline light arrow* represents the end size and rotation. The *arc* around the outside shows the path of the rotation.
+
+The **Size Start** parameter (50% in the above screenshot) is the percentage size of the brush at the start of a brush trail, and **Size End** (100% in the above screenshot) is the percentage size of the brush at the end of the brush trail.
+In the same way, the **Rotate Start** parameter (-70 degrees in the above screenshot) is the rotation of the brush at the start of the brush trail, and **Rotate End** (70 degrees in the above screenshot) is the rotation of the brush at the end of the brush trail.
+
+### Example
+
+If you take this brush:
+
+![](brushtrails-size-rotate-example.png)
+
+and draw a line from left to right with 10 trails (N Total = 10) and the Size/Rotate parameters from above, you get this:
+
+![](brushtrails-size-rotate-example-line.png)
+
+Notice that the brush trails get larger from left to right as they rotate from -70 degrees to 70 degrees.
+
+### Tutorial
+
+Using animpainting and Brush Trails you can even make this effect:
+
+![](../../tutorials/src/move/text-move.gif)
+
+See the [move tutorial](../../tutorials/src/move/move.md) to learn how to create things like this yourself.
 
 ###### Documentation written by Stephane Anquetil
