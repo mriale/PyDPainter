@@ -79,6 +79,7 @@ Think of time as going from left to right and position going from bottom to top.
 A line will show linear trails while a curve will show acceleration or deceleration.
 
 The settings control the spacing of the brush trails:
+
 | Ease In | Ease Out | Example<br>(left to right) | Description |
 |:-------:|:--------:| ------- | ----------- |
 | Off     | Off      | ![](brushtrails-flat.png)  | brushes are evenly spaced |
