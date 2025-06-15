@@ -25,6 +25,7 @@ YouTube videos:
 * [Quick PyDPainter Demo](https://youtu.be/XwagsCdMj74)
 * [PyDPainter 2.0 Trailer](https://youtu.be/l385Z7_CRB0)
 * [PyDPainter 2.1.0 Trailer](https://youtu.be/xbe3t0TKU3g)
+* [PyDPainter 2.2.0 Trailer](https://youtu.be/muISqT-eM_k)
 * [PyDPainter tutorial playlist](https://www.youtube.com/playlist?list=PLhgHYZ9fWyHjocfn8Syo3kfIXT5irI-GC)
 
 Ko-fi donation page:
