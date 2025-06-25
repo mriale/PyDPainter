@@ -1078,6 +1078,8 @@ Offset: ____~ ____~
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.grid_size = (int(sizeXg.value), int(sizeYg.value))
                     config.grid_offset = (int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value))
+                    if not config.grid_on:
+                        config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -1152,6 +1154,8 @@ Height:  ____
                     config.symm_mode = 1
                     config.symm_width = int(widthg.value)
                     config.symm_height = int(heightg.value)
+                    if not config.symm_on:
+                        config.toolbar.click(config.toolbar.tool_id("symm"), MOUSEBUTTONDOWN)
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -1226,6 +1230,8 @@ X:_____  Y:_____
                     config.symm_mode = 0
                     config.symm_num = int(orderg.value)
                     config.symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
+                    if not config.symm_on:
+                        config.toolbar.click(config.toolbar.tool_id("symm"), MOUSEBUTTONDOWN)
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
