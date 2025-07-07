@@ -1435,6 +1435,10 @@ class FillMode:
                  "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
                  "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
+    ORDER1 = np.matrix([[0,2],
+                        [2,0]], dtype="int8")
+    ORDER2 = np.matrix([[0,2],
+                        [3,1]], dtype="int8")
     ORDER4 = np.matrix([[ 0, 8, 2,10],
                         [12, 4,14, 6],
                         [ 3,11, 1, 9],
@@ -1446,6 +1450,10 @@ class FillMode:
         self.gradient_dither = 4
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
+        self.od_matrix = self.ORDER4 / 16.0
+        #self.od_matrix = self.ORDER2 / 4.0
+        #self.od_matrix = self.ORDER1 / 4.0
+
     def __str__(self):
         return FillMode.LABEL_STR[self.value]
 
@@ -2308,11 +2316,12 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                     elif primprops.fillmode.value == FillMode.VERTICAL:
                         colori = int(int((y+dither)-y1) / pointspercolor)
                     if primprops.fillmode.gradient_dither < 0:
+                        od_size = primprops.fillmode.od_matrix.shape[0]
                         if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x-x1) / pointspercolor)%16):
+                            if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((x-x1) / pointspercolor) % 1:
                                 colori += 1
                         elif primprops.fillmode.value == FillMode.VERTICAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
+                            if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((y-y1) / pointspercolor) % 1:
                                 colori += 1
                     if colori >= len(arange):
                         colori = len(arange) - 1
@@ -2410,8 +2419,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
             surf_array += dither_array
         elif primprops.fillmode.gradient_dither < 0:
-            dither_order4 = (FillMode.ORDER4 - 8) * 16
-            dither_array = np.tile(dither_order4, ((w+3)//4,(h+3)//4))
+            od_size = primprops.fillmode.od_matrix.shape[0]
+            dither_order = ((primprops.fillmode.od_matrix - 0.5) * 256).astype(np.int64)
+            dither_array = np.tile(dither_order, ((w+3)//od_size,(h+3)//od_size))
             surf_array += dither_array[0:w,0:h]
 
         #Force out of range colors back into range
@@ -2558,7 +2568,9 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                         if pointspercolor > 0:
                             colori = int(int((y+dither)-y1) / pointspercolor)
                             if primprops.fillmode.gradient_dither < 0:
-                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
+                                od_size = primprops.fillmode.od_matrix.shape[0]
+                                if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((y-y1) / pointspercolor) % 1:
+
                                     colori += 1
                             if colori >= len(arange):
                                 colori = len(arange) - 1
