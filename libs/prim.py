@@ -1436,14 +1436,6 @@ class FillMode:
                  "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
                  "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
-    ORDER1 = np.matrix([[0,2],
-                        [2,0]], dtype="int8")
-    ORDER2 = np.matrix([[0,2],
-                        [3,1]], dtype="int8")
-    ORDER4 = np.matrix([[ 0, 8, 2,10],
-                        [12, 4,14, 6],
-                        [ 3,11, 1, 9],
-                        [15, 7,13, 5]], dtype="int8")
 
     def __init__(self, value=0):
         self.brush = None
@@ -1451,7 +1443,6 @@ class FillMode:
         self.gradient_dither = 4
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
-        self.od_matrix = self.ORDER4 / 16.0
         self.load_dither_matrix("4x4")
         #self.od_matrix = self.ORDER2 / 4.0
         #self.od_matrix = self.ORDER1 / 4.0
