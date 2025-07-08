@@ -8,6 +8,7 @@ import os.path
 import random
 import copy
 import colorsys
+import csv
 from libs.menureq import *
 
 import contextlib
@@ -1451,11 +1452,23 @@ class FillMode:
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
         self.od_matrix = self.ORDER4 / 16.0
+        self.load_dither_matrix("4x4")
         #self.od_matrix = self.ORDER2 / 4.0
         #self.od_matrix = self.ORDER1 / 4.0
 
     def __str__(self):
         return FillMode.LABEL_STR[self.value]
+
+    def load_dither_matrix(self, name):
+        csv_reader = csv.reader(open(os.path.join('data', 'dither', f"{name}.csv"), "r"), delimiter=",")
+        x = list(csv_reader)
+        divisor = 1.0
+        # Check if first row is divisor
+        if "".join(x[0]) == x[0][0]:
+            divisor = float(x[0][0])
+            del x[0]
+        self.od_matrix = np.array(x).astype("float").transpose() / divisor
+
 
 
 class PrimProps:
