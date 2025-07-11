@@ -1416,6 +1416,46 @@ class DrawMode:
     def __str__(self):
         return DrawMode.LABEL_STR[self.value]
 
+class Dither:
+    """This class describes the dither type and matrixes"""
+    ORDER1 = np.matrix([[0,1],
+                        [1,0]], dtype="float") / 2.0
+    ORDER2 = np.matrix([[0,2],
+                        [3,1]], dtype="float") / 4.0
+    ORDER4 = np.matrix([[ 0, 8, 2,10],
+                        [12, 4,14, 6],
+                        [ 3,11, 1, 9],
+                        [15, 7,13, 5]], dtype="float") / 16.0
+
+    TYPE_RANDOM = 0
+    TYPE_2X2 = 1
+    TYPE_4x4 = 2
+    TYPE_CHECKER = 4
+    TYPE_CUSTOM = 5
+
+    MATRIXES = [None, ORDER2, ORDER4, ORDER1, ORDER4]
+
+    def __init__(self):
+        self.name = None
+        self.type = self.TYPE_RANDOM
+        self.matrix = None
+
+    def set_type(self, new_value, new_name=None):
+        self.type = new_value
+        self.matrix = self.MATRIXES[new_value]
+        if not new_name is None:
+            self.load_matrix(new_name)
+
+    def load_matrix(self, name):
+        self.name = name
+        csv_reader = csv.reader(open(os.path.join('data', 'dither', f"{name}.csv"), "r"), delimiter=",")
+        x = list(csv_reader)
+        divisor = 1.0
+        # Check if first row is divisor
+        if "".join(x[0]) == x[0][0]:
+            divisor = float(x[0][0])
+            del x[0]
+        self.matrix = np.array(x).astype("float").transpose() / divisor
 
 class FillMode:
     """This class describes the fill modes for solid shapes"""
@@ -1443,23 +1483,14 @@ class FillMode:
         self.gradient_dither = 4
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
-        self.load_dither_matrix("4x4")
-        #self.od_matrix = self.ORDER2 / 4.0
-        #self.od_matrix = self.ORDER1 / 4.0
+        self.dither = Dither()
+
+    @property
+    def od_matrix(self):
+        return self.dither.matrix
 
     def __str__(self):
         return FillMode.LABEL_STR[self.value]
-
-    def load_dither_matrix(self, name):
-        csv_reader = csv.reader(open(os.path.join('data', 'dither', f"{name}.csv"), "r"), delimiter=",")
-        x = list(csv_reader)
-        divisor = 1.0
-        # Check if first row is divisor
-        if "".join(x[0]) == x[0][0]:
-            divisor = float(x[0][0])
-            del x[0]
-        self.od_matrix = np.array(x).astype("float").transpose() / divisor
-
 
 
 class PrimProps:
@@ -2304,13 +2335,13 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                 numpoints = x2-x1+1
             else:
                 numpoints = x2-x1+1
-            if primprops.fillmode.gradient_dither >= 0:
+            if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                 pointspercolor = numpoints / (numcolors)
             else:
                 pointspercolor = numpoints / (numcolors-.9)
             ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
             for x in range(xs1,xs2+1):
-                if primprops.fillmode.gradient_dither >= 0:
+                if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                     dither = int((random.random()*ditherfactor)-(ditherfactor/2))
                 else:
                     dither = 0
@@ -2319,7 +2350,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                         colori = int(int((x+dither)-x1) / pointspercolor)
                     elif primprops.fillmode.value == FillMode.VERTICAL:
                         colori = int(int((y+dither)-y1) / pointspercolor)
-                    if primprops.fillmode.gradient_dither < 0:
+                    if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
                         od_size = primprops.fillmode.od_matrix.shape[0]
                         if primprops.fillmode.value >= FillMode.HORIZONTAL:
                             if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((x-x1) / pointspercolor) % 1:
@@ -2417,12 +2448,12 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         surf_array //= max_pixels + 1
         surf_array += cur_crange.low * 256
 
-        if primprops.fillmode.gradient_dither > 0:
+        if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
             dither_range = 32 * primprops.fillmode.gradient_dither
             dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
             surf_array += dither_array
-        elif primprops.fillmode.gradient_dither < 0:
+        else:
             od_size = primprops.fillmode.od_matrix.shape[0]
             dither_order = ((primprops.fillmode.od_matrix - 0.5) * 256).astype(np.int64)
             dither_array = np.tile(dither_order, ((w+3)//od_size,(h+3)//od_size))
@@ -2559,19 +2590,19 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                     if ys2>size[1]-1:
                         ys2=size[1]-1
                     numpoints = y2-y1+1
-                    if primprops.fillmode.gradient_dither >= 0:
+                    if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                         pointspercolor = numpoints / (numcolors)
                     else:
                         pointspercolor = numpoints / (numcolors-.9)
                     ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
                     for y in range(ys1,ys2+1):
-                        if primprops.fillmode.gradient_dither >= 0:
+                        if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                             dither = int((random.random()*ditherfactor)-(ditherfactor/2))
                         else:
                             dither = 0
                         if pointspercolor > 0:
                             colori = int(int((y+dither)-y1) / pointspercolor)
-                            if primprops.fillmode.gradient_dither < 0:
+                            if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
                                 od_size = primprops.fillmode.od_matrix.shape[0]
                                 if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((y-y1) / pointspercolor) % 1:
 

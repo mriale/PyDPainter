@@ -1775,6 +1775,7 @@ class FillGadget(Gadget):
                     primprops.fillmode = copy.copy(config.primprops.fillmode)
                     primprops.fillmode.gradient_dither = self.value
                     primprops.fillmode.value = self.fillmode_value
+                    primprops.fillmode.dither = self.fillmode_dither
                     primprops.fillmode.predraw = False
                     primprops.handlesymm = False
                     rx,ry,rw,rh = self.screenrect
@@ -1919,10 +1920,10 @@ def get_dither_dir():
 def range_enable(req):
     ditherdir = get_dither_dir()
 
-    ditherg = req.find_gadget("Dither:", 1)
-    dithervalg = req.find_gadget("Dither:", 2)
-    ditherdirg = req.find_gadget("Dither:", 3)
-    dithersampleg = req.gadget_id("12_0")
+    dithersampleg = req.find_gadget("Solid", 1)
+    ditherbuttonsg = list()
+    for i in range(1,10):
+        ditherbuttonsg.append(req.find_gadget("Dither:", i))
 
     renabled = False
     if ditherdir != 0 and \
@@ -1931,12 +1932,9 @@ def range_enable(req):
                            FillMode.BOTH_FIT]:
         renabled = True
 
-    ditherg.enabled = renabled
-    ditherg.need_redraw = True
-    dithervalg.enabled = renabled
-    dithervalg.need_redraw = True
-    ditherdirg.enabled = renabled
-    ditherdirg.need_redraw = True
+    for g in ditherbuttonsg:
+        g.enabled = renabled
+        g.need_redraw = True
 
 def fill_req(screen):
     config.stop_cycling()
@@ -1950,6 +1948,8 @@ def fill_req(screen):
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:--------------00^^
+[Random~2x2~4x4~Checker]
+[Custom]aaaaaaaaaaaaaaaaa
 [Cancel][OK]
 """, "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
@@ -1961,27 +1961,35 @@ Dither:--------------00^^
             g.state = 1
 
     ditherg = req.find_gadget("Dither:", 1)
-    ditherg.maxvalue = 22
-    ditherg.value = config.fillmode.gradient_dither + 1
+    ditherg.maxvalue = 21
+    ditherg.value = config.fillmode.gradient_dither
     ditherg.need_redraw = True
 
     dithervalg = req.find_gadget("Dither:", 2)
-    if ditherg.value > 0:
-        dithervalg.label = "%d " % (ditherg.value-1)
-    else:
-        dithervalg.label = "\x99\x9a"
+    dithervalg.label = "%d " % (ditherg.value)
     dithervalg.need_redraw = True
 
     ditherdirg = req.find_gadget("Dither:", 3)
     ditherdirg.value = get_dither_dir()
     ditherdirg.need_redraw = True
 
-    dithersampleg = req.gadget_id("12_0")
+    dither = copy.copy(config.fillmode.dither)
+    dithersampleg = req.find_gadget("Solid", 1)
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
+    dithersampleg.fillmode_dither = dither
     dithersampleg.need_redraw = True
 
+    dithertypeg = list()
+    for i in range(5):
+        dithertypeg.append(req.find_gadget("Random", i))
+
+    dither_custom_labelg = req.find_gadget("Custom", 1)
+    dither_custom_label_size = len(dither_custom_labelg.label)
+    dither_custom_labelg.label = "None".ljust(dither_custom_label_size)
+
     fillmode_value = config.fillmode.value
+    dithertypeg[dither.type].state = 1
     range_enable(req)
     req.draw(screen)
     config.recompose()
@@ -1998,7 +2006,8 @@ Dither:--------------00^^
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.fillmode.value = fillmode_value
-                    config.fillmode.gradient_dither = ditherg.value - 1
+                    config.fillmode.gradient_dither = ditherg.value
+                    config.fillmode.dither = dither
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
                     draw_fill_indicator(None)
                     running = 0
@@ -2009,13 +2018,13 @@ Dither:--------------00^^
                     dithersampleg.fillmode_value = fillmode_value
                     dithersampleg.need_redraw = True
                     range_enable(req)
+                elif ge.gadget in dithertypeg:
+                    i = dithertypeg.index(ge.gadget)
+                    dither.set_type(i)
             elif ge.gadget == ditherg:
-                if ditherg.value > 0:
-                    dithervalg.label = "%d " % (ditherg.value-1)
-                else:
-                    dithervalg.label = "\x99\x9a"
+                dithervalg.label = "%d " % (ditherg.value)
                 dithervalg.need_redraw = True
-                dithersampleg.value = ditherg.value - 1
+                dithersampleg.value = ditherg.value
                 dithersampleg.need_redraw = True
             elif ge.gadget == ditherdirg:
                 crange = config.get_range(config.color)
@@ -2044,6 +2053,9 @@ Dither:--------------00^^
         for g in req.gadgets:
             if g.label == FillMode.LABEL_STR[fillmode_value]:
                 g.state = 1
+
+        dithertypeg[dither.type].state = 1
+        dithertypeg[dither.type].need_redraw = True
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
             req.draw(screen)
