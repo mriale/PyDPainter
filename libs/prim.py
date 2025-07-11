@@ -1430,8 +1430,8 @@ class Dither:
     TYPE_RANDOM = 0
     TYPE_2X2 = 1
     TYPE_4x4 = 2
-    TYPE_CHECKER = 4
-    TYPE_CUSTOM = 5
+    TYPE_CHECKER = 3
+    TYPE_CUSTOM = 4
 
     MATRIXES = [None, ORDER2, ORDER4, ORDER1, ORDER4]
 

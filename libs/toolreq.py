@@ -2020,7 +2020,14 @@ Dither:--------------00^^
                     range_enable(req)
                 elif ge.gadget in dithertypeg:
                     i = dithertypeg.index(ge.gadget)
-                    dither.set_type(i)
+                    if i == Dither.TYPE_CUSTOM:
+                        dither.set_type(i,"vertbar4")
+                        dither_custom_labelg.label = dither.name.ljust(dither_custom_label_size)
+                        dither_custom_labelg.need_redraw = True
+                    else:
+                        dither.set_type(i)
+                        dither_custom_labelg.label = "None".ljust(dither_custom_label_size)
+                        dither_custom_labelg.need_redraw = True
             elif ge.gadget == ditherg:
                 dithervalg.label = "%d " % (ditherg.value)
                 dithervalg.need_redraw = True
