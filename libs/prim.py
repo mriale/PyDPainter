@@ -2351,12 +2351,12 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                     elif primprops.fillmode.value == FillMode.VERTICAL:
                         colori = int(int((y+dither)-y1) / pointspercolor)
                     if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
-                        od_size = primprops.fillmode.od_matrix.shape[0]
+                        od_size = primprops.fillmode.od_matrix.shape
                         if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                            if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((x-x1) / pointspercolor) % 1:
+                            if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((x-x1) / pointspercolor) % 1:
                                 colori += 1
                         elif primprops.fillmode.value == FillMode.VERTICAL:
-                            if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((y-y1) / pointspercolor) % 1:
+                            if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((y-y1) / pointspercolor) % 1:
                                 colori += 1
                     if colori >= len(arange):
                         colori = len(arange) - 1
@@ -2454,9 +2454,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
             surf_array += dither_array
         else:
-            od_size = primprops.fillmode.od_matrix.shape[0]
+            od_size = primprops.fillmode.od_matrix.shape
             dither_order = ((primprops.fillmode.od_matrix - 0.5) * 256).astype(np.int64)
-            dither_array = np.tile(dither_order, ((w+3)//od_size,(h+3)//od_size))
+            dither_array = np.tile(dither_order, ((w+3)//od_size[0],(h+3)//od_size[1]))
             surf_array += dither_array[0:w,0:h]
 
         #Force out of range colors back into range
@@ -2603,8 +2603,8 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                         if pointspercolor > 0:
                             colori = int(int((y+dither)-y1) / pointspercolor)
                             if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
-                                od_size = primprops.fillmode.od_matrix.shape[0]
-                                if primprops.fillmode.od_matrix[x%od_size, y%od_size] > 1 - ((y-y1) / pointspercolor) % 1:
+                                od_size = primprops.fillmode.od_matrix.shape
+                                if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((y-y1) / pointspercolor) % 1:
 
                                     colori += 1
                             if colori >= len(arange):
