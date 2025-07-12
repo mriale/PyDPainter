@@ -1450,12 +1450,15 @@ class Dither:
         self.name = name
         csv_reader = csv.reader(open(os.path.join('data', 'dither', f"{name}.csv"), "r"), delimiter=",")
         x = list(csv_reader)
-        divisor = 1.0
         # Check if first row is divisor
+        divisor = None
         if "".join(x[0]) == x[0][0]:
             divisor = float(x[0][0])
             del x[0]
-        self.matrix = np.array(x).astype("float").transpose() / divisor
+        self.matrix = np.array(x).astype("float").transpose()
+        if divisor is None:
+            divisor = int(self.matrix.max()) + 1.0
+        self.matrix /= divisor
 
 class FillMode:
     """This class describes the fill modes for solid shapes"""
