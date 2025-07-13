@@ -2454,8 +2454,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
             dither_range = 32 * primprops.fillmode.gradient_dither
-            dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
-            surf_array += dither_array
+            if dither_range > 0:
+                dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
+                surf_array += dither_array
         else:
             od_size = primprops.fillmode.od_matrix.shape
             dither_order = ((primprops.fillmode.od_matrix - 0.5) * 256).astype(np.int64)
