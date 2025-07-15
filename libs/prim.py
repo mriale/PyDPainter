@@ -2447,9 +2447,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         max_pixels = np.amax(surf_array)
         if cur_crange.get_dir() == 1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
-        surf_array *= numcolors * 256   # multiply for more precision
+        surf_array *= int((numcolors-.5) * 256)   # multiply for more precision
         surf_array //= max_pixels + 1
-        surf_array += cur_crange.low * 256
+        surf_array += int((cur_crange.low+.5) * 256)
 
         if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
