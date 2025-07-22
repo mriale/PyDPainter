@@ -2341,7 +2341,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
             if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                 pointspercolor = numpoints / (numcolors)
             else:
-                pointspercolor = numpoints / (numcolors-.9)
+                pointspercolor = numpoints / (numcolors-(primprops.fillmode.od_matrix.max()))
             ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
             for x in range(xs1,xs2+1):
                 if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
@@ -2597,7 +2597,7 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                     if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                         pointspercolor = numpoints / (numcolors)
                     else:
-                        pointspercolor = numpoints / (numcolors-.9)
+                        pointspercolor = numpoints / (numcolors-(primprops.fillmode.od_matrix.max()))
                     ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
                     for y in range(ys1,ys2+1):
                         if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
