@@ -1773,9 +1773,9 @@ class FillGadget(Gadget):
                 if self.value != None:
                     primprops = copy.copy(config.primprops)
                     primprops.fillmode = copy.copy(config.primprops.fillmode)
+                    primprops.fillmode.dither = self.fillmode_dither
                     primprops.fillmode.gradient_dither = self.value
                     primprops.fillmode.value = self.fillmode_value
-                    primprops.fillmode.dither = self.fillmode_dither
                     primprops.fillmode.predraw = False
                     primprops.handlesymm = False
                     rx,ry,rw,rh = self.screenrect
@@ -1922,7 +1922,7 @@ def range_enable(req):
 
     dithersampleg = req.find_gadget("Solid", 1)
     ditherbuttonsg = list()
-    for i in range(1,10):
+    for i in range(1,11):
         ditherbuttonsg.append(req.find_gadget("Dither:", i))
 
     renabled = False
@@ -1949,7 +1949,7 @@ def fill_req(screen):
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:--------------00^^
 [Random~2x2~4x4~Checker]
-[Custom]aaaaaaaaaaaaaaaaa
+[HTone~VertBar~HorizBar]
 [Cancel][OK]
 """, "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
@@ -1981,12 +1981,8 @@ Dither:--------------00^^
     dithersampleg.need_redraw = True
 
     dithertypeg = list()
-    for i in range(5):
+    for i in range(7):
         dithertypeg.append(req.find_gadget("Random", i))
-
-    dither_custom_labelg = req.find_gadget("Custom", 1)
-    dither_custom_label_size = len(dither_custom_labelg.label)
-    dither_custom_labelg.label = "None".ljust(dither_custom_label_size)
 
     fillmode_value = config.fillmode.value
     dithertypeg[dither.type].state = 1
@@ -2006,8 +2002,8 @@ Dither:--------------00^^
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.fillmode.value = fillmode_value
-                    config.fillmode.gradient_dither = ditherg.value
                     config.fillmode.dither = dither
+                    config.fillmode.gradient_dither = ditherg.value
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
                     draw_fill_indicator(None)
                     running = 0
@@ -2020,14 +2016,7 @@ Dither:--------------00^^
                     range_enable(req)
                 elif ge.gadget in dithertypeg:
                     i = dithertypeg.index(ge.gadget)
-                    if i == Dither.TYPE_CUSTOM:
-                        dither.set_type(i,"vertbar4")
-                        dither_custom_labelg.label = dither.name.ljust(dither_custom_label_size)
-                        dither_custom_labelg.need_redraw = True
-                    else:
-                        dither.set_type(i)
-                        dither_custom_labelg.label = "None".ljust(dither_custom_label_size)
-                        dither_custom_labelg.need_redraw = True
+                    dither.set_type(i)
             elif ge.gadget == ditherg:
                 dithervalg.label = "%d " % (ditherg.value)
                 dithervalg.need_redraw = True

@@ -1431,7 +1431,10 @@ class Dither:
     TYPE_2X2 = 1
     TYPE_4x4 = 2
     TYPE_CHECKER = 3
-    TYPE_CUSTOM = 4
+    TYPE_HALFTONE = 4
+    TYPE_VERTBAR = 5
+    TYPE_HORIZBAR = 6
+    TYPE_CUSTOM = 7
 
     MATRIXES = [None, ORDER2, ORDER4, ORDER1, ORDER4]
 
@@ -1439,12 +1442,53 @@ class Dither:
         self.name = None
         self.type = self.TYPE_RANDOM
         self.matrix = None
+        self.__gradient = 4
+
+    @property
+    def gradient(self):
+        return self.__gradient
+
+    @gradient.setter
+    def gradient(self, value):
+        self.__gradient = value
+        self.set_type(self.type)
 
     def set_type(self, new_value, new_name=None):
         self.type = new_value
-        self.matrix = self.MATRIXES[new_value]
+        if new_value == self.TYPE_RANDOM:
+            self.matrix = None
+        elif new_value <= self.TYPE_CHECKER:
+            if self.__gradient >= 1:
+                self.matrix = self.MATRIXES[new_value] / (4 / self.__gradient)
+            else:
+                self.matrix = np.matrix([[0]])
+        elif new_value == self.TYPE_HALFTONE:
+            self.matrix = self.halftone()
+        elif new_value == self.TYPE_VERTBAR:
+            if self.__gradient <= 1:
+                self.matrix = np.matrix([[0]])
+            else:
+                vert_list = list(range(0,self.__gradient))
+                self.matrix = (np.matrix([vert_list]) / self.__gradient).transpose()
+        elif new_value == self.TYPE_HORIZBAR:
+            if self.__gradient <= 1:
+                self.matrix = np.matrix([[0]])
+            else:
+                vert_list = list(range(0,self.__gradient))
+                self.matrix = np.matrix([vert_list]) / self.__gradient
         if not new_name is None:
             self.load_matrix(new_name)
+
+    def halftone(self):
+        tau = math.pi*2
+        l = self.__gradient
+        if l <= 1:
+            return np.matrix([[0]])
+        a = [round(math.sin(tau*(i%l)/l)+math.sin(tau*(i//l)/l)+2,10)for i in range(l*l)]
+        b = [sorted(set(a)).index(i)for i in a]
+        index=0
+        divisor = max(b) + 1
+        return np.matrix(b).reshape((l,l)) / divisor
 
     def load_matrix(self, name):
         self.name = name
@@ -1483,7 +1527,6 @@ class FillMode:
     def __init__(self, value=0):
         self.brush = None
         self.value = value
-        self.gradient_dither = 4
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
         self.dither = Dither()
@@ -1491,6 +1534,14 @@ class FillMode:
     @property
     def od_matrix(self):
         return self.dither.matrix
+
+    @property
+    def gradient_dither(self):
+        return self.dither.gradient
+
+    @gradient_dither.setter
+    def gradient_dither(self, value):
+        self.dither.gradient = value
 
     def __str__(self):
         return FillMode.LABEL_STR[self.value]
