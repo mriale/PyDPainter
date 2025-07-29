@@ -1953,12 +1953,15 @@ Dither:--------------00^^
 [Cancel][OK]
 """, "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
+    req.draggable = True
     config.pixel_req_rect = req.get_screen_rect()
 
     for g in req.gadgets:
         #print("%s: %s" % (g.id, g.label))
         if g.label == str(config.fillmode):
             g.state = 1
+
+    dither_default = [4,10,10,10,4,4,4,4]
 
     ditherg = req.find_gadget("Dither:", 1)
     ditherg.maxvalue = 21
@@ -1990,6 +1993,14 @@ Dither:--------------00^^
     req.draw(screen)
     config.recompose()
 
+    def update_gradient(gradient_value):
+        ditherg.value = gradient_value
+        ditherg.need_redraw = True
+        dithervalg.label = "%d " % (gradient_value)
+        dithervalg.need_redraw = True
+        dithersampleg.value = gradient_value
+        dithersampleg.need_redraw = True
+
     running = 1
     while running:
         event = config.xevent.wait()
@@ -2017,11 +2028,9 @@ Dither:--------------00^^
                 elif ge.gadget in dithertypeg:
                     i = dithertypeg.index(ge.gadget)
                     dither.set_type(i)
+                    update_gradient(dither_default[i])
             elif ge.gadget == ditherg:
-                dithervalg.label = "%d " % (ditherg.value)
-                dithervalg.need_redraw = True
-                dithersampleg.value = ditherg.value
-                dithersampleg.need_redraw = True
+                update_gradient(ditherg.value)
             elif ge.gadget == ditherdirg:
                 crange = config.get_range(config.color)
                 if not crange is None:
@@ -2054,6 +2063,19 @@ Dither:--------------00^^
         dithertypeg[dither.type].need_redraw = True
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            #keep requestor within screen
+            (rx,ry,rw,rh) = req.rect
+            if ry < 14:
+                ry = 14
+            if ry > screen.get_height()-20:
+                ry = screen.get_height()-20
+            if rx < -rw+20:
+                rx = -rw+20
+            if rx > screen.get_width()-40:
+                rx = screen.get_width()-40
+            req.rect = (rx,ry,rw,rh)
+            config.pixel_req_rect = req.get_screen_rect()
+
             req.draw(screen)
             config.recompose()
 

@@ -1459,7 +1459,7 @@ class Dither:
             self.matrix = None
         elif new_value <= self.TYPE_CHECKER:
             if self.__gradient >= 1:
-                self.matrix = self.MATRIXES[new_value] / (4 / self.__gradient)
+                self.matrix = self.MATRIXES[new_value] / (10 / self.__gradient)
             else:
                 self.matrix = np.matrix([[0]])
         elif new_value == self.TYPE_HALFTONE:
