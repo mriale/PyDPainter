@@ -2510,8 +2510,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 surf_array += dither_array
         else:
             od_size = primprops.fillmode.od_matrix.shape
-            dither_order = ((primprops.fillmode.od_matrix - 0.5) * 256).astype(np.int64)
-            dither_array = np.tile(dither_order, ((w+3)//od_size[0],(h+3)//od_size[1]))
+            matrix_max = primprops.fillmode.od_matrix.max()
+            dither_order = ((primprops.fillmode.od_matrix - matrix_max + 0.1) * 256).astype(np.int64)
+            dither_array = np.tile(dither_order, ((w//od_size[0])+1,(h//od_size[1])+1))
             surf_array += dither_array[0:w,0:h]
 
         #Force out of range colors back into range
