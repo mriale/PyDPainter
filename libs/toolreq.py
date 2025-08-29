@@ -1743,14 +1743,59 @@ Rotate\xB0_____~ _____~
 
 
 class FillGadget(Gadget):
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+    ROT_ARROW = np.array([[-0.5,0.0], [0.5,0.0], [0,1]])
+
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, minvalue=None):
         if label == "^":
             scaleX = rect[2] // 16
             scaleY = rect[3] // 8
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
-        super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id)
+        self.prev_arrow = None
+        super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id, minvalue=minvalue)
+
+    def draw_arrow(self, screen, color, bgcolor):
+        rx,ry,rw,rh = self.screenrect
+        cw = rw//2
+        ch = rh//2
+        cx = rx + cw
+        cy = ry + ch
+        arrowcoords = self.ROT_ARROW.copy()
+        arrowcoords *= np.array([cw/8,ch/8])
+        size = max(cw, ch) * 2.0 / config.aspectX / config.aspectY
+
+        #initial scale
+        arrowcoords += np.array([cx,ry])
+        newcoords = np.zeros(shape=(3,2), dtype=np.float64)
+
+        q = math.radians(self.fillmode_angle)
+        trans1   = np.matrix([[ 1, 0, 0],
+                              [ 0, 1, 0],
+                              [-cx, -cy, 1]])
+        scale1   = np.matrix([[1.0/config.aspectX, 0, 0],
+                              [0, 1.0/config.aspectY, 0],
+                              [0, 0, 1]])
+        rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
+                              [-math.sin(q), math.cos(q), 0],
+                              [           0,           0, 1]])
+        scale2   = np.matrix([[config.aspectX, 0, 0],
+                              [0, config.aspectY, 0],
+                              [0, 0, 1]])
+        trans2   = np.matrix([[ 1, 0, 0],
+                              [ 0, 1, 0],
+                              [ cx,  cy, 1]])
+        arrow_mat = trans1 @ scale1 @ rot @ scale2 @ trans2
+
+        for i in range(arrowcoords.shape[0]):
+            xf,yf = arrowcoords[i]
+            xyvect = np.matmul(np.matrix([[xf,yf,1]]),arrow_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            newcoords[i] = [int(round(xf)),int(round(yf))]
+
+        pygame.draw.polygon(screen, color, newcoords, 0)
+        self.prev_arrow = newcoords.copy()
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -1759,6 +1804,9 @@ class FillGadget(Gadget):
         self.offsetx = xo
         self.offsety = yo
         self.screenrect = (x+xo,y+yo,w,h)
+        px = config.font.xsize // 8
+        py = config.font.ysize // 8
+
         if self.maxvalue == None:
             current_range = 1
         else:
@@ -1771,9 +1819,11 @@ class FillGadget(Gadget):
             self.need_redraw = False
             if self.label == "#":
                 if self.value != None:
+                    self.fillmode_angle %= 360
                     primprops = copy.copy(config.primprops)
                     primprops.fillmode = copy.copy(config.primprops.fillmode)
                     primprops.fillmode.dither = self.fillmode_dither
+                    primprops.fillmode.angle = self.fillmode_angle
                     primprops.fillmode.gradient_dither = self.value
                     primprops.fillmode.value = self.fillmode_value
                     primprops.fillmode.predraw = False
@@ -1793,7 +1843,12 @@ class FillGadget(Gadget):
                         tx = rx + ((rw - tw) // 2)
                         ty = iy + ih
                         font.blitstring(screen, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
-                    fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
+                    if not self.prev_arrow is None:
+                        pygame.draw.polygon(screen, bgcolor, self.prev_arrow, 0)
+                    fillellipse(screen, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
+                    self.draw_arrow(screen, fgcolor, bgcolor)
+                    draw_half_str_color(screen, (rx+rw-16*px, ry), str(self.fillmode_angle)+"o  ", fgcolor, bgcolor)
+
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
@@ -1839,6 +1894,23 @@ class FillGadget(Gadget):
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
                     if g.label == "^":
                         g.state = 1
+                        g.need_redraw = True
+                    elif g.label == "#":
+                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                        g.fillmode_angle = int(angle)
+                        g.need_redraw = True
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4:
+                    if g.label == "#":
+                        g.fillmode_angle += 1
+                        g.need_redraw = True
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5:
+                    if g.label == "#":
+                        g.fillmode_angle -= 1
+                        g.need_redraw = True
+                elif event.type == MOUSEMOTION and event.buttons[0]:
+                    if g.label == "#":
+                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                        g.fillmode_angle = int(angle)
                         g.need_redraw = True
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
@@ -1981,6 +2053,7 @@ Dither:--------------00^^
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.fillmode_dither = dither
+    dithersampleg.fillmode_angle = config.fillmode.angle
     dithersampleg.need_redraw = True
 
     dithertypeg = list()
@@ -2015,6 +2088,7 @@ Dither:--------------00^^
                     config.fillmode.value = fillmode_value
                     config.fillmode.dither = dither
                     config.fillmode.gradient_dither = ditherg.value
+                    config.fillmode.angle = int(dithersampleg.fillmode_angle)
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
                     draw_fill_indicator(None)
                     running = 0

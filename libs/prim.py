@@ -262,6 +262,46 @@ def tint_image(img, tint_trans):
     ia = None
     return img
 
+halfnumbers_image = None
+def draw_half_str(screen, xypos, text):
+    global halfnumbers_image
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+    if halfnumbers_image is None or halfnumbers_image.get_size() != (px*4*16,py*8):
+        halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
+    nh = halfnumbers_image.get_height()
+    nw = halfnumbers_image.get_width() // 16
+    xpos = xypos[0] * px
+    ypos = xypos[1] * py
+
+    for c in text:
+        noffset = halfnumbers_image.get_width() + 1
+        if c >= '0' and c <= '9':
+            noffset = (ord(c) - ord('0')) * nw
+        elif c == 'o':
+            noffset = 10 * nw
+        elif c == '-':
+            noffset = 11 * nw
+        elif c == '%':
+            noffset = 12 * nw
+        elif c == 'C':
+            noffset = 13 * nw
+        elif c == 'Q':
+            noffset = 14 * nw
+        elif c == 'S':
+            noffset = 15 * nw
+        screen.blit(halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
+        xpos += nw
+
+def draw_half_str_color(screen, xypos, text, fgcolor, bgcolor):
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+    image = pygame.Surface((px*4*len(text), py*8),0, config.pixel_canvas)
+    image.set_palette([(255,255,255), (0,0,0)])
+    draw_half_str(image, (0,0), text)
+    image.set_palette([bgcolor, fgcolor])
+    screen.blit(image, xypos)
+
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
     def __init__(self):
@@ -621,44 +661,15 @@ class Brush:
                 frame.image.set_palette(pal)
         self.cache = BrushCache()
 
-    def draw_half_str(self, screen, xypos, text):
-        px = config.font.xsize // 8
-        py = config.font.ysize // 8
-        if not "halfnumbers_image" in dir(self):
-            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
-        nh = self.halfnumbers_image.get_height()
-        nw = self.halfnumbers_image.get_width() // 16
-        xpos = xypos[0] * px
-        ypos = xypos[1] * py
-
-        for c in text:
-            noffset = self.halfnumbers_image.get_width() + 1
-            if c >= '0' and c <= '9':
-                noffset = (ord(c) - ord('0')) * nw
-            elif c == 'o':
-                noffset = 10 * nw
-            elif c == '-':
-                noffset = 11 * nw
-            elif c == '%':
-                noffset = 12 * nw
-            elif c == 'C':
-                noffset = 13 * nw
-            elif c == 'Q':
-                noffset = 14 * nw
-            elif c == 'S':
-                noffset = 15 * nw
-            screen.blit(self.halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
-            xpos += nw
-
     def draw_indicator(self, screen):
         if self.__rotate != 0:
-            self.draw_half_str(screen, (197,2), f"{self.rotate}o")
+            draw_half_str(screen, (197,2), f"{self.rotate}o")
 
         if self.type == Brush.CUSTOM:
             orig_height = self.image_orig.get_height()
             if self.__size != orig_height:
                 pct = 100 * self.__size // orig_height
-                self.draw_half_str(screen, (213,2), f"{pct}%")
+                draw_half_str(screen, (213,2), f"{pct}%")
         elif self.size != 1:
             size = self.size
             btype_str = ""
@@ -668,8 +679,8 @@ class Brush:
                 btype_str = "Q"
             elif self.type == Brush.SPRAY:
                 btype_str = "S"
-            self.draw_half_str(screen, (213,2), f"{btype_str}")
-            self.draw_half_str(screen, (218,2), f"{size}")
+            draw_half_str(screen, (213,2), f"{btype_str}")
+            draw_half_str(screen, (218,2), f"{size}")
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
@@ -1530,6 +1541,7 @@ class FillMode:
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
         self.dither = Dither()
+        self.angle = 0
 
     @property
     def od_matrix(self):
@@ -2301,6 +2313,11 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             #true color
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
+def hline_HORIZONTAL(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
 def hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2):
     if primprops.fillmode.predraw or config.get_range(color) == None:
         hline_SOLID(surf_array, color, y, xs1, xs2)
@@ -2360,6 +2377,8 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_WRAP(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.HORIZONTAL:
+        hline_HORIZONTAL(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BOTH_FIT:
@@ -2438,7 +2457,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
     if len(hlines) == 0:
         return
 
-    if primprops.fillmode.value == FillMode.BOTH_FIT:
+    if primprops.fillmode.value in [FillMode.HORIZONTAL, FillMode.BOTH_FIT]:
         #Find color range
         cyclemode = False
         for crange in config.cranges:
@@ -2465,31 +2484,45 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         #Render shape into numpy array
         for y,x1,x2 in hlines:
             surf_array[x1-xo:x2-xo+1,y-yo] = 1
-        surf_trim = surf_array.copy()
 
-        #Build up array of number of pixels to the edge
-        while (np.count_nonzero(surf_trim) > 0):
-            #Create mask to cut away edges
-            tfarray = np.equal(surf_trim, 0)
-            surf_mask = np.zeros((w,h), dtype=int)
-            surf_mask[tfarray] = 1
+        if primprops.fillmode.value == FillMode.HORIZONTAL:
+            rot = primprops.fillmode.angle
+            a = int(256 * math.cos(math.radians(rot-90))) * config.aspectY
+            b = int(256 * math.sin(math.radians(rot-90))) * config.aspectX
+            for x in range(w):
+                for y in range(h):
+                    if surf_array[x,y] > 0:
+                        surf_array[x,y] = a*x + b*y + 65536
+            nz_index = np.nonzero(surf_array)
+            min_value = surf_array[nz_index].min()
+            max_value = surf_array[nz_index].max()
+            surf_array[nz_index] -= min_value - int((max_value-min_value)/(numcolors)*.5)
 
-            #Trim edges of shape
-            surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
-            surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
-            surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
-            surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
-            tfarray = np.not_equal(surf_trim, 1)
-            surf_trim[tfarray] = 0
+        if primprops.fillmode.value == FillMode.BOTH_FIT:
+            surf_trim = surf_array.copy()
+            #Build up array of number of pixels to the edge
+            while (np.count_nonzero(surf_trim) > 0):
+                #Create mask to cut away edges
+                tfarray = np.equal(surf_trim, 0)
+                surf_mask = np.zeros((w,h), dtype=int)
+                surf_mask[tfarray] = 1
 
-            #Increment shape array pixel count from trimmed shape
-            surf_array += surf_trim
+                #Trim edges of shape
+                surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
+                surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
+                surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
+                surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
+                tfarray = np.not_equal(surf_trim, 1)
+                surf_trim[tfarray] = 0
 
-            #Interrupt if needed
-            if interrupt and config.has_event():
-                config.drawing_interrupted = True
-                return
-            config.try_recompose()
+                #Increment shape array pixel count from trimmed shape
+                surf_array += surf_trim
+
+                #Interrupt if needed
+                if interrupt and config.has_event():
+                    config.drawing_interrupted = True
+                    return
+                config.try_recompose()
 
         #Create mask of finished shape
         tfmask = np.not_equal(surf_array, 0)
