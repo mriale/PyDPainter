@@ -1763,7 +1763,6 @@ class FillGadget(Gadget):
         cy = ry + ch
         arrowcoords = self.ROT_ARROW.copy()
         arrowcoords *= np.array([cw/8,ch/8])
-        size = max(cw, ch) * 2.0 / config.aspectX / config.aspectY
 
         #initial scale
         arrowcoords += np.array([cx,ry])
@@ -1847,7 +1846,7 @@ class FillGadget(Gadget):
                         pygame.draw.polygon(screen, bgcolor, self.prev_arrow, 0)
                     fillellipse(screen, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
                     self.draw_arrow(screen, fgcolor, bgcolor)
-                    draw_half_str_color(screen, (rx+rw-16*px, ry), str(self.fillmode_angle)+"o  ", fgcolor, bgcolor)
+                    draw_half_str_color(screen, (rx+rw-16*px, ry), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
 
                     if config.has_event():
                         #Got interrupted so still needs to redraw
