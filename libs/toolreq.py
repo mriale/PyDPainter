@@ -1850,7 +1850,7 @@ class FillGadget(Gadget):
                     draw_half_str_color(screen, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
                     if len(self.cutout_rect) == 0:
                         self.cutout_rect.append([rx,ry,px*16,py*11])
-                        self.cutout_rect.append([rx+rw-px*16*px,ry,px*16,py*11])
+                        self.cutout_rect.append([rx+rw-px*16,ry,px*16,py*11])
 
                     if config.has_event():
                         #Got interrupted so still needs to redraw
