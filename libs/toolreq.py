@@ -1753,6 +1753,7 @@ class FillGadget(Gadget):
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
         self.prev_arrow = None
+        self.cutout_rect = list()
         super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id, minvalue=minvalue)
 
     def draw_arrow(self, screen, color, bgcolor):
@@ -1846,7 +1847,10 @@ class FillGadget(Gadget):
                         pygame.draw.polygon(screen, bgcolor, self.prev_arrow, 0)
                     fillellipse(screen, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
                     self.draw_arrow(screen, fgcolor, bgcolor)
-                    draw_half_str_color(screen, (rx+rw-16*px, ry), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                    draw_half_str_color(screen, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                    if len(self.cutout_rect) == 0:
+                        self.cutout_rect.append([rx,ry,px*16,py*11])
+                        self.cutout_rect.append([rx+rw-px*16*px,ry,px*16,py*11])
 
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -1876,6 +1880,12 @@ class FillGadget(Gadget):
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
+    def inFillPreview(self, g, pointxy):
+        for screenrect in self.cutout_rect:
+            if g.pointin(pointxy, screenrect):
+                return False
+        return True
+
     def process_event(self, screen, event, mouse_pixel_mapper):
         global palette_page
         ge = []
@@ -1895,9 +1905,10 @@ class FillGadget(Gadget):
                         g.state = 1
                         g.need_redraw = True
                     elif g.label == "#":
-                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
-                        g.fillmode_angle = int(angle)
-                        g.need_redraw = True
+                        if self.inFillPreview(g, (x,y)):
+                            angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                            g.fillmode_angle = int(angle)
+                            g.need_redraw = True
                 elif event.type == MOUSEBUTTONDOWN and event.button == 4:
                     if g.label == "#":
                         g.fillmode_angle += 1
@@ -1991,7 +2002,7 @@ def get_dither_dir():
 def range_enable(req):
     ditherdir = get_dither_dir()
 
-    dithersampleg = req.find_gadget("Solid", 1)
+    dithersampleg = req.find_gadget("Solid", 2)
     ditherbuttonsg = list()
     for i in range(1,11):
         ditherbuttonsg.append(req.find_gadget("Dither:", i))
@@ -2009,8 +2020,11 @@ def range_enable(req):
 
 def fill_req(screen):
     config.stop_cycling()
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+
     req = str2req("Fill Type", """
-[Solid]     ###########
+[Solid]  [\x9e]###########[\x9f]
 [Brush]     ###########
 [Wrap]      ###########
 [Pattern]   ###########
@@ -2032,6 +2046,12 @@ Dither:--------------00^^
         if g.label == str(config.fillmode):
             g.state = 1
 
+    angleminusg = req.find_gadget("Solid", 1)
+    angleminusg.rect = list(angleminusg.rect)
+    angleminusg.rect[0] += 24*px
+    angleplusg = req.find_gadget("Solid", 3)
+    angleplusg.rect = list(angleplusg.rect)
+    angleplusg.rect[0] -= 16*px
     dither_default = [4,10,10,10,4,4,4,4]
 
     ditherg = req.find_gadget("Dither:", 1)
@@ -2048,7 +2068,7 @@ Dither:--------------00^^
     ditherdirg.need_redraw = True
 
     dither = copy.copy(config.fillmode.dither)
-    dithersampleg = req.find_gadget("Solid", 1)
+    dithersampleg = req.find_gadget("Solid", 2)
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.fillmode_dither = dither
@@ -2093,6 +2113,16 @@ Dither:--------------00^^
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget == angleminusg:
+                    angle = int(dithersampleg.fillmode_angle)
+                    angle = (angle // 45 * 45 - 45) % 360
+                    dithersampleg.fillmode_angle = angle
+                    dithersampleg.need_redraw = True
+                elif ge.gadget == angleplusg:
+                    angle = int(dithersampleg.fillmode_angle)
+                    angle = (angle // 45 * 45 + 45) % 360
+                    dithersampleg.fillmode_angle = angle
+                    dithersampleg.need_redraw = True
                 elif ge.type == GadgetEvent.TYPE_GADGETUP and ge.gadget.label in FillMode.LABEL_STR:
                     fillmode_value = FillMode.LABEL_STR.index(ge.gadget.label)
                     dithersampleg.fillmode_value = fillmode_value

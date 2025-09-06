@@ -48,6 +48,7 @@ def refresh():
             pygame.display.update()
             return
 
+        screen.fill((128,128,128,255))
         screen.blit(imagex1, (0,0))
 
         surf_array = pygame.surfarray.array3d(imagex1)
