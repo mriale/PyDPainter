@@ -1906,6 +1906,7 @@ class FillGadget(Gadget):
                         g.need_redraw = True
                     elif g.label == "#":
                         if self.inFillPreview(g, (x,y)):
+                            g.state = 1
                             angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
                             g.fillmode_angle = int(angle)
                             g.need_redraw = True
@@ -1917,11 +1918,11 @@ class FillGadget(Gadget):
                     if g.label == "#":
                         g.fillmode_angle -= 1
                         g.need_redraw = True
-                elif event.type == MOUSEMOTION and event.buttons[0]:
-                    if g.label == "#":
-                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
-                        g.fillmode_angle = int(angle)
-                        g.need_redraw = True
+            if event.type == MOUSEMOTION and event.buttons[0]:
+                if g.label == "#" and g.state == 1:
+                    angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                    g.fillmode_angle = int(angle)
+                    g.need_redraw = True
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
@@ -1930,6 +1931,8 @@ class FillGadget(Gadget):
                     g.state = 0
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif g.label == "#":
+                    g.state = 0
         else:
             ge.extend(super(FillGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
@@ -2115,7 +2118,7 @@ Dither:--------------00^^
                     running = 0
                 elif ge.gadget == angleminusg:
                     angle = int(dithersampleg.fillmode_angle)
-                    angle = (angle // 45 * 45 - 45) % 360
+                    angle = ((angle+44) // 45 * 45 - 45) % 360
                     dithersampleg.fillmode_angle = angle
                     dithersampleg.need_redraw = True
                 elif ge.gadget == angleplusg:
