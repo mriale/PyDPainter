@@ -114,7 +114,7 @@ class GIFParser:
             if self.global_palette != None and num_colors < len(self.global_palette):
                 pal.extend([[0,0,0]] * (len(self.global_palette) - num_colors))
             elif self.global_palette != None and num_colors > len(self.global_palette):
-                pal = pal[:len(self.global_palette)]
+                self.global_palette.extend([[0,0,0]] * (num_colors - len(self.global_palette)))
         return {
             "image_left_position": struct.unpack("<H", descriptor[0:2])[0],
             "image_top_position": struct.unpack("<H", descriptor[2:4])[0],

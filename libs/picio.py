@@ -681,10 +681,10 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             w = gif.header["width"]
             h = gif.header["height"]
             pic = pygame.Surface((w,h), 0, depth=8)
-            if gif.global_palette != None:
-                pal = gif.global_palette
-            else:
+            if gif.frames[0]["local_palette"] != None:
                 pal = gif.frames[0]["local_palette"]
+            else:
+                pal = gif.global_palette
             config.color_depth = config.guess_color_depth(pal)
             pal = config.quantize_palette(pal, config.color_depth)
             upal = config.unique_palette(pal)
