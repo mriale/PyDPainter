@@ -1437,17 +1437,26 @@ class Dither:
                         [12, 4,14, 6],
                         [ 3,11, 1, 9],
                         [15, 7,13, 5]], dtype="float") / 16.0
+    ORDER8 = np.matrix([[13, 61, 0, 49, 14, 62, 3, 52],
+                        [37, 21, 40, 25, 38, 22, 42, 27],
+                        [ 6, 53, 8, 57, 7, 54, 12, 59],
+                        [47, 31, 35, 20, 45, 28, 32, 17],
+                        [15, 63, 2, 50, 11, 58, 1, 48],
+                        [39, 23, 43, 26, 36, 19, 41, 24],
+                        [ 5, 55, 10, 60, 4, 51, 9, 56],
+                        [44, 29, 33, 16, 46, 30, 34, 18]], dtype="float") / 64.0
 
     TYPE_RANDOM = 0
-    TYPE_2X2 = 1
-    TYPE_4x4 = 2
-    TYPE_CHECKER = 3
-    TYPE_HALFTONE = 4
-    TYPE_VERTBAR = 5
-    TYPE_HORIZBAR = 6
-    TYPE_CUSTOM = 7
+    TYPE_CHECKER = 1
+    TYPE_2X2 = 2
+    TYPE_4x4 = 3
+    TYPE_8x8 = 4
+    TYPE_HALFTONE = 5
+    TYPE_VERTBAR = 6
+    TYPE_HORIZBAR = 7
+    TYPE_CUSTOM = 8
 
-    MATRIXES = [None, ORDER2, ORDER4, ORDER1, ORDER4]
+    MATRIXES = [None, ORDER1, ORDER2, ORDER4, ORDER8]
 
     def __init__(self):
         self.name = None
@@ -1468,7 +1477,7 @@ class Dither:
         self.type = new_value
         if new_value == self.TYPE_RANDOM:
             self.matrix = None
-        elif new_value <= self.TYPE_CHECKER:
+        elif new_value < self.TYPE_HALFTONE:
             if self.__gradient >= 1:
                 self.matrix = self.MATRIXES[new_value] / (10 / self.__gradient)
             else:

@@ -2036,7 +2036,7 @@ def fill_req(screen):
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:--------------00^^
-[Random~2x2~4x4~Checker]
+[Random~Check~2x2~4x4~8x8]
 [HTone~VertBar~HorizBar]
 [Cancel][OK]
 """, "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
@@ -2055,7 +2055,7 @@ Dither:--------------00^^
     angleplusg = req.find_gadget("Solid", 3)
     angleplusg.rect = list(angleplusg.rect)
     angleplusg.rect[0] -= 16*px
-    dither_default = [4,10,10,10,4,4,4,4]
+    dither_default = [4,10,10,10,10,4,4,4,4]
 
     ditherg = req.find_gadget("Dither:", 1)
     ditherg.maxvalue = 21
@@ -2079,7 +2079,7 @@ Dither:--------------00^^
     dithersampleg.need_redraw = True
 
     dithertypeg = list()
-    for i in range(7):
+    for i in range(8):
         dithertypeg.append(req.find_gadget("Random", i))
 
     fillmode_value = config.fillmode.value
