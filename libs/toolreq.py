@@ -1744,6 +1744,9 @@ Rotate\xB0_____~ _____~
 
 class FillGadget(Gadget):
     ROT_ARROW = np.array([[-0.5,0.0], [0.5,0.0], [0,1]])
+    CONTROL_MODE_NONE = 0
+    CONTROL_MODE_ANGLE = 1
+    CONTROL_MODE_XY = 2
 
     def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, minvalue=None):
         if label == "^":
@@ -1752,9 +1755,14 @@ class FillGadget(Gadget):
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
-        self.prev_arrow = None
         self.cutout_rect = list()
         super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id, minvalue=minvalue)
+
+    def get_control_mode(self):
+        control_mode = self.CONTROL_MODE_NONE
+        if "fillmode_value" in dir(self) and self.fillmode_value in [FillMode.HORIZONTAL]:
+            control_mode = self.CONTROL_MODE_ANGLE
+        return control_mode
 
     def draw_arrow(self, screen, color, bgcolor):
         rx,ry,rw,rh = self.screenrect
@@ -1795,7 +1803,6 @@ class FillGadget(Gadget):
             newcoords[i] = [int(round(xf)),int(round(yf))]
 
         pygame.draw.polygon(screen, color, newcoords, 0)
-        self.prev_arrow = newcoords.copy()
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -1845,23 +1852,31 @@ class FillGadget(Gadget):
                         tx = rx + ((rw - tw) // 2)
                         ty = iy + ih
                         font.blitstring(screen_dbuff, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
-                    if not self.prev_arrow is None:
-                        pygame.draw.polygon(screen_dbuff, bgcolor, self.prev_arrow, 0)
                     fillellipse(screen_dbuff, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
-                    self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
-                    draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                    control_mode = self.get_control_mode()
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
+                        draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
                     if len(self.cutout_rect) == 0:
                         self.cutout_rect.append([rx,ry,px*16,py*11])
                         self.cutout_rect.append([rx+rw-px*16,ry,px*16,py*11])
 
-                    screen.blit(screen_dbuff, self.screenrect, self.screenrect)
-                    for g in self.other_gadgets:
-                        g.need_redraw = True
-                        g.draw(screen, font, offset, fgcolor, bgcolor, hcolor)
-
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
+                    else:
+                        screen.blit(screen_dbuff, self.screenrect, self.screenrect)
+
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        for g in self.other_gadgets:
+                            g.enabled = True
+                            g.need_redraw = True
+                            g.draw(screen, font, offset, fgcolor, bgcolor, hcolor)
+                    else:
+                        for g in self.other_gadgets:
+                            g.enabled = False
+                            g.need_redraw = False
+
             elif self.label == "^": # direction arrow
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
                 if self.state == 0:
@@ -1904,6 +1919,7 @@ class FillGadget(Gadget):
         if not g.enabled:
             return ge
 
+        control_mode = self.get_control_mode()
         if self.type == Gadget.TYPE_CUSTOM:
             if g.pointin((x,y), g.screenrect):
                 #handle left button
@@ -1912,17 +1928,17 @@ class FillGadget(Gadget):
                         g.state = 1
                         g.need_redraw = True
                     elif g.label == "#":
-                        if self.inFillPreview(g, (x,y)):
+                        if self.inFillPreview(g, (x,y)) and control_mode != self.CONTROL_MODE_NONE:
                             g.state = 1
                             angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
                             g.fillmode_angle = int(angle)
                             g.need_redraw = True
                 elif event.type == MOUSEBUTTONDOWN and event.button == 4:
-                    if g.label == "#":
+                    if g.label == "#" and control_mode == self.CONTROL_MODE_ANGLE:
                         g.fillmode_angle += 1
                         g.need_redraw = True
                 elif event.type == MOUSEBUTTONDOWN and event.button == 5:
-                    if g.label == "#":
+                    if g.label == "#" and control_mode == self.CONTROL_MODE_ANGLE:
                         g.fillmode_angle -= 1
                         g.need_redraw = True
             if event.type == MOUSEMOTION and event.buttons[0]:
@@ -1930,7 +1946,7 @@ class FillGadget(Gadget):
                     angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
                     g.fillmode_angle = int(angle)
                     g.need_redraw = True
-            if event.type == MOUSEBUTTONUP and event.button == 1:
+            if event.type == MOUSEBUTTONUP and event.button == 1 and control_mode != self.CONTROL_MODE_NONE:
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
                         if abs(g.value) == 1:
