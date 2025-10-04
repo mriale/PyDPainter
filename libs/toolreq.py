@@ -1818,6 +1818,8 @@ class FillGadget(Gadget):
 
             self.need_redraw = False
             if self.label == "#":
+                screen_dbuff = pygame.Surface((screen.get_size()), 0, screen)
+                pygame.draw.rect(screen_dbuff, bgcolor, self.screenrect, 0)
                 if self.value != None:
                     self.fillmode_angle %= 360
                     primprops = copy.copy(config.primprops)
@@ -1834,23 +1836,28 @@ class FillGadget(Gadget):
                     cx = rx + cw
                     cy = ry + ch
                     if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
-                        pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
+                        pygame.draw.rect(screen_dbuff, (160,160,160), (rx,ry,rw+1,rh+1))
                         iw,ih = config.smooth_example_image.get_size()
                         ix = rx + ((rw - iw) // 2)
                         iy = ry + ((rh - ih) // 2)
-                        screen.blit(config.smooth_example_image, (ix,iy))
+                        screen_dbuff.blit(config.smooth_example_image, (ix,iy))
                         tw = font.xsize * len(str(primprops.fillmode))
                         tx = rx + ((rw - tw) // 2)
                         ty = iy + ih
-                        font.blitstring(screen, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
+                        font.blitstring(screen_dbuff, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
                     if not self.prev_arrow is None:
-                        pygame.draw.polygon(screen, bgcolor, self.prev_arrow, 0)
-                    fillellipse(screen, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
-                    self.draw_arrow(screen, fgcolor, bgcolor)
-                    draw_half_str_color(screen, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                        pygame.draw.polygon(screen_dbuff, bgcolor, self.prev_arrow, 0)
+                    fillellipse(screen_dbuff, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
+                    self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
+                    draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
                     if len(self.cutout_rect) == 0:
                         self.cutout_rect.append([rx,ry,px*16,py*11])
                         self.cutout_rect.append([rx+rw-px*16,ry,px*16,py*11])
+
+                    screen.blit(screen_dbuff, self.screenrect, self.screenrect)
+                    for g in self.other_gadgets:
+                        g.need_redraw = True
+                        g.draw(screen, font, offset, fgcolor, bgcolor, hcolor)
 
                     if config.has_event():
                         #Got interrupted so still needs to redraw
@@ -2007,7 +2014,7 @@ def range_enable(req):
 
     dithersampleg = req.find_gadget("Solid", 2)
     ditherbuttonsg = list()
-    for i in range(1,11):
+    for i in range(1,12):
         ditherbuttonsg.append(req.find_gadget("Dither:", i))
 
     renabled = False
@@ -2076,6 +2083,7 @@ Dither:--------------00^^
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.fillmode_dither = dither
     dithersampleg.fillmode_angle = config.fillmode.angle
+    dithersampleg.other_gadgets = [angleminusg, angleplusg]
     dithersampleg.need_redraw = True
 
     dithertypeg = list()
