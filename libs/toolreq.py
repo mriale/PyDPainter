@@ -1755,7 +1755,6 @@ class FillGadget(Gadget):
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
-        self.cutout_rect = list()
         super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id, minvalue=minvalue)
 
     def get_control_mode(self):
@@ -1857,10 +1856,6 @@ class FillGadget(Gadget):
                     if control_mode == self.CONTROL_MODE_ANGLE:
                         self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
                         draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
-                    if len(self.cutout_rect) == 0:
-                        self.cutout_rect.append([rx,ry,px*16,py*11])
-                        self.cutout_rect.append([rx+rw-px*16,ry,px*16,py*11])
-
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
@@ -1903,8 +1898,8 @@ class FillGadget(Gadget):
             super(FillGadget, self).draw(screen, font, offset)
 
     def inFillPreview(self, g, pointxy):
-        for screenrect in self.cutout_rect:
-            if g.pointin(pointxy, screenrect):
+        for arrowg in self.other_gadgets:
+            if arrowg.enabled and g.pointin(pointxy, arrowg.screenrect):
                 return False
         return True
 
@@ -1946,7 +1941,7 @@ class FillGadget(Gadget):
                     angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
                     g.fillmode_angle = int(angle)
                     g.need_redraw = True
-            if event.type == MOUSEBUTTONUP and event.button == 1 and control_mode != self.CONTROL_MODE_NONE:
+            if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
                         if abs(g.value) == 1:
