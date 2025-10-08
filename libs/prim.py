@@ -1540,7 +1540,7 @@ class FillMode:
     ANTIALIAS = 11
     SMOOTH = 12
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
+                 "\x88\x89","\x8a\x8b","\x99\x9a","\x8e\x8f", "\x90\x91",
                  "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
 
@@ -2483,7 +2483,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         hlines_min = np.amin(hlines, axis=0)
         hlines_max = np.amax(hlines, axis=0)
         xo = hlines_min[1] - 1
-        yo = hlines_min[0] - 1
+        yo = hlines_min[0] - 2
         w = hlines_max[2] - xo + 2
         h = hlines_max[0] - yo + 2
 
@@ -2496,13 +2496,15 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
         if primprops.fillmode.value == FillMode.HORIZONTAL:
             rot = primprops.fillmode.angle
-            a = int(256 * math.cos(math.radians(rot-90))) * config.aspectY
-            b = int(256 * math.sin(math.radians(rot-90))) * config.aspectX
+            a = int(65536 * math.cos(math.radians(rot-90))) * config.aspectY
+            b = int(65536 * math.sin(math.radians(rot-90))) * config.aspectX
             for x in range(w):
                 for y in range(h):
                     if surf_array[x,y] > 0:
                         surf_array[x,y] = a*x + b*y + 65536
             nz_index = np.nonzero(surf_array)
+            if np.size(nz_index) == 0:
+                return
             min_value = surf_array[nz_index].min()
             max_value = surf_array[nz_index].max()
             surf_array[nz_index] -= min_value - int((max_value-min_value)/(numcolors)*.5)
