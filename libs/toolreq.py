@@ -1759,8 +1759,11 @@ class FillGadget(Gadget):
 
     def get_control_mode(self):
         control_mode = self.CONTROL_MODE_NONE
-        if "fillmode_value" in dir(self) and self.fillmode_value in [FillMode.HORIZONTAL]:
-            control_mode = self.CONTROL_MODE_ANGLE
+        if "fillmode_value" in dir(self):
+            if self.fillmode_value in [FillMode.LINEAR]:
+                control_mode = self.CONTROL_MODE_ANGLE
+            elif self.fillmode_value in [FillMode.CIRCULAR]:
+                control_mode = self.CONTROL_MODE_XY
         return control_mode
 
     def draw_arrow(self, screen, color, bgcolor):
@@ -1832,6 +1835,7 @@ class FillGadget(Gadget):
                     primprops.fillmode = copy.copy(config.primprops.fillmode)
                     primprops.fillmode.dither = self.fillmode_dither
                     primprops.fillmode.angle = self.fillmode_angle
+                    primprops.fillmode.xy = self.fillmode_xy
                     primprops.fillmode.gradient_dither = self.value
                     primprops.fillmode.value = self.fillmode_value
                     primprops.fillmode.predraw = False
@@ -1856,6 +1860,16 @@ class FillGadget(Gadget):
                     if control_mode == self.CONTROL_MODE_ANGLE:
                         self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
                         draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                    if control_mode == self.CONTROL_MODE_XY:
+                        # draw crosshair
+                        chx = rx + int(self.fillmode_xy[0]*rw)
+                        chy = ry + int(self.fillmode_xy[1]*rh)
+                        surf_array = pygame.surfarray.pixels2d(screen_dbuff)
+                        surf_array[chx-4*px:chx+5*px:2,chy] = 0x00000000
+                        surf_array[chx-3*px:chx+4*px:2,chy] = 0x00ffffff
+                        surf_array[chx,chy-4*py:chy+5*py:2] = 0x00000000
+                        surf_array[chx,chy-3*py:chy+4*py:2] = 0x00ffffff
+                        surf_array = None
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
@@ -1923,10 +1937,14 @@ class FillGadget(Gadget):
                         g.state = 1
                         g.need_redraw = True
                     elif g.label == "#":
-                        if self.inFillPreview(g, (x,y)) and control_mode != self.CONTROL_MODE_NONE:
+                        if self.inFillPreview(g, (x,y)) and control_mode == self.CONTROL_MODE_ANGLE:
                             g.state = 1
                             angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
                             g.fillmode_angle = int(angle)
+                            g.need_redraw = True
+                        elif control_mode == self.CONTROL_MODE_XY:
+                            g.state = 1
+                            g.fillmode_xy = [(x-gx)/gw, (y-gy)/gh]
                             g.need_redraw = True
                 elif event.type == MOUSEBUTTONDOWN and event.button == 4:
                     if g.label == "#" and control_mode == self.CONTROL_MODE_ANGLE:
@@ -1938,9 +1956,13 @@ class FillGadget(Gadget):
                         g.need_redraw = True
             if event.type == MOUSEMOTION and event.buttons[0]:
                 if g.label == "#" and g.state == 1:
-                    angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
-                    g.fillmode_angle = int(angle)
-                    g.need_redraw = True
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                        g.fillmode_angle = int(angle)
+                        g.need_redraw = True
+                    elif control_mode == self.CONTROL_MODE_XY:
+                        g.fillmode_xy = [(x-gx)/gw, (y-gy)/gh]
+                        g.need_redraw = True
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
                     if g.pointin((x,y), g.screenrect) and g.state == 1:
@@ -2030,8 +2052,8 @@ def range_enable(req):
 
     renabled = False
     if ditherdir != 0 and \
-       dithersampleg.fillmode_value in [FillMode.VERTICAL, FillMode.VERT_FIT,
-                           FillMode.HORIZONTAL, FillMode.HORIZ_FIT,
+       dithersampleg.fillmode_value in [FillMode.CIRCULAR, FillMode.VERT_FIT,
+                           FillMode.LINEAR, FillMode.HORIZ_FIT,
                            FillMode.BOTH_FIT]:
         renabled = True
 
@@ -2094,6 +2116,7 @@ Dither:--------------00^^
     dithersampleg.fillmode_value = config.fillmode.value
     dithersampleg.fillmode_dither = dither
     dithersampleg.fillmode_angle = config.fillmode.angle
+    dithersampleg.fillmode_xy = config.fillmode.xy
     dithersampleg.other_gadgets = [angleminusg, angleplusg]
     dithersampleg.need_redraw = True
 
@@ -2130,6 +2153,7 @@ Dither:--------------00^^
                     config.fillmode.dither = dither
                     config.fillmode.gradient_dither = ditherg.value
                     config.fillmode.angle = int(dithersampleg.fillmode_angle)
+                    config.fillmode.xy = dithersampleg.fillmode_xy
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
                     draw_fill_indicator(None)
                     running = 0

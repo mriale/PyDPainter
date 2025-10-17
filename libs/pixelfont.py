@@ -93,7 +93,7 @@ def main():
     yscroll = 0
 
     if len(sys.argv) == 2:
-        with open(sys.argv[1],"r") as textfile:
+        with open(sys.argv[1],"r", encoding="utf-8") as textfile:
             displaytext = textfile.read().split("\n") #open text file from command line argument
     else:
         displaytext = ["ABCDEFGHIJKLMNOPQRSTUVWXYZ", "abcdefghijkmlnopqrstuvwxyz"]

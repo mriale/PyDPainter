@@ -1532,9 +1532,9 @@ class FillMode:
     WRAP = 3
     PERSPECTIVE = 4
     PATTERN = 5
-    VERTICAL = 6
+    CIRCULAR = 6
     VERT_FIT = 7
-    HORIZONTAL = 8
+    LINEAR = 8
     HORIZ_FIT = 9
     BOTH_FIT = 10
     ANTIALIAS = 11
@@ -1551,6 +1551,7 @@ class FillMode:
         self.predraw = True
         self.dither = Dither()
         self.angle = 0
+        self.xy = [0.5,0.5]
 
     @property
     def od_matrix(self):
@@ -2386,7 +2387,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_WRAP(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
-    elif primprops.fillmode.value == FillMode.HORIZONTAL:
+    elif primprops.fillmode.value == FillMode.LINEAR:
         hline_HORIZONTAL(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
@@ -2396,7 +2397,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.SMOOTH:
         hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2)
-    elif primprops.fillmode.value >= FillMode.VERTICAL:
+    elif primprops.fillmode.value >= FillMode.CIRCULAR:
         #get color range
         cyclemode = False
         for crange in config.cranges:
@@ -2407,11 +2408,11 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                 cur_crange = crange
                 color = arange[0]
         if cyclemode:
-            if primprops.fillmode.value == FillMode.VERTICAL:
+            if primprops.fillmode.value == FillMode.CIRCULAR:
                 y1 = config.fillmode.bounds[1]
                 y2 = config.fillmode.bounds[3]
                 numpoints = y2-y1+1
-            elif primprops.fillmode.value == FillMode.HORIZONTAL:
+            elif primprops.fillmode.value == FillMode.LINEAR:
                 x1 = config.fillmode.bounds[0]
                 x2 = config.fillmode.bounds[2]
                 numpoints = x2-x1+1
@@ -2428,16 +2429,16 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                 else:
                     dither = 0
                 if pointspercolor > 0:
-                    if primprops.fillmode.value >= FillMode.HORIZONTAL:
+                    if primprops.fillmode.value >= FillMode.LINEAR:
                         colori = int(int((x+dither)-x1) / pointspercolor)
-                    elif primprops.fillmode.value == FillMode.VERTICAL:
+                    elif primprops.fillmode.value == FillMode.CIRCULAR:
                         colori = int(int((y+dither)-y1) / pointspercolor)
                     if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
                         od_size = primprops.fillmode.od_matrix.shape
-                        if primprops.fillmode.value >= FillMode.HORIZONTAL:
+                        if primprops.fillmode.value >= FillMode.LINEAR:
                             if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((x-x1) / pointspercolor) % 1:
                                 colori += 1
-                        elif primprops.fillmode.value == FillMode.VERTICAL:
+                        elif primprops.fillmode.value == FillMode.CIRCULAR:
                             if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((y-y1) / pointspercolor) % 1:
                                 colori += 1
                     if colori >= len(arange):
@@ -2466,7 +2467,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
     if len(hlines) == 0:
         return
 
-    if primprops.fillmode.value in [FillMode.HORIZONTAL, FillMode.BOTH_FIT]:
+    if primprops.fillmode.value in [FillMode.LINEAR, FillMode.BOTH_FIT]:
         #Find color range
         cyclemode = False
         for crange in config.cranges:
@@ -2494,7 +2495,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         for y,x1,x2 in hlines:
             surf_array[x1-xo:x2-xo+1,y-yo] = 1
 
-        if primprops.fillmode.value == FillMode.HORIZONTAL:
+        if primprops.fillmode.value == FillMode.LINEAR:
             rot = primprops.fillmode.angle
             a = int(65536 * math.cos(math.radians(rot-90))) * config.aspectY
             b = int(65536 * math.sin(math.radians(rot-90))) * config.aspectX
