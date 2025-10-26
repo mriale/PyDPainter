@@ -1435,9 +1435,9 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
             all_256 = np.arange(256, dtype=np.uint8)
             surf_unique = np.unique(surf_array[surf_diff_ne])
             surf_notin = np.setdiff1d(all_256, surf_unique, assume_unique=True)
+            surf_diff_array = surf_array.copy()
             if len(surf_notin) > 0:
                 bgcolor = surf_notin[0]
-                surf_diff_array = surf_array.copy()
                 surf_diff_array[surf_diff] = bgcolor
                 # find bounds of diff
                 diff_indexes = np.argwhere(surf_diff_ne)
@@ -1468,8 +1468,7 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
                 else:
                     image_data_lzh = surf_lzw
             else:
-                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
-                image_data_lzh = surf_lzw
+                image_data_lzh = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
 
         frame = {"local_palette": localpal,
                  "image_data": surf_array,
