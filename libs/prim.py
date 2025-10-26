@@ -2508,7 +2508,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 return
             min_value = surf_array[nz_index].min()
             max_value = surf_array[nz_index].max()
-            surf_array[nz_index] -= min_value - int((max_value-min_value)/(numcolors)*.5)
+            surf_array[nz_index] -= min_value - 1;
 
         if primprops.fillmode.value == FillMode.BOTH_FIT:
             surf_trim = surf_array.copy()
@@ -2543,9 +2543,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         max_pixels = np.amax(surf_array)
         if cur_crange.get_dir() == 1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
-        surf_array *= int((numcolors-.5) * 256)   # multiply for more precision
+        surf_array *= numcolors * 256   # multiply for more precision
         surf_array //= max_pixels + 1
-        surf_array += int((cur_crange.low+.5) * 256)
+        surf_array += cur_crange.low * 256
 
         if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
