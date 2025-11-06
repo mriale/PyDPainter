@@ -1463,6 +1463,7 @@ class Dither:
         self.type = self.TYPE_RANDOM
         self.matrix = None
         self.__gradient = 4
+        self.gradient_frac = self.__gradient / 20
 
     @property
     def gradient(self):
@@ -1475,6 +1476,7 @@ class Dither:
 
     def set_type(self, new_value, new_name=None):
         self.type = new_value
+        self.gradient_frac = self.__gradient / 20
         if new_value == self.TYPE_RANDOM:
             self.matrix = None
         elif new_value < self.TYPE_HALFTONE:
@@ -1484,13 +1486,16 @@ class Dither:
                 self.matrix = np.matrix([[0]])
         elif new_value == self.TYPE_HALFTONE:
             self.matrix = self.halftone()
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
         elif new_value == self.TYPE_VERTBAR:
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
             if self.__gradient <= 1:
                 self.matrix = np.matrix([[0]])
             else:
                 vert_list = list(range(0,self.__gradient))
                 self.matrix = (np.matrix([vert_list]) / self.__gradient).transpose()
         elif new_value == self.TYPE_HORIZBAR:
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
             if self.__gradient <= 1:
                 self.matrix = np.matrix([[0]])
             else:
@@ -2467,6 +2472,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
     if len(hlines) == 0:
         return
 
+    grad = primprops.fillmode.dither.gradient_frac / 2
     if primprops.fillmode.value in [FillMode.LINEAR, FillMode.BOTH_FIT]:
         #Find color range
         cyclemode = False
@@ -2508,7 +2514,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 return
             min_value = surf_array[nz_index].min()
             max_value = surf_array[nz_index].max()
-            surf_array[nz_index] -= min_value - 1;
+            surf_array[nz_index] -= min_value - int((max_value-min_value)/(numcolors)*grad) - 1
 
         if primprops.fillmode.value == FillMode.BOTH_FIT:
             surf_trim = surf_array.copy()
@@ -2543,9 +2549,9 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         max_pixels = np.amax(surf_array)
         if cur_crange.get_dir() == 1:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
-        surf_array *= numcolors * 256   # multiply for more precision
+        surf_array *= int((numcolors - grad) * 256)   # multiply for more precision
         surf_array //= max_pixels + 1
-        surf_array += cur_crange.low * 256
+        surf_array += int((cur_crange.low + grad) * 256)
 
         if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
