@@ -2328,7 +2328,12 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             #true color
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
-def hline_HORIZONTAL(surf_array, primprops, color, y, xs1, xs2):
+def hline_CIRCULAR(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
+def hline_LINEAR(surf_array, primprops, color, y, xs1, xs2):
     if primprops.fillmode.predraw or config.get_range(color) == None:
         hline_SOLID(surf_array, color, y, xs1, xs2)
     hlines.append([y, xs1, xs2])
@@ -2354,8 +2359,8 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         primprops = config.primprops
 
     size = screen.get_size()
-    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
-    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+    #clip most fill modes
+    if not primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.VERT_FIT, FillMode.BOTH_FIT]:
         #don't draw if off screen
         if y<0 or y>=size[1]:
             return
@@ -2371,8 +2376,8 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         x1,x2 = (x2,x1)
     xs1,xs2 = (x1,x2)
 
-    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
-    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+    #clip most fill modes
+    if not primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.VERT_FIT, FillMode.BOTH_FIT]:
         #clip to edges of screen
         if xs1<0:
             xs1=0
@@ -2392,8 +2397,10 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_WRAP(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.CIRCULAR:
+        hline_CIRCULAR(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.LINEAR:
-        hline_HORIZONTAL(surf_array, primprops, color, y, xs1, xs2)
+        hline_LINEAR(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BOTH_FIT:
@@ -2402,7 +2409,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.SMOOTH:
         hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2)
-    elif primprops.fillmode.value >= FillMode.CIRCULAR:
+    elif primprops.fillmode.value > FillMode.CIRCULAR:
         #get color range
         cyclemode = False
         for crange in config.cranges:
@@ -2473,7 +2480,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         return
 
     grad = primprops.fillmode.dither.gradient_frac / 2
-    if primprops.fillmode.value in [FillMode.LINEAR, FillMode.BOTH_FIT]:
+    if primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.BOTH_FIT]:
         #Find color range
         cyclemode = False
         for crange in config.cranges:
@@ -2501,14 +2508,64 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         for y,x1,x2 in hlines:
             surf_array[x1-xo:x2-xo+1,y-yo] = 1
 
+        if primprops.fillmode.value == FillMode.CIRCULAR:
+            cx, cy = primprops.fillmode.xy
+            cx *= w
+            cy *= h
+            #Create matrix of indices
+            a3d = np.indices((w,h), dtype=int).transpose((1,2,0))
+            #Apply distance formula:
+            #  surf_array[x,y] = ((x-cx)**2 + (y-cy)**2)**0.5 + 1
+            a3d[:,:,0] -= int(cx)
+            a3d[:,:,0] *= config.aspectY
+            a3d[:,:,0] **= 2
+            a3d[:,:,1] -= int(cy)
+            a3d[:,:,1] *= config.aspectX
+            a3d[:,:,1] **= 2
+            a2d = np.zeros((w,h), dtype=float)
+            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1]
+            a2d **= 0.5
+            a2d += 1
+
+            z_index = np.equal(surf_array, 0)
+            if np.size(z_index) == 0:
+                return
+            surf_array[:,:] = a2d[:,:]
+            surf_array[z_index] = 0
+
+            """
+            for x in range(w):
+                for y in range(h):
+                    if surf_array[x,y] > 0:
+                        surf_array[x,y] = ((x-cx)**2 + (y-cy)**2)**0.5 + 1
+            """
+
         if primprops.fillmode.value == FillMode.LINEAR:
             rot = primprops.fillmode.angle
             a = int(65536 * math.cos(math.radians(rot-90))) * config.aspectY
             b = int(65536 * math.sin(math.radians(rot-90))) * config.aspectX
+
+            #Create matrix of indices
+            a3d = np.indices((w,h), dtype=int).transpose((1,2,0))
+            #Apply linear calculation
+            a3d[:,:,0] *= a
+            a3d[:,:,1] *= b
+            a2d = np.zeros((w,h), dtype=int)
+            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1] + 65536
+
+            z_index = np.equal(surf_array, 0)
+            if np.size(z_index) == 0:
+                return
+            surf_array[:,:] = a2d[:,:]
+            surf_array[z_index] = 0
+
+            """
             for x in range(w):
                 for y in range(h):
                     if surf_array[x,y] > 0:
                         surf_array[x,y] = a*x + b*y + 65536
+            """
+
             nz_index = np.nonzero(surf_array)
             if np.size(nz_index) == 0:
                 return
