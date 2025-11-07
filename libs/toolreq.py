@@ -1865,10 +1865,10 @@ class FillGadget(Gadget):
                         chx = rx + int(self.fillmode_xy[0]*rw)
                         chy = ry + int(self.fillmode_xy[1]*rh)
                         surf_array = pygame.surfarray.pixels2d(screen_dbuff)
-                        surf_array[chx-4*px:chx+5*px:2,chy] = 0x00000000
-                        surf_array[chx-3*px:chx+4*px:2,chy] = 0x00ffffff
-                        surf_array[chx,chy-4*py:chy+5*py:2] = 0x00000000
-                        surf_array[chx,chy-3*py:chy+4*py:2] = 0x00ffffff
+                        surf_array[chx-4*px:chx+5*px:2*px,chy] = 0x00000000
+                        surf_array[chx-3*px:chx+4*px:2*px,chy] = 0x00ffffff
+                        surf_array[chx,chy-4*py:chy+5*py:2*py] = 0x00000000
+                        surf_array[chx,chy-3*py:chy+4*py:2*py] = 0x00ffffff
                         surf_array = None
                     if config.has_event():
                         #Got interrupted so still needs to redraw
