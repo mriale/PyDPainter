@@ -880,7 +880,7 @@ def save_iffinfo(filename):
         0, \
         0, \
         10, 11, \
-        config.pixel_width, config.pixel_height
+        config.screen_width, config.screen_height
         ))
 
     write_chunk(newfile, b'CAMG', pack(">I", config.display_mode))
@@ -967,7 +967,7 @@ def save_iff(filename, config, ifftype, bgcolor=-1):
         0, \
         max(0, bgcolor), \
         10, 11, \
-        config.pixel_width, config.pixel_height
+        config.screen_width, config.screen_height
         ))
 
     cmap_chunk = b''
