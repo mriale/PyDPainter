@@ -1145,22 +1145,24 @@ class Brush:
                     screen.blit(self.smear_image,
                                 (x - self.handle[0], y - self.handle[1]))
                 elif drawmode == DrawMode.SMOOTH:
+                    w2 = self.rect[2] + 2
+                    h2 = self.rect[3] + 2
                     #Allocate smooth image if needed
                     if self.smear_image == None:
-                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image = pygame.Surface((w2, h2),0, screen)
                         self.smear_image.set_palette(config.pal)
                         self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
 
                     #Get canvas into smear image
-                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0] - 1, y - self.handle[1] - 1, w2, h2])
                     #self.smear_image.blit(self.smear_stencil, (0,0))
 
                     #Smooth image
                     smooth_image(self.smear_image)
-                    self.smear_image.blit(self.smear_stencil, (0,0))
+                    self.smear_image.blit(self.smear_stencil, (1,1))
 
                     #Blit smoothed image
-                    screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
+                    screen.blit(self.smear_image, [x - self.handle[0], y - self.handle[1]], [1,1, self.rect[2], self.rect[3]])
                 elif drawmode == DrawMode.TINT:
                     #Allocate smooth image if needed
                     if self.smear_image == None:
