@@ -2493,6 +2493,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         if not cyclemode:
             return
 
+        invert_range = False
+
         #Find bounds of shape
         hlines_min = np.amin(hlines, axis=0)
         hlines_max = np.amax(hlines, axis=0)
@@ -2532,6 +2534,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 return
             surf_array[:,:] = a2d[:,:]
             surf_array[z_index] = 0
+
+            invert_range = True
 
             """
             for x in range(w):
@@ -2604,7 +2608,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
 
         #Map counts to colors in the range
         max_pixels = np.amax(surf_array)
-        if cur_crange.get_dir() == 1:
+        if (cur_crange.get_dir() == 1) ^ invert_range:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
         surf_array *= int((numcolors - grad) * 256)   # multiply for more precision
         surf_array //= max_pixels + 1
