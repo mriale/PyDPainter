@@ -7,11 +7,23 @@
   - [Pattern](#pattern)
   - [AntiAlias \& Smooth](#antialias--smooth)
   - [Gradient](#gradient)
+      - [Circular](#circular-fill)
+      - [Vertical Line](#vertical-line)
+      - [Linear Fill](#linear-fill)
+      - [Horizontal Line](#horizontal-line)
+      - [Vertical and Horizontal](#vertical-and-horizontal-fill)
   - [Dither](#dither)
-    - [Ordered dithering](#ordered-dithering)
     - [No dithering](#no-dithering)
-    - [1 to 20 dithering](#1-to-20-dithering)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
+    - [Gradient direction](#gradient-direction)
+    - [Random](#random)
+    - [Check](#check)
+    - [2x2](#2x2)
+    - [4x4](#4x4)
+    - [8x8](#8x8)
+    - [HalfTone](#halftone)
+    - [Vertical Bar](#vertbar)
+    - [Horizontal Bar](#horizbar)
+
 
 Right-clicking the **Fill tool** <img src="t-fill.png" width="32"> or the lower-right half of most drawing tools displays this **Fill Type** requester: 
 
@@ -82,47 +94,43 @@ Select one of the gradient options by clicking it with the left mouse button. Pr
 
 <img src="gradient-fill-v.png" width="500">
 
-**Vertical fill** paints the gradient top-to-bottom with an even distribution without regard to the shape of the object.
 
-<img src="gradient-fill-v-line.png" width="500">
+### Circular fill
+**Circular fill** paints the gradient as concentric circles, from center to borders with an even distribution without regard to the shape of the object.
+
+
  
+### Vertical Line
 **Vertical Line** fill paints the gradient top-to-bottom adjusting the gradient so that it follows the contours of the shape being filled.
 
-<img src="gradient-fill-h.png" width="500">
+### Linear Fill
+**Linear fill** paints the gradient in a line, according to the angle defined, with an even distribution without regard to the shape of the object.
 
-**Horizontal fill** paints the gradient left-to-right with an even distribution without regard to the shape of the object.
-
-<img src="gradient-fill-h-line.png" width="500">
-
+### Horizontal Line
 **Horizontal Line** fill paints the gradient left-to-right adjusting the gradient so that it follows the contours of the shape being filled.
 
-<img src="gradient-fill-hv-line.png" width="500">
-
+### Vertical and Horizontal Fill 
 **Vertical and Horizontal** fill paints the gradient from the inside out adjusting the gradient so that it follows the contours of the shape being filled.
 
 *The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen and any type of shape.*
-**New in PydPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the gradient orientation.
+
+## Gradient direction
+**New in PydPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the gradient orientation. Not the gradient up and down direction, but the order of the colors inside a range.
 <img src="fill-orientation.png" width="500">
-This orientation is first defined by the color order in the **Palette** (`P`). It can now be reversed with a click directly from here.
+This orientation is first defined by the color order in the **Palette** (`P`). It can now be reversed with a click directly from here. If you have a light to dark blue range in the Palette, and want to use a dark to light blue gradient, just click that arrow.
 
 ## Dither
 
-Dithering is the blending of pixels within a **Range** defined in Palette. Usually, it's a gradient, but it doesn't have to be. It can be ordered dithering or a random dithering setting from none to increasingly blended.
-
-### Ordered dithering
-
-To use this quasi-geometric rasterization, pull the **Dither** slider all the way to the left. Notice that number to the right of the dithering slider turns into an ordered dithering icon.
-
-<img src="Dithering-on.png" width="500">
+Dithering is the blending of pixels within a **Range** defined in Palette. Usually, it's a gradient, but it doesn't have to be. It can be ordered dithering or a random dithering setting from none to increasingly blended. PyDPainter 2.2.1 introduce a lot of new dithering patterns.
 
 ### No dithering
 
-If you don't want to use dithering, set the **Dither** slider to **0**.
+If you don't want to use dithering, set the **Dither** slider to **0**. Pull the **Dither** slider all the way to the left to use this quasi-geometric rasterization. It works with any dithering mode selected from Random to Horizontal bar.
 
 <img src="Dithering-0.png" width="500">
 
-### 1 to 20 dithering
-
+### Random
+It's a legacy from Deluxe Paint.
 The further the **Dither** slider is pulled to the right, the stronger the blend. Values range from 1 (very light) to 20 (a mishmash of colors).
 
 <img src="Dithering-2.png" width="500">
@@ -136,5 +144,30 @@ Dither at 8. More of a mixture, it can be used as a base for coloring rocks or p
 <img src="Dithering-20.png" width="500">
 
 Max dithering (20). The gradient is barely recognizable. Can be used as a noise base before using other drawing modes such as Smooth or Blend.
+
+### Check
+
+A very basic checkerboard pattern.
+### 2x2
+A elegant checkerboard pattern with some extra dots.
+
+### 4x4
+
+It's another legacy from Deluxe Paint. If you search for the same pattern as DPaint or previous versions of PyDPainter, use 4x4 with a 13 value. 
+
+<img src="Dithering-on.png" width="500">
+
+### 8x8
+
+The more complex 8x8 pattern. It need some place to draw it's pixels pattern entirely.
+### Halftone
+
+A well-know and recognizable pattern from the printing industry. Mey require some place to be nice-looking. Produce nice aquatic effect when stretched out to large Dither value.
+
+### VertBar
+May look strange. It's a pattern designed for vertical gradient. So click to Linear Fill and choose a 90° or 270° angle. Of course, you can use it as a creative way with other fill or angle, if you like theses saw shapes. A 2 Dither value produce a basic line alternate which is interesting in any Gradient type.
+
+### HorizBar
+May look strange. It's a pattern designed for horizontal gradient, like sky. So click to Linear Fill and choose a 0° or 180° angle. Of course, you can use it in a creative way with other fill or angle, if you like theses saw shapes. A 2 Dither value produce a basic line alternate which is interesting in any Gradient type.
 
 ###### Documentation written by Stephane Anquetil
