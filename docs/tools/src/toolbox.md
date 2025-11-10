@@ -120,7 +120,7 @@ Then both tools, drawing and fill, are drawn with the same shape you make on scr
 
 ![](ALT-areafill.png)
 
-Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Brush Trails](brushtrails.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](spacing.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
 
 
 Key: `D`
@@ -145,7 +145,7 @@ With the `CTRL` key held down, the tool leaves traces between the two clicks.
 
 Key: `v`
 
-Right-click tool to open [Brush Trails](brushtrails.md).
+Right-click tool to open [Spacing](spacing.md).
 
 ## Curve tool
 
@@ -167,7 +167,7 @@ drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 
 Key: `q`
 
-Right-click tool to open [Brush Trails](brushtrails.md).
+Right-click tool to open [Spacing](spacing.md).
 
 ## Fill tool
 
@@ -180,7 +180,7 @@ clicking the right button.
 
 *Note that the Fill tool fills all the way to the boundaries of an enclosed
 shape. If the shape is not completely enclosed (that is, if there is a hole in
-its perimeter), the paint will "leak" through and fill the entire page.*
+its perimeter), the paint will "leak" through and fill the entire page. Bear in mind that the working format extends beyond the interface menus (press F10 to reveal). Therefore, the fill may spill underneath and produce a surprising result.*
 
 Holding down the `Alt` key when you click with the Fill cursor, fills outward to the background color. In other words, the fill spreads
 outward until it reaches areas of the current background color.
@@ -234,9 +234,9 @@ In any case, the rectangle is completed as soon as you release the button.
 
 *Remember, top left for unfilled, and bottom right for filled shapes.*
 
-Key: `r`
+Key: `r`; `R` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key for a square drawing constraint.
 
@@ -256,9 +256,9 @@ you're happy with the shape.
 circle around anything just by starting to paint from where you want the center
 of the circle.*
 
-Key: `c`
+Key: `c`; `C` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key to start with the next circle center on your last click.
 
@@ -276,9 +276,9 @@ The Ellipse Tool works just like the [Circle tool](#circle-tool), except that it
 the mouse button and hold. Now you can rotate your ellipse until it has just the right tilt.
 4. When it is in just the right position, release the mouse button.
 
-Key: `e`
+Key: `e`; `E` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
 With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 Amazing results can be achieved easily:  
@@ -303,9 +303,9 @@ Quickly double-click to stop the shape immediately. In fill mode, the shape is a
 
 *Note: Filled polygonal shapes with intersecting sides create interesting graphic effects.*
 
-Key: `w`
+Key: `w`; `W` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
 
 ## Brush tool
 
@@ -345,7 +345,7 @@ However, there is one aspect of brush selection you should be aware of: if any p
 
 Press the `SHIFT` key during use for for a "square" constraint.
 
-Key: `b`
+Key: `b` ; hit again for Polygonal brush.
 
 ## Text tool
 
