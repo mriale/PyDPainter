@@ -1089,13 +1089,13 @@ class pydpainter:
 
         #constrain mouse to edge of screen
         mouseX = max(ox, mouseX)
-        mouseX = min(mouseX, screenX-ox-1)
+        mouseX = min(mouseX, screenX+ox-1)
         mouseY = max(oy, mouseY)
-        mouseY = min(mouseY, screenY-oy-1)
+        mouseY = min(mouseY, screenY+oy-1)
 
         #scale window mouse coords to pixel coords
-        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
-        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
+        mouseX = (mouseX-ox) * self.screen_width // screenX
+        mouseY = (mouseY-oy) * self.screen_height // screenY
         return((mouseX, mouseY))
 
     def calc_page_pos(self, mouseX, mouseY):
@@ -1130,8 +1130,8 @@ class pydpainter:
 
         ox,oy,screenX,screenY = config.window_canvas_rect
 
-        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
-        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
+        mouseX = (mouseX-ox) * self.screen_width // screenX
+        mouseY = (mouseY-oy) * self.screen_height // screenY
 
         mouseside = 0
 
@@ -1386,11 +1386,8 @@ class pydpainter:
             scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
         self.screen.fill((0,0,0))
-        if config.fullscreen:
-            ox = (self.screen.get_width() - scaledup.get_width()) // 2
-            oy = (self.screen.get_height() - scaledup.get_height()) // 2
-        else:
-            ox, oy = 0,0
+        ox = (self.screen.get_width() - scaledup.get_width()) // 2
+        oy = (self.screen.get_height() - scaledup.get_height()) // 2
         config.window_canvas_rect = [ox,oy, self.window_size[0], self.window_size[1]]
         self.screen.blit(scaledup,(ox,oy))
         scaledup = None
@@ -1700,9 +1697,11 @@ class pydpainter:
 
             #Show system mouse pointer if outside of screen
             if e.type == MOUSEMOTION:
+                ox,oy,screenX,screenY = config.window_canvas_rect
+                x,y = e.pos
                 if config.fullscreen:
                     pygame.mouse.set_visible(False)
-                elif e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
+                elif x < ox or x > ox+screenX or y < oy or y > oy+screenY:
                     pygame.mouse.set_visible(True)
                 else:
                     pygame.mouse.set_visible(False)
