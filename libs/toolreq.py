@@ -2074,7 +2074,7 @@ def fill_req(screen):
 [Antialias] ###########
 [Smooth]    ###########
             ###########
-Gradient: [\x88\x89~\x8a\x8b~\x99\x9a~\x8e\x8f~\x90\x91]
+Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:--------------00^^
 [Random~Check~2x2~4x4~8x8]
 [HTone~VertBar~HorizBar]

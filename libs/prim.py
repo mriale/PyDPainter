@@ -1547,7 +1547,7 @@ class FillMode:
     ANTIALIAS = 11
     SMOOTH = 12
     LABEL_STR = ["Solid","Tint","Brush","Wrap","Perspective","Pattern",
-                 "\x88\x89","\x8a\x8b","\x99\x9a","\x8e\x8f", "\x90\x91",
+                 "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
                  "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
 
@@ -1557,7 +1557,7 @@ class FillMode:
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
         self.dither = Dither()
-        self.angle = 0
+        self.angle = 270
         self.xy = [0.5,0.5]
 
     @property
