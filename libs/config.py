@@ -231,7 +231,7 @@ class pydpainter:
         if config.scale <= 1:
             config.scale /= 2.0
         else:
-            currscale = round(config.scale * 2.0) / 2.0
+            currscale = math.floor(config.scale * 2.0) / 2.0
             if abs(config.scale - currscale) < .01:
                 config.scale = currscale - 0.5
             else:
@@ -241,7 +241,7 @@ class pydpainter:
         if config.scale < 1:
             config.scale *= 2.0
         else:
-            currscale = round(config.scale * 2.0) / 2.0
+            currscale = math.ceil(config.scale * 2.0) / 2.0
             if abs(config.scale - currscale) < .01:
                 config.scale = currscale + 0.5
             else:
@@ -310,16 +310,8 @@ class pydpainter:
             config.scale = config.scale_bak
             config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
-        while True:
-            new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
-            if (new_window_size[0] > config.max_width or \
-                new_window_size[1] > config.max_height):
-                    config.scale_dec()
-            elif (new_window_size[0] < self.screen_width_min or \
-                  new_window_size[1] < self.screen_height_min):
-                    config.scale_inc()
-            else:
-                break
+        config.scale = max(1.0, config.scale)
+        new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
 
         if 'SDL_VIDEO_WINDOW_POS' in os.environ:
             del os.environ['SDL_VIDEO_WINDOW_POS']
@@ -344,7 +336,6 @@ class pydpainter:
                 config.xevent.get()
                 while True in pygame.mouse.get_pressed():
                     config.xevent.get()
-                new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
                 if pygame.version.vernum[0] == 1:
                     pygame.time.wait(300)
