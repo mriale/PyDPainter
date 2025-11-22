@@ -488,7 +488,7 @@ class BrushReqProps(object):
     A_BOTTOM = 4
     A_CENTER_Y = 5
 
-    A_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
+    A_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x99\x9A"]
     A_NAME = ["A_LEFT", "A_RIGHT", "A_CENTER_X", "A_TOP", "A_BOTTOM", "A_CENTER_Y"]
 
     H_CENTER, H_TOP_LEFT, H_TOP, H_TOP_RIGHT, H_RIGHT, H_BOTTOM_RIGHT, H_BOTTOM, H_BOTTOM_LEFT, H_LEFT = range(9)

@@ -290,6 +290,9 @@ Path:_________________________
 File:___________________%s
 [%s][Cancel]  [Make Dir]
 """%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+    oldcursor = config.cursor.shape
+    config.cursor.shape = config.cursor.NORMAL
+
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -478,6 +481,7 @@ File:___________________%s
     config.filepath = filepath
 
     config.pixel_req_rect = None
+    config.cursor.shape = oldcursor
     config.recompose()
 
     return retval

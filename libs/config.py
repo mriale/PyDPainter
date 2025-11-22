@@ -855,6 +855,8 @@ class pydpainter:
         self.busy_last_coords = (0,0)
         self.BUSY_LAG_TIME = 500
 
+        self.dropper = False
+
         #Allocate user events
         self.ALLCUSTOMEVENTS = []
 
@@ -1166,7 +1168,7 @@ class pydpainter:
 
         if not event is None and event.type == MOUSEBUTTONDOWN:
             self.zoom.mousedown_side = mouseside
-        if not event is None and event.type == MOUSEBUTTONUP:
+        if not True in config.get_mouse_pressed():
             self.zoom.mousedown_side = 0
 
         #turn constrain on or off
@@ -1959,6 +1961,23 @@ class pydpainter:
                     self.set_screen_offset(self.screen_offset_x, self.screen_offset_y)
                     self.doKeyAction(curr_action)
 
+            #process CTRL dropper
+            if e.type == KEYDOWN:
+                if e.key in [K_LCTRL, K_RCTRL] and not True in buttons:
+                    config.dropper = True
+                    config.clear_pixel_draw_canvas()
+            if config.dropper and not config.xevent.is_key_down([K_LCTRL, K_RCTRL]) and not True in buttons:
+                config.dropper = False
+                if e.type != MOUSEBUTTONUP:
+                    self.doKeyAction(curr_action)
+            if config.dropper:
+                cx,cy = self.get_mouse_pixel_pos(e)
+                if buttons[0]:
+                    config.color = config.pixel_canvas.get_at_mapped((cx,cy))
+                elif buttons[2]:
+                    config.bgcolor = config.pixel_canvas.get_at_mapped((cx,cy))
+                config.cursor.shape = config.cursor.DROPPER
+
             #process keyboard mouse clicks
             if e.type == KEYDOWN:
                 if e.mod & KMOD_META and e.mod & KMOD_ALT:
@@ -1979,6 +1998,7 @@ class pydpainter:
                 if curr_action != None and len(te_list) == 0 and \
                    len(mte_list) == 0 and len(me_list) == 0 and \
                    len(mta_list) == 0 and len(mtl_list) == 0 and \
+                   not config.dropper and \
                    not wait_for_mouseup_gui and not hide_draw_tool:
                     if config.coords_on:
                         cx,cy = self.get_mouse_pixel_pos(e)
