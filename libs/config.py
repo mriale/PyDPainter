@@ -1596,6 +1596,25 @@ class pydpainter:
             str = "%4d\x94%4d\x95" % ((x, y))
         return str
 
+    def draw_rgb_dropper(self, cxy, color):
+        cx,cy = cxy
+        px = config.font.xsize // 8
+        py = config.font.ysize // 8
+        bx = cx
+        if cy < config.screen_height // 4:
+            by = cy + 4*py
+        else:
+            by = cy - 32*py
+        bw = 6 * 4 * px
+        bh = 2 * 8 * py
+        bg = (255,255,0)
+        fg = (0,0,0)
+        rgb = config.truepal[color]
+        color_str = "%02x%02x%02x" % (rgb[0], rgb[1], rgb[2])
+        pygame.draw.rect(config.pixel_canvas, bg, [bx-px,by-py,bw+2*px,bh+2*py])
+        draw_half_str_color(config.pixel_canvas, [bx,by], "%d"%(color), fg, bg)
+        draw_half_str_color(config.pixel_canvas, [bx,by+8*py], color_str, fg, bg)
+
     def run(self):
         """
         This method is the main application loop.
@@ -1968,15 +1987,19 @@ class pydpainter:
                     config.clear_pixel_draw_canvas()
             if config.dropper and not config.xevent.is_key_down([K_LCTRL, K_RCTRL]) and not True in buttons:
                 config.dropper = False
+                config.clear_pixel_draw_canvas()
                 if e.type != MOUSEBUTTONUP:
                     self.doKeyAction(curr_action)
             if config.dropper:
+                config.clear_pixel_draw_canvas()
                 cx,cy = self.get_mouse_pixel_pos(e)
+                color = config.pixel_canvas.get_at_mapped((cx,cy))
                 if buttons[0]:
-                    config.color = config.pixel_canvas.get_at_mapped((cx,cy))
+                    config.color = color
                 elif buttons[2]:
-                    config.bgcolor = config.pixel_canvas.get_at_mapped((cx,cy))
+                    config.bgcolor = color
                 config.cursor.shape = config.cursor.DROPPER
+                config.draw_rgb_dropper((cx,cy), color)
 
             #process keyboard mouse clicks
             if e.type == KEYDOWN:

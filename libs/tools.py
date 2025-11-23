@@ -677,7 +677,7 @@ class DoAirbrush(ToolSingleAction):
         xor_props.xor = True
 
         while not point_placed:
-            config.cursor.shape = 4
+            config.cursor.shape = config.cursor.RESIZE
             event = config.xevent.poll()
             while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
@@ -2068,7 +2068,7 @@ class PalGadget(ToolGadget):
             super(PalGadget, self).draw(screen, font, offset)
 
     def pick_color(self):
-        config.cursor.shape = 3
+        config.cursor.shape = config.cursor.DROPPER
         config.clear_pixel_draw_canvas()
         config.recompose()
         color_picked = False
@@ -2084,6 +2084,9 @@ class PalGadget(ToolGadget):
                 event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            color_hover = config.pixel_canvas.get_at_mapped((mouseX,mouseY))
+            config.clear_pixel_draw_canvas()
+            config.draw_rgb_dropper((mouseX,mouseY), color_hover)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
                 if event.buttons[0]:
                     config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
@@ -2100,6 +2103,8 @@ class PalGadget(ToolGadget):
 
             config.recompose()
             first_time = False
+
+        config.clear_pixel_draw_canvas()
 
 
     def process_event(self, screen, event, mouse_pixel_mapper):

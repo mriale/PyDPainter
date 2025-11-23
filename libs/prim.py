@@ -265,12 +265,13 @@ def tint_image(img, tint_trans):
 halfnumbers_image = None
 def draw_half_str(screen, xypos, text):
     global halfnumbers_image
+    numchars = 22
     px = config.font.xsize // 8
     py = config.font.ysize // 8
-    if halfnumbers_image is None or halfnumbers_image.get_size() != (px*4*16,py*8):
+    if halfnumbers_image is None or halfnumbers_image.get_size() != (px*4*numchars,py*8):
         halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
     nh = halfnumbers_image.get_height()
-    nw = halfnumbers_image.get_width() // 16
+    nw = halfnumbers_image.get_width() // numchars
     xpos = xypos[0] * px
     ypos = xypos[1] * py
 
@@ -290,6 +291,8 @@ def draw_half_str(screen, xypos, text):
             noffset = 14 * nw
         elif c == 'S':
             noffset = 15 * nw
+        elif c >= 'a' and c <= 'f':
+            noffset = (16 + (ord(c) - ord('a'))) * nw
         screen.blit(halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
         xpos += nw
 
