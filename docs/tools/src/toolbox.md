@@ -48,6 +48,12 @@ the capital letter of which brings up the variant or the options.
   - [Zoom magnifier in/out](#zoom-magnifier-inout)
   - [Undo/redo](#undoredo)
   - [Clear canvas](#clear-canvas)
+  - [Color Swatch](#color-swatch)
+    - [Foreground Color](#foreground-color)
+    - [Background Color](#background-color)
+    - [Pick color](#pick-color)
+    - [Palette](#palette)
+  - [Colors](#colors)
           - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 ## Default brushes
@@ -120,7 +126,7 @@ Then both tools, drawing and fill, are drawn with the same shape you make on scr
 
 ![](ALT-areafill.png)
 
-Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](spacing.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](brushtrails.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
 
 
 Key: `D`
@@ -145,7 +151,7 @@ With the `CTRL` key held down, the tool leaves traces between the two clicks.
 
 Key: `v`
 
-Right-click tool to open [Spacing](spacing.md).
+Right-click tool or `V` to open [Spacing](brushtrails.md).
 
 ## Curve tool
 
@@ -167,7 +173,7 @@ drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 
 Key: `q`
 
-Right-click tool to open [Spacing](spacing.md).
+Right-click tool to open [Spacing](brushtrails.md).
 
 ## Fill tool
 
@@ -195,7 +201,7 @@ Filling the sky with `ALT` stops only at the **background** color (green of land
 
 Key: `f`
 
-Right-click tool to open [Fill](fill.md) type.
+Right-click tool or `F`to open [Fill](fill.md) type.
 
 ## Airbrush tool
 
@@ -236,7 +242,7 @@ In any case, the rectangle is completed as soon as you release the button.
 
 Key: `r`; `R` for filled.
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key for a square drawing constraint.
 
@@ -258,7 +264,7 @@ of the circle.*
 
 Key: `c`; `C` for filled.
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key to start with the next circle center on your last click.
 
@@ -278,7 +284,7 @@ the mouse button and hold. Now you can rotate your ellipse until it has just the
 
 Key: `e`; `E` for filled.
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 Amazing results can be achieved easily:  
@@ -305,7 +311,7 @@ Quickly double-click to stop the shape immediately. In fill mode, the shape is a
 
 Key: `w`; `W` for filled.
 
-Right-click tool to open [Spacing](spacing.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 ## Brush tool
 
@@ -325,7 +331,7 @@ Step-by-step operation:
 5. release the button
 6. this area is now your new brush, and you can draw with it!
 
-Not just once, like a stamp, but with all the drawing tools: freehand draw, line, rectangle, circle and even ellipse! Experiment with different brush shapes and stroke tools to understand the power and simplicity of the brush tool.
+Not just once, like a stamp, but with all the drawing tools: freehand draw, line, rectangle, circle and even ellipse! Experiment with different brush shapes and stroke tools to understand the power and simplicity of the brush tool. Use **Brush Trails** options for more controls, like Spacing or rotation and resize.
 
 There's a special [Brush](../../menus/src/brush.md) menu, with dedicated effects and functions.
 
@@ -351,8 +357,7 @@ Key: `b` ; hit again for Polygonal brush.
 
 ![](t-text.png)
 
-The Text tool lets you place text anywhere on the page, and the Brush Selector lets you pick it up and reposition it if you didn't have it quite right the first time.
-
+The Text tool lets you place text anywhere on the page. You can change the color of your text by choosing a different foreground color.
 To enter text on the page:
 
 1. Click the Text tool
@@ -368,9 +373,7 @@ point where you first placed the cursor. If the page size is larger than the
 screen, the screen will scroll to the edge of the page as you type. You can
 delete text by using the **`Backspace`** key.
 
-Note, however, that if after entering a portion of text you click the cursor elsewhere on the screen, or you select a tool from the Toolbox, that text becomes a bit-mapped image, and no longer behaves as text. In other words, you cannot **`Backspace`** over it as you could when it was still active as text.
-You can change the color of your text by choosing a different foreground
-color.
+Note, however, that if after entering a portion of text you click the cursor elsewhere on the screen, or you select a tool from the Toolbox, that text becomes a bit-mapped image, and no longer behaves as text. In other words, you cannot **`Backspace`** over it as you could when it was still active as text. The [Brush tool](#brush-tool) lets you pick it up and reposition it if you didn't have it quite right the first time.
 
 ---
 
@@ -448,7 +451,7 @@ An **Order of 2** imitates a paper folded into 4, like the Rorschach tests.
 
 **Cyclic symmetries** of order 2 to 7, especially the odd values, once offset from the center of the screen, let you effortlessly draw bold natural shapes, such as flowers, an impact on the ground, the cracks in a window, a tunnel narrowing...
 
-Values of 5 and above, used with the Line tool and a little practice, will help you draw regular polygons.
+Values of 5 and above, used with the Line tool and a little practice, will help you draw regular polygons or stars.
 
 The maximum is 99, which may sound crazy, but allows for some very amusing variations on the circle design.
 
@@ -508,7 +511,7 @@ Keys: `>` / `<`
 
 Reverses the last painting action. Thanks to the huge memory capacity of modern computers, PyDPainter allows **up to 20 undos!**
 
-Right-clicking "undoes" previous undos.
+Right-clicking or uppecase `U` "undoes" previous undos.
 
 Keys: `u` / `U`
 
@@ -520,6 +523,44 @@ Clears the screen to the currently selected **background color**. If you have
 multiple frames, an Options requester appears for you to indicate which
 frames you want to clear.
 
-Key: `K`
+Key: `K` <= uppercase
+
+## Color Swatch
+
+You see a zone below the Undo and CLR button and above the color palette : a rectange with a large dot in the center. The dot is always displaying the **Foreground color**. The rectangle is always of the color of the **Background color**.
+![](color-swatch.png)
+
+### Foreground Color
+
+The **foreground** color is the color used for all drawing tools with the LEFT mouse button... like lines, shapes, text in default Color mode, etc. It's the default fill color for the [Fill tool](#fill-tool) too, if no other Fill Type have been selected. The color palette belows, have the **foreground** color, cream by default, displayed inside a white outline.
+
+### Background Color
+
+By default, on a new PydPainter projet, the **Background** color is black.
+All drawing tools can use this color to ERASE or as a secondary color using the RIGHT mouse button. The [Fill tool](#fill-tool) can always fill with that color too, whatever Fill type is on. Just RIGHT-click with Fill tool selected.
+
+[Clear tool](#clear-canvas) use the current background color as its color to clear the current screen.
+
+That means the [Brush](#brush-tool) tool use this black as transparency by default. It's not mandatory, you can SELECT another color RIGHT clicking anywhere on the palette below. Pink can be the transparency color, preserving all black pixel to be transparent in a new brush grabbing.
+
+### Pick color
+You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). You'd better use one of thoses short key: `,` or `Ctrl` 
+The mouse pointer change to an pipette with a information bubble displaying the current color rank and RGB valeurs in Hex.
+
+![](pipette.png)
+
+- LEFT click to define the current underlying color as Foreground.
+- RIGHT click to define the current underlying color as Background.
+
+*Note: it does not change the color palette. If you need to change the color, use Palette.*
+
+### Palette
+You have quick access to [Palette](../../menus/src/palette.md) editor, using either of thoses method belows:
+- RIGHT click on the foreground or background color on the Color Swatch.
+It open the **Palette** windows.
+- hit `P`
+
+## Colors
+The colors are ranked from 0 to the max colors you define in the [Chosse Screen  Fromat requester](../../menus/src/screenformat.md). 32 colors slots a time. A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. A yellow bubble can display additionnal information, like rank and RGB values if Help bubbles are ON.
 
 ###### Documentation written by Stephane Anquetil

@@ -9,6 +9,9 @@
   - [N Total](#n-total)
   - [Ease In/Out](#ease-inout)
   - [Size and Rotate](#size-and-rotate)
+    - [Example](#example)
+    - [Tutorial](#tutorial)
+          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 | ![New Brush Trails](brushtrails.png) |
 | :-----: |
