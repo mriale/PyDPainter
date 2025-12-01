@@ -856,6 +856,10 @@ class pydpainter:
         self.BUSY_LAG_TIME = 500
 
         self.dropper = False
+        self.pick_canvas = None
+        self.pick_canvas_offset = [0,0]
+        self.pick_canvas_font = None
+        self.pick_canvas_font_size = 0
 
         #Allocate user events
         self.ALLCUSTOMEVENTS = []
@@ -1073,6 +1077,14 @@ class pydpainter:
                 self.screen_offset_y = self.screen_height - self.pixel_height - atbh
             elif y > mh:
                 self.screen_offset_y = mh
+
+    def get_win_pos_from_pixel(self, coords):
+        cx, cy = coords
+        ox,oy,screenX,screenY = config.window_canvas_rect
+        #scale pixel coords to window coords
+        wx = (cx * screenX // self.screen_width) + ox
+        wy = (cy * screenY // self.screen_height) + oy
+        return((wx, wy))
 
     def get_mouse_pointer_pos(self, event=None):
         mouseX, mouseY = pygame.mouse.get_pos()
@@ -1439,6 +1451,10 @@ class pydpainter:
             sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.layertoolbar.tip_canvas, (sx,sy))
 
+        #blit pick RGB layer
+        if not config.pick_canvas is None:
+            self.screen.blit(config.pick_canvas, config.pick_canvas_offset)
+
         pygame.display.flip()
         self.last_recompose_timer = pygame.time.get_ticks()
 
@@ -1598,22 +1614,62 @@ class pydpainter:
 
     def draw_rgb_dropper(self, cxy, color):
         cx,cy = cxy
-        px = config.font.xsize // 8
-        py = config.font.ysize // 8
-        bx = cx
-        if cy < config.screen_height // 4:
-            by = cy + 4*py
-        else:
-            by = cy - 32*py
-        bw = 6 * 4 * px
-        bh = 2 * 8 * py
         bg = (255,255,0)
         fg = (0,0,0)
-        rgb = config.truepal[color]
-        color_str = "%02x%02x%02x" % (rgb[0], rgb[1], rgb[2])
-        pygame.draw.rect(config.pixel_canvas, bg, [bx-px,by-py,bw+2*px,bh+2*py])
-        draw_half_str_color(config.pixel_canvas, [bx,by], "%d"%(color), fg, bg)
-        draw_half_str_color(config.pixel_canvas, [bx,by+8*py], color_str, fg, bg)
+        if isinstance(color, tuple):
+            rgb = list(color)
+            color_str = "N/A"
+        else:
+            rgb = config.truepal[color]
+            color_str = "%d" % (color)
+
+        #load font and get text size
+        win_ox,win_oy,win_w,win_h = config.window_canvas_rect
+        calc_font_size = win_h//50
+        if config.pick_canvas_font_size != calc_font_size:
+            config.pick_canvas_font_size = calc_font_size
+            config.pick_canvas_font = pygame.font.Font(os.path.join('data', 'FreeSansBold.ttf'), config.pick_canvas_font_size)
+
+        #size box
+        title_font = config.pick_canvas_font
+        wrect = title_font.size("W")
+        lineheight = title_font.get_linesize()
+        w = wrect[0]*16
+        h = wrect[1]*4
+        rect = [0,0, w,h]
+
+        #create surface
+        config.pick_canvas = pygame.Surface((w,h),SRCALPHA)
+        config.pick_canvas.fill(bg)
+
+        #calc offset
+        pick_ox, pick_oy = self.get_win_pos_from_pixel(cxy)
+        cursor_yo = int(config.cursor.center[config.cursor.shape][1] * config.cursor.scaleY * config.scale // 2)
+        if pick_ox + w >= win_ox + win_w:
+            pick_ox = win_ox + win_w - w
+        if pick_oy < win_oy + h + wrect[1] + cursor_yo:
+            pick_oy = pick_oy + h - cursor_yo
+        else:
+            pick_oy = pick_oy - h - wrect[1] - cursor_yo
+        config.pick_canvas_offset = [pick_ox, pick_oy]
+
+        #render rectangles
+        pygame.draw.rect(config.pick_canvas, fg, [0,0,w,h], wrect[0]//6)
+        pygame.draw.rect(config.pick_canvas, rgb, [wrect[0]//2, wrect[0]//2, wrect[1]*3, h-wrect[0]])
+        pygame.draw.rect(config.pick_canvas, fg, [wrect[0]//2, wrect[0]//2, wrect[1]*3, h-wrect[0]], wrect[0]//6)
+
+        #render text
+        tx = wrect[0] + wrect[1] * 3
+        ty = wrect[1] // 2
+        timg = title_font.render("Color Index: %s" % (color_str), True, fg, bg)
+        config.pick_canvas.blit(timg, (tx,ty))
+        ty += wrect[1] + wrect[1] // 8
+        timg = title_font.render("RGB: %d, %d, %d" % (rgb[0],rgb[1],rgb[2]), True, fg, bg)
+        config.pick_canvas.blit(timg, (tx,ty))
+        ty += wrect[1] + wrect[1] // 8
+        timg = title_font.render("Hex: %02X%02X%02X" % (rgb[0], rgb[1], rgb[2]), True, fg, bg)
+
+        config.pick_canvas.blit(timg, (tx,ty))
 
     def run(self):
         """
@@ -1981,25 +2037,30 @@ class pydpainter:
                     self.doKeyAction(curr_action)
 
             #process CTRL dropper
+            mouseXY = config.get_mouse_pointer_pos(e)
+            in_toolbars = config.inside_toolbars(config.all_toolbars, mouseXY)
             if e.type == KEYDOWN:
-                if e.key in [K_LCTRL, K_RCTRL] and not True in buttons:
+                if e.key in [K_LCTRL, K_RCTRL] and not True in buttons \
+                   and not in_toolbars and config.tool_selected in ["dot","draw"]:
                     config.dropper = True
                     config.clear_pixel_draw_canvas()
             if config.dropper and not config.xevent.is_key_down([K_LCTRL, K_RCTRL]) and not True in buttons:
                 config.dropper = False
-                config.clear_pixel_draw_canvas()
+                config.pick_canvas = None
                 if e.type != MOUSEBUTTONUP:
                     self.doKeyAction(curr_action)
             if config.dropper:
-                config.clear_pixel_draw_canvas()
-                cx,cy = self.get_mouse_pixel_pos(e)
-                color = config.pixel_canvas.get_at_mapped((cx,cy))
-                if buttons[0]:
-                    config.color = color
-                elif buttons[2]:
-                    config.bgcolor = color
-                config.cursor.shape = config.cursor.DROPPER
-                config.draw_rgb_dropper((cx,cy), color)
+                if in_toolbars or config.menubar.menus_on:
+                    config.pick_canvas = None
+                else:
+                    cx,cy = self.get_mouse_pixel_pos(e)
+                    color = config.pixel_canvas.get_at_mapped((cx,cy))
+                    if buttons[0]:
+                        config.color = color
+                    elif buttons[2]:
+                        config.bgcolor = color
+                    config.cursor.shape = config.cursor.PICK
+                    config.draw_rgb_dropper(mouseXY, color)
 
             #process keyboard mouse clicks
             if e.type == KEYDOWN:

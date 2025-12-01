@@ -23,6 +23,7 @@ class cursor:
     UP_DOWN=7
     BUSY=8
     NORMALTO=9
+    PICK=10
     def __init__(self, screen, scaleX, scaleY, config, cursor_images):
         self.shape = 0
         self.visible = True
@@ -44,6 +45,7 @@ class cursor:
         self.center.append((9,9))
         self.center.append((9,9))
         self.center.append((7,11))
+        self.center.append((1,1))
         self.center.append((1,1))
 
     def draw(self):

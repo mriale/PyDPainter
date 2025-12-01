@@ -2068,8 +2068,9 @@ class PalGadget(ToolGadget):
             super(PalGadget, self).draw(screen, font, offset)
 
     def pick_color(self):
-        config.cursor.shape = config.cursor.DROPPER
+        config.cursor.shape = config.cursor.PICK
         config.clear_pixel_draw_canvas()
+        config.toolbar.tip_canvas = None
         config.recompose()
         color_picked = False
         first_time = True
@@ -2104,6 +2105,7 @@ class PalGadget(ToolGadget):
             config.recompose()
             first_time = False
 
+        config.pick_canvas = None
         config.clear_pixel_draw_canvas()
 
 

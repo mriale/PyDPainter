@@ -276,7 +276,7 @@ def palette_req(screen):
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
 :|:|:|:|:|:| ######
-_______[Pick]^^ A^^
+_______[\x01RGB]^^ A^^
 [Spread]   [Ex~Copy]
 [Range][1~2~3~4~5~6]
 Speed---------000^^
@@ -390,6 +390,16 @@ Speed---------000^^
             config.pal = list(backuppal)
             config.set_all_palettes(config.pal)
 
+        if color_action == CA_PICK:
+            x1,y1 = config.get_mouse_pixel_pos(event, ignore_req=True)
+            rgb = config.layers.get_at((x1,y1))[0:3]
+            mouseXY = config.get_mouse_pointer_pos(event)
+            x,y = mouseXY
+            if x < rx or y < ry or x > rx+rw or y > ry+rh:
+                config.draw_rgb_dropper(mouseXY, rgb)
+            else:
+                config.pick_canvas = None
+
         #Get color from pixel canvas
         if event.type == MOUSEBUTTONUP and event.button == 1:
             config.stop_cycling()
@@ -449,7 +459,7 @@ Speed---------000^^
                     from_color = color
                     color_action = CA_RANGE
                     config.cursor.shape = config.cursor.NORMALTO
-                elif ge.gadget.label == "Pick":
+                elif ge.gadget.label == "\x01RGB":
                     from_color = color
                     color_action = CA_PICK
                     config.cursor.shape = config.cursor.DROPPER
