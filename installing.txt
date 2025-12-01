@@ -11,25 +11,23 @@ Or type this from the command prompt:
 
   python -m pip install -r requirements.txt
 
-For Mac OS X:
+For Mac OS:
 
 On the Mac it is advised to install a separate version of Python from your system version using Brew. Brew is a package manager that keeps packages separate from your System Packages and Application.
 
 To install Python, open Terminal.
 
  1. Update Brew - brew update && brew upgrade
- 2. brew install python
- 3. brew install git
- 4. brew install python-tk
- 5. cd ~
- 6. mkdir PythonApps
- 7. cd PythonApps
- 8. git clone https://github.com/mriale/PyDPainter/
- 9. cd PyDPainter
-10. python3 -m venv .venv
-11. source .venv/bin/activate
-12. pip install -r requirements.txt
-13. python3 PyDPainter.py
+ 2. brew install python git python-tk cmake sdl2_image sdl2_mixer sdl2_ttf
+ 3. cd ~
+ 4. mkdir PythonApps
+ 5. cd PythonApps
+ 6. git clone https://github.com/mriale/PyDPainter/
+ 7. cd PyDPainter
+ 8. python3 -m venv .venv
+ 9. source .venv/bin/activate
+10. pip install -r requirements.txt
+11. python3 PyDPainter.py
 
 
 For Ubuntu, type this from the terminal:
