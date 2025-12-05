@@ -1,10 +1,12 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-import os.path, colorsys
+import os.path, colorsys, re
 
 import libs.gadget
 from libs.gadget import *
+
+from libs.clipboard import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -246,6 +248,8 @@ def rgb_to_hex(rgb):
     return hex(rgb[0]*256*256 + rgb[1]*256 + rgb[2])[2:].zfill(6)
 
 def hex_to_rgb(hexstr):
+    if len(hexstr) == 3:
+        hexstr = hexstr[0] + hexstr[0] + hexstr[1] + hexstr[1] + hexstr[2] + hexstr[2]
     try:
         r = int("0x" + hexstr[0:2], 16)
         g = int("0x" + hexstr[2:4], 16)
@@ -419,6 +423,25 @@ Speed---------000^^
                     elif not config.inside_toolbars(config.all_toolbars, (x,y)):
                         color = config.pixel_canvas.get_at_mapped((x1,y1))
                     set_to_color(color)
+
+        #Handle pasting of RGB values
+        if event.type == KEYDOWN and ((event.mod & KMOD_CTRL and event.key == K_v) or (event.mod & KMOD_SHIFT and event.key == K_INSERT)):
+            clipboard_text = clipboard_get_text()
+            matches = re.search(r"([0-9a-fA-F]{3,6})", clipboard_text)
+            if matches:
+                rgb = hex_to_rgb(matches.group(1))
+                if rgb == None:
+                    strg.value = rgb_to_hex(get_rgb_sliders(rg, gg, bg))
+                    strg.need_redraw = True
+                else:
+                    set_rgb_sliders(rgb, rg, gg, bg)
+                    rgb = get_rgb_sliders(rg, gg, bg)
+                    set_hsv_sliders(rgb, hg, sg, vg)
+                    strg.value = rgb_to_hex(rgb)
+                    strg.need_redraw = True
+                    config.pal[color] = rgb
+                    config.pal = config.quantize_palette(config.pal, config.color_depth)
+                    config.set_all_palettes(config.pal)
 
         #Get color from toolbar palette
         if event.type == MOUSEBUTTONDOWN and event.button == 1:

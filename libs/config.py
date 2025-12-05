@@ -8,6 +8,7 @@ Implement the global area of PyDPainter
 import sys, math, os.path, random, colorsys, platform, re, datetime
 import argparse
 
+from libs.clipboard import *
 from libs.colorrange import *
 from libs.cursor import *
 from libs.displayinfo import *
@@ -196,7 +197,7 @@ class pydpainter:
         #initialize system
         self.dinfo = pygame.display.Info()
         self.initialize()
-        clipboard_init()  # tools.clipboard_init()
+        clipboard_init()  # clipboard.clipboard_init()
 
         #load picture if recovered
         if do_recover != "":
