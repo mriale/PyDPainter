@@ -633,6 +633,7 @@ Speed---------000^^
             req.draw(screen)
             config.recompose()
     config.pixel_req_rect = None
+    config.pick_canvas = None
 
     config.truepal = list(config.pal)
     config.pal = config.unique_palette(config.pal)
