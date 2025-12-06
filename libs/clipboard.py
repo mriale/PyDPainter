@@ -33,11 +33,12 @@ def clipboard_get_text():
     else:
         # pygame
         for t in pygame.scrap.get_types():
-            if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
+            if "text/plain" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
                 if is_win:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le")  # under windows its utf16-le! and null terminated..
+                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le", "ignore")  # under windows its utf16-le! and null terminated
                 else:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-8")
+                    clipboard_text = pygame.scrap.get(t).decode("utf-8", "ignore")
+                break
         if clipboard_text:
             if clipboard_text.endswith('\x00'):
                 clipboard_text = clipboard_text[:-1]
