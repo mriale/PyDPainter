@@ -83,19 +83,18 @@ Now, deleting (either with the drawing tools and the right mouse button) or the 
 
 ## Better than painting? Animpainting!
 
-To activate, hold down the `Left-Windows` key or the `Left-Command` key on the Mac before you drag out a line or draw with a tool. When you let go of the mouse button, the brush will be stamped on successive frames.
+To activate, hold down the `Alt` key or the `Left-Command` key on the Mac before you drag out a line or draw with a tool. When you let go of the mouse button, the brush will be stamped on successive frames.
 
 *Tips: Press **Shift-B** or* `Brush/Restore` *menu to recall the last ball... er brush.*
 
 Let's try!
 1. Hit the Dot drawing tool.
 2. Check you're at frame 1/100.
-3. Hold down the Animpainting key (`Left-Windows` or `Left-Command`).
+3. Hold down the Animpainting key (`Alt` or `Left-Command`).
 4. Move the ball around the screen, holding down the left mouse button as if it were the trajectory you wanted it to follow.
 5. Then Release everything.
-6. Exit the PC Windows menu if it was triggered. Click into the PyDPainter windows.
-7. Rewind and admire your animation skills!
-8. Clear the animation and start again. 
+6. Rewind and admire your animation skills!
+7. Clear the animation and start again. 
 
 Move the ball around the screen, clicking repeatedly with the left mouse button along the trajectory you want it to follow.
 
@@ -103,9 +102,13 @@ You can also try drawing by holding down the left mouse button and dragging, but
 
 Have a little fun, then let's move on to the next step, which brings a little more control for more realistic trajectories.
 
+Hit the Clear ![img](../../../tools/src/t-clr.png) tool, **All Frames** to erase your animation test. Recall your ball brush with `SHIFT B` or reload it.
+
 ## Linear and curved trajectories.
 
 Remember, Animpainting works for all dot and line-based tools (except airbrush). It also automatically adjusts to the number of frames if you have the **spacing option** set to **continuous**.
+
+
 
 Select the Line tool.![](../../../tools/src/t-line.png)
 
@@ -113,10 +116,10 @@ Now the ball will follow the straight line you're about to draw.
 
 1. Start from frame 1.<br>
 *It's not required, but if you start from frame 25, the animpainting will loop and continue after 100 from 1 to 24.*
-2. Press the Animpainting key (remember `Left-Windows` key or the `Left-Command` key on the Mac).
-3. Draw a line from the far left to the right of the screen.
-4. Release the key.
-5. Play and enjoy!
+1. Press the Animpainting key (remember `Alt` key or the `Left-Command` key on the Mac).
+2. Draw a line from the far left to the right of the screen.
+3. Release the key.
+4. Play and enjoy!
 
 ### Faster ?
 
@@ -124,7 +127,7 @@ The result is slow. Why? We're at 20 fps (frame per second). Click on the clock 
 ![](anim-rate.jpg)
 This means that with a path of 100 frames, our ball takes 5 seconds to pass through the screen (100/20=5).
 
-Go to the **Spacing** options of the Line tool (right-click on the icon). 
+Go to the **Spacing** options of the Line tool (right-click on the icon). *Ok, it's now **Brush Trails**.*
 Change to **N total** 20.
 ![](n-spacing.jpg)
 
@@ -133,11 +136,17 @@ This means that our trajectory will be drawn with 20 "points" / balls and theref
 ![](7-linear-20.jpg)
 1. Start from frame 1.
 2. Hit **F10** three times to hide the right toolbar.
-2. Press the Animpainting key (remember `Left-Windows` key or the `Left-Command` key on the Mac).
+2. Press the Animpainting key (remember `Alt` key or the `Left-Command` key on the Mac).
 3. Draw a line from the far left to the right of the screen. 
 4. Release the Animpainting key.
 5. Hit **F10** to have the animbar again on screen.
 5. Play the animation!
+
+### Ease In and Out
+You can now use the new [Brush Trails](../../../tools/src/brushtrails.md#ease-inout) option to **Ease In** or **Out** the movement. For examples, a **Ease In** of **2** will slower the ball speed at the beginning and make it accelerating.
+![alt text](ease-ex-1.gif)
+
+Feel free to erase and try again to experiment.
 
 ### Let's bounce!
 
@@ -152,7 +161,7 @@ This time we want a 3-part trajectory:
 
 We want to "simulate" a ball, i.e. a curved trajectory. Click on the Curve tool.
 
-We'll therefore divide the animation into 3 parts of 33 frames each (100/3). In the **Spacing** options, set the **N total** to 33.
+We'll therefore divide the animation into 3 parts of 33 frames each (100/3). In the **Spacing** now **Brush Trails** options, set the **N total** to 33.
 
 Starting at frame 1. In 3 curved traces, try to make this trajectory according to this model (I've made it as a drawing so you can see my curves).
 ![](bounces.jpg)
@@ -183,11 +192,11 @@ Animation file (Go to **Anim / Save...**). Fille a filename and choose one of th
 ![](save-anim-gif.jpg)
 
 You can also export all frames at once as a succession of numbered images, and this automatically.
-Go to **Anim / Frames / Export...** Then type a file name and choose one of the image formats supported by PyDPainter in the small drop-down menu on the right.
+Go to **Anim / Frames / Export...** Then type a file name and choose one of the image formats supported by PyDPainter in the small drop-down menu on the right. Add a .anim5 or .gif suffix to your filename if needed.
 
 ![](export-frames.jpg)
 
-***Note that saving an animation does not preserve the sources of the entire project, remember to save the brushes used (as Brush) or the background and spare screen (as Picture).***
+*Note that saving an animation does not preserve the sources of the entire project, remember to save the brushes used (as Brush) or the background and spare screen (as Picture).*
 
 ## Other drawing tools
 
