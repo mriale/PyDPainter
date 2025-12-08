@@ -2560,7 +2560,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             a3d[:,:,0] *= a
             a3d[:,:,1] *= b
             a2d = np.zeros((w,h), dtype=int)
-            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1] + 65536
+            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1] + 65537
 
             z_index = np.equal(surf_array, 0)
             if np.size(z_index) == 0:
