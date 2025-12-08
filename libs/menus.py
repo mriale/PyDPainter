@@ -758,7 +758,7 @@ class DoBrushSet0(MenuAction):
         else:
             return False
 
-class DoBrushShear(MenuAction):
+class DoBrushShearX(MenuAction):
     def selected(self, attrs):
         if config.brush.type != Brush.CUSTOM:
             return
@@ -766,7 +766,7 @@ class DoBrushShear(MenuAction):
         sx, sy = (0,0)
         ow,oh = config.brush.image_orig.get_size()
         w,h = config.brush.image.get_size()
-        config.cursor.shape = 6
+        config.cursor.shape = config.cursor.LEFT_RIGHT
         config.clear_pixel_draw_canvas()
         config.brush.size = config.brush.size
         config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
@@ -829,6 +829,86 @@ class DoBrushShear(MenuAction):
                 if prevy != coord[1]:
                     shearimage.blit(config.brush.image, (imgXoffset+coord[0],coord[1]), area=(0,coord[1],w,1))
                     prevy = coord[1]
+            config.brush.image = shearimage.copy()
+            config.brush.image_orig = shearimage.copy()
+            config.brush.aspect = 1.0
+            config.brush.handle_type = config.brush.CENTER
+            config.brush.rotate = 0
+            config.brush.size = shearimage.get_height()
+
+        config.doKeyAction()
+
+class DoBrushShearY(MenuAction):
+    def selected(self, attrs):
+        if config.brush.type != Brush.CUSTOM:
+            return
+
+        sx, sy = (0,0)
+        ow,oh = config.brush.image_orig.get_size()
+        w,h = config.brush.image.get_size()
+        config.cursor.shape = config.cursor.UP_DOWN
+        config.clear_pixel_draw_canvas()
+        config.brush.size = config.brush.size
+        config.brush.draw(config.pixel_canvas, config.color, config.get_mouse_pixel_pos(ignore_grid=True))
+        config.recompose()
+        imgXoffset = 0
+        shearimage = config.brush.image.copy()
+        clist = drawline(config.pixel_canvas, 1, (0,0), (0,h), coordsonly=True)
+        first_time = True
+        wait_for_mouseup = 1 + pygame.mouse.get_pressed()[0]
+        while wait_for_mouseup:
+            event = config.xevent.poll()
+            while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
+                #get rid of extra mouse movements
+                event = config.xevent.poll()
+
+            if event.type == pygame.NOEVENT and not first_time:
+                event = config.xevent.wait()
+
+            mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            if event.type == MOUSEMOTION:
+                config.clear_pixel_draw_canvas()
+                if event.buttons[0] and wait_for_mouseup:
+                    yoffset = mouseY - my
+                    shearimage = pygame.Surface((w, h+abs(yoffset)),0, config.pixel_canvas)
+                    shearimage.set_palette(config.pal)
+                    shearimage.set_colorkey(config.brush.bgcolor)
+                    shearimage.fill(config.brush.bgcolor)
+                    clist = drawline(config.pixel_canvas, 1, (0,0), (w,yoffset), coordsonly=True)
+                    if yoffset < 0:
+                        imgYoffset = -yoffset
+                    else:
+                        imgYoffset = 0
+                    prevx = -1
+                    for coord in clist:
+                        if prevx != coord[0]:
+                            shearimage.blit(config.brush.image, (coord[0],imgYoffset+coord[1]), area=(coord[0],0,1,h))
+                            prevx = coord[0]
+
+                    config.pixel_canvas.blit(shearimage, (sx-w//2,sy-h//2-imgYoffset))
+                    config.menubar.title_right = "%d"%(yoffset)
+                else:
+                    config.pixel_canvas.blit(shearimage, (mouseX-w,mouseY-h))
+            elif event.type == MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    sx, sy = (mouseX-w//2, mouseY-h//2)
+                    my = mouseY
+            elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
+                if event.button == 1:
+                    wait_for_mouseup -= 1
+
+            config.recompose()
+            first_time = False
+
+        config.menubar.title_right = ""
+
+        for frame_no in config.brush:
+            shearimage.fill(config.brush.bgcolor)
+            prevx = -1
+            for coord in clist:
+                if prevx != coord[0]:
+                    shearimage.blit(config.brush.image, (coord[0],imgYoffset+coord[1]), area=(coord[0],0,1,h))
+                    prevx = coord[0]
             config.brush.image = shearimage.copy()
             config.brush.image_orig = shearimage.copy()
             config.brush.aspect = 1.0
@@ -1588,7 +1668,8 @@ def init_menubar(config_in):
                 ["Right 1\xB0", "0", DoBrushRotateRight],
                 ["Left 1\xB0", "9", DoBrushRotateLeft],
                 ["Set to 0\xB0", "shift-0", DoBrushSet0],
-                ["Shear", " ", DoBrushShear],
+                ["Shear X", " ", DoBrushShearX],
+                ["Shear Y", " ", DoBrushShearY],
                 ]],
             ["Change Color", [
                 ["BG -> FG", " ", DoBrushBG2FG],
