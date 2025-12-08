@@ -156,11 +156,17 @@ A reminder in degrees of the current rotation is displayed in the menu bar. It w
 Reset the brush rotation to 0° (as grabbed, or loaded)
 `shift 0`
 
-### Shear
+### Shear X
 
 Slant the brush horizontally with the mouse. _Think italics!_
 
 ![](shear.png) ![](shear2.png) 
+
+### Shear Y
+
+Slant the brush vertically with the mouse.
+
+![](shear_y.png) ![](shear_y2.png)
 - - -
 
 ## Change Color
