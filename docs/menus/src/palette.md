@@ -1,20 +1,22 @@
 # Color Palette
-
 ![Palette](palette.png)
 
-- [Overall principles](#overall-principles)
-- [RGB values](#rgb-values)
-- [HSV values](#hsv-values)
-- [Hex (web) values](#hex-web-values)
-- [Pick (color)](#pick-color)
-- [Palette index nav](#palette-index-navigation)
-- [Spread](#spread)
-- [Ex (Exchange)](#ex-exchange)
-- [Copy](#copy)
-- [Range](#range)
-- [1 to 6 range selector](#126-range-selector)
-- [Speed](#speed)
-- [Up/Down range](#updown-range)
+- [Color Palette](#color-palette)
+  - [Overall principles](#overall-principles)
+  - [RGB values](#rgb-values)
+  - [HSV values](#hsv-values)
+  - [Hex (web) values](#hex-web-values)
+  - [Pasting color values](#pasting-color-values)
+  - [RGB Pick](#rgb-pick)
+  - [Palette index navigation](#palette-index-navigation)
+  - [Spread](#spread)
+  - [Ex (Exchange)](#ex-exchange)
+  - [Copy](#copy)
+  - [Range](#range)
+  - [1,2,...6 range selector](#126-range-selector)
+  - [Speed](#speed)
+    - [Cycle speed preview](#cycle-speed-preview)
+  - [Up/Down range](#updown-range)
 
 ## Overall principles
 
@@ -45,15 +47,14 @@ RGB stands for "Red, Green, Blue". It's as if you had three magical friends who 
 ![](RGB-palette-3D.jpg)  
 *3D rendition of 3 color spots. Notice that pure blue looks darker than pure red or pure green.*
 
-PyDPainter's sliders represent the intensity of these three lights, from 0 at the bottom, to 16 at the top (4096 colors) or up to 256 in AGA (16M colors).
-
+**PyDPainter**'s sliders represent the intensity of these three lights, from 0 at the bottom, to 16 at the top (4096 colors) or up to 256 in AGA (16M colors).
 
 ## HSV values
-The H S V system is more intuitive for painters used to the color wheel.  
+The HSV system is more intuitive for painters used to the color wheel.  
 ![](HSV.PNG)  
 *H is the rainbow, S fades to white, then V darkens to black.*  
 
-`H` is the hue, i.e. the brightest color around the color wheel. It starts at the bottom from red to orange, yellow, green, blue, violet, and up to red again, including all the colors of the rainbow. `S` is saturation, the transition from pure color to white, via more subtle, desaturated colors. Finally, `V` is value, which darkens the color more and more until it reaches black. *Of course, nowadays software can display a nice color wheel, but in that era, the number of colors on screen was limited.*
+`H` is the **hue**, i.e. the brightest color around the color wheel. It starts at the bottom from red to orange, yellow, green, blue, violet, and up to red again, including all the colors of the rainbow. `S` is **saturation**, the transition from pure color to white, via more subtle, desaturated colors. Finally, `V` is **value**, which darkens the color more and more until it reaches black. *Of course, nowadays software can display a nice color wheel, but in that era, the number of colors on screen was limited.*
 
 ## Hex (web) values
 
@@ -62,23 +63,29 @@ Hexadecimal values are used in color coding for the web (html, CSS, etc.). It's 
 Each pair of numbers or letters represents a color component.
 
 For example, the hexadecimal code "#FF0000" represents the color red. "FF" means that the red component is at its maximum, and the other two components (green and blue) are at zero.
+
 ![](hex-colors.png)
 
 This field accepts direct typing of these values.
-
+![](hexfield.png)
 *If you want to see anytime the hexadecimal value of a color, simply stop the mouse on the color, and the #hex and RGB values will be displayed at the bottom of the yellow tooltip.*
 
+## Pasting color values
+PyDPainter 2.2.1 allows the clipboard paste to color palette. It works for hex numbers and ignores extra characters. It also works with 6 hex digits for 24 bit color (ex: #FFCC06 or FFCC06) or 3 hex digits for 12 bit color (ex: B81). See [this page](https://borderleft.com/toolbox/hex/) for visual reference. You don't have to be in the color text field for `CTRL-v` and `SHIFT-INSERT` to work.
 
-## Pick (color)
-`Pick` activates the color picker to fetch a color value from the screen into the current slot. When you click the `Pick` button, the cursor changes to a pipette. Move the cursor to the color you want to grab and click the left mouse button to pick the color under the pipette.  
-
+## RGB Pick
+![RGB](rgb-pick-button.png)
+This button, previously `Pick` in older version, activates the color picker to fetch a color value from the screen into the current slot. When you click it, the cursor changes to a pipette.
 ![](pick-cursor.png)
+Move the cursor to the color you want to grab and click the left mouse button to pick the color under the pipette.  
 
-*Tip: This only works in the PyDPainter canvas (not on the user interface). If you need to reproduce the colors of a reference photo, you can load it as a reference in the `Effect/Background/Open` menu, and `Color Pick` will allow you to build a palette from that picture.*
+![](new-pick-color.jpg)
+
+*Tip: This only works in the PyDPainter canvas (not on the user interface). It's designed to reproduce the colors of a reference photo. You can load it as a reference in the `Effect/Background/Open` menu, and `Color Pick` will allow you to build a palette from that picture.*
 
 ## Palette index navigation
 For screen formats greater than 32 colors, the arrows `<-A->`allow you to navigate through the other colors. To help you find your way around, the index displays a letter from `A` to `H` (8 pages for up to 256 colors).
-
+![palette nav](palette-nav-a.png)
 *Please note that you can use these arrows to fetch a color location in the middle of a gradient creation, swap or color copy operation.*
 
 ## Spread
@@ -92,6 +99,7 @@ The gradient is created, very "mathematically", by a uniform color transition.
 
 ## Ex (Exchange)
 Swap two color slots. Click on the first color, click on the `Ex` button, the mouse pointer changes to a red "to" arrow, then the second color. The exchange takes place instantly.
+![Ex button](ex-copy.png)
 
 *Tip: This is very useful for reorganizing a palette resulting from a picture import/conversion. The colors may all be there, but color gradients may not be arranged sequentually, making it impossible to use powerful PyDPainter [Modes](mode.md) and gradients.*
 
@@ -101,7 +109,7 @@ Copies a color to another location (**overwriting it**). Click on the color to b
 *Tip: You don't want to keep two copies of the same color and waste a slot unless you are using color cycling to animate something.*
 
 ## Range
-A `range` is a sequence of colors that allows you to use advanced drawing modes such as [Shade](mode.md#shade), [Cycle](#cycle), etc. and gradient fills. 
+A `range` is a sequence of colors that allows you to use advanced drawing modes such as [Shade](mode.md#shade), [Cycle](mode.md#cycle), etc. and **gradient fills**. 
 
 To define a range. *First order your colors by adjusting the sliders and using the Ex, Copy and Spread tools.* Select a range slot between `1` and `6` *(see below)*.  Click on the first color, then click on `Range`, and finally choose the last color you want in your selection (min 2). A kind of white bracket surrounds the colors of the range. Each time, the previous Range is replaced by this one. If you've made a mistake, just start again.
 
@@ -116,17 +124,18 @@ You have 6 ranges at your disposal. Click on the button to display the correspon
  
 ## Speed
 Sets the speed of color cycling within a `Range`. You can directly enter a numerical value or use the horizontal slider. 0 is no color cycle. Values between 1 and 60 are the number of color which changes per second. A value of 1 mean only one color of the range shifts per second. The higher the value, the faster the cycling.
-
+![cycle bar](cycle-bar.png)
 ### Cycle speed preview
 If you hold down the horizontal slider, a preview of all color cycles is displayed. 
 
-*Tip: To display this color cycle outside the Palette window, press the `TAB` key.*
+*Tip: To display this color cycle outside the Palette window, press the* `TAB` *key. Or use* `Picture/Change color/Cycle` *menu*
 
 ## Up/Down range
+![arrow](arrow.png)
 This arrow defines the direction of the color cycling, as well as the gradients of the selected range. Click to change direction.  
 
 ![](range-dir.png)
 
 *Tip: the up/down direction is symbolic; the gradient direction is defined in the gradient parameters of any `Fill Type`.*
 
-###### Documentation written by Stephane Anquetil
+Documentation written by Stephane Anquetil
