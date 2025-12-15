@@ -18,9 +18,9 @@ Table of Contents
 ### Tools
 
 - [Toolbox](tools/src/toolbox.md)
-- [Fill Type](tools/src/fill.md)
-- [Brush Trails –formerly Spacing](tools/src/brushtrails.md) <new>*new!*</new>
-  
+- [Fill Type](tools/src/fill.md) <new>*new types !*</new>
+- [Brush Trails –formerly Spacing](tools/src/brushtrails.md) <red>*updated*</red>
+
 ### Menus
 
 - [Picture](menus/src/picture.md)
@@ -28,14 +28,15 @@ Table of Contents
 - [Mode](menus/src/mode.md)
 - [Anim](menus/src/anim.md)
 - [Effect](menus/src/effect.md)
-- [Prefs](menus/src/prefs.md) <red>*updated*</red>
-
+- [Prefs](menus/src/prefs.md)
+- [Palette](menus/src/palette.md) <red>*updated*</red>
+  
 ### Tutorials
 
 - [Cloud and Noise Tutorial](tutorials/src/clouds/Clouds.md)
 - [Plasma Texture Tutorial](tutorials/src/plasma/Plasma.md)
 - [Planet Tutorial](tutorials/src/planet/Planet.md)
 - [Galaxy Tutorial](tutorials/src/galaxy/Galaxy.md)
-- [Anim Painting Tutorial "Bouncing balls"](tutorials/src/animpainting/animpainting.md)
+- [Anim Painting Tutorial "Bouncing balls"](tutorials/src/animpainting/animpainting.md) <red>*updated*</red>
 - [Anim Brush Tutorial "Sparkling Stars"](tutorials/src/animbrush/animbrush.md)
-- [Anim Brush Trails "Moving Amiga text"](tutorials/src/move/move.md) <new>*new!*</new>
+- [Anim Brush Trails "Moving Amiga text"](tutorials/src/move/move.md) 
