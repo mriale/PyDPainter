@@ -383,7 +383,8 @@ If you right-click on the text tool, you'll access text options, including choos
 **AA** is depressed by default, for **anti-aliasing**. For a more pixelated effect, remove it. Please note that "bitmap" fonts are no longer a common standard, so don't hesitate to install some fonts on your system from these sites:
 
 * [Workbench Topaz](https://www.sblendorio.eu/Misc/TopazFont)
-* [Bitmap on Dafont](https://www.dafont.com/bitmap.php)
+* [Damien Guard fixed fonts](https://damieng.com/typography/)
+* [Bitmap category on Dafont](https://www.dafont.com/bitmap.php)
 * [Fontstruct](https://fontstruct.com/gallery/tag/707/Amiga?category=any)
 
 Note the approximate height, and enter it in the **"Size"** field. 8 is a good default size for legacy bitmap fonts.
@@ -445,13 +446,16 @@ There are two symmetry modes : **[Point](#point-symmetry)** and **[Tile](#tile-s
 
 #### Order
 
-You can lower the **Order value to 1** with **Mirror** on to retain a basic mirror function. The left and right parts of the screen will be copied as a mirror erected vertically in the center of the screen.  
+You can lower the **Order value to 1** with **Mirror** on to retain a basic mirror function. The left and right parts of the screen will be copied as a mirror erected vertically in the center of the screen.
+![mirror](sym-mirror-ex.png)  
 
 An **Order of 2** imitates a paper folded into 4, like the Rorschach tests.
 
 **Cyclic symmetries** of order 2 to 7, especially the odd values, once offset from the center of the screen, let you effortlessly draw bold natural shapes, such as flowers, an impact on the ground, the cracks in a window, a tunnel narrowing...
+![mirror](sym-5-ex.png)  
 
-Values of 5 and above, used with the Line tool and a little practice, will help you draw regular polygons or stars.
+Values of 5 and above, used with the Line or Curve tool and a little practice, will help you draw regular polygons, stars, helix, screw…
+![](sym-5-line-ex.png)
 
 The maximum is 99, which may sound crazy, but allows for some very amusing variations on the circle design.
 
@@ -544,7 +548,7 @@ All drawing tools can use this color to ERASE or as a secondary color using the 
 That means the [Brush](#brush-tool) tool use this black as transparency by default. It's not mandatory, you can SELECT another color RIGHT clicking anywhere on the palette below. Pink can be the transparency color, preserving all black pixel to be transparent in a new brush grabbing.
 
 ### Pick color
-You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). You'd better use one of thoses short key: `,` or `Ctrl` 
+You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). While using a drawing tool, you'd better learn this short key: `,`. We add the shortkey `Ctrl` to pick a color while in **Dot** or **Draw** tools for the convenience of PhotoShop and tablets users. 
 The mouse pointer change to an pipette with a information bubble displaying the current color rank and RGB valeurs in Hex.
 
 ![](pipette.png)
@@ -561,6 +565,9 @@ It open the **Palette** windows.
 - hit `P`
 
 ## Colors
-The colors are ranked from 0 to the max colors you define in the [Chosse Screen  Fromat requester](../../menus/src/screenformat.md). 32 colors slots a time. A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. A yellow bubble can display additionnal information, like rank and RGB values if Help bubbles are ON.
+The colors are ranked from 0 to the max colors you define in the [Chosse Screen  Fromat requester](../../menus/src/screenformat.md). A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. A yellow bubble can display additionnal information, like rank and RGB values if Help bubbles are ON.
+
+It display 32 colors slots a time. If you're using more, use the arrows bellow to browse through more colors (from A to H if 256 colors.)
+![](color-browse.png)
 
 ###### Documentation written by Stephane Anquetil
