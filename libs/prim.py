@@ -469,7 +469,7 @@ class Brush:
             # Create image same size as brush and draw poly into it
             polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
             primprops = PrimProps()
-            fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+            fillpoly(polyimage, 1, pl, handlesymm=False, interrupt=False, primprops=primprops)
 
             # Create numpy mask out of poly and apply to brush
             surf_array_poly = pygame.surfarray.pixels2d(polyimage)
