@@ -211,9 +211,19 @@ Dir Name: ______________________
 
 def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
     if config.sys_file_dialog and not config.fullscreen:
-        return file_req_system(screen, title, action_label, filepath, filename, filetype_list)
+        selected_file = file_req_system(screen, title, action_label, filepath, filename, filetype_list)
     else:
-        return file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
+        selected_file = file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
+
+    if len(selected_file) > 0:
+        #Check for file extension
+        if not re.fullmatch(r"^.*\.[^.]+$", selected_file):
+            if "Anim" in title:
+                selected_file = selected_file.rstrip(".") + ".anim"
+            else:
+                selected_file = selected_file.rstrip(".") + ".iff"
+
+    return selected_file
 
 def file_req_system(screen, title, action_label, filepath, filename, filetype_list=None):
     if filetype_list is None:
@@ -250,6 +260,10 @@ def file_req_system(screen, title, action_label, filepath, filename, filetype_li
     config.pixel_req_rect = None
     config.cursor.shape = old_shape
     config.cursor.visible = True
+
+    if len(filename) > 0:
+        newpath = os.path.dirname(filename)
+        config.filepath = newpath
 
     #Eat all events
     event = config.xevent.poll()
