@@ -215,7 +215,7 @@ def file_req(screen, title, action_label, filepath, filename, filetype_list=None
     else:
         selected_file = file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
 
-    if len(selected_file) > 0:
+    if len(selected_file) > 0 and action_label != "Open":
         #Check for file extension
         if not re.fullmatch(r"^.*\.[^.]+$", selected_file):
             if "Anim" in title:
