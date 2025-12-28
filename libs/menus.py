@@ -83,6 +83,7 @@ class DoDummy(MenuAction):
 
 class DoNew(MenuAction):
     def selected(self, attrs):
+        config.pick_canvas = None
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
@@ -116,6 +117,7 @@ class DoOpen(MenuAction):
         global progress_req
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
+        config.pick_canvas = None
         filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
@@ -138,6 +140,7 @@ class DoOpen(MenuAction):
 class DoSave(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.pick_canvas = None
         config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
         merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
@@ -156,6 +159,7 @@ class DoSave(MenuAction):
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
+        config.pick_canvas = None
         merge_config = copy.copy(config)
         merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
@@ -172,6 +176,7 @@ class DoRevert(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
+        config.pick_canvas = None
         filename = config.filename
         if filename != "":
             if config.modified_count >= 1:

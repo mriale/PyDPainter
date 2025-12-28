@@ -420,6 +420,8 @@ Speed---------000^^
                         color = from_color
                         config.set_all_palettes(config.pal)
                         config.cursor.shape = config.cursor.NORMAL
+                        color_action = 0
+                        config.pick_canvas = None
                     elif not config.inside_toolbars(config.all_toolbars, (x,y)):
                         color = config.pixel_canvas.get_at_mapped((x1,y1))
                     set_to_color(color)
