@@ -473,6 +473,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
+        self.menubar.menu_id("prefs").menu_id("ctrlpickoverride").checked = self.ctrl_pick_override
         self.menubar.hide_menus = self.hide_menus
 
         self.brush = Brush()
@@ -611,6 +612,7 @@ class pydpainter:
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
+            f.write("ctrl_pick_override=%s\n" % (self.ctrl_pick_override))
             f.close()
         except:
             pass
@@ -674,6 +676,8 @@ class pydpainter:
                         self.true_symmetry = True if vars[1] == "True" else False
                     elif vars[0] == "sys_file_dialog":
                         self.sys_file_dialog = True if vars[1] == "True" else False
+                    elif vars[0] == "ctrl_pick_override":
+                        self.ctrl_pick_override = True if vars[1] == "True" else False
             f.close()
             return True
         except:
@@ -817,6 +821,7 @@ class pydpainter:
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
         self.sys_file_dialog = False
+        self.ctrl_pick_override = False
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))
@@ -1899,11 +1904,14 @@ class pydpainter:
                 gotkey = False
                 if e.mod & KMOD_CTRL and (e.unicode == "+" or e.unicode == "="):
                     gotkey = True
+                    config.dropper = False
                     config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN)
                 elif e.mod & KMOD_CTRL and e.unicode == "-":
                     gotkey = True
+                    config.dropper = False
                     config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN, subtool=True)
                 elif e.mod & KMOD_CTRL and e.key == K_RETURN:
+                    config.dropper = False
                     config.perspective.do_mode()
                     gotkey = True
                 elif e.key == K_KP_ENTER:
@@ -2009,10 +2017,13 @@ class pydpainter:
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
+                    config.dropper = False
                     config.redo()
                 elif e.mod & KMOD_CTRL and e.key == K_z:
+                    config.dropper = False
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
+                    config.dropper = False
                     config.redo()
                 elif config.xevent.intl_backtick_press(e) == 1:
                     gotkey = True
@@ -2042,7 +2053,10 @@ class pydpainter:
             in_toolbars = config.inside_toolbars(config.all_toolbars, mouseXY)
             if e.type == KEYDOWN:
                 if e.key in [K_LCTRL, K_RCTRL] and not True in buttons \
-                   and not in_toolbars and config.tool_selected in ["dot","draw"]:
+                   and not in_toolbars \
+                   and (config.tool_selected in ["dot","draw"] \
+                        or (config.ctrl_pick_override and config.tool_selected in [
+                            "line","curve","fill","airbrush","rect","circle", "ellipse","poly"])):
                     config.dropper = True
                     config.clear_pixel_draw_canvas()
             if config.dropper and not config.xevent.is_key_down([K_LCTRL, K_RCTRL]) and not True in buttons:
@@ -2062,6 +2076,8 @@ class pydpainter:
                         config.bgcolor = color
                     config.cursor.shape = config.cursor.PICK
                     config.draw_rgb_dropper(mouseXY, color)
+            else:
+                config.pick_canvas = None
 
             #process keyboard mouse clicks
             if e.type == KEYDOWN:

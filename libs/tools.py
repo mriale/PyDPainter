@@ -174,6 +174,8 @@ class ToolDragAction(ToolAction):
         return False
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
@@ -479,6 +481,8 @@ class DoCurve(ToolSingleAction):
             self.move(coords)
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
@@ -840,6 +844,8 @@ class DoEllipse(ToolDragAction):
             self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
