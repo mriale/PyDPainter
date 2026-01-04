@@ -2008,6 +2008,26 @@ class pydpainter:
                     mouseX, mouseY = self.get_mouse_pixel_pos(e, ignore_grid=True)
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
+                elif e.key >= K_F1 and e.key <= K_F8 and e.mod & KMOD_SHIFT:
+                    gotkey = True
+                    if e.key == K_F1:
+                        config.fillmode.value = FillMode.PATTERN
+                    elif e.key == K_F2:
+                        config.fillmode.value = FillMode.SOLID
+                    elif e.key == K_F3:
+                        config.fillmode.value = FillMode.CIRCULAR
+                    elif e.key == K_F4:
+                        config.fillmode.value = FillMode.VERT_FIT
+                    elif e.key == K_F5:
+                        config.fillmode.value = FillMode.LINEAR
+                    elif e.key == K_F6:
+                        config.fillmode.value = FillMode.HORIZ_FIT
+                    elif e.key == K_F7:
+                        config.fillmode.value = FillMode.BOTH_FIT
+                    elif e.key == K_F8:
+                        config.fillmode.value = FillMode.SMOOTH
+                    config.menubar.indicators["fillmode"] = draw_fill_indicator
+                    draw_fill_indicator(None)
                 elif e.key == K_F10:
                     self.tool_visibility_state += 1
                 elif e.key == K_F11:
