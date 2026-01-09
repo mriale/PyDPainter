@@ -1620,7 +1620,7 @@ class pydpainter:
 
     def draw_rgb_dropper(self, cxy, color):
         cx,cy = cxy
-        bg = (255,255,0)
+        bg = (200,200,200)
         fg = (0,0,0)
         if isinstance(color, tuple):
             rgb = list(color)

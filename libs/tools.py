@@ -2056,7 +2056,8 @@ class PalGadget(ToolGadget):
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
             color_hover = config.pixel_canvas.get_at_mapped((mouseX,mouseY))
             config.clear_pixel_draw_canvas()
-            config.draw_rgb_dropper((mouseX,mouseY), color_hover)
+            mouseXY = config.get_mouse_pointer_pos(event)
+            config.draw_rgb_dropper(mouseXY, color_hover)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
                 if event.buttons[0]:
                     config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
