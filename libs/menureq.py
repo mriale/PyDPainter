@@ -2,6 +2,7 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import os.path, colorsys
+import textwrap
 
 from tkinter import filedialog as fd
 
@@ -1445,7 +1446,11 @@ def stencil_req(screen):
     return
 
 def question_req(screen, title, text, buttons, hotkeys=[]):
-    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
+    textlines = text.splitlines()
+    for i in range(len(textlines)):
+        textlines[i] = textwrap.fill(textlines[i], width=33)
+    wrapped_text = "\n".join(textlines)
+    dummy_text = re.sub(r'[^\n]', "A", wrapped_text) #replace text with "A"s so characters aren't interpreted
     all_text = dummy_text + "\n"
     for button_text in buttons:
         all_text += "[" + button_text + "]"
@@ -1454,7 +1459,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
           mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
     #Replace dummy text with actual text
-    textlines = text.splitlines()
+    textlines = wrapped_text.splitlines()
     textrow = 0
     for textline in textlines:
         labelg = req.gadget_id("0_%d" % (textrow))

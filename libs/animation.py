@@ -421,7 +421,7 @@ class Animation:
                 config.anim.show_curr_frame()
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req(str(ex), "Unable to open anim:\n%s", filename)
+                io_error_anim_req("Load Error", "Unable to open anim:\n%s\n" + str(ex), filename)
 
     def import_frames(self):
         global progress_req
@@ -443,9 +443,9 @@ class Animation:
                 config.filename = filename
                 config.modified_count = 0
                 config.anim.show_curr_frame()
-            except:
+            except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Load Error", "Unable to import frames:\n%s", filename)
+                io_error_anim_req("Load Error", "Unable to import frames:\n%s\n" + str(ex), filename)
 
     def export_frames(self):
         global progress_req
@@ -460,18 +460,21 @@ class Animation:
 
             self.first_frame()
             self.show_curr_frame(doAction=False)
-            for i in range(0, self.num_frames):
-                try:
+
+            error = ""
+            try:
+                for i in range(0, self.num_frames):
                     load_progress_anim(self.curr_frame / self.num_frames)
                     frame_filename = file_root + ("%04d"%i) + "." + file_ext
                     libs.picio.save_pic(frame_filename, config)
                     self.next_frame()
                     self.show_curr_frame(doAction=False)
-                except:
-                    close_progress_req(progress_req)
-                    io_error_anim_req("Load Error", "Unable to save frame:\n%s", frame_filename)
+            except Exception as ex:
+                error = str(ex)
 
             close_progress_req(progress_req)
+            if len(error) > 0:
+                io_error_anim_req("Save Error", "Unable to save frame:\n%s\n" + error, frame_filename)
 
     def save_file(self):
         global progress_req
@@ -489,9 +492,9 @@ class Animation:
                 config.filename = filename
                 config.modified_count = 0
                 config.anim.show_curr_frame()
-            except:
+            except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Load Error", "Unable to save anim:\n%s", filename)
+                io_error_anim_req("Save Error", "Unable to save anim:\n%s\n" + str(ex), filename)
 
     def handle_events(self, event):
         if event.type == KEYDOWN:
