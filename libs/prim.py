@@ -79,11 +79,11 @@ def start_shape():
     hlines = []
     vlines = {}
 
-def end_shape(screen, color, primprops=None, interrupt=False):
+def end_shape(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global vlines
-    drawhlines(screen, color, primprops=primprops, interrupt=interrupt)
+    drawhlines(screen, color, primprops=primprops, interrupt=interrupt, enable_recompose=enable_recompose)
     hlines = []
-    drawvlines(screen, color, primprops=primprops, interrupt=interrupt)
+    drawvlines(screen, color, primprops=primprops, interrupt=interrupt, enable_recompose=enable_recompose)
     vlines = {}
 
 def symm_coords_list(coords, handlesymm=True, interrupt=False):
@@ -469,7 +469,7 @@ class Brush:
             # Create image same size as brush and draw poly into it
             polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
             primprops = PrimProps()
-            fillpoly(polyimage, 1, pl, handlesymm=False, interrupt=False, primprops=primprops)
+            fillpoly(polyimage, 1, pl, handlesymm=False, interrupt=False, primprops=primprops, enable_recompose=False)
 
             # Create numpy mask out of poly and apply to brush
             surf_array_poly = pygame.surfarray.pixels2d(polyimage)
@@ -2476,7 +2476,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
     surf_array = None
 
 
-def drawhlines(screen, color, primprops=None, interrupt=False):
+def drawhlines(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global hlines
     if primprops == None:
         primprops = config.primprops
@@ -2606,7 +2606,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
         #Create mask of finished shape
         tfmask = np.not_equal(surf_array, 0)
@@ -2686,7 +2687,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
             #Scale image down again and convert to 8-bit
             smoothed_image = pygame.transform.smoothscale(big_image, (w,h))
@@ -2696,7 +2698,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if enable_recompose:
+                config.try_recompose()
 
         if primprops.fillmode.value == FillMode.SMOOTH:
             smooth_image(new_image)
@@ -2705,7 +2708,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if enable_recompose:
+                config.try_recompose()
 
         #Mask off shape and draw into screen
         surf_array = pygame.surfarray.pixels2d(i8)
@@ -2714,7 +2718,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         i8.set_colorkey(0)
         screen.blit(i8, (xo,yo))
 
-def drawvlines(screen, color, primprops=None, interrupt=False):
+def drawvlines(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global vlines
     if primprops == None:
         primprops = config.primprops
@@ -2793,7 +2797,8 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
 def drawxorcross(screen, x, y, step=1, offset=0):
     #don't draw if off screen
@@ -2951,7 +2956,7 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False, enable_recompose=True):
     n = len(coords)
     if n == 0:
         return
@@ -3016,14 +3021,16 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
                 hline(screen, color, miny, minx, maxx, primprops=primprops, erase=erase)
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
-        end_shape(screen, color, interrupt=interrupt)
+        end_shape(screen, color, interrupt=interrupt, enable_recompose=enable_recompose)
 
 
 def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False, erase=False):
