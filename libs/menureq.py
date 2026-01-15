@@ -57,7 +57,6 @@ def get_type(filename, filetype_list):
 
 def pick_file_type(screen, req, file_typeg, ext, filetype_list):
     retval = -1
-    req_backup = screen.copy()
     rx,ry,rw,rh = file_typeg.rect
     fontx = req.font.xsize
     fonty = req.font.ysize
@@ -91,7 +90,7 @@ def pick_file_type(screen, req, file_typeg, ext, filetype_list):
         config.recompose()
 
     req.gadgets.remove(pickg)
-    screen.blit(req_backup, (0,0))
+    req.need_redraw = True
     config.recompose()
     return retval
 
