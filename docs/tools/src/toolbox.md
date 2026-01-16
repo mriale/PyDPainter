@@ -147,7 +147,7 @@ and release the button to draw the line.
 Press the `SHIFT` key for a horizontal or vertical line constraint.
 
 This tool can be used in conjunction with custom Brushes and Modes.
-With the `CTRL` key held down, the tool leaves traces between the two clicks.
+With the `CTRL` key held down, the tool leaves traces between the two clicks. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 Key: `v`
 
@@ -207,16 +207,13 @@ Right-click tool or `F`to open [Fill](fill.md) type.
 
 ![](t-airbrush.png)
 
-By using the Airbrush in combination with the different
-brushes, you can create a variety of effects, ranging from a fine one-pixel
+By using the Airbrush in combination with the different brushes, you can create a variety of effects, ranging from a fine one-pixel
 spray to a coarse spray made with the big brushes.
 
-Click the Airbrush icon with the left button, and then try painting
-with it using the various brushes. Try it with the three- and five-pixel brushes, and then try it with the big
+Click the Airbrush icon with the left button, and then try painting with it using the various brushes. Try it with the three- and five-pixel brushes, and then try it with the big
 brushes.
 
-*Note that, just like a regular airbrush, if you keep the mouse
-button pressed without moving the mouse, the paint continues to build
+*Note that, just like a regular airbrush, if you keep the mouse button pressed without moving the mouse, the paint continues to build
 up in one spot.*
 
 Key: *no hotkey*
@@ -225,7 +222,7 @@ Right-click tool to resize nozzle size.
 
 Press the `SHIFT` key for a horizontal or vertical line constraint.
 
-Press the `CTRL` key to slow down the Airbrush flow rate.
+Press the `CTRL` key to slow down the Airbrush flow rate. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 ## Rectangle tool
 
@@ -246,7 +243,7 @@ Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key for a square drawing constraint.
 
-Press the `CTRL` key to draw rectangles on the fly as you move the mouse.
+Press the `CTRL` key to draw rectangles on the fly as you move the mouse. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 
 ## Circle tool
@@ -268,7 +265,7 @@ Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key to start with the next circle center on your last click.
 
-Press the `CTRL` key to draw circles on the fly as you move the mouse.
+Press the `CTRL` key to draw circles on the fly as you move the mouse. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 ## Ellipse tool
 
@@ -548,7 +545,7 @@ All drawing tools can use this color to ERASE or as a secondary color using the 
 That means the [Brush](#brush-tool) tool use this black as transparency by default. It's not mandatory, you can SELECT another color RIGHT clicking anywhere on the palette below. Pink can be the transparency color, preserving all black pixel to be transparent in a new brush grabbing.
 
 ### Pick color
-You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). While using a drawing tool, you'd better learn this short key: `,`. We add the shortkey `Ctrl` to pick a color while in **Dot** or **Draw** tools for the convenience of PhotoShop and tablets users. 
+You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). While using a drawing tool, you'd better learn this short key: `,`. We add the optional short-keys `Ctrl` to pick a color everywhere for the convenience of PhotoShop and tablets users. **Activate CTRL Pick Override** in  [Prefs menu](../../menus/src/prefs.md) to use it.
 The mouse pointer change to an pipette with a information bubble displaying the current color rank and RGB valeurs in Hex.
 
 ![](pipette.png)
