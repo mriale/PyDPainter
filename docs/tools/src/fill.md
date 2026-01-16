@@ -40,6 +40,8 @@ The options in the requester are explained in the following paragraphs.
 | ![solid fill](solid-fill-ex.png) |
 | :----: |
 | *Filled rectangle, filled circle, filled ellipse, filled polygon, and Fill tool.* |
+
+Key: `SHIFT-F2`
 ## Brush
 
 **Brush** fills with the current custom brush and sizes it to fit the filled area.
@@ -60,10 +62,12 @@ The options in the requester are explained in the following paragraphs.
 | :----: |
 | ***Brush*** *respects the original image of the brush.* ***Warp*** *gives interesting effects on rounded shapes. There are no predefined rules: it's up to you to experiment! You can try yourself loading this example file in:* `iff_pics/fill-wrap-comp-ex.iff` |
 
+Key: `SHIFT-F1`
+
 ## AntiAlias & Smooth
 
 The following two modes are new to **PyDPainter**:
-* **Smooth** allows you to use the drawing mode of the same name (that of the F8 key) with fill tools. It's a brutal softening, which can give interesting  effects (blur, textures).
+* **Smooth** allows you to use the drawing mode of the same name (that of the F8 key) with fill tools. It's a brutal softening, which can give interesting  effects (blur, textures). Key: `SHIFT-F8`
 * **AntiAliasing** is a more modern mode, which really smoothes the sharp borders of pixels. It's perfect for lettering, diagonal lines or softening the contrast.
 
 *Note that you need an existing design to have a visible effect.*
@@ -92,26 +96,38 @@ If you're smoothing red on a black background, but no dark red/brown color is av
 **Circular fill** paints the gradient as concentric circles, from center to borders with an even distribution without regard to the shape of the object.
 
 ![circular](gradient-fill-circular.png)
+
 You can adjust the center of circular dragging the crosshair. It can achieve a nice 3D "ball" effect.
 ![circular](3d-ball-fx.png)
 
+Key: `SHIFT-F3`
+
 ### Vertical Line
 **Vertical Line** fill paints the gradient top-to-bottom adjusting the gradient so that it follows the contours of the shape being filled.
+
 ![circular](gradient-fill-v-line.png)
+
+Key: `SHIFT-F4`
 ### Linear Fill
 **Linear fill** paints the gradient in a line, **according to the angle defined**, with an even distribution without regard to the shape of the object.
 
 ![](gradient-linear-fill.png)
 Introduced in PydPainter 2.1.1, the 2 square-shaped arrows above allows you to quickly rotate by 45° clockwise or anticlockwise. But you can rotate freely by 1° using the triangular arrow.
+Key: `SHIFT-F5`
 ### Horizontal Line
 **Horizontal Line** fill paints the gradient left-to-right adjusting the gradient so that it follows the contours of the shape being filled.
 
 ![](gradient-fill-h-line.png)
 
+Key: `SHIFT-F6`
+
 ### Vertical and Horizontal Fill 
 **Vertical and Horizontal** fill paints the gradient from the inside out adjusting the gradient so that it follows the contours of the shape being filled.
+
 ![](gradient-fill-hv-line.png)
+
 *The preview uses the shape of a circle, but remember that the fill tools can fill the whole screen and any type of shape.*
+Key: `SHIFT-F7`
 
 ## Gradient direction
 **New in PydPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the gradient orientation. Not the gradient up and down direction, but the order of the colors inside a range.
