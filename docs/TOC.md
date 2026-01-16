@@ -17,7 +17,7 @@ Table of Contents
 
 ### Tools
 
-- [Toolbox](tools/src/toolbox.md)
+- [Toolbox](tools/src/toolbox.md) <red>*updated*</red>
 - [Fill Type](tools/src/fill.md) <new>*new types !*</new>
 - [Brush Trails –formerly Spacing](tools/src/brushtrails.md) <red>*updated*</red>
 
