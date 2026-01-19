@@ -71,7 +71,7 @@ This field accepts direct typing of these values.
 *If you want to see anytime the hexadecimal value of a color, simply stop the mouse on the color, and the #hex and RGB values will be displayed at the bottom of the yellow tooltip.*
 
 ## Pasting color values
-PyDPainter 2.2.1 allows the clipboard paste to color palette. It works for hex numbers and ignores extra characters. It also works with 6 hex digits for 24 bit color (ex: #FFCC06 or FFCC06) or 3 hex digits for 12 bit color (ex: B81). See [this page](https://borderleft.com/toolbox/hex/) for visual reference. You don't have to be in the color text field for `CTRL-v` and `SHIFT-INSERT` to work.
+PyDPainter allows the clipboard to paste to the color palette. It works for hex numbers and ignores extra characters. It also works with 6 hex digits for 24 bit color (ex: #FFCC06 or FFCC06) or 3 hex digits for 12 bit color (ex: B81). See [this page](https://borderleft.com/toolbox/hex/) for visual reference. You don't have to be in the color text field for `CTRL-v` and `SHIFT-INSERT` to work.
 
 ## RGB Pick
 ![RGB](rgb-pick-button.png)

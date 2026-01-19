@@ -14,13 +14,12 @@ An active setting is preceded by a checkmark &check;.
   - [Force 1:1 Pixels](#force-11-pixels)
   - [True Symmetry](#true-symmetry)
   - [SysFileDialog](#sysfiledialog)
-  - [CTRL Pick Overide](#ctrl-pick-overide)
+  - [CTRL Pick Override](#ctrl-pick-override)
   - [Coords](#coords)
     - [Show](#show)
     - [Flip](#flip)
     - [1-based](#1-based)
   - [Save Config](#save-config)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 ## AutoTransp
 When this setting is on, PyDPainter ignores the current palette background color when grabbing a brush and uses instead the color of the 4 points at the corner of the brush capture rectangle.
@@ -74,8 +73,8 @@ By default, PyDPainter uses its own file requester, inspired by Deluxe Paint. If
 *Open Picture with the system file dialog on Linux*
 
 *Note: Because full screen mode (`F11`) takes over the screen, the system file dialog window can easily be lost behind the PyDPainter window with no easy way to get it back. Therefore, the SysFileDialog option will be ignored in full screen mode.*
-## CTRL Pick Overide
-Overide `CTRL` short-keys (both side) to use the new [Color Picker](../../tools/src/toolbox.md#pick-color) with `CTRL`  and `ALT` keys. This feature was requested by some users who are accustomed to using Photoshop. If activated, it means you loose the legacy **DPaint** features : "leave trails" on Line, Curves, Rectangle, Circle tools and to slow down Airbrush.
+## CTRL Pick Override
+Override `CTRL` keys (left or right) to use the new [Color Picker](../../tools/src/toolbox.md#pick-color) with the `CTRL` key. This feature is similar to the dropper tool in Photoshop or Gimp. If activated, it means you loose the legacy **Deluxe Paint** features: "leave trails" on Line, Curves, Rectangle, Circle tools and also reducing the spray speed on the Airbrush.
 
 ## Coords
 Displays mouse x and y coordinates in the menu bar. When drawing rectangles, circles, ellipses and brushes selection, the coordinates are replaced by the distance in pixels between the point of origin and your mouse position.  

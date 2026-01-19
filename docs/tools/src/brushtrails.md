@@ -12,7 +12,6 @@
   - [Size and Rotate](#size-and-rotate)
     - [Example](#example)
     - [Tutorial](#tutorial)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 | ![New Brush Trails](brushtrails.png) |
 | :-----: |
@@ -27,6 +26,7 @@ Number spinners: Click the up or down arrows to increment or decrement values. H
 Let's have a quick look of the four buttons : **Continuous, Every Nth dot, Airbrush** and **N Total**.
 
 ![](Spacing-examples.png)
+
 From left to right, examples of the 4 default settings, with **Circle**, **Rectangle** and **Line** tools, each with a different brush (indicated in red).
 
 ## Continuous
@@ -67,8 +67,7 @@ You can set the new **Size** and **Rotation** parameters to quickly add variety,
 Set **Size End** to 300% will draw your brush up to 3 times larger.
 | ![](size-100-300.png) |
 | :-----: |
-| Every 8th dot, Continuous and Airbrush .5 examples within a Line
-using defaults brush round 3, square brush 2 and the small 3 dots.|
+| Every 8th dot, Continuous and Airbrush .5 examples within a Line<br>using defaults brush round 3, square brush 2 and the small 3 dots.|
 
 ## N Total
 Defines the total number of times the current brush will be copied along the path. For example, if you draw a circle with a **total spacing** of 14 with a star-shaped brush, this will make a round of 14 stars.

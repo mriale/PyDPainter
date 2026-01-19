@@ -143,7 +143,8 @@ This means that our trajectory will be drawn with 20 "points" / balls and theref
 5. Play the animation!
 
 ### Ease In and Out
-You can now use the new [Brush Trails](../../../tools/src/brushtrails.md#ease-inout) option to **Ease In** or **Out** the movement. For examples, a **Ease In** of **2** will slower the ball speed at the beginning and make it accelerating.
+You can now use the new [Brush Trails](../../../tools/src/brushtrails.md#ease-inout) option to **Ease In** or **Out** the movement. For example, a **Ease In** of **2** will start the ball slowly at the beginning and make it accelerate at the end.
+
 ![alt text](ease-ex-1.gif)
 
 Feel free to erase and try again to experiment.

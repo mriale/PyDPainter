@@ -31,12 +31,12 @@ Right-clicking the **Fill tool** <img src="t-fill.png" width="32"> or the lower-
 
 <img src="fill-defaut.png">
 
-Some buttons are ghosted until you select one of the 5 **Gradient** and most importantly a color which is already in a [range](../../menus/src/palette.md#range.). Select one of the grey color to be sure.
+Some buttons are ghosted until you select one of the 5 **Gradient** and most importantly a color which is already in a [range](../../menus/src/palette.md#range.). Select one of the gray color to be sure.
 The options in the requester are explained in the following paragraphs.
 
 ## Solid
 
-**Solid** fills with the current color with no added effects. If you paint or fill your shape using the left button, the shape is filled with the foreground color. If you paint or fill your shape using the right mouse button, it is filled with the background color (often black). It's the mode by default, if you never open **Fill Type** or used some basic Pixel Art program, you know it.
+**Solid** fills with the current color with no added effects. If you paint or fill your shape using the left button, the shape is filled with the foreground color. If you paint or fill your shape using the right mouse button, it is filled with the background color (often black). It's the mode by default, if you never open **Fill Type** or use a basic Pixel Art program, you've seen it.
 | ![solid fill](solid-fill-ex.png) |
 | :----: |
 | *Filled rectangle, filled circle, filled ellipse, filled polygon, and Fill tool.* |
@@ -112,7 +112,9 @@ Key: `SHIFT-F4`
 **Linear fill** paints the gradient in a line, **according to the angle defined**, with an even distribution without regard to the shape of the object.
 
 ![](gradient-linear-fill.png)
-Introduced in PydPainter 2.1.1, the 2 square-shaped arrows above allows you to quickly rotate by 45° clockwise or anticlockwise. But you can rotate freely by 1° using the triangular arrow.
+
+Introduced in PyDPainter 2.2.1, the 2 square-shaped arrows above allow you to quickly rotate by 45° clockwise or counterclockwise. Also you can rotate freely by dragging the triangular arrow.
+
 Key: `SHIFT-F5`
 ### Horizontal Line
 **Horizontal Line** fill paints the gradient left-to-right adjusting the gradient so that it follows the contours of the shape being filled.
@@ -130,13 +132,15 @@ Key: `SHIFT-F6`
 Key: `SHIFT-F7`
 
 ## Gradient direction
-**New in PydPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the gradient orientation. Not the gradient up and down direction, but the order of the colors inside a range.
+**New in PyDPainter 2.1.0**: right to the Dither bar, there is an new black arrow that toggles the order of the order of the colors inside a range.
+
 ![direction](gradient-direction.png)
-This orientation is first defined by the color order in the **Palette** (`P`). It can now be reversed with a click directly from here. If you have a light to dark grey range in the Palette, and want to use a dark to light grey gradient, just click that arrow.
+
+This direction is first defined by the color order in the **Palette** (`P`). It can now be reversed with a click directly from here. If you have a light to dark gray range in the Palette, and want to use a dark to light gray gradient, just click that arrow.
 
 ## Dither
 
-Dithering is the blending of pixels within a **Range** defined in Palette. Usually, it's a gradient, but it doesn't have to be. It can be ordered dithering or a random dithering setting from none to increasingly blended. **PyDPainter 2.2.1** introduce a lot of **new dithering patterns**.
+Dithering is the blending of pixels within a **Range** defined in Palette. Usually, it's a gradient, but it doesn't have to be. It can be ordered dithering or a random dithering setting from none to increasingly blended. **PyDPainter 2.2.1** introduces a lot of **new dithering patterns**.
 
 ### No dithering
 
@@ -162,13 +166,15 @@ Max dithering is 20. The gradient is barely recognizable. Can be used as a noise
 
 ### Check
 ![](dither-check.png)
+
 A basic checkerboard pattern.
 
 ### Dithering slider on all new patterns.
-The Dither slider adjust the pattern size beetween the colors. 0 is always no dithering,1 the minimum, 20 the max. 10 is the new default. It is a relative value, the real pattern is drawn when you fill an actual shape. So a small shape will not render the same gradient as the whole screen.
+The Dither slider adjust the pattern size between the colors. 0 is always no dithering,1 the minimum, 20 the max. 10 is the new default. It is a relative value, the real pattern is drawn when you fill an actual shape. So a small shape will not render the same gradient as the whole screen.
 ### 2x2
 ![](dither-2x2.png)
-A elegant bayer diffusion.
+
+A elegant Bayer diffusion.
 
 ### 4x4
 
@@ -177,28 +183,34 @@ It's another legacy from Deluxe Paint. If you search for the same pattern as DPa
 ![](dither-4x4.png)
 ### 8x8
 
-The more complex Bayer diffusion 8x8 pattern. It need some place to draw it's pixels pattern entirely.
+The more complex Bayer diffusion 8x8 pattern. It needs a large area to draw its pixel pattern entirely.
+
 ![](dither-8x8.png)
 ### Halftone
 
-A well-know and recognizable pattern from the printing industry. May require some place to be nice-looking. Produce nice aquatic effect when stretched out to large Dither value. *Experiment !*
+A well-known and recognizable pattern from the printing industry. May require a large area to be nice-looking. Produce nice aquatic effect when stretched out to large Dither value. *Experiment !*
+
 ![](dither-htone.png)
 
 ### VertBar
-May look strange. It's a pattern designed for vertical gradient. So click to Linear Fill and choose a 90° or 270° angle. Of course, you can use it as a creative way with other fill or angle, if you like theses saw shapes.
+May look strange. It's a pattern designed for a horizontal gradient. So click to Linear Fill and choose a 90° or 270° angle. Of course, you can use it as a creative way with other fill or angle, if you like these sawtooth shapes.
+
 ![](dither-vertbar.png)
 
 ### HorizBar
-May look strange. It's a pattern designed for horizontal gradient, like a sky. So click to Linear Fill and choose a 0° or 180° angle. Of course, you can use it in a creative way with other fill or angle, if you like theses saw shapes.
+May look strange. It's a pattern designed for a vertical gradient, like a sky. So click to Linear Fill and choose a 0° or 180° angle. Of course, you can use it in a creative way with other fill or angle, if you like these sawtooth shapes.
+
 ![](dither-horizbar.png)
+
 *Tip: Set **Dither** value at 2 to produce a basic line alternate with Vert or Horiz Bar which is interesting in any Gradient type.*
+
 ![](bar-2-ex.png)
 ## Status bar
 When you return to the painting screen after choosing a fill type :
 - the current **Gradient** and its orientation,
 - and it's dithering pattern or
 - current brush fill, if **Pattern** or **Wrap** are selected
-- **AntiAlias** or **Smooth** (**AA** or **SM**) type if choosen
+- **AntiAlias** or **Smooth** (**AA** or **SM**) type if chosen
 are shown in the Color Fill box in the menu bar:
 
 | ![](fill-status.png) |

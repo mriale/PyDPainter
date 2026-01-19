@@ -54,7 +54,6 @@ the capital letter of which brings up the variant or the options.
     - [Pick color](#pick-color)
     - [Palette](#palette)
   - [Colors](#colors)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
 
 ## Default brushes
 
@@ -545,26 +544,26 @@ All drawing tools can use this color to ERASE or as a secondary color using the 
 That means the [Brush](#brush-tool) tool use this black as transparency by default. It's not mandatory, you can SELECT another color RIGHT clicking anywhere on the palette below. Pink can be the transparency color, preserving all black pixel to be transparent in a new brush grabbing.
 
 ### Pick color
-You can pick any color from the canvas using a left click on the Color Swatch (either the dot or around). While using a drawing tool, you'd better learn this short key: `,`. We add the optional short-keys `Ctrl` to pick a color everywhere for the convenience of PhotoShop and tablets users. **Activate CTRL Pick Override** in  [Prefs menu](../../menus/src/prefs.md) to use it.
-The mouse pointer change to an pipette with a information bubble displaying the current color rank and RGB valeurs in Hex.
+You can pick any color from the canvas using a left click on the Color Swatch (either the dot or the are around it). While using a drawing tool, you'd better learn this short key: `,`. There is also the optional short-key `Ctrl` to pick a color everywhere for the convenience of PhotoShop and tablets users. **Activate CTRL Pick Override** in  [Prefs menu](../../menus/src/prefs.md) to use it.
+The mouse pointer changes to a pipette with a information bubble displaying the current color index and RGB values.
 
 ![](pipette.png)
 
 - LEFT click to define the current underlying color as Foreground.
 - RIGHT click to define the current underlying color as Background.
 
-*Note: it does not change the color palette. If you need to change the color, use Palette.*
+*Note: This does not modify the color palette - it only chooses which color from the palette you paint with. If you need to modify a color in the palette, use Palette (below).*
 
 ### Palette
-You have quick access to [Palette](../../menus/src/palette.md) editor, using either of thoses method belows:
+You have quick access to [Palette](../../menus/src/palette.md) editor, using either of the methods below:
 - RIGHT click on the foreground or background color on the Color Swatch.
 It open the **Palette** windows.
 - hit `P`
 
 ## Colors
-The colors are ranked from 0 to the max colors you define in the [Chosse Screen  Fromat requester](../../menus/src/screenformat.md). A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. A yellow bubble can display additionnal information, like rank and RGB values if Help bubbles are ON.
+The colors are numbered from 0 to the max colors you define in the [Choose Screen  Format requester](../../menus/src/screenformat.md). A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. The bubble can display additional information, like index and RGB values.
 
-It display 32 colors slots a time. If you're using more, use the arrows bellow to browse through more colors (from A to H if 256 colors.)
+32 colors slots are displayed at a time. If you're using more, use the arrows bellow to browse through more colors (from A to H if 256 colors.)
 ![](color-browse.png)
 
 ###### Documentation written by Stephane Anquetil
