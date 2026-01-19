@@ -12,24 +12,33 @@ class HotKeyMap:
     def __init__(self):
         self.hotkey_map = {}
 
+    def __getitem__(self, key):
+        return self.hotkey_map[key]
+
+    def keys(self):
+        return self.hotkey_map.keys()
+
     def add(self, hotkey):
         if hotkey.unicode != "":
             self.hotkey_map[hotkey.unicode] = hotkey
         elif hotkey.key != 0:
             self.hotkey_map[(hotkey.mod,hotkey.key)] = hotkey
 
+    def build_mod(self, event):
+        mod = 0
+        if event.mod & KMOD_SHIFT:
+            mod |= KMOD_SHIFT
+        if event.mod & KMOD_CTRL:
+            mod |= KMOD_CTRL
+        if event.mod & KMOD_ALT:
+            mod |= KMOD_ALT
+        if event.mod & KMOD_META:
+            mod |= KMOD_ALT
+        return mod
+
     def press(self, event):
         if event.type == KEYDOWN:
-            mod = 0
-            if event.mod & KMOD_SHIFT:
-                mod |= KMOD_SHIFT
-            if event.mod & KMOD_CTRL:
-                mod |= KMOD_CTRL
-            if event.mod & KMOD_ALT:
-                mod |= KMOD_ALT
-            if event.mod & KMOD_META:
-                mod |= KMOD_ALT
-
+            mod = self.build_mod(event)
             if event.unicode in self.hotkey_map:
                 hotkey = self.hotkey_map[event.unicode]
                 if hotkey.action != None:
@@ -38,6 +47,24 @@ class HotKeyMap:
                 hotkey = self.hotkey_map[(mod, event.key)]
                 if hotkey.action != None:
                     hotkey.action.selected(hotkey.attrs)
+
+    def process_remap(self, event):
+        if event.type == KEYDOWN:
+            mod = self.build_mod(event)
+            new_key = None
+            if event.unicode in self.hotkey_map:
+                hotkey = self.hotkey_map[event.unicode]
+                if hotkey.attrs != None and "map_to" in hotkey.attrs:
+                    new_key = hotkey.attrs["map_to"]
+            elif (mod,event.key) in self.hotkey_map:
+                hotkey = self.hotkey_map[(mod, event.key)]
+                if hotkey.attrs != None and "map_to" in hotkey.attrs:
+                    new_key = hotkey.attrs["map_to"]
+            #Modify event with remapped key
+            if new_key != None:
+                event.mod = new_key.mod
+                event.key = new_key.key
+                event.unicode = new_key.unicode
 
     def __repr__(self):
         str = ""

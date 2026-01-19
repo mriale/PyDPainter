@@ -13,6 +13,7 @@ from libs.colorrange import *
 from libs.cursor import *
 from libs.displayinfo import *
 from libs.toolbar import *
+from libs.hotkey import *
 from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
@@ -613,6 +614,9 @@ class pydpainter:
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
             f.write("ctrl_pick_override=%s\n" % (self.ctrl_pick_override))
+            for k in self.user_hotkeys.keys():
+                h = self.user_hotkeys[k]
+                f.write("hotkey_%s=%s\n" % (str(h), str(h.attrs["map_to"])))
             f.close()
         except:
             pass
@@ -678,6 +682,10 @@ class pydpainter:
                         self.sys_file_dialog = True if vars[1] == "True" else False
                     elif vars[0] == "ctrl_pick_override":
                         self.ctrl_pick_override = True if vars[1] == "True" else False
+                    elif vars[0][:7] == "hotkey_":
+                        map_to = vars[0][7:]
+                        map_from = vars[1]
+                        self.user_hotkeys.add(HotKey(map_to, attrs={"map_to": HotKey(map_from)}))
             f.close()
             return True
         except:
@@ -822,6 +830,7 @@ class pydpainter:
         self.true_symmetry = False
         self.sys_file_dialog = False
         self.ctrl_pick_override = False
+        self.user_hotkeys = HotKeyMap()
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))
@@ -1699,6 +1708,9 @@ class pydpainter:
         #main loop
         while config.running:
             e = config.xevent.wait()
+
+            if self.tool_selected != "text":
+                config.user_hotkeys.process_remap(e)
 
             if e.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
