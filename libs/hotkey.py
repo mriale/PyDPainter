@@ -112,6 +112,23 @@ class HotKey:
         "f10": K_F10,
         "f11": K_F11,
         "f12": K_F12,
+        "kp0": K_KP0,
+        "kp1": K_KP1,
+        "kp2": K_KP2,
+        "kp3": K_KP3,
+        "kp4": K_KP4,
+        "kp5": K_KP5,
+        "kp6": K_KP6,
+        "kp7": K_KP7,
+        "kp8": K_KP8,
+        "kp9": K_KP9,
+        "kp.": K_KP_PERIOD,
+        "kp/": K_KP_DIVIDE,
+        "kp*": K_KP_MULTIPLY,
+        "kp-": K_KP_MINUS,
+        "kp+": K_KP_PLUS,
+        "kpenter": K_KP_ENTER,
+        "kpequals": K_KP_EQUALS,
     }
     for i in range(ord("a"), ord("z")+1):
         keymap[chr(i)] = i
