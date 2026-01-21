@@ -127,8 +127,7 @@ class HotKey:
         "kp*": K_KP_MULTIPLY,
         "kp-": K_KP_MINUS,
         "kp+": K_KP_PLUS,
-        "kpenter": K_KP_ENTER,
-        "kpequals": K_KP_EQUALS,
+        "enter": K_KP_ENTER,
     }
     for i in range(ord("a"), ord("z")+1):
         keymap[chr(i)] = i
@@ -181,6 +180,12 @@ class HotKey:
         else:
             return self.unicode
 
+    def keyname(self):
+        name = pygame.key.name(self.key)
+        if len(name) == 3 and name[0] == "[" and name[2] == "]":
+            name = "kp" + name[1]
+        return name
+
     def __repr__(self):
         return "mod=%d key=%d unicode=\"%s\"" % (self.mod, self.key, self.unicode)
 
@@ -193,7 +198,7 @@ class HotKey:
                 s += "alt-"
             if self.mod & KMOD_SHIFT:
                 s += "shift-"
-            return s+pygame.key.name(self.key)
+            return s + self.keyname()
         else:
             return self.unicode
 
@@ -218,6 +223,13 @@ def main():
     testHotKey("<")
     testHotKey("0")
     testHotKey("shift-0")
+    testHotKey("shift-kp0")
+    testHotKey("kp.")
+    testHotKey("kp/")
+    testHotKey("kp*")
+    testHotKey("kp-")
+    testHotKey("kp+")
+    testHotKey("enter")
 
     print("")
     hotkeymap = HotKeyMap()
