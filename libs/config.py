@@ -458,8 +458,9 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
-        self.stencil.clear()
-        self.stencil.free()
+        for i in range(len(self.proj)):
+            self.proj[i].stencil.clear()
+            self.proj[i].stencil.free()
 
         self.perspective = Perspective()
 
