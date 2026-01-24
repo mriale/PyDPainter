@@ -101,20 +101,24 @@ def check_recover():
             root.title("Recovery")
             heading = tk.Label(root, text="PyDPainter Recovery", font="Helvetica 16 bold")
             heading.pack()
-            message = tk.Label(root, text="Recover from:")
+
+            delete_all = tk.Button(root, text="Delete all", command=remove_files)
+            delete_all.pack()
+            continue_button = tk.Button(root, text="Continue without recovering", command=root.destroy)
+            continue_button.pack()
+
+            message = tk.Label(root, text="Or recover from:")
             message.pack()
+
             buttons = []
             pics = []
-            for dir_name in sorted(dir_list):
+            for dir_name in sorted(dir_list)[-3:]:
                 if os.path.exists(os.path.join(recover_path, dir_name, "recover.png")):
                     try:
                         pics.append(tk.PhotoImage(file=os.path.join(recover_path, dir_name, "recover.png")).subsample(4, 4))
                         buttons.append(tk.Button(root, text=dir_name, image=pics[-1], compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
                     except:
                         buttons.append(tk.Button(root, text=dir_name, compound=tk.LEFT, command=lambda dn=dir_name: recover_file(dn)))
-
-            buttons.append(tk.Button(root, text="Delete all", command=remove_files))
-            buttons.append(tk.Button(root, text="Continue without recovering", command=root.destroy))
 
             for b in buttons:
                 b.pack()

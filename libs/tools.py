@@ -8,15 +8,11 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
-try:
-    import xerox  # NOTE use https://github.com/clach04/xerox/  -- python -m pip install git+https://github.com/clach04/xerox.git
-except ImportError:
-    xerox = None
-
 from libs.toolbar import *
 from libs.toolreq import *
 from libs.gadget import *
 from libs.tiptext import *
+from libs.clipboard import *
 
 config = None
 
@@ -25,39 +21,6 @@ config = None
 #  https://github.com/pygame/pygame/pull/3062
 TIMEROFF = int((2**31)-1)
 DBL_CLICK = 500
-
-is_win = sys.platform.startswith('win')
-is_android = "getandroidapilevel" in dir(sys)
-is_pygamece = getattr(pygame, "IS_CE", False)
-
-def clipboard_init():
-    if is_android:
-        return
-    if not is_pygamece and "scrap" in dir(pygame) and "init" in dir(pygame.scrap):
-        # pygame
-        pygame.scrap.init()
-        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
-
-def clipboard_get_text():
-    if xerox:
-        clipboard_text = xerox.paste()
-    elif is_pygamece:
-        # pygame-ce
-        clipboard_text = pygame.scrap.get_text()
-    else:
-        # pygame
-        for t in pygame.scrap.get_types():
-            if "text" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
-                if is_win:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le")  # under windows its utf16-le! and null terminated..
-                else:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-8")
-        if clipboard_text:
-            if clipboard_text.endswith('\x00'):
-                clipboard_text = clipboard_text[:-1]
-
-    return clipboard_text
-
 
 def cycle():
     if config.drawmode.value == DrawMode.CYCLE:
@@ -211,6 +174,8 @@ class ToolDragAction(ToolAction):
         return False
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
@@ -516,6 +481,8 @@ class DoCurve(ToolSingleAction):
             self.move(coords)
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
@@ -677,7 +644,7 @@ class DoAirbrush(ToolSingleAction):
         xor_props.xor = True
 
         while not point_placed:
-            config.cursor.shape = 4
+            config.cursor.shape = config.cursor.RESIZE
             event = config.xevent.poll()
             while event.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
@@ -877,6 +844,8 @@ class DoEllipse(ToolDragAction):
             self.leave_trace(coords, [self.button==1, self.button==2, self.button==3])
 
     def leave_trace(self, coords, buttons):
+        if config.ctrl_pick_override:
+            return False
         t = pygame.time.get_ticks()
         if "last_trace_time" in dir(self):
             if t - self.last_trace_time > 60:
@@ -2068,8 +2037,9 @@ class PalGadget(ToolGadget):
             super(PalGadget, self).draw(screen, font, offset)
 
     def pick_color(self):
-        config.cursor.shape = 3
+        config.cursor.shape = config.cursor.PICK
         config.clear_pixel_draw_canvas()
+        config.toolbar.tip_canvas = None
         config.recompose()
         color_picked = False
         first_time = True
@@ -2084,6 +2054,10 @@ class PalGadget(ToolGadget):
                 event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
+            color_hover = config.pixel_canvas.get_at_mapped((mouseX,mouseY))
+            config.clear_pixel_draw_canvas()
+            mouseXY = config.get_mouse_pointer_pos(event)
+            config.draw_rgb_dropper(mouseXY, color_hover)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
                 if event.buttons[0]:
                     config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
@@ -2100,6 +2074,9 @@ class PalGadget(ToolGadget):
 
             config.recompose()
             first_time = False
+
+        config.pick_canvas = None
+        config.clear_pixel_draw_canvas()
 
 
     def process_event(self, screen, event, mouse_pixel_mapper):

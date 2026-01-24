@@ -51,8 +51,10 @@ class ToolGadget(Gadget):
         Render a tooltip into a canvas with speech bubble in quadrant.
         0=left, 1=bottom, 2=right, 3=top
         """
-        if self.toolbar.tip_font_size != pygame.display.get_surface().get_height()//50:
-            self.toolbar.tip_font_size = pygame.display.get_surface().get_height()//50
+        win_size = pygame.display.get_surface().get_size()
+        calc_font_size = min(win_size[0]//60, win_size[1]//50)
+        if self.toolbar.tip_font_size != calc_font_size:
+            self.toolbar.tip_font_size = calc_font_size
             self.toolbar.tip_title_font = pygame.font.Font(os.path.join('data', 'FreeSansBold.ttf'), self.toolbar.tip_font_size)
             self.toolbar.tip_font = pygame.font.Font(os.path.join('data', 'FreeSans.ttf'), self.toolbar.tip_font_size)
         title_font = self.toolbar.tip_title_font

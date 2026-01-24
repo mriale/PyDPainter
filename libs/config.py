@@ -8,10 +8,12 @@ Implement the global area of PyDPainter
 import sys, math, os.path, random, colorsys, platform, re, datetime
 import argparse
 
+from libs.clipboard import *
 from libs.colorrange import *
 from libs.cursor import *
 from libs.displayinfo import *
 from libs.toolbar import *
+from libs.hotkey import *
 from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
@@ -196,7 +198,7 @@ class pydpainter:
         #initialize system
         self.dinfo = pygame.display.Info()
         self.initialize()
-        clipboard_init()  # tools.clipboard_init()
+        clipboard_init()  # clipboard.clipboard_init()
 
         #load picture if recovered
         if do_recover != "":
@@ -231,7 +233,7 @@ class pydpainter:
         if config.scale <= 1:
             config.scale /= 2.0
         else:
-            currscale = round(config.scale * 2.0) / 2.0
+            currscale = math.floor(config.scale * 2.0) / 2.0
             if abs(config.scale - currscale) < .01:
                 config.scale = currscale - 0.5
             else:
@@ -241,7 +243,7 @@ class pydpainter:
         if config.scale < 1:
             config.scale *= 2.0
         else:
-            currscale = round(config.scale * 2.0) / 2.0
+            currscale = math.ceil(config.scale * 2.0) / 2.0
             if abs(config.scale - currscale) < .01:
                 config.scale = currscale + 0.5
             else:
@@ -310,16 +312,8 @@ class pydpainter:
             config.scale = config.scale_bak
             config.max_width, config.max_height = (config.max_width_init, config.max_height_init)
 
-        while True:
-            new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
-            if (new_window_size[0] > config.max_width or \
-                new_window_size[1] > config.max_height):
-                    config.scale_dec()
-            elif (new_window_size[0] < self.screen_width_min or \
-                  new_window_size[1] < self.screen_height_min):
-                    config.scale_inc()
-            else:
-                break
+        config.scale = max(1.0, config.scale)
+        new_window_size = (int(config.screen_width*config.scale*config.pixel_aspect), int(config.screen_height*config.scale))
 
         if 'SDL_VIDEO_WINDOW_POS' in os.environ:
             del os.environ['SDL_VIDEO_WINDOW_POS']
@@ -344,7 +338,6 @@ class pydpainter:
                 config.xevent.get()
                 while True in pygame.mouse.get_pressed():
                     config.xevent.get()
-                new_window_size = (new_window_size[0], min(int(config.max_height * 0.9), new_window_size[1]))
                 pygame.display.set_mode(new_window_size, display_flags)
                 if pygame.version.vernum[0] == 1:
                     pygame.time.wait(300)
@@ -465,8 +458,9 @@ class pydpainter:
 
         self.NUM_COLORS = len(self.pal)
         self.set_all_palettes(self.pal)
-        self.stencil.clear()
-        self.stencil.free()
+        for i in range(len(self.proj)):
+            self.proj[i].stencil.clear()
+            self.proj[i].stencil.free()
 
         self.perspective = Perspective()
 
@@ -481,6 +475,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("forcepixels").checked = self.force_1_to_1_pixels
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
+        self.menubar.menu_id("prefs").menu_id("ctrlpickoverride").checked = self.ctrl_pick_override
         self.menubar.hide_menus = self.hide_menus
 
         self.brush = Brush()
@@ -619,6 +614,10 @@ class pydpainter:
             f.write("force_1_to_1_pixels=%s\n" % (self.force_1_to_1_pixels))
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
+            f.write("ctrl_pick_override=%s\n" % (self.ctrl_pick_override))
+            for k in self.user_hotkeys.keys():
+                h = self.user_hotkeys[k]
+                f.write("hotkey_%s=%s\n" % (str(h), str(h.attrs["map_to"])))
             f.close()
         except:
             pass
@@ -682,6 +681,12 @@ class pydpainter:
                         self.true_symmetry = True if vars[1] == "True" else False
                     elif vars[0] == "sys_file_dialog":
                         self.sys_file_dialog = True if vars[1] == "True" else False
+                    elif vars[0] == "ctrl_pick_override":
+                        self.ctrl_pick_override = True if vars[1] == "True" else False
+                    elif vars[0][:7] == "hotkey_":
+                        map_to = vars[0][7:]
+                        map_from = vars[1]
+                        self.user_hotkeys.add(HotKey(map_to, attrs={"map_to": HotKey(map_from)}))
             f.close()
             return True
         except:
@@ -825,6 +830,8 @@ class pydpainter:
         self.force_1_to_1_pixels = False
         self.true_symmetry = False
         self.sys_file_dialog = False
+        self.ctrl_pick_override = False
+        self.user_hotkeys = HotKeyMap()
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
         pygame.display.set_icon(pygame.image.load(os.path.join('data', 'logo.png')))
@@ -863,6 +870,12 @@ class pydpainter:
         self.busy_start_time = 0
         self.busy_last_coords = (0,0)
         self.BUSY_LAG_TIME = 500
+
+        self.dropper = False
+        self.pick_canvas = None
+        self.pick_canvas_offset = [0,0]
+        self.pick_canvas_font = None
+        self.pick_canvas_font_size = 0
 
         #Allocate user events
         self.ALLCUSTOMEVENTS = []
@@ -1081,6 +1094,14 @@ class pydpainter:
             elif y > mh:
                 self.screen_offset_y = mh
 
+    def get_win_pos_from_pixel(self, coords):
+        cx, cy = coords
+        ox,oy,screenX,screenY = config.window_canvas_rect
+        #scale pixel coords to window coords
+        wx = (cx * screenX // self.screen_width) + ox
+        wy = (cy * screenY // self.screen_height) + oy
+        return((wx, wy))
+
     def get_mouse_pointer_pos(self, event=None):
         mouseX, mouseY = pygame.mouse.get_pos()
         if not event is None and (event.type == MOUSEMOTION or event.type == MOUSEBUTTONUP or event.type == MOUSEBUTTONDOWN):
@@ -1089,13 +1110,13 @@ class pydpainter:
 
         #constrain mouse to edge of screen
         mouseX = max(ox, mouseX)
-        mouseX = min(mouseX, screenX-ox-1)
+        mouseX = min(mouseX, screenX+ox-1)
         mouseY = max(oy, mouseY)
-        mouseY = min(mouseY, screenY-oy-1)
+        mouseY = min(mouseY, screenY+oy-1)
 
         #scale window mouse coords to pixel coords
-        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
-        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
+        mouseX = (mouseX-ox) * self.screen_width // screenX
+        mouseY = (mouseY-oy) * self.screen_height // screenY
         return((mouseX, mouseY))
 
     def calc_page_pos(self, mouseX, mouseY):
@@ -1130,8 +1151,8 @@ class pydpainter:
 
         ox,oy,screenX,screenY = config.window_canvas_rect
 
-        mouseX = (mouseX-ox) * self.screen_width // (screenX-ox-ox)
-        mouseY = (mouseY-oy) * self.screen_height // (screenY-oy-oy)
+        mouseX = (mouseX-ox) * self.screen_width // screenX
+        mouseY = (mouseY-oy) * self.screen_height // screenY
 
         mouseside = 0
 
@@ -1175,7 +1196,7 @@ class pydpainter:
 
         if not event is None and event.type == MOUSEBUTTONDOWN:
             self.zoom.mousedown_side = mouseside
-        if not event is None and event.type == MOUSEBUTTONUP:
+        if not True in config.get_mouse_pressed():
             self.zoom.mousedown_side = 0
 
         #turn constrain on or off
@@ -1386,11 +1407,8 @@ class pydpainter:
             scaledup = pygame.transform.scale(self.scaled_image, self.window_size)
 
         self.screen.fill((0,0,0))
-        if config.fullscreen:
-            ox = (self.screen.get_width() - scaledup.get_width()) // 2
-            oy = (self.screen.get_height() - scaledup.get_height()) // 2
-        else:
-            ox, oy = 0,0
+        ox = (self.screen.get_width() - scaledup.get_width()) // 2
+        oy = (self.screen.get_height() - scaledup.get_height()) // 2
         config.window_canvas_rect = [ox,oy, self.window_size[0], self.window_size[1]]
         self.screen.blit(scaledup,(ox,oy))
         scaledup = None
@@ -1448,6 +1466,10 @@ class pydpainter:
             sx = ox + (tx * self.window_size[0] // self.screen_width)
             sy = oy + (ty * self.window_size[1] // self.screen_height) - (t_size[1]//2)
             self.screen.blit(self.layertoolbar.tip_canvas, (sx,sy))
+
+        #blit pick RGB layer
+        if not config.pick_canvas is None:
+            self.screen.blit(config.pick_canvas, config.pick_canvas_offset)
 
         pygame.display.flip()
         self.last_recompose_timer = pygame.time.get_ticks()
@@ -1606,6 +1628,65 @@ class pydpainter:
             str = "%4d\x94%4d\x95" % ((x, y))
         return str
 
+    def draw_rgb_dropper(self, cxy, color):
+        cx,cy = cxy
+        bg = (200,200,200)
+        fg = (0,0,0)
+        if isinstance(color, tuple):
+            rgb = list(color)
+            color_str = "N/A"
+        else:
+            rgb = config.truepal[color]
+            color_str = "%d" % (color)
+
+        #load font and get text size
+        win_ox,win_oy,win_w,win_h = config.window_canvas_rect
+        calc_font_size = win_h//50
+        if config.pick_canvas_font_size != calc_font_size:
+            config.pick_canvas_font_size = calc_font_size
+            config.pick_canvas_font = pygame.font.Font(os.path.join('data', 'FreeSansBold.ttf'), config.pick_canvas_font_size)
+
+        #size box
+        title_font = config.pick_canvas_font
+        wrect = title_font.size("W")
+        lineheight = title_font.get_linesize()
+        w = wrect[0]*16
+        h = wrect[1]*4
+        rect = [0,0, w,h]
+
+        #create surface
+        config.pick_canvas = pygame.Surface((w,h),SRCALPHA)
+        config.pick_canvas.fill(bg)
+
+        #calc offset
+        pick_ox, pick_oy = self.get_win_pos_from_pixel(cxy)
+        cursor_yo = int(config.cursor.center[config.cursor.shape][1] * config.cursor.scaleY * config.scale // 2)
+        if pick_ox + w >= win_ox + win_w:
+            pick_ox = win_ox + win_w - w
+        if pick_oy < win_oy + h + wrect[1] + cursor_yo:
+            pick_oy = pick_oy + h - cursor_yo
+        else:
+            pick_oy = pick_oy - h - wrect[1] - cursor_yo
+        config.pick_canvas_offset = [pick_ox, pick_oy]
+
+        #render rectangles
+        pygame.draw.rect(config.pick_canvas, fg, [0,0,w,h], wrect[0]//6)
+        pygame.draw.rect(config.pick_canvas, rgb, [wrect[0]//2, wrect[0]//2, wrect[1]*3, h-wrect[0]])
+        pygame.draw.rect(config.pick_canvas, fg, [wrect[0]//2, wrect[0]//2, wrect[1]*3, h-wrect[0]], wrect[0]//6)
+
+        #render text
+        tx = wrect[0] + wrect[1] * 3
+        ty = wrect[1] // 2
+        timg = title_font.render("Color Index: %s" % (color_str), True, fg, bg)
+        config.pick_canvas.blit(timg, (tx,ty))
+        ty += wrect[1] + wrect[1] // 8
+        timg = title_font.render("RGB: %d, %d, %d" % (rgb[0],rgb[1],rgb[2]), True, fg, bg)
+        config.pick_canvas.blit(timg, (tx,ty))
+        ty += wrect[1] + wrect[1] // 8
+        timg = title_font.render("Hex: %02X%02X%02X" % (rgb[0], rgb[1], rgb[2]), True, fg, bg)
+
+        config.pick_canvas.blit(timg, (tx,ty))
+
     def run(self):
         """
         This method is the main application loop.
@@ -1628,6 +1709,9 @@ class pydpainter:
         #main loop
         while config.running:
             e = config.xevent.wait()
+
+            if self.tool_selected != "text":
+                config.user_hotkeys.process_remap(e)
 
             if e.type == pygame.MOUSEMOTION and config.xevent.peek((MOUSEMOTION)):
                 #get rid of extra mouse movements
@@ -1673,7 +1757,7 @@ class pydpainter:
                             config.anim.show_curr_frame()
                     except Exception as ex:
                         close_progress_req(progress_req)
-                        io_error_req(str(ex), "Unable to open image:\n%s", filename)
+                        io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
 
 
             #Intercept keys for toolbar
@@ -1700,9 +1784,11 @@ class pydpainter:
 
             #Show system mouse pointer if outside of screen
             if e.type == MOUSEMOTION:
+                ox,oy,screenX,screenY = config.window_canvas_rect
+                x,y = e.pos
                 if config.fullscreen:
                     pygame.mouse.set_visible(False)
-                elif e.pos[0] > config.window_size[0] or e.pos[1] > config.window_size[1]:
+                elif x < ox or x > ox+screenX or y < oy or y > oy+screenY:
                     pygame.mouse.set_visible(True)
                 else:
                     pygame.mouse.set_visible(False)
@@ -1831,11 +1917,14 @@ class pydpainter:
                 gotkey = False
                 if e.mod & KMOD_CTRL and (e.unicode == "+" or e.unicode == "="):
                     gotkey = True
+                    config.dropper = False
                     config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN)
                 elif e.mod & KMOD_CTRL and e.unicode == "-":
                     gotkey = True
+                    config.dropper = False
                     config.toolbar.click(config.minitoolbar.tool_id("scale"), MOUSEBUTTONDOWN, subtool=True)
                 elif e.mod & KMOD_CTRL and e.key == K_RETURN:
+                    config.dropper = False
                     config.perspective.do_mode()
                     gotkey = True
                 elif e.key == K_KP_ENTER:
@@ -1932,6 +2021,26 @@ class pydpainter:
                     mouseX, mouseY = self.get_mouse_pixel_pos(e, ignore_grid=True)
                     config.screen_offset_x = (config.screen_width // 2) - mouseX
                     config.screen_offset_y = (config.screen_height // 2) - mouseY
+                elif e.key >= K_F1 and e.key <= K_F8 and e.mod & KMOD_SHIFT:
+                    gotkey = True
+                    if e.key == K_F1:
+                        config.fillmode.value = FillMode.PATTERN
+                    elif e.key == K_F2:
+                        config.fillmode.value = FillMode.SOLID
+                    elif e.key == K_F3:
+                        config.fillmode.value = FillMode.CIRCULAR
+                    elif e.key == K_F4:
+                        config.fillmode.value = FillMode.VERT_FIT
+                    elif e.key == K_F5:
+                        config.fillmode.value = FillMode.LINEAR
+                    elif e.key == K_F6:
+                        config.fillmode.value = FillMode.HORIZ_FIT
+                    elif e.key == K_F7:
+                        config.fillmode.value = FillMode.BOTH_FIT
+                    elif e.key == K_F8:
+                        config.fillmode.value = FillMode.SMOOTH
+                    config.menubar.indicators["fillmode"] = draw_fill_indicator
+                    draw_fill_indicator(None)
                 elif e.key == K_F10:
                     self.tool_visibility_state += 1
                 elif e.key == K_F11:
@@ -1941,16 +2050,19 @@ class pydpainter:
                 elif e.key == K_DELETE:
                     config.cursor.visible = not config.cursor.visible
                 elif e.mod & KMOD_CTRL and e.mod & KMOD_SHIFT and e.key == K_z:
+                    config.dropper = False
                     config.redo()
                 elif e.mod & KMOD_CTRL and e.key == K_z:
+                    config.dropper = False
                     config.undo()
                 elif e.mod & KMOD_CTRL and e.key == K_y:
+                    config.dropper = False
                     config.redo()
-                elif e.unicode == chr(178) or (e.key == 178 and not (e.mod & KMOD_SHIFT)): #AZERTY backtick key
+                elif config.xevent.intl_backtick_press(e) == 1:
                     gotkey = True
                     config.stencil.enable = not config.stencil.enable
                     config.doKeyAction()
-                elif e.key == 178 and e.mod & KMOD_SHIFT and e.unicode != "~": #AZERTY tilde key
+                elif config.xevent.intl_backtick_press(e) == 2:
                     gotkey = True
                     config.menubar.menu_id("effect").menu_id("stencil").menu_id("make").action.selected("")
                     config.doKeyAction()
@@ -1968,6 +2080,37 @@ class pydpainter:
                 if gotkey:
                     self.set_screen_offset(self.screen_offset_x, self.screen_offset_y)
                     self.doKeyAction(curr_action)
+
+            #process CTRL dropper
+            mouseXY = config.get_mouse_pointer_pos(e)
+            in_toolbars = config.inside_toolbars(config.all_toolbars, mouseXY)
+            if e.type == KEYDOWN:
+                if e.key in [K_LCTRL, K_RCTRL] and not True in buttons \
+                   and not in_toolbars \
+                   and (config.tool_selected in ["dot","draw"] \
+                        or (config.ctrl_pick_override and config.tool_selected in [
+                            "line","curve","fill","airbrush","rect","circle", "ellipse","poly"])):
+                    config.dropper = True
+                    config.clear_pixel_draw_canvas()
+            if config.dropper and not config.xevent.is_key_down([K_LCTRL, K_RCTRL]) and not True in buttons:
+                config.dropper = False
+                config.pick_canvas = None
+                if e.type != MOUSEBUTTONUP:
+                    self.doKeyAction(curr_action)
+            if config.dropper:
+                if in_toolbars or config.menubar.menus_on:
+                    config.pick_canvas = None
+                else:
+                    cx,cy = self.get_mouse_pixel_pos(e)
+                    color = config.pixel_canvas.get_at_mapped((cx,cy))
+                    if buttons[0]:
+                        config.color = color
+                    elif buttons[2]:
+                        config.bgcolor = color
+                    config.cursor.shape = config.cursor.PICK
+                    config.draw_rgb_dropper(mouseXY, color)
+            else:
+                config.pick_canvas = None
 
             #process keyboard mouse clicks
             if e.type == KEYDOWN:
@@ -1989,6 +2132,7 @@ class pydpainter:
                 if curr_action != None and len(te_list) == 0 and \
                    len(mte_list) == 0 and len(me_list) == 0 and \
                    len(mta_list) == 0 and len(mtl_list) == 0 and \
+                   not config.dropper and \
                    not wait_for_mouseup_gui and not hide_draw_tool:
                     if config.coords_on:
                         cx,cy = self.get_mouse_pixel_pos(e)

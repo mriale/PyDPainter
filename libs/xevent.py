@@ -118,3 +118,16 @@ class Xevent(object):
             else:
                 self.xq.extend(self.dedup_new([pygame.event.wait()]))
         return xevent
+
+    def intl_backtick_press(self, e):
+        #return:
+        #  0 for not pressed
+        #  1 for US backtick
+        #  2 for US tilde (shifted)
+
+        if e.scancode == 53 and not (e.mod & KMOD_SHIFT) and e.unicode != "`" and e.unicode != "|":
+            return 1
+        if e.scancode == 53 and e.mod & KMOD_SHIFT and e.unicode != "~":
+            return 2
+
+        return 0

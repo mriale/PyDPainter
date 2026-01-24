@@ -681,10 +681,10 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             w = gif.header["width"]
             h = gif.header["height"]
             pic = pygame.Surface((w,h), 0, depth=8)
-            if gif.global_palette != None:
-                pal = gif.global_palette
-            else:
+            if gif.frames[0]["local_palette"] != None:
                 pal = gif.frames[0]["local_palette"]
+            else:
+                pal = gif.global_palette
             config.color_depth = config.guess_color_depth(pal)
             pal = config.quantize_palette(pal, config.color_depth)
             upal = config.unique_palette(pal)
@@ -880,7 +880,7 @@ def save_iffinfo(filename):
         0, \
         0, \
         10, 11, \
-        config.pixel_width, config.pixel_height
+        config.screen_width, config.screen_height
         ))
 
     write_chunk(newfile, b'CAMG', pack(">I", config.display_mode))
@@ -967,7 +967,7 @@ def save_iff(filename, config, ifftype, bgcolor=-1):
         0, \
         max(0, bgcolor), \
         10, 11, \
-        config.pixel_width, config.pixel_height
+        config.screen_width, config.screen_height
         ))
 
     cmap_chunk = b''
@@ -1435,9 +1435,9 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
             all_256 = np.arange(256, dtype=np.uint8)
             surf_unique = np.unique(surf_array[surf_diff_ne])
             surf_notin = np.setdiff1d(all_256, surf_unique, assume_unique=True)
+            surf_diff_array = surf_array.copy()
             if len(surf_notin) > 0:
                 bgcolor = surf_notin[0]
-                surf_diff_array = surf_array.copy()
                 surf_diff_array[surf_diff] = bgcolor
                 # find bounds of diff
                 diff_indexes = np.argwhere(surf_diff_ne)
@@ -1468,8 +1468,7 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
                 else:
                     image_data_lzh = surf_lzw
             else:
-                surf_diff_lzw = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
-                image_data_lzh = surf_lzw
+                image_data_lzh = gif.encode_lzw_data(bytes(surf_diff_array.transpose().flatten()))
 
         frame = {"local_palette": localpal,
                  "image_data": surf_array,

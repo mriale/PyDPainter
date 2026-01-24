@@ -2,6 +2,7 @@
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
 import os.path, colorsys
+import textwrap
 
 from tkinter import filedialog as fd
 
@@ -56,7 +57,6 @@ def get_type(filename, filetype_list):
 
 def pick_file_type(screen, req, file_typeg, ext, filetype_list):
     retval = -1
-    req_backup = screen.copy()
     rx,ry,rw,rh = file_typeg.rect
     fontx = req.font.xsize
     fonty = req.font.ysize
@@ -90,7 +90,7 @@ def pick_file_type(screen, req, file_typeg, ext, filetype_list):
         config.recompose()
 
     req.gadgets.remove(pickg)
-    screen.blit(req_backup, (0,0))
+    req.need_redraw = True
     config.recompose()
     return retval
 
@@ -211,9 +211,19 @@ Dir Name: ______________________
 
 def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
     if config.sys_file_dialog and not config.fullscreen:
-        return file_req_system(screen, title, action_label, filepath, filename, filetype_list)
+        selected_file = file_req_system(screen, title, action_label, filepath, filename, filetype_list)
     else:
-        return file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
+        selected_file = file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
+
+    if len(selected_file) > 0 and action_label != "Open":
+        #Check for file extension
+        if not re.fullmatch(r"^.*\.[^.\\/]+$", selected_file):
+            if "Anim" in title:
+                selected_file = selected_file.rstrip(".") + ".anim"
+            else:
+                selected_file = selected_file.rstrip(".") + ".iff"
+
+    return selected_file
 
 def file_req_system(screen, title, action_label, filepath, filename, filetype_list=None):
     if filetype_list is None:
@@ -250,6 +260,10 @@ def file_req_system(screen, title, action_label, filepath, filename, filetype_li
     config.pixel_req_rect = None
     config.cursor.shape = old_shape
     config.cursor.visible = True
+
+    if len(filename) > 0:
+        newpath = os.path.dirname(filename)
+        config.filepath = newpath
 
     #Eat all events
     event = config.xevent.poll()
@@ -290,6 +304,9 @@ Path:_________________________
 File:___________________%s
 [%s][Cancel]  [Make Dir]
 """%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+    oldcursor = config.cursor.shape
+    config.cursor.shape = config.cursor.NORMAL
+
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -478,6 +495,7 @@ File:___________________%s
     config.filepath = filepath
 
     config.pixel_req_rect = None
+    config.cursor.shape = oldcursor
     config.recompose()
 
     return retval
@@ -1427,7 +1445,11 @@ def stencil_req(screen):
     return
 
 def question_req(screen, title, text, buttons, hotkeys=[]):
-    dummy_text = re.sub(r'[^\n]', "A", text) #replace text with "A"s so characters aren't interpreted
+    textlines = text.splitlines()
+    for i in range(len(textlines)):
+        textlines[i] = textwrap.fill(textlines[i], width=33)
+    wrapped_text = "\n".join(textlines)
+    dummy_text = re.sub(r'[^\n]', "A", wrapped_text) #replace text with "A"s so characters aren't interpreted
     all_text = dummy_text + "\n"
     for button_text in buttons:
         all_text += "[" + button_text + "]"
@@ -1436,7 +1458,7 @@ def question_req(screen, title, text, buttons, hotkeys=[]):
           mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
     #Replace dummy text with actual text
-    textlines = text.splitlines()
+    textlines = wrapped_text.splitlines()
     textrow = 0
     for textline in textlines:
         labelg = req.gadget_id("0_%d" % (textrow))

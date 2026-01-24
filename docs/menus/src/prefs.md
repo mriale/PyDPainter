@@ -14,6 +14,7 @@ An active setting is preceded by a checkmark &check;.
   - [Force 1:1 Pixels](#force-11-pixels)
   - [True Symmetry](#true-symmetry)
   - [SysFileDialog](#sysfiledialog)
+  - [CTRL Pick Override](#ctrl-pick-override)
   - [Coords](#coords)
     - [Show](#show)
     - [Flip](#flip)
@@ -72,6 +73,8 @@ By default, PyDPainter uses its own file requester, inspired by Deluxe Paint. If
 *Open Picture with the system file dialog on Linux*
 
 *Note: Because full screen mode (`F11`) takes over the screen, the system file dialog window can easily be lost behind the PyDPainter window with no easy way to get it back. Therefore, the SysFileDialog option will be ignored in full screen mode.*
+## CTRL Pick Override
+Override `CTRL` keys (left or right) to use the new [Color Picker](../../tools/src/toolbox.md#pick-color) with the `CTRL` key. This feature is similar to the dropper tool in Photoshop or Gimp. If activated, it means you loose the legacy **Deluxe Paint** features: "leave trails" on Line, Curves, Rectangle, Circle tools and also reducing the spray speed on the Airbrush.
 
 ## Coords
 Displays mouse x and y coordinates in the menu bar. When drawing rectangles, circles, ellipses and brushes selection, the coordinates are replaced by the distance in pixels between the point of origin and your mouse position.  

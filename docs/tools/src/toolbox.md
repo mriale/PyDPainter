@@ -48,7 +48,12 @@ the capital letter of which brings up the variant or the options.
   - [Zoom magnifier in/out](#zoom-magnifier-inout)
   - [Undo/redo](#undoredo)
   - [Clear canvas](#clear-canvas)
-          - [Documentation written by Stephane Anquetil](#documentation-written-by-stephane-anquetil)
+  - [Color Swatch](#color-swatch)
+    - [Foreground Color](#foreground-color)
+    - [Background Color](#background-color)
+    - [Pick color](#pick-color)
+    - [Palette](#palette)
+  - [Colors](#colors)
 
 ## Default brushes
 
@@ -120,7 +125,7 @@ Then both tools, drawing and fill, are drawn with the same shape you make on scr
 
 ![](ALT-areafill.png)
 
-Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Brush Trails](brushtrails.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
+Holding down the `Alt` key as you click on the Filled Freehand Shape tool causes the tool to paint shapes that are filled and then outlined with the current brush using the settings of the [Spacing](brushtrails.md) requester. If you use a custom brush as your current brush, it is possible to paint shapes that are filled with one color and outlined with another. The outline is painted by tracing the shape with the current brush. Note that the shape is traced by the brush handle; if the handle is offset from the brush, the outline will be offset from your filled shape.
 
 
 Key: `D`
@@ -141,11 +146,11 @@ and release the button to draw the line.
 Press the `SHIFT` key for a horizontal or vertical line constraint.
 
 This tool can be used in conjunction with custom Brushes and Modes.
-With the `CTRL` key held down, the tool leaves traces between the two clicks.
+With the `CTRL` key held down, the tool leaves traces between the two clicks. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 Key: `v`
 
-Right-click tool to open [Brush Trails](brushtrails.md).
+Right-click tool or `V` to open [Spacing](brushtrails.md).
 
 ## Curve tool
 
@@ -167,7 +172,7 @@ drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 
 Key: `q`
 
-Right-click tool to open [Brush Trails](brushtrails.md).
+Right-click tool to open [Spacing](brushtrails.md).
 
 ## Fill tool
 
@@ -180,7 +185,7 @@ clicking the right button.
 
 *Note that the Fill tool fills all the way to the boundaries of an enclosed
 shape. If the shape is not completely enclosed (that is, if there is a hole in
-its perimeter), the paint will "leak" through and fill the entire page.*
+its perimeter), the paint will "leak" through and fill the entire page. Bear in mind that the working format extends beyond the interface menus (press F10 to reveal). Therefore, the fill may spill underneath and produce a surprising result.*
 
 Holding down the `Alt` key when you click with the Fill cursor, fills outward to the background color. In other words, the fill spreads
 outward until it reaches areas of the current background color.
@@ -195,22 +200,19 @@ Filling the sky with `ALT` stops only at the **background** color (green of land
 
 Key: `f`
 
-Right-click tool to open [Fill](fill.md) type.
+Right-click tool or `F`to open [Fill](fill.md) type.
 
 ## Airbrush tool
 
 ![](t-airbrush.png)
 
-By using the Airbrush in combination with the different
-brushes, you can create a variety of effects, ranging from a fine one-pixel
+By using the Airbrush in combination with the different brushes, you can create a variety of effects, ranging from a fine one-pixel
 spray to a coarse spray made with the big brushes.
 
-Click the Airbrush icon with the left button, and then try painting
-with it using the various brushes. Try it with the three- and five-pixel brushes, and then try it with the big
+Click the Airbrush icon with the left button, and then try painting with it using the various brushes. Try it with the three- and five-pixel brushes, and then try it with the big
 brushes.
 
-*Note that, just like a regular airbrush, if you keep the mouse
-button pressed without moving the mouse, the paint continues to build
+*Note that, just like a regular airbrush, if you keep the mouse button pressed without moving the mouse, the paint continues to build
 up in one spot.*
 
 Key: *no hotkey*
@@ -219,7 +221,7 @@ Right-click tool to resize nozzle size.
 
 Press the `SHIFT` key for a horizontal or vertical line constraint.
 
-Press the `CTRL` key to slow down the Airbrush flow rate.
+Press the `CTRL` key to slow down the Airbrush flow rate. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 ## Rectangle tool
 
@@ -234,13 +236,13 @@ In any case, the rectangle is completed as soon as you release the button.
 
 *Remember, top left for unfilled, and bottom right for filled shapes.*
 
-Key: `r`
+Key: `r`; `R` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key for a square drawing constraint.
 
-Press the `CTRL` key to draw rectangles on the fly as you move the mouse.
+Press the `CTRL` key to draw rectangles on the fly as you move the mouse. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 
 ## Circle tool
@@ -256,13 +258,13 @@ you're happy with the shape.
 circle around anything just by starting to paint from where you want the center
 of the circle.*
 
-Key: `c`
+Key: `c`; `C` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 Press the `SHIFT` key to start with the next circle center on your last click.
 
-Press the `CTRL` key to draw circles on the fly as you move the mouse.
+Press the `CTRL` key to draw circles on the fly as you move the mouse. _Warning: This legacy keyboard shortcut can be overridden by the CTRL Pick Override Prefs._
 
 ## Ellipse tool
 
@@ -276,9 +278,9 @@ The Ellipse Tool works just like the [Circle tool](#circle-tool), except that it
 the mouse button and hold. Now you can rotate your ellipse until it has just the right tilt.
 4. When it is in just the right position, release the mouse button.
 
-Key: `e`
+Key: `e`; `E` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 With the `CTRL` key held down, the tool leaves traces while the curve is being drawn. Use `Shift` or the [Grid](#grid) for aligned anchor points.
 Amazing results can be achieved easily:  
@@ -303,9 +305,9 @@ Quickly double-click to stop the shape immediately. In fill mode, the shape is a
 
 *Note: Filled polygonal shapes with intersecting sides create interesting graphic effects.*
 
-Key: `w`
+Key: `w`; `W` for filled.
 
-Right-click tool to open [Brush Trails](brushtrails.md) or [Fill](fill.md) type.
+Right-click tool to open [Spacing](brushtrails.md) or [Fill](fill.md) type.
 
 ## Brush tool
 
@@ -325,7 +327,7 @@ Step-by-step operation:
 5. release the button
 6. this area is now your new brush, and you can draw with it!
 
-Not just once, like a stamp, but with all the drawing tools: freehand draw, line, rectangle, circle and even ellipse! Experiment with different brush shapes and stroke tools to understand the power and simplicity of the brush tool.
+Not just once, like a stamp, but with all the drawing tools: freehand draw, line, rectangle, circle and even ellipse! Experiment with different brush shapes and stroke tools to understand the power and simplicity of the brush tool. Use **Brush Trails** options for more controls, like Spacing or rotation and resize.
 
 There's a special [Brush](../../menus/src/brush.md) menu, with dedicated effects and functions.
 
@@ -345,14 +347,13 @@ However, there is one aspect of brush selection you should be aware of: if any p
 
 Press the `SHIFT` key during use for for a "square" constraint.
 
-Key: `b`
+Key: `b` ; hit again for Polygonal brush.
 
 ## Text tool
 
 ![](t-text.png)
 
-The Text tool lets you place text anywhere on the page, and the Brush Selector lets you pick it up and reposition it if you didn't have it quite right the first time.
-
+The Text tool lets you place text anywhere on the page. You can change the color of your text by choosing a different foreground color.
 To enter text on the page:
 
 1. Click the Text tool
@@ -368,9 +369,7 @@ point where you first placed the cursor. If the page size is larger than the
 screen, the screen will scroll to the edge of the page as you type. You can
 delete text by using the **`Backspace`** key.
 
-Note, however, that if after entering a portion of text you click the cursor elsewhere on the screen, or you select a tool from the Toolbox, that text becomes a bit-mapped image, and no longer behaves as text. In other words, you cannot **`Backspace`** over it as you could when it was still active as text.
-You can change the color of your text by choosing a different foreground
-color.
+Note, however, that if after entering a portion of text you click the cursor elsewhere on the screen, or you select a tool from the Toolbox, that text becomes a bit-mapped image, and no longer behaves as text. In other words, you cannot **`Backspace`** over it as you could when it was still active as text. The [Brush tool](#brush-tool) lets you pick it up and reposition it if you didn't have it quite right the first time.
 
 ---
 
@@ -380,7 +379,8 @@ If you right-click on the text tool, you'll access text options, including choos
 **AA** is depressed by default, for **anti-aliasing**. For a more pixelated effect, remove it. Please note that "bitmap" fonts are no longer a common standard, so don't hesitate to install some fonts on your system from these sites:
 
 * [Workbench Topaz](https://www.sblendorio.eu/Misc/TopazFont)
-* [Bitmap on Dafont](https://www.dafont.com/bitmap.php)
+* [Damien Guard fixed fonts](https://damieng.com/typography/)
+* [Bitmap category on Dafont](https://www.dafont.com/bitmap.php)
 * [Fontstruct](https://fontstruct.com/gallery/tag/707/Amiga?category=any)
 
 Note the approximate height, and enter it in the **"Size"** field. 8 is a good default size for legacy bitmap fonts.
@@ -442,13 +442,16 @@ There are two symmetry modes : **[Point](#point-symmetry)** and **[Tile](#tile-s
 
 #### Order
 
-You can lower the **Order value to 1** with **Mirror** on to retain a basic mirror function. The left and right parts of the screen will be copied as a mirror erected vertically in the center of the screen.  
+You can lower the **Order value to 1** with **Mirror** on to retain a basic mirror function. The left and right parts of the screen will be copied as a mirror erected vertically in the center of the screen.
+![mirror](sym-mirror-ex.png)  
 
 An **Order of 2** imitates a paper folded into 4, like the Rorschach tests.
 
 **Cyclic symmetries** of order 2 to 7, especially the odd values, once offset from the center of the screen, let you effortlessly draw bold natural shapes, such as flowers, an impact on the ground, the cracks in a window, a tunnel narrowing...
+![mirror](sym-5-ex.png)  
 
-Values of 5 and above, used with the Line tool and a little practice, will help you draw regular polygons.
+Values of 5 and above, used with the Line or Curve tool and a little practice, will help you draw regular polygons, stars, helix, screw…
+![](sym-5-line-ex.png)
 
 The maximum is 99, which may sound crazy, but allows for some very amusing variations on the circle design.
 
@@ -508,7 +511,7 @@ Keys: `>` / `<`
 
 Reverses the last painting action. Thanks to the huge memory capacity of modern computers, PyDPainter allows **up to 20 undos!**
 
-Right-clicking "undoes" previous undos.
+Right-clicking or uppecase `U` "undoes" previous undos.
 
 Keys: `u` / `U`
 
@@ -520,6 +523,47 @@ Clears the screen to the currently selected **background color**. If you have
 multiple frames, an Options requester appears for you to indicate which
 frames you want to clear.
 
-Key: `K`
+Key: `K` <= uppercase
+
+## Color Swatch
+
+You see a zone below the Undo and CLR button and above the color palette : a rectange with a large dot in the center. The dot is always displaying the **Foreground color**. The rectangle is always of the color of the **Background color**.
+![](color-swatch.png)
+
+### Foreground Color
+
+The **foreground** color is the color used for all drawing tools with the LEFT mouse button... like lines, shapes, text in default Color mode, etc. It's the default fill color for the [Fill tool](#fill-tool) too, if no other Fill Type have been selected. The color palette belows, have the **foreground** color, cream by default, displayed inside a white outline.
+
+### Background Color
+
+By default, on a new PydPainter projet, the **Background** color is black.
+All drawing tools can use this color to ERASE or as a secondary color using the RIGHT mouse button. The [Fill tool](#fill-tool) can always fill with that color too, whatever Fill type is on. Just RIGHT-click with Fill tool selected.
+
+[Clear tool](#clear-canvas) use the current background color as its color to clear the current screen.
+
+That means the [Brush](#brush-tool) tool use this black as transparency by default. It's not mandatory, you can SELECT another color RIGHT clicking anywhere on the palette below. Pink can be the transparency color, preserving all black pixel to be transparent in a new brush grabbing.
+
+### Pick color
+You can pick any color from the canvas using a left click on the Color Swatch (either the dot or the are around it). While using a drawing tool, you'd better learn this short key: `,`. There is also the optional short-key `Ctrl` to pick a color everywhere for the convenience of PhotoShop and tablets users. **Activate CTRL Pick Override** in  [Prefs menu](../../menus/src/prefs.md) to use it.
+The mouse pointer changes to a pipette with a information bubble displaying the current color index and RGB values.
+
+![](pipette.png)
+
+- LEFT click to define the current underlying color as Foreground.
+- RIGHT click to define the current underlying color as Background.
+
+*Note: This does not modify the color palette - it only chooses which color from the palette you paint with. If you need to modify a color in the palette, use Palette (below).*
+
+### Palette
+You have quick access to [Palette](../../menus/src/palette.md) editor, using either of the methods below:
+- RIGHT click on the foreground or background color on the Color Swatch.
+It open the **Palette** windows.
+- hit `P`
+
+## Colors
+The colors are numbered from 0 to the max colors you define in the [Choose Screen  Format requester](../../menus/src/screenformat.md). A LEFT click on any color select the color as Foreground. A RIGHT click select color as Background. The bubble can display additional information, like index and RGB values.
+
+32 colors slots are displayed at a time. If you're using more, use the arrows bellow to browse through more colors (from A to H if 256 colors.)
+![](color-browse.png)
 
 ###### Documentation written by Stephane Anquetil

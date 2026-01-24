@@ -488,7 +488,7 @@ class BrushReqProps(object):
     A_BOTTOM = 4
     A_CENTER_Y = 5
 
-    A_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x88\x89"]
+    A_STR = ["\x97", "\x94", "\x8C\x8D", "\x95", "\x96", "\x99\x9A"]
     A_NAME = ["A_LEFT", "A_RIGHT", "A_CENTER_X", "A_TOP", "A_BOTTOM", "A_CENTER_Y"]
 
     H_CENTER, H_TOP_LEFT, H_TOP, H_TOP_RIGHT, H_RIGHT, H_BOTTOM_RIGHT, H_BOTTOM, H_BOTTOM_LEFT, H_LEFT = range(9)
@@ -1078,6 +1078,8 @@ Offset: ____~ ____~
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.grid_size = (int(sizeXg.value), int(sizeYg.value))
                     config.grid_offset = (int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value))
+                    if not config.grid_on:
+                        config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -1152,6 +1154,8 @@ Height:  ____
                     config.symm_mode = 1
                     config.symm_width = int(widthg.value)
                     config.symm_height = int(heightg.value)
+                    if not config.symm_on:
+                        config.toolbar.click(config.toolbar.tool_id("symm"), MOUSEBUTTONDOWN)
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -1226,6 +1230,8 @@ X:_____  Y:_____
                     config.symm_mode = 0
                     config.symm_num = int(orderg.value)
                     config.symm_center = [config.xpos_undisplay(int(centerxvalg.value)), config.ypos_undisplay(int(centeryvalg.value))]
+                    if not config.symm_on:
+                        config.toolbar.click(config.toolbar.tool_id("symm"), MOUSEBUTTONDOWN)
                     running = 0 
                 elif ge.gadget.label == "Cancel":
                     running = 0 
@@ -1737,14 +1743,68 @@ Rotate\xB0_____~ _____~
 
 
 class FillGadget(Gadget):
-    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None):
+    ROT_ARROW = np.array([[-0.5,0.0], [0.5,0.0], [0,1]])
+    CONTROL_MODE_NONE = 0
+    CONTROL_MODE_ANGLE = 1
+    CONTROL_MODE_XY = 2
+
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, minvalue=None):
         if label == "^":
             scaleX = rect[2] // 16
             scaleY = rect[3] // 8
             scaledown = 4 // min(scaleX,scaleY)
             self.crng_arrows = imgload('crng_arrows.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
             value = 0
-        super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id)
+        super(FillGadget, self).__init__(type, label, rect, value, maxvalue, id, minvalue=minvalue)
+
+    def get_control_mode(self):
+        control_mode = self.CONTROL_MODE_NONE
+        if "fillmode_value" in dir(self):
+            if self.fillmode_value in [FillMode.LINEAR]:
+                control_mode = self.CONTROL_MODE_ANGLE
+            elif self.fillmode_value in [FillMode.CIRCULAR]:
+                control_mode = self.CONTROL_MODE_XY
+        return control_mode
+
+    def draw_arrow(self, screen, color, bgcolor):
+        rx,ry,rw,rh = self.screenrect
+        cw = rw//2
+        ch = rh//2
+        cx = rx + cw
+        cy = ry + ch
+        arrowcoords = self.ROT_ARROW.copy()
+        arrowcoords *= np.array([cw/8,ch/8])
+
+        #initial scale
+        arrowcoords += np.array([cx,ry])
+        newcoords = np.zeros(shape=(3,2), dtype=np.float64)
+
+        q = math.radians(self.fillmode_angle)
+        trans1   = np.matrix([[ 1, 0, 0],
+                              [ 0, 1, 0],
+                              [-cx, -cy, 1]])
+        scale1   = np.matrix([[1.0/config.aspectX, 0, 0],
+                              [0, 1.0/config.aspectY, 0],
+                              [0, 0, 1]])
+        rot      = np.matrix([[ math.cos(q), math.sin(q), 0],
+                              [-math.sin(q), math.cos(q), 0],
+                              [           0,           0, 1]])
+        scale2   = np.matrix([[config.aspectX, 0, 0],
+                              [0, config.aspectY, 0],
+                              [0, 0, 1]])
+        trans2   = np.matrix([[ 1, 0, 0],
+                              [ 0, 1, 0],
+                              [ cx,  cy, 1]])
+        arrow_mat = trans1 @ scale1 @ rot @ scale2 @ trans2
+
+        for i in range(arrowcoords.shape[0]):
+            xf,yf = arrowcoords[i]
+            xyvect = np.matmul(np.matrix([[xf,yf,1]]),arrow_mat)
+            xf = xyvect[0,0]
+            yf = xyvect[0,1]
+            newcoords[i] = [int(round(xf)),int(round(yf))]
+
+        pygame.draw.polygon(screen, color, newcoords, 0)
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
@@ -1753,6 +1813,9 @@ class FillGadget(Gadget):
         self.offsetx = xo
         self.offsety = yo
         self.screenrect = (x+xo,y+yo,w,h)
+        px = config.font.xsize // 8
+        py = config.font.ysize // 8
+
         if self.maxvalue == None:
             current_range = 1
         else:
@@ -1764,9 +1827,15 @@ class FillGadget(Gadget):
 
             self.need_redraw = False
             if self.label == "#":
+                screen_dbuff = pygame.Surface((screen.get_size()), 0, screen)
+                pygame.draw.rect(screen_dbuff, bgcolor, self.screenrect, 0)
                 if self.value != None:
+                    self.fillmode_angle %= 360
                     primprops = copy.copy(config.primprops)
                     primprops.fillmode = copy.copy(config.primprops.fillmode)
+                    primprops.fillmode.dither = self.fillmode_dither
+                    primprops.fillmode.angle = self.fillmode_angle
+                    primprops.fillmode.xy = self.fillmode_xy
                     primprops.fillmode.gradient_dither = self.value
                     primprops.fillmode.value = self.fillmode_value
                     primprops.fillmode.predraw = False
@@ -1777,19 +1846,46 @@ class FillGadget(Gadget):
                     cx = rx + cw
                     cy = ry + ch
                     if primprops.fillmode.value in [FillMode.ANTIALIAS, FillMode.SMOOTH]:
-                        pygame.draw.rect(screen, (160,160,160), (rx,ry,rw+1,rh+1))
+                        pygame.draw.rect(screen_dbuff, (160,160,160), (rx,ry,rw+1,rh+1))
                         iw,ih = config.smooth_example_image.get_size()
                         ix = rx + ((rw - iw) // 2)
                         iy = ry + ((rh - ih) // 2)
-                        screen.blit(config.smooth_example_image, (ix,iy))
+                        screen_dbuff.blit(config.smooth_example_image, (ix,iy))
                         tw = font.xsize * len(str(primprops.fillmode))
                         tx = rx + ((rw - tw) // 2)
                         ty = iy + ih
-                        font.blitstring(screen, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
-                    fillellipse(screen, config.color, (cx,cy), cw, ch, primprops=primprops, interrupt=True)
+                        font.blitstring(screen_dbuff, (tx,ty), str(primprops.fillmode).upper(), (0,0,0), (255,255,255))
+                    fillellipse(screen_dbuff, config.color, (cx,cy), cw*7//8, ch*7//8, primprops=primprops, interrupt=True)
+                    control_mode = self.get_control_mode()
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        self.draw_arrow(screen_dbuff, fgcolor, bgcolor)
+                        draw_half_str_color(screen_dbuff, (rx+rw-16*px, ry+rh-8*py), "%3do" % (self.fillmode_angle), fgcolor, bgcolor)
+                    if control_mode == self.CONTROL_MODE_XY:
+                        # draw crosshair
+                        chx = rx + int(self.fillmode_xy[0]*rw)
+                        chy = ry + int(self.fillmode_xy[1]*rh)
+                        surf_array = pygame.surfarray.pixels2d(screen_dbuff)
+                        surf_array[chx-4*px:chx+5*px:2*px,chy] = 0x00000000
+                        surf_array[chx-3*px:chx+4*px:2*px,chy] = 0x00ffffff
+                        surf_array[chx,chy-4*py:chy+5*py:2*py] = 0x00000000
+                        surf_array[chx,chy-3*py:chy+4*py:2*py] = 0x00ffffff
+                        surf_array = None
                     if config.has_event():
                         #Got interrupted so still needs to redraw
                         self.need_redraw = True
+                    else:
+                        screen.blit(screen_dbuff, self.screenrect, self.screenrect)
+
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        for g in self.other_gadgets:
+                            g.enabled = True
+                            g.need_redraw = True
+                            g.draw(screen, font, offset, fgcolor, bgcolor, hcolor)
+                    else:
+                        for g in self.other_gadgets:
+                            g.enabled = False
+                            g.need_redraw = False
+
             elif self.label == "^": # direction arrow
                 pygame.draw.rect(screen, bgcolor, self.screenrect, 0)
                 if self.state == 0:
@@ -1815,6 +1911,12 @@ class FillGadget(Gadget):
         else:
             super(FillGadget, self).draw(screen, font, offset)
 
+    def inFillPreview(self, g, pointxy):
+        for arrowg in self.other_gadgets:
+            if arrowg.enabled and g.pointin(pointxy, arrowg.screenrect):
+                return False
+        return True
+
     def process_event(self, screen, event, mouse_pixel_mapper):
         global palette_page
         ge = []
@@ -1826,12 +1928,40 @@ class FillGadget(Gadget):
         if not g.enabled:
             return ge
 
+        control_mode = self.get_control_mode()
         if self.type == Gadget.TYPE_CUSTOM:
             if g.pointin((x,y), g.screenrect):
                 #handle left button
                 if event.type == MOUSEBUTTONDOWN and event.button == 1:
                     if g.label == "^":
                         g.state = 1
+                        g.need_redraw = True
+                    elif g.label == "#":
+                        if self.inFillPreview(g, (x,y)) and control_mode == self.CONTROL_MODE_ANGLE:
+                            g.state = 1
+                            angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                            g.fillmode_angle = int(angle)
+                            g.need_redraw = True
+                        elif control_mode == self.CONTROL_MODE_XY:
+                            g.state = 1
+                            g.fillmode_xy = [(x-gx)/gw, (y-gy)/gh]
+                            g.need_redraw = True
+                elif event.type == MOUSEBUTTONDOWN and event.button == 4:
+                    if g.label == "#" and control_mode == self.CONTROL_MODE_ANGLE:
+                        g.fillmode_angle += 1
+                        g.need_redraw = True
+                elif event.type == MOUSEBUTTONDOWN and event.button == 5:
+                    if g.label == "#" and control_mode == self.CONTROL_MODE_ANGLE:
+                        g.fillmode_angle -= 1
+                        g.need_redraw = True
+            if event.type == MOUSEMOTION and event.buttons[0]:
+                if g.label == "#" and g.state == 1:
+                    if control_mode == self.CONTROL_MODE_ANGLE:
+                        angle = math.degrees(math.atan2((gy+(gh/2)-y)*config.aspectX, (gx+(gw/2)-x)*config.aspectY) - math.pi/2)
+                        g.fillmode_angle = int(angle)
+                        g.need_redraw = True
+                    elif control_mode == self.CONTROL_MODE_XY:
+                        g.fillmode_xy = [(x-gx)/gw, (y-gy)/gh]
                         g.need_redraw = True
             if event.type == MOUSEBUTTONUP and event.button == 1:
                 if g.label == "^":
@@ -1841,6 +1971,8 @@ class FillGadget(Gadget):
                     g.state = 0
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+                elif g.label == "#":
+                    g.state = 0
         else:
             ge.extend(super(FillGadget, self).process_event(screen, event, mouse_pixel_mapper))
         return ge
@@ -1913,29 +2045,29 @@ def get_dither_dir():
 def range_enable(req):
     ditherdir = get_dither_dir()
 
-    ditherg = req.find_gadget("Dither:", 1)
-    dithervalg = req.find_gadget("Dither:", 2)
-    ditherdirg = req.find_gadget("Dither:", 3)
-    dithersampleg = req.gadget_id("12_0")
+    dithersampleg = req.find_gadget("Solid", 2)
+    ditherbuttonsg = list()
+    for i in range(1,12):
+        ditherbuttonsg.append(req.find_gadget("Dither:", i))
 
     renabled = False
     if ditherdir != 0 and \
-       dithersampleg.fillmode_value in [FillMode.VERTICAL, FillMode.VERT_FIT,
-                           FillMode.HORIZONTAL, FillMode.HORIZ_FIT,
+       dithersampleg.fillmode_value in [FillMode.CIRCULAR, FillMode.VERT_FIT,
+                           FillMode.LINEAR, FillMode.HORIZ_FIT,
                            FillMode.BOTH_FIT]:
         renabled = True
 
-    ditherg.enabled = renabled
-    ditherg.need_redraw = True
-    dithervalg.enabled = renabled
-    dithervalg.need_redraw = True
-    ditherdirg.enabled = renabled
-    ditherdirg.need_redraw = True
+    for g in ditherbuttonsg:
+        g.enabled = renabled
+        g.need_redraw = True
 
 def fill_req(screen):
     config.stop_cycling()
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+
     req = str2req("Fill Type", """
-[Solid]     ###########
+[Solid]  [\x9e]###########[\x9f]
 [Brush]     ###########
 [Wrap]      ###########
 [Pattern]   ###########
@@ -1944,9 +2076,12 @@ def fill_req(screen):
             ###########
 Gradient: [\x88\x89~\x8a\x8b~\x8c\x8d~\x8e\x8f~\x90\x91]
 Dither:--------------00^^
+[Random~Check~2x2~4x4~8x8]
+[HTone~VertBar~HorizBar]
 [Cancel][OK]
 """, "^#", mouse_pixel_mapper=config.get_mouse_pointer_pos, custom_gadget_type=FillGadget, font=config.font)
     req.center(screen)
+    req.draggable = True
     config.pixel_req_rect = req.get_screen_rect()
 
     for g in req.gadgets:
@@ -1954,31 +2089,54 @@ Dither:--------------00^^
         if g.label == str(config.fillmode):
             g.state = 1
 
+    angleminusg = req.find_gadget("Solid", 1)
+    angleminusg.rect = list(angleminusg.rect)
+    angleminusg.rect[0] += 24*px
+    angleplusg = req.find_gadget("Solid", 3)
+    angleplusg.rect = list(angleplusg.rect)
+    angleplusg.rect[0] -= 16*px
+    dither_default = [4,10,10,10,10,4,4,4,4]
+
     ditherg = req.find_gadget("Dither:", 1)
-    ditherg.maxvalue = 22
-    ditherg.value = config.fillmode.gradient_dither + 1
+    ditherg.maxvalue = 21
+    ditherg.value = config.fillmode.gradient_dither
     ditherg.need_redraw = True
 
     dithervalg = req.find_gadget("Dither:", 2)
-    if ditherg.value > 0:
-        dithervalg.label = "%d " % (ditherg.value-1)
-    else:
-        dithervalg.label = "\x99\x9a"
+    dithervalg.label = "%d " % (ditherg.value)
     dithervalg.need_redraw = True
 
     ditherdirg = req.find_gadget("Dither:", 3)
     ditherdirg.value = get_dither_dir()
     ditherdirg.need_redraw = True
 
-    dithersampleg = req.gadget_id("12_0")
+    dither = copy.copy(config.fillmode.dither)
+    dithersampleg = req.find_gadget("Solid", 2)
     dithersampleg.value = config.fillmode.gradient_dither
     dithersampleg.fillmode_value = config.fillmode.value
+    dithersampleg.fillmode_dither = dither
+    dithersampleg.fillmode_angle = config.fillmode.angle
+    dithersampleg.fillmode_xy = config.fillmode.xy
+    dithersampleg.other_gadgets = [angleminusg, angleplusg]
     dithersampleg.need_redraw = True
 
+    dithertypeg = list()
+    for i in range(8):
+        dithertypeg.append(req.find_gadget("Random", i))
+
     fillmode_value = config.fillmode.value
+    dithertypeg[dither.type].state = 1
     range_enable(req)
     req.draw(screen)
     config.recompose()
+
+    def update_gradient(gradient_value):
+        ditherg.value = gradient_value
+        ditherg.need_redraw = True
+        dithervalg.label = "%d " % (gradient_value)
+        dithervalg.need_redraw = True
+        dithersampleg.value = gradient_value
+        dithersampleg.need_redraw = True
 
     running = 1
     while running:
@@ -1992,25 +2150,36 @@ Dither:--------------00^^
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
                     config.fillmode.value = fillmode_value
-                    config.fillmode.gradient_dither = ditherg.value - 1
+                    config.fillmode.dither = dither
+                    config.fillmode.gradient_dither = ditherg.value
+                    config.fillmode.angle = int(dithersampleg.fillmode_angle)
+                    config.fillmode.xy = dithersampleg.fillmode_xy
                     config.menubar.indicators["fillmode"] = draw_fill_indicator
                     draw_fill_indicator(None)
                     running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0
+                elif ge.gadget == angleminusg:
+                    angle = int(dithersampleg.fillmode_angle)
+                    angle = ((angle+44) // 45 * 45 - 45) % 360
+                    dithersampleg.fillmode_angle = angle
+                    dithersampleg.need_redraw = True
+                elif ge.gadget == angleplusg:
+                    angle = int(dithersampleg.fillmode_angle)
+                    angle = (angle // 45 * 45 + 45) % 360
+                    dithersampleg.fillmode_angle = angle
+                    dithersampleg.need_redraw = True
                 elif ge.type == GadgetEvent.TYPE_GADGETUP and ge.gadget.label in FillMode.LABEL_STR:
                     fillmode_value = FillMode.LABEL_STR.index(ge.gadget.label)
                     dithersampleg.fillmode_value = fillmode_value
                     dithersampleg.need_redraw = True
                     range_enable(req)
+                elif ge.gadget in dithertypeg:
+                    i = dithertypeg.index(ge.gadget)
+                    dither.set_type(i)
+                    update_gradient(dither_default[i])
             elif ge.gadget == ditherg:
-                if ditherg.value > 0:
-                    dithervalg.label = "%d " % (ditherg.value-1)
-                else:
-                    dithervalg.label = "\x99\x9a"
-                dithervalg.need_redraw = True
-                dithersampleg.value = ditherg.value - 1
-                dithersampleg.need_redraw = True
+                update_gradient(ditherg.value)
             elif ge.gadget == ditherdirg:
                 crange = config.get_range(config.color)
                 if not crange is None:
@@ -2039,7 +2208,23 @@ Dither:--------------00^^
             if g.label == FillMode.LABEL_STR[fillmode_value]:
                 g.state = 1
 
+        dithertypeg[dither.type].state = 1
+        dithertypeg[dither.type].need_redraw = True
+
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            #keep requestor within screen
+            (rx,ry,rw,rh) = req.rect
+            if ry < 14:
+                ry = 14
+            if ry > screen.get_height()-20:
+                ry = screen.get_height()-20
+            if rx < -rw+20:
+                rx = -rw+20
+            if rx > screen.get_width()-40:
+                rx = screen.get_width()-40
+            req.rect = (rx,ry,rw,rh)
+            config.pixel_req_rect = req.get_screen_rect()
+
             req.draw(screen)
             config.recompose()
 

@@ -1,6 +1,7 @@
 # Brush Trails
 - [Brush Trails](#brush-trails)
     - [New in version 2.1.0](#new-in-version-210)
+    - [Quick look](#quick-look)
   - [Continuous](#continuous)
   - [Every Nth dot](#every-nth-dot)
   - [Airbrush](#airbrush)
@@ -9,28 +10,44 @@
   - [N Total](#n-total)
   - [Ease In/Out](#ease-inout)
   - [Size and Rotate](#size-and-rotate)
+    - [Example](#example)
+    - [Tutorial](#tutorial)
 
 | ![New Brush Trails](brushtrails.png) |
 | :-----: |
-| *These options make more sense with a custom brush, otherwise it just looks like dotted lines.* |
+| *These options make more sense with a larger or custom brush, otherwise it just looks like dotted lines.* |
 
 ### New in version 2.1.0 
 
 Number spinners: Click the up or down arrows to increment or decrement values. Holding the button causes them to repeat.
 
+### Quick look
+
+Let's have a quick look of the four buttons : **Continuous, Every Nth dot, Airbrush** and **N Total**.
+
+![](Spacing-examples.png)
+
+From left to right, examples of the 4 default settings, with **Circle**, **Rectangle** and **Line** tools, each with a different brush (indicated in red).
+
 ## Continuous
-Default operation. Brush paints continuously without spacing.
+Default operation. Draw continuously using the current brush without spacing.
+|![](continuous-ex.png) |
+| :-----: |
+| *Here with standard 3 pixel round brush* |
 
 ## Every Nth dot
 
 Defines the regular pixel spacing between each time the current brush will be copied along the path. This spacing remains the same whatever the length of the line, the size of the rectangle and so on.
+|![](8.png) |
+| :-----: |
+| *Here with standard 3 pixel round brush* |
 
 *Note: The default spacing of 8 pixels can be covered by brushes larger than 8 pixels.*
 
 ## Airbrush
 Airbrush paints using the airbrush tool along the path defined by any drawing tool affected by thoses settings (**Line, Curve, Rectangle, Circle, Elipse,** and **Draw**). The number '16' by default sets the number of airbrush sprays to be applied at each pixel along the path. We recommend lowering it to 1 to 4 to better understand the effect. This creates a fuzzy line or shape.  The **spraying size** defined by a right-click on the regular **Airbrush** tool is supported.
 
-![](airbrush.png)
+![](airbrush-spacing.png)
 
 *Note: The Airbrush settings apply to all the drawing tools, not the Airbrush tool. Use the **Draw** drawing tool for a free drawing.*
 
@@ -47,23 +64,19 @@ On the left side, there are two examples with the default single pixel brush, at
 ### New 2.2.0 Size and Rotate values 
 
 You can set the new **Size** and **Rotation** parameters to quickly add variety, for example:
-Set Size end to 250% will spray your brush up to 2.5 times larger.
-Set Rotation from -90° to 90° will create an illusion of chaos with a brush that has a directional sense, like a square, a rock.
+Set **Size End** to 300% will draw your brush up to 3 times larger.
+| ![](size-100-300.png) |
+| :-----: |
+| Every 8th dot, Continuous and Airbrush .5 examples within a Line<br>using defaults brush round 3, square brush 2 and the small 3 dots.|
 
 ## N Total
 Defines the total number of times the current brush will be copied along the path. For example, if you draw a circle with a **total spacing** of 14 with a star-shaped brush, this will make a round of 14 stars.
 
 | ![](14stars.png) |
 | :-----: |
-| *Combined with the [Cycle](../../menus/src/mode.md#cycle) mode using a color range, gives this kind of effect.* |
+| *Combined with a custom star brush and the [Cycle](../../menus/src/mode.md#cycle) mode using a color range, gives this kind of effect.* |
 
 *Note: With shapes that have multiple line segments like rectangles and polygons, the N Total property is applied to each line segment.*
-
----
-
-From left to right, examples of the 4 default settings, with Circle, Rectangle and Line tools, each with a different brush (indicated in red).
-
-![](Spacing-examples.png)
 
 ## Ease In/Out
 

@@ -36,8 +36,9 @@ class GIFWriter:
         self.first_frame = True
 
     def __del__(self):
-        self.file.write(struct.pack("B", TRAILER)) # End of file
-        self.file.close()
+        if "file" in dir(self):
+            self.file.write(struct.pack("B", TRAILER)) # End of file
+            self.file.close()
 
     def write_header(self):
         header = b"GIF89a"

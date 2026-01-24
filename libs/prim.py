@@ -8,6 +8,7 @@ import os.path
 import random
 import copy
 import colorsys
+import csv
 from libs.menureq import *
 
 import contextlib
@@ -78,11 +79,11 @@ def start_shape():
     hlines = []
     vlines = {}
 
-def end_shape(screen, color, primprops=None, interrupt=False):
+def end_shape(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global vlines
-    drawhlines(screen, color, primprops=primprops, interrupt=interrupt)
+    drawhlines(screen, color, primprops=primprops, interrupt=interrupt, enable_recompose=enable_recompose)
     hlines = []
-    drawvlines(screen, color, primprops=primprops, interrupt=interrupt)
+    drawvlines(screen, color, primprops=primprops, interrupt=interrupt, enable_recompose=enable_recompose)
     vlines = {}
 
 def symm_coords_list(coords, handlesymm=True, interrupt=False):
@@ -261,6 +262,49 @@ def tint_image(img, tint_trans):
     ia = None
     return img
 
+halfnumbers_image = None
+def draw_half_str(screen, xypos, text):
+    global halfnumbers_image
+    numchars = 22
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+    if halfnumbers_image is None or halfnumbers_image.get_size() != (px*4*numchars,py*8):
+        halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
+    nh = halfnumbers_image.get_height()
+    nw = halfnumbers_image.get_width() // numchars
+    xpos = xypos[0] * px
+    ypos = xypos[1] * py
+
+    for c in text:
+        noffset = halfnumbers_image.get_width() + 1
+        if c >= '0' and c <= '9':
+            noffset = (ord(c) - ord('0')) * nw
+        elif c == 'o':
+            noffset = 10 * nw
+        elif c == '-':
+            noffset = 11 * nw
+        elif c == '%':
+            noffset = 12 * nw
+        elif c == 'C':
+            noffset = 13 * nw
+        elif c == 'Q':
+            noffset = 14 * nw
+        elif c == 'S':
+            noffset = 15 * nw
+        elif c >= 'a' and c <= 'f':
+            noffset = (16 + (ord(c) - ord('a'))) * nw
+        screen.blit(halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
+        xpos += nw
+
+def draw_half_str_color(screen, xypos, text, fgcolor, bgcolor):
+    px = config.font.xsize // 8
+    py = config.font.ysize // 8
+    image = pygame.Surface((px*4*len(text), py*8),0, config.pixel_canvas)
+    image.set_palette([(255,255,255), (0,0,0)])
+    draw_half_str(image, (0,0), text)
+    image.set_palette([bgcolor, fgcolor])
+    screen.blit(image, xypos)
+
 class BrushCache:
     """This class models brush images that are ready to stamp on the screen"""
     def __init__(self):
@@ -425,7 +469,7 @@ class Brush:
             # Create image same size as brush and draw poly into it
             polyimage = pygame.Surface((w, h),0, config.pixel_canvas)
             primprops = PrimProps()
-            fillpoly(polyimage, 1, pl, handlesymm=False, primprops=primprops)
+            fillpoly(polyimage, 1, pl, handlesymm=False, interrupt=False, primprops=primprops, enable_recompose=False)
 
             # Create numpy mask out of poly and apply to brush
             surf_array_poly = pygame.surfarray.pixels2d(polyimage)
@@ -620,44 +664,15 @@ class Brush:
                 frame.image.set_palette(pal)
         self.cache = BrushCache()
 
-    def draw_half_str(self, screen, xypos, text):
-        px = config.font.xsize // 8
-        py = config.font.ysize // 8
-        if not "halfnumbers_image" in dir(self):
-            self.halfnumbers_image = imgload('halfnumbers.png', scaleX=px, scaleY=py, scaledown=4//min(px,py))
-        nh = self.halfnumbers_image.get_height()
-        nw = self.halfnumbers_image.get_width() // 16
-        xpos = xypos[0] * px
-        ypos = xypos[1] * py
-
-        for c in text:
-            noffset = self.halfnumbers_image.get_width() + 1
-            if c >= '0' and c <= '9':
-                noffset = (ord(c) - ord('0')) * nw
-            elif c == 'o':
-                noffset = 10 * nw
-            elif c == '-':
-                noffset = 11 * nw
-            elif c == '%':
-                noffset = 12 * nw
-            elif c == 'C':
-                noffset = 13 * nw
-            elif c == 'Q':
-                noffset = 14 * nw
-            elif c == 'S':
-                noffset = 15 * nw
-            screen.blit(self.halfnumbers_image, (xpos,ypos), (noffset,0,nw,nh))
-            xpos += nw
-
     def draw_indicator(self, screen):
         if self.__rotate != 0:
-            self.draw_half_str(screen, (197,2), f"{self.rotate}o")
+            draw_half_str(screen, (197,2), f"{self.rotate}o")
 
         if self.type == Brush.CUSTOM:
             orig_height = self.image_orig.get_height()
             if self.__size != orig_height:
                 pct = 100 * self.__size // orig_height
-                self.draw_half_str(screen, (213,2), f"{pct}%")
+                draw_half_str(screen, (213,2), f"{pct}%")
         elif self.size != 1:
             size = self.size
             btype_str = ""
@@ -667,8 +682,8 @@ class Brush:
                 btype_str = "Q"
             elif self.type == Brush.SPRAY:
                 btype_str = "S"
-            self.draw_half_str(screen, (213,2), f"{btype_str}")
-            self.draw_half_str(screen, (218,2), f"{size}")
+            draw_half_str(screen, (213,2), f"{btype_str}")
+            draw_half_str(screen, (218,2), f"{size}")
 
     def add_frame(self, image):
         self.frame.append(BrushFrame(self, image))
@@ -1133,22 +1148,24 @@ class Brush:
                     screen.blit(self.smear_image,
                                 (x - self.handle[0], y - self.handle[1]))
                 elif drawmode == DrawMode.SMOOTH:
+                    w2 = self.rect[2] + 2
+                    h2 = self.rect[3] + 2
                     #Allocate smooth image if needed
                     if self.smear_image == None:
-                        self.smear_image = pygame.Surface((self.rect[2], self.rect[3]),0, screen)
+                        self.smear_image = pygame.Surface((w2, h2),0, screen)
                         self.smear_image.set_palette(config.pal)
                         self.smear_image.set_colorkey(min(config.NUM_COLORS+1, 255))
 
                     #Get canvas into smear image
-                    self.smear_image.blit(screen, (0,0), [x - self.handle[0], y - self.handle[1], self.rect[2], self.rect[3]])
+                    self.smear_image.blit(screen, (0,0), [x - self.handle[0] - 1, y - self.handle[1] - 1, w2, h2])
                     #self.smear_image.blit(self.smear_stencil, (0,0))
 
                     #Smooth image
                     smooth_image(self.smear_image)
-                    self.smear_image.blit(self.smear_stencil, (0,0))
+                    self.smear_image.blit(self.smear_stencil, (1,1))
 
                     #Blit smoothed image
-                    screen.blit(self.smear_image, (x - self.handle[0], y - self.handle[1]))
+                    screen.blit(self.smear_image, [x - self.handle[0], y - self.handle[1]], [1,1, self.rect[2], self.rect[3]])
                 elif drawmode == DrawMode.TINT:
                     #Allocate smooth image if needed
                     if self.smear_image == None:
@@ -1415,6 +1432,107 @@ class DrawMode:
     def __str__(self):
         return DrawMode.LABEL_STR[self.value]
 
+class Dither:
+    """This class describes the dither type and matrixes"""
+    ORDER1 = np.matrix([[0,1],
+                        [1,0]], dtype="float") / 2.0
+    ORDER2 = np.matrix([[0,2],
+                        [3,1]], dtype="float") / 4.0
+    ORDER4 = np.matrix([[ 0, 8, 2,10],
+                        [12, 4,14, 6],
+                        [ 3,11, 1, 9],
+                        [15, 7,13, 5]], dtype="float") / 16.0
+    ORDER8 = np.matrix([[13, 61, 0, 49, 14, 62, 3, 52],
+                        [37, 21, 40, 25, 38, 22, 42, 27],
+                        [ 6, 53, 8, 57, 7, 54, 12, 59],
+                        [47, 31, 35, 20, 45, 28, 32, 17],
+                        [15, 63, 2, 50, 11, 58, 1, 48],
+                        [39, 23, 43, 26, 36, 19, 41, 24],
+                        [ 5, 55, 10, 60, 4, 51, 9, 56],
+                        [44, 29, 33, 16, 46, 30, 34, 18]], dtype="float") / 64.0
+
+    TYPE_RANDOM = 0
+    TYPE_CHECKER = 1
+    TYPE_2X2 = 2
+    TYPE_4x4 = 3
+    TYPE_8x8 = 4
+    TYPE_HALFTONE = 5
+    TYPE_VERTBAR = 6
+    TYPE_HORIZBAR = 7
+    TYPE_CUSTOM = 8
+
+    MATRIXES = [None, ORDER1, ORDER2, ORDER4, ORDER8]
+
+    def __init__(self):
+        self.name = None
+        self.type = self.TYPE_RANDOM
+        self.matrix = None
+        self.__gradient = 4
+        self.gradient_frac = self.__gradient / 20
+
+    @property
+    def gradient(self):
+        return self.__gradient
+
+    @gradient.setter
+    def gradient(self, value):
+        self.__gradient = value
+        self.set_type(self.type)
+
+    def set_type(self, new_value, new_name=None):
+        self.type = new_value
+        self.gradient_frac = self.__gradient / 20
+        if new_value == self.TYPE_RANDOM:
+            self.matrix = None
+        elif new_value < self.TYPE_HALFTONE:
+            if self.__gradient >= 1:
+                self.matrix = self.MATRIXES[new_value] / (10 / self.__gradient)
+            else:
+                self.matrix = np.matrix([[0]])
+        elif new_value == self.TYPE_HALFTONE:
+            self.matrix = self.halftone()
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
+        elif new_value == self.TYPE_VERTBAR:
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
+            if self.__gradient <= 1:
+                self.matrix = np.matrix([[0]])
+            else:
+                vert_list = list(range(0,self.__gradient))
+                self.matrix = (np.matrix([vert_list]) / self.__gradient).transpose()
+        elif new_value == self.TYPE_HORIZBAR:
+            self.gradient_frac = max(self.gradient_frac * 2, 1.0)
+            if self.__gradient <= 1:
+                self.matrix = np.matrix([[0]])
+            else:
+                vert_list = list(range(0,self.__gradient))
+                self.matrix = np.matrix([vert_list]) / self.__gradient
+        if not new_name is None:
+            self.load_matrix(new_name)
+
+    def halftone(self):
+        tau = math.pi*2
+        l = self.__gradient
+        if l <= 1:
+            return np.matrix([[0]])
+        a = [round(math.sin(tau*(i%l)/l)+math.sin(tau*(i//l)/l)+2,10)for i in range(l*l)]
+        b = [sorted(set(a)).index(i)for i in a]
+        index=0
+        divisor = max(b) + 1
+        return np.matrix(b).reshape((l,l)) / divisor
+
+    def load_matrix(self, name):
+        self.name = name
+        csv_reader = csv.reader(open(os.path.join('data', 'dither', f"{name}.csv"), "r"), delimiter=",")
+        x = list(csv_reader)
+        # Check if first row is divisor
+        divisor = None
+        if "".join(x[0]) == x[0][0]:
+            divisor = float(x[0][0])
+            del x[0]
+        self.matrix = np.array(x).astype("float").transpose()
+        if divisor is None:
+            divisor = int(self.matrix.max()) + 1.0
+        self.matrix /= divisor
 
 class FillMode:
     """This class describes the fill modes for solid shapes"""
@@ -1424,9 +1542,9 @@ class FillMode:
     WRAP = 3
     PERSPECTIVE = 4
     PATTERN = 5
-    VERTICAL = 6
+    CIRCULAR = 6
     VERT_FIT = 7
-    HORIZONTAL = 8
+    LINEAR = 8
     HORIZ_FIT = 9
     BOTH_FIT = 10
     ANTIALIAS = 11
@@ -1435,17 +1553,28 @@ class FillMode:
                  "\x88\x89","\x8a\x8b","\x8c\x8d","\x8e\x8f", "\x90\x91",
                  "Antialias","Smooth"]
     NOBOUNDS = [65535,65535,-1,-1]
-    ORDER4 = np.matrix([[ 0, 8, 2,10],
-                        [12, 4,14, 6],
-                        [ 3,11, 1, 9],
-                        [15, 7,13, 5]], dtype="int8")
 
     def __init__(self, value=0):
         self.brush = None
         self.value = value
-        self.gradient_dither = 4
         self.bounds = copy.copy(FillMode.NOBOUNDS)
         self.predraw = True
+        self.dither = Dither()
+        self.angle = 270
+        self.xy = [0.5,0.5]
+
+    @property
+    def od_matrix(self):
+        return self.dither.matrix
+
+    @property
+    def gradient_dither(self):
+        return self.dither.gradient
+
+    @gradient_dither.setter
+    def gradient_dither(self, value):
+        self.dither.gradient = value
+
     def __str__(self):
         return FillMode.LABEL_STR[self.value]
 
@@ -2204,6 +2333,16 @@ def hline_PATTERN(surf_array, y, x1, x2, xs1, xs2):
             #true color
             surf_array[x,y] = (config.pal[color][0] << 16) | (config.pal[color][1] << 8) | (config.pal[color][2])
 
+def hline_CIRCULAR(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
+def hline_LINEAR(surf_array, primprops, color, y, xs1, xs2):
+    if primprops.fillmode.predraw or config.get_range(color) == None:
+        hline_SOLID(surf_array, color, y, xs1, xs2)
+    hlines.append([y, xs1, xs2])
+
 def hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2):
     if primprops.fillmode.predraw or config.get_range(color) == None:
         hline_SOLID(surf_array, color, y, xs1, xs2)
@@ -2225,8 +2364,8 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         primprops = config.primprops
 
     size = screen.get_size()
-    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
-    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+    #clip most fill modes
+    if not primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.VERT_FIT, FillMode.BOTH_FIT]:
         #don't draw if off screen
         if y<0 or y>=size[1]:
             return
@@ -2242,8 +2381,8 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         x1,x2 = (x2,x1)
     xs1,xs2 = (x1,x2)
 
-    #VERT_FIT and BOTH_FIT shouldn't be affected by clipping
-    if not primprops.fillmode.value in [FillMode.VERT_FIT, FillMode.BOTH_FIT]:
+    #clip most fill modes
+    if not primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.VERT_FIT, FillMode.BOTH_FIT]:
         #clip to edges of screen
         if xs1<0:
             xs1=0
@@ -2263,6 +2402,10 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_WRAP(surf_array, y, x1, x2, xs1, xs2)
     elif primprops.fillmode.value == FillMode.PATTERN:
         hline_PATTERN(surf_array, y, x1, x2, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.CIRCULAR:
+        hline_CIRCULAR(surf_array, primprops, color, y, xs1, xs2)
+    elif primprops.fillmode.value == FillMode.LINEAR:
+        hline_LINEAR(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.VERT_FIT:
         hline_VERT_FIT(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.BOTH_FIT:
@@ -2271,7 +2414,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
         hline_ANTIALIAS(surf_array, primprops, color, y, xs1, xs2)
     elif primprops.fillmode.value == FillMode.SMOOTH:
         hline_SMOOTH(surf_array, primprops, color, y, xs1, xs2)
-    elif primprops.fillmode.value >= FillMode.VERTICAL:
+    elif primprops.fillmode.value > FillMode.CIRCULAR:
         #get color range
         cyclemode = False
         for crange in config.cranges:
@@ -2282,37 +2425,38 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
                 cur_crange = crange
                 color = arange[0]
         if cyclemode:
-            if primprops.fillmode.value == FillMode.VERTICAL:
+            if primprops.fillmode.value == FillMode.CIRCULAR:
                 y1 = config.fillmode.bounds[1]
                 y2 = config.fillmode.bounds[3]
                 numpoints = y2-y1+1
-            elif primprops.fillmode.value == FillMode.HORIZONTAL:
+            elif primprops.fillmode.value == FillMode.LINEAR:
                 x1 = config.fillmode.bounds[0]
                 x2 = config.fillmode.bounds[2]
                 numpoints = x2-x1+1
             else:
                 numpoints = x2-x1+1
-            if primprops.fillmode.gradient_dither >= 0:
+            if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                 pointspercolor = numpoints / (numcolors)
             else:
-                pointspercolor = numpoints / (numcolors-.9)
+                pointspercolor = numpoints / (numcolors-(primprops.fillmode.od_matrix.max()))
             ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
             for x in range(xs1,xs2+1):
-                if primprops.fillmode.gradient_dither >= 0:
+                if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                     dither = int((random.random()*ditherfactor)-(ditherfactor/2))
                 else:
                     dither = 0
                 if pointspercolor > 0:
-                    if primprops.fillmode.value >= FillMode.HORIZONTAL:
+                    if primprops.fillmode.value >= FillMode.LINEAR:
                         colori = int(int((x+dither)-x1) / pointspercolor)
-                    elif primprops.fillmode.value == FillMode.VERTICAL:
+                    elif primprops.fillmode.value == FillMode.CIRCULAR:
                         colori = int(int((y+dither)-y1) / pointspercolor)
-                    if primprops.fillmode.gradient_dither < 0:
-                        if primprops.fillmode.value >= FillMode.HORIZONTAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (x-x1) / pointspercolor)%16):
+                    if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
+                        od_size = primprops.fillmode.od_matrix.shape
+                        if primprops.fillmode.value >= FillMode.LINEAR:
+                            if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((x-x1) / pointspercolor) % 1:
                                 colori += 1
-                        elif primprops.fillmode.value == FillMode.VERTICAL:
-                            if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
+                        elif primprops.fillmode.value == FillMode.CIRCULAR:
+                            if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((y-y1) / pointspercolor) % 1:
                                 colori += 1
                     if colori >= len(arange):
                         colori = len(arange) - 1
@@ -2332,7 +2476,7 @@ def hline(screen, color_in, y, x1, x2, primprops=None, interrupt=False, erase=Fa
     surf_array = None
 
 
-def drawhlines(screen, color, primprops=None, interrupt=False):
+def drawhlines(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global hlines
     if primprops == None:
         primprops = config.primprops
@@ -2340,7 +2484,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
     if len(hlines) == 0:
         return
 
-    if primprops.fillmode.value == FillMode.BOTH_FIT:
+    grad = primprops.fillmode.dither.gradient_frac / 2
+    if primprops.fillmode.value in [FillMode.CIRCULAR, FillMode.LINEAR, FillMode.BOTH_FIT]:
         #Find color range
         cyclemode = False
         for crange in config.cranges:
@@ -2353,11 +2498,13 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         if not cyclemode:
             return
 
+        invert_range = False
+
         #Find bounds of shape
         hlines_min = np.amin(hlines, axis=0)
         hlines_max = np.amax(hlines, axis=0)
         xo = hlines_min[1] - 1
-        yo = hlines_min[0] - 1
+        yo = hlines_min[0] - 2
         w = hlines_max[2] - xo + 2
         h = hlines_max[0] - yo + 2
 
@@ -2367,51 +2514,123 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         #Render shape into numpy array
         for y,x1,x2 in hlines:
             surf_array[x1-xo:x2-xo+1,y-yo] = 1
-        surf_trim = surf_array.copy()
 
-        #Build up array of number of pixels to the edge
-        while (np.count_nonzero(surf_trim) > 0):
-            #Create mask to cut away edges
-            tfarray = np.equal(surf_trim, 0)
-            surf_mask = np.zeros((w,h), dtype=int)
-            surf_mask[tfarray] = 1
+        if primprops.fillmode.value == FillMode.CIRCULAR:
+            cx, cy = primprops.fillmode.xy
+            cx *= w
+            cy *= h
+            #Create matrix of indices
+            a3d = np.indices((w,h), dtype=int).transpose((1,2,0))
+            #Apply distance formula:
+            #  surf_array[x,y] = ((x-cx)**2 + (y-cy)**2)**0.5 + 1
+            a3d[:,:,0] -= int(cx)
+            a3d[:,:,0] *= config.aspectY
+            a3d[:,:,0] **= 2
+            a3d[:,:,1] -= int(cy)
+            a3d[:,:,1] *= config.aspectX
+            a3d[:,:,1] **= 2
+            a2d = np.zeros((w,h), dtype=float)
+            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1]
+            a2d **= 0.5
+            a2d += 1
 
-            #Trim edges of shape
-            surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
-            surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
-            surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
-            surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
-            tfarray = np.not_equal(surf_trim, 1)
-            surf_trim[tfarray] = 0
-
-            #Increment shape array pixel count from trimmed shape
-            surf_array += surf_trim
-
-            #Interrupt if needed
-            if interrupt and config.has_event():
-                config.drawing_interrupted = True
+            z_index = np.equal(surf_array, 0)
+            if np.size(z_index) == 0:
                 return
-            config.try_recompose()
+            surf_array[:,:] = a2d[:,:]
+            surf_array[z_index] = 0
+
+            invert_range = True
+
+            """
+            for x in range(w):
+                for y in range(h):
+                    if surf_array[x,y] > 0:
+                        surf_array[x,y] = ((x-cx)**2 + (y-cy)**2)**0.5 + 1
+            """
+
+        if primprops.fillmode.value == FillMode.LINEAR:
+            rot = primprops.fillmode.angle
+            a = int(65536 * math.cos(math.radians(rot-90))) * config.aspectY
+            b = int(65536 * math.sin(math.radians(rot-90))) * config.aspectX
+
+            #Create matrix of indices
+            a3d = np.indices((w,h), dtype=int).transpose((1,2,0))
+            #Apply linear calculation
+            a3d[:,:,0] *= a
+            a3d[:,:,1] *= b
+            a2d = np.zeros((w,h), dtype=int)
+            a2d[:,:] = a3d[:,:,0] + a3d[:,:,1] + 65537
+
+            z_index = np.equal(surf_array, 0)
+            if np.size(z_index) == 0:
+                return
+            surf_array[:,:] = a2d[:,:]
+            surf_array[z_index] = 0
+
+            """
+            for x in range(w):
+                for y in range(h):
+                    if surf_array[x,y] > 0:
+                        surf_array[x,y] = a*x + b*y + 65536
+            """
+
+            nz_index = np.nonzero(surf_array)
+            if np.size(nz_index) == 0:
+                return
+            min_value = surf_array[nz_index].min()
+            max_value = surf_array[nz_index].max()
+            surf_array[nz_index] -= min_value - int((max_value-min_value)/(numcolors)*grad) - 1
+
+        if primprops.fillmode.value == FillMode.BOTH_FIT:
+            surf_trim = surf_array.copy()
+            #Build up array of number of pixels to the edge
+            while (np.count_nonzero(surf_trim) > 0):
+                #Create mask to cut away edges
+                tfarray = np.equal(surf_trim, 0)
+                surf_mask = np.zeros((w,h), dtype=int)
+                surf_mask[tfarray] = 1
+
+                #Trim edges of shape
+                surf_trim[1:w,1:h] -= surf_mask[0:w-1,0:h-1]
+                surf_trim[0:w-1,0:h-1] -= surf_mask[1:w,1:h]
+                surf_trim[1:w,0:h-1] -= surf_mask[0:w-1,1:h]
+                surf_trim[0:w-1,1:h] -= surf_mask[1:w,0:h-1]
+                tfarray = np.not_equal(surf_trim, 1)
+                surf_trim[tfarray] = 0
+
+                #Increment shape array pixel count from trimmed shape
+                surf_array += surf_trim
+
+                #Interrupt if needed
+                if interrupt and config.has_event():
+                    config.drawing_interrupted = True
+                    return
+                if enable_recompose:
+                    config.try_recompose()
 
         #Create mask of finished shape
         tfmask = np.not_equal(surf_array, 0)
 
         #Map counts to colors in the range
         max_pixels = np.amax(surf_array)
-        if cur_crange.get_dir() == 1:
+        if (cur_crange.get_dir() == 1) ^ invert_range:
             surf_array[tfmask] = max_pixels - surf_array[tfmask]
-        surf_array *= numcolors * 256   # multiply for more precision
+        surf_array *= int((numcolors - grad) * 256)   # multiply for more precision
         surf_array //= max_pixels + 1
-        surf_array += cur_crange.low * 256
+        surf_array += int((cur_crange.low + grad) * 256)
 
-        if primprops.fillmode.gradient_dither > 0:
+        if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
             #Random dither
             dither_range = 32 * primprops.fillmode.gradient_dither
-            dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
-            surf_array += dither_array
-        elif primprops.fillmode.gradient_dither < 0:
-            dither_order4 = (FillMode.ORDER4 - 8) * 16
-            dither_array = np.tile(dither_order4, ((w+3)//4,(h+3)//4))
+            if dither_range > 0:
+                dither_array = np.random.randint(-dither_range,dither_range,size=(w,h))
+                surf_array += dither_array
+        else:
+            od_size = primprops.fillmode.od_matrix.shape
+            matrix_max = primprops.fillmode.od_matrix.max()
+            dither_order = ((primprops.fillmode.od_matrix - matrix_max/2.0) * 256).astype(np.int64)
+            dither_array = np.tile(dither_order, ((w//od_size[0])+1,(h//od_size[1])+1))
             surf_array += dither_array[0:w,0:h]
 
         #Force out of range colors back into range
@@ -2468,7 +2687,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
             #Scale image down again and convert to 8-bit
             smoothed_image = pygame.transform.smoothscale(big_image, (w,h))
@@ -2478,7 +2698,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if enable_recompose:
+                config.try_recompose()
 
         if primprops.fillmode.value == FillMode.SMOOTH:
             smooth_image(new_image)
@@ -2487,7 +2708,8 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
             if interrupt and config.has_event():
                 config.drawing_interrupted = True
                 return
-            config.try_recompose()
+            if enable_recompose:
+                config.try_recompose()
 
         #Mask off shape and draw into screen
         surf_array = pygame.surfarray.pixels2d(i8)
@@ -2496,7 +2718,7 @@ def drawhlines(screen, color, primprops=None, interrupt=False):
         i8.set_colorkey(0)
         screen.blit(i8, (xo,yo))
 
-def drawvlines(screen, color, primprops=None, interrupt=False):
+def drawvlines(screen, color, primprops=None, interrupt=False, enable_recompose=True):
     global vlines
     if primprops == None:
         primprops = config.primprops
@@ -2545,20 +2767,22 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                     if ys2>size[1]-1:
                         ys2=size[1]-1
                     numpoints = y2-y1+1
-                    if primprops.fillmode.gradient_dither >= 0:
+                    if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                         pointspercolor = numpoints / (numcolors)
                     else:
-                        pointspercolor = numpoints / (numcolors-.9)
+                        pointspercolor = numpoints / (numcolors-(primprops.fillmode.od_matrix.max()))
                     ditherfactor = primprops.fillmode.gradient_dither/3.0 * pointspercolor
                     for y in range(ys1,ys2+1):
-                        if primprops.fillmode.gradient_dither >= 0:
+                        if primprops.fillmode.dither.type == Dither.TYPE_RANDOM:
                             dither = int((random.random()*ditherfactor)-(ditherfactor/2))
                         else:
                             dither = 0
                         if pointspercolor > 0:
                             colori = int(int((y+dither)-y1) / pointspercolor)
-                            if primprops.fillmode.gradient_dither < 0:
-                                if FillMode.ORDER4[x%4, y%4] > (16 - (16 * (y-y1) / pointspercolor)%16):
+                            if primprops.fillmode.dither.type != Dither.TYPE_RANDOM:
+                                od_size = primprops.fillmode.od_matrix.shape
+                                if primprops.fillmode.od_matrix[x%od_size[0], y%od_size[1]] > 1 - ((y-y1) / pointspercolor) % 1:
+
                                     colori += 1
                             if colori >= len(arange):
                                 colori = len(arange) - 1
@@ -2573,7 +2797,8 @@ def drawvlines(screen, color, primprops=None, interrupt=False):
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
 def drawxorcross(screen, x, y, step=1, offset=0):
     #don't draw if off screen
@@ -2731,7 +2956,7 @@ def floodfill(surface, fill_color, position, erase=False, bounds_color=-1):
             end_shape(surface, fill_color)
 
 #from pygame: https://github.com/atizo/pygame/blob/master/src/draw.c
-def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False):
+def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=None, erase=False, enable_recompose=True):
     n = len(coords)
     if n == 0:
         return
@@ -2796,14 +3021,16 @@ def fillpoly(screen, color, coords, handlesymm=True, interrupt=False, primprops=
                 if interrupt and config.has_event():
                     config.drawing_interrupted = True
                     return
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
             # special case for horizontal line
             if miny == maxy:
                 hline(screen, color, miny, minx, maxx, primprops=primprops, erase=erase)
-                config.try_recompose()
+                if enable_recompose:
+                    config.try_recompose()
 
-        end_shape(screen, color, interrupt=interrupt)
+        end_shape(screen, color, interrupt=interrupt, enable_recompose=enable_recompose)
 
 
 def drawpoly(screen, color, coords, filled=0, xormode=False, drawmode=-1, handlesymm=True, interrupt=False, skiplast=False, erase=False):
