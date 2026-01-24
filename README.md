@@ -41,5 +41,5 @@ Documentation: [Table of Contents](docs/TOC.md)
 
 External Resources: [External Links](docs/links.md)
 
-**PyDPainter Copyright (C) 2019-2025 Mark Riale**<br>
+**PyDPainter Copyright (C) 2019-2026 Mark Riale**<br>
 This program is licensed under the GPLv3 or later. See [LICENSE](LICENSE) file for more details.
