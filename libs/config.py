@@ -476,6 +476,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
         self.menubar.menu_id("prefs").menu_id("ctrlpickoverride").checked = self.ctrl_pick_override
+        self.menubar.menu_id("prefs").menu_id("toolbarsoutside").checked = self.toolbars_outside
         self.menubar.hide_menus = self.hide_menus
 
         self.brush = Brush()
@@ -615,6 +616,7 @@ class pydpainter:
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
             f.write("ctrl_pick_override=%s\n" % (self.ctrl_pick_override))
+            f.write("toolbars_outside=%s\n" % (self.toolbars_outside))
             for k in self.user_hotkeys.keys():
                 h = self.user_hotkeys[k]
                 f.write("hotkey_%s=%s\n" % (str(h), str(h.attrs["map_to"])))
@@ -683,6 +685,8 @@ class pydpainter:
                         self.sys_file_dialog = True if vars[1] == "True" else False
                     elif vars[0] == "ctrl_pick_override":
                         self.ctrl_pick_override = True if vars[1] == "True" else False
+                    elif vars[0] == "toolbars_outside":
+                        self.toolbars_outside = True if vars[1] == "True" else False
                     elif vars[0][:7] == "hotkey_":
                         map_to = vars[0][7:]
                         map_from = vars[1]
@@ -831,6 +835,7 @@ class pydpainter:
         self.true_symmetry = False
         self.sys_file_dialog = False
         self.ctrl_pick_override = False
+        self.toolbars_outside = False
         self.user_hotkeys = HotKeyMap()
         config.resize_display()
         pygame.display.set_caption("PyDPainter")

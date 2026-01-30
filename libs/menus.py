@@ -1606,6 +1606,14 @@ class DoPrefsCtrlPickOverride(MenuAction):
         config.ctrl_pick_override = self.gadget.checked
         config.doKeyAction()
 
+class DoPrefsToolbarsOutside(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.toolbars_outside = self.gadget.checked
+        config.doKeyAction()
+
 class DoPrefsSave(MenuAction):
     def selected(self, attrs):
         config.saveConfig()
@@ -1777,6 +1785,7 @@ def init_menubar(config_in):
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],
             ["/Sys File Dialog", " ", DoPrefsSysFileDialog],
             ["/CTRL Pick Override", " ", DoPrefsCtrlPickOverride],
+            ["/Toolbars Outside", " ", DoPrefsToolbarsOutside],
             ["/Coords", [
                 ["/Show", "|", DoPrefsCoords],
                 ["/Flip", " ", DoPrefsFlipCoords],
