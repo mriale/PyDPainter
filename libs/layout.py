@@ -14,6 +14,7 @@ class LayoutTile:
     def __init__(self, name, size, anchor=False, show=True):
         self.name = name
         self.size = size
+        self.max_size = list(size)
         self.anchor = anchor
         self.show = show
         self.calc_rect = [0, 0, size[0], size[1]]
@@ -28,27 +29,83 @@ class LayoutGroup:
     def __init__(self, direction, list):
         self.direction = direction
         self.list = list
+        self.max_size = [0,0]
+
+    def calc_max_size(self):
+        self.max_size = [0,0]
+        for l in self.list:
+            if isinstance(l, LayoutGroup):
+                l.calc_max_size()
+            elif isinstance(l, LayoutTile):
+                print(f"{l}")
+            if self.direction == LayoutGroup.VERT:
+                self.max_size[1] += l.max_size[1]
+                if l.max_size[0] > 0:
+                    self.max_size[0] = l.max_size[0]
+            else:
+                self.max_size[0] += l.max_size[0]
+                if l.max_size[1] > 0:
+                    self.max_size[1] = l.max_size[1]
+        #print(f"{self.max_size=}")
+
+    def calc_tile_size(self):
+        for l in self.list:
+            if isinstance(l, LayoutGroup):
+                l.calc_tile_size()
+            elif isinstance(l, LayoutTile):
+                if l.size[0] < 0:
+                    l.calc_rect[2] = self.max_size[0]
+                if l.size[1] < 0:
+                    l.calc_rect[3] = self.max_size[1]
+
+    def calc_tile_pos(self):
+        pos = 0
+        for l in self.list:
+            if isinstance(l, LayoutGroup):
+                l.calc_tile_pos()
+                if self.direction == LayoutGroup.VERT:
+                    pos += l.max_size[1]
+                else:
+                    pos += l.max_size[0]
+            elif isinstance(l, LayoutTile):
+                if self.direction == LayoutGroup.VERT:
+                    l.calc_rect[1] = pos
+                    pos += l.max_size[1]
+                else:
+                    l.calc_rect[0] = pos
+                    pos += l.max_size[0]
+            print(f"{pos=}")
+
+    def calc(self):
+        self.calc_max_size()
+        self.calc_tile_size()
+        self.calc_tile_pos()
+        print(f"{self.max_size=}")
 
     def __repr__(self):
         if self.direction == LayoutGroup.VERT:
             dir_str = "VERT"
         else:
             dir_str = "HORIZ"
-        outstr = f"LayoutGroup<direction={dir_str} ["
+        outstr = f"LayoutGroup<direction={dir_str}, ["
         for item in self.list:
-            outstr += f"{item}, "
+            outstr += f"{item}"
         outstr = outstr.rstrip(", ")
-        outstr += "]>"
+        outstr += "]"
+        outstr += f", max_size={self.max_size}"
+        outstr += ">"
         return outstr
 
 class Layout:
     """This class describes a layout of windows"""
     def __init__(self, overlap=True):
         self.list = list()
+        self.lookup = {}
         self.overlap = overlap
         self.last_overlap = overlap
         self.max_size = [0,0]
         self.need_calc = True
+        self.tiles = list()
 
     def add(self, list):
         self.list.extend(list)
@@ -56,12 +113,25 @@ class Layout:
 
     def calc(self):
         if self.need_calc or self.last_overlap != self.overlap:
+            anchor_tile = None
+            """
+            - traverse list
+              - find anchor -- needed????
+              - make parent pointers
+              - make dict for direct access to tiles
+            """
+            for l in self.list:
+                if isinstance(l, LayoutGroup):
+                    l.calc()
+                elif isinstance(l, LayoutTile):
+                    print(f"layout tile: {l}")
+
             self.need_calc = False
             self.last_overlap = self.overlap
 
     def get_rect(self, name):
         self.calc()
-        rect = self.list[name].calc_rect
+        rect = self.lookup[name].calc_rect
         return rect
 
     def __repr__(self):
@@ -84,10 +154,11 @@ layout.add([LayoutGroup(LayoutGroup.VERT, [
                         LayoutGroup(LayoutGroup.HORIZ, [
                             LayoutTile("layers", (25,-1)),
                             LayoutTile("canvas", (320,200), anchor=True),
+                            ]),
+                        LayoutTile("animbar", (-1,11)),
                         ]),
+                    LayoutTile("tools", (25,-1)),
                     ]),
-                ]),
-                LayoutTile("animbar", (-1,11)),
                 ]),
             ])
 
