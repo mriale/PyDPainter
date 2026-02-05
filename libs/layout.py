@@ -14,10 +14,10 @@ class LayoutTile:
     def __init__(self, name, size, anchor=False, show=True):
         self.name = name
         self.size = size
-        self.max_size = list(size)
         self.anchor = anchor
         self.show = show
         self.calc_rect = [0, 0, size[0], size[1]]
+        self.parent = None
 
     def __repr__(self):
         return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, anchor={self.anchor}, show={self.show}>"
@@ -29,58 +29,61 @@ class LayoutGroup:
     def __init__(self, direction, list):
         self.direction = direction
         self.list = list
-        self.max_size = [0,0]
+        self.calc_rect = [0,0,0,0]
+        self.parent = None
 
-    def calc_max_size(self):
-        self.max_size = [0,0]
+    def calc_max_size(self, layout):
+        self.calc_rect = [0,0,0,0]
         for l in self.list:
             if isinstance(l, LayoutGroup):
-                l.calc_max_size()
+                l.calc_max_size(layout)
             elif isinstance(l, LayoutTile):
-                print(f"{l}")
+                layout.lookup[l.name] = l
+                l.parent = self
             if self.direction == LayoutGroup.VERT:
-                self.max_size[1] += l.max_size[1]
-                if l.max_size[0] > 0:
-                    self.max_size[0] = l.max_size[0]
+                self.calc_rect[3] += l.calc_rect[3]
+                if l.calc_rect[2] > 0:
+                    self.calc_rect[2] = l.calc_rect[2]
             else:
-                self.max_size[0] += l.max_size[0]
-                if l.max_size[1] > 0:
-                    self.max_size[1] = l.max_size[1]
-        #print(f"{self.max_size=}")
+                self.calc_rect[2] += l.calc_rect[2]
+                if l.calc_rect[3] > 0:
+                    self.calc_rect[3] = l.calc_rect[3]
+        #print(f"{self.calc_rect=}")
 
     def calc_tile_size(self):
         for l in self.list:
             if isinstance(l, LayoutGroup):
                 l.calc_tile_size()
-            elif isinstance(l, LayoutTile):
-                if l.size[0] < 0:
-                    l.calc_rect[2] = self.max_size[0]
-                if l.size[1] < 0:
-                    l.calc_rect[3] = self.max_size[1]
+            if l.calc_rect[2] < 0:
+                l.calc_rect[2] = self.calc_rect[2]
+            if l.calc_rect[3] < 0:
+                l.calc_rect[3] = self.calc_rect[3]
 
-    def calc_tile_pos(self):
+    def calc_tile_pos(self, parent):
+        self.parent = parent
         pos = 0
         for l in self.list:
             if isinstance(l, LayoutGroup):
-                l.calc_tile_pos()
-                if self.direction == LayoutGroup.VERT:
-                    pos += l.max_size[1]
-                else:
-                    pos += l.max_size[0]
-            elif isinstance(l, LayoutTile):
+                l.calc_tile_pos(self)
                 if self.direction == LayoutGroup.VERT:
                     l.calc_rect[1] = pos
-                    pos += l.max_size[1]
+                    pos += l.calc_rect[3]
                 else:
                     l.calc_rect[0] = pos
-                    pos += l.max_size[0]
-            print(f"{pos=}")
+                    pos += l.calc_rect[2]
+            elif isinstance(l, LayoutTile):
+                l.parent = self
+                if self.direction == LayoutGroup.VERT:
+                    l.calc_rect[1] = pos
+                    pos += l.calc_rect[3]
+                else:
+                    l.calc_rect[0] = pos
+                    pos += l.calc_rect[2]
 
-    def calc(self):
-        self.calc_max_size()
+    def calc(self, layout):
+        self.calc_max_size(layout)
         self.calc_tile_size()
-        self.calc_tile_pos()
-        print(f"{self.max_size=}")
+        self.calc_tile_pos(None)
 
     def __repr__(self):
         if self.direction == LayoutGroup.VERT:
@@ -92,7 +95,7 @@ class LayoutGroup:
             outstr += f"{item}"
         outstr = outstr.rstrip(", ")
         outstr += "]"
-        outstr += f", max_size={self.max_size}"
+        outstr += f", calc_rect={self.calc_rect}"
         outstr += ">"
         return outstr
 
@@ -103,9 +106,8 @@ class Layout:
         self.lookup = {}
         self.overlap = overlap
         self.last_overlap = overlap
-        self.max_size = [0,0]
+        self.calc_rect = [0,0,0,0]
         self.need_calc = True
-        self.tiles = list()
 
     def add(self, list):
         self.list.extend(list)
@@ -114,15 +116,9 @@ class Layout:
     def calc(self):
         if self.need_calc or self.last_overlap != self.overlap:
             anchor_tile = None
-            """
-            - traverse list
-              - find anchor -- needed????
-              - make parent pointers
-              - make dict for direct access to tiles
-            """
             for l in self.list:
                 if isinstance(l, LayoutGroup):
-                    l.calc()
+                    l.calc(self)
                 elif isinstance(l, LayoutTile):
                     print(f"layout tile: {l}")
 
@@ -131,7 +127,15 @@ class Layout:
 
     def get_rect(self, name):
         self.calc()
-        rect = self.lookup[name].calc_rect
+        tile = self.lookup[name]
+        rect = list(tile.calc_rect)
+        lg = tile.parent
+        while not lg is None:
+            if lg.direction == LayoutGroup.VERT:
+                rect[1] += lg.calc_rect[1]
+            else:
+                rect[0] += lg.calc_rect[0]
+            lg = lg.parent
         return rect
 
     def __repr__(self):
@@ -163,3 +167,7 @@ layout.add([LayoutGroup(LayoutGroup.VERT, [
             ])
 
 print(f"{layout=}")
+
+for k in layout.lookup.keys():
+    print(f"{k=} {layout.get_rect(k)}")
+
