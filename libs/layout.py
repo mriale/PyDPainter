@@ -11,16 +11,16 @@ def layout_set_config(config_in):
 
 class LayoutTile:
     """This class describes a single tile in a tiled layout"""
-    def __init__(self, name, size, anchor=False, show=True):
+    def __init__(self, name, size, anchor=False, visible=True):
         self.name = name
         self.size = size
         self.anchor = anchor
-        self.show = show
+        self.visible = visible
         self.calc_rect = [0, 0, size[0], size[1]]
         self.parent = None
 
     def __repr__(self):
-        return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, anchor={self.anchor}, show={self.show}>"
+        return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, anchor={self.anchor}, visible={self.visible}>"
 
 class LayoutGroup:
     """This class describes a vertically or horizontally tiled layout"""
@@ -101,27 +101,18 @@ class LayoutGroup:
 
 class Layout:
     """This class describes a layout of windows"""
-    def __init__(self, overlap=True):
-        self.list = list()
+    def __init__(self, group, overlap=True):
+        self.group = group
         self.lookup = {}
         self.overlap = overlap
         self.last_overlap = overlap
         self.calc_rect = [0,0,0,0]
         self.need_calc = True
 
-    def add(self, list):
-        self.list.extend(list)
-        self.need_calc = True
-
     def calc(self):
         if self.need_calc or self.last_overlap != self.overlap:
             anchor_tile = None
-            for l in self.list:
-                if isinstance(l, LayoutGroup):
-                    l.calc(self)
-                elif isinstance(l, LayoutTile):
-                    print(f"layout tile: {l}")
-
+            self.group.calc(self)
             self.need_calc = False
             self.last_overlap = self.overlap
 
@@ -141,17 +132,13 @@ class Layout:
     def __repr__(self):
         self.calc()
         outstr = "Layout<"
-        outstr += "list=["
-        for g in self.list:
-            outstr += f"{g}, "
-        outstr = outstr.rstrip(", ")
-        outstr += "]"
+        outstr += f"group={self.group}"
         outstr += f", overlap={self.overlap}"
         outstr += ">"
         return outstr;
 
-layout = Layout()
-layout.add([LayoutGroup(LayoutGroup.VERT, [
+layout = Layout(
+            LayoutGroup(LayoutGroup.VERT, [
                 LayoutTile("menubar", (-1,11)),
                 LayoutGroup(LayoutGroup.HORIZ, [
                     LayoutGroup(LayoutGroup.VERT, [
@@ -164,7 +151,7 @@ layout.add([LayoutGroup(LayoutGroup.VERT, [
                     LayoutTile("tools", (25,-1)),
                     ]),
                 ]),
-            ])
+            )
 
 print(f"{layout=}")
 
