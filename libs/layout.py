@@ -17,7 +17,6 @@ class LayoutTile:
         self.anchor = anchor
         self.visible = visible
         self.calc_rect = [0, 0, size[0], size[1]]
-        self.parent = None
 
     def __repr__(self):
         return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, anchor={self.anchor}, visible={self.visible}>"
@@ -30,7 +29,6 @@ class LayoutGroup:
         self.direction = direction
         self.list = list
         self.calc_rect = [0,0,0,0]
-        self.parent = None
 
     def calc_max_size(self, layout):
         self.calc_rect = [0,0,0,0]
@@ -39,7 +37,6 @@ class LayoutGroup:
                 l.calc_max_size(layout)
             elif isinstance(l, LayoutTile):
                 layout.lookup[l.name] = l
-                l.parent = self
             if self.direction == LayoutGroup.VERT:
                 self.calc_rect[3] += l.calc_rect[3]
                 if l.calc_rect[2] > 0:
@@ -59,29 +56,21 @@ class LayoutGroup:
             if l.calc_rect[3] < 0:
                 l.calc_rect[3] = self.calc_rect[3]
 
-    def calc_tile_pos(self, parent):
-        self.parent = parent
+    def calc_tile_pos(self):
         pos = [self.calc_rect[0], self.calc_rect[1]]
         for l in self.list:
-            l.calc_rect[0] = pos[0]
-            l.calc_rect[1] = pos[1]
+            l.calc_rect[0:2] = pos
+            if self.direction == LayoutGroup.VERT:
+                pos[1] += l.calc_rect[3]
+            else:
+                pos[0] += l.calc_rect[2]
             if isinstance(l, LayoutGroup):
-                if self.direction == LayoutGroup.VERT:
-                    pos[1] += l.calc_rect[3]
-                else:
-                    pos[0] += l.calc_rect[2]
-                l.calc_tile_pos(self)
-            elif isinstance(l, LayoutTile):
-                l.parent = self
-                if self.direction == LayoutGroup.VERT:
-                    pos[1] += l.calc_rect[3]
-                else:
-                    pos[0] += l.calc_rect[2]
+                l.calc_tile_pos()
 
     def calc(self, layout):
         self.calc_max_size(layout)
         self.calc_tile_size()
-        self.calc_tile_pos(None)
+        self.calc_tile_pos()
 
     def __repr__(self):
         if self.direction == LayoutGroup.VERT:
@@ -118,16 +107,6 @@ class Layout:
         self.calc()
         tile = self.lookup[name]
         rect = list(tile.calc_rect)
-        """
-        lg = tile.parent
-        while not lg is None:
-            print(f"{lg.calc_rect} {lg.direction}")
-            if lg.direction == LayoutGroup.VERT:
-                rect[1] += lg.calc_rect[1]
-            else:
-                rect[0] += lg.calc_rect[0]
-            lg = lg.parent
-        """
         return rect
 
     def __repr__(self):
