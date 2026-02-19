@@ -11,15 +11,14 @@ def layout_set_config(config_in):
 
 class LayoutTile:
     """This class describes a single tile in a tiled layout"""
-    def __init__(self, name, size, anchor=False, visible=True):
+    def __init__(self, name, size, visible=True):
         self.name = name
         self.size = size
-        self.anchor = anchor
         self.visible = visible
-        self.calc_rect = [0, 0, size[0], size[1]]
+        self.calc_rect = [0, 0, abs(size[0]), abs(size[1])]
 
     def __repr__(self):
-        return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, anchor={self.anchor}, visible={self.visible}>"
+        return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, visible={self.visible}>"
 
 class LayoutGroup:
     """This class describes a vertically or horizontally tiled layout"""
@@ -29,6 +28,13 @@ class LayoutGroup:
         self.direction = direction
         self.list = list
         self.calc_rect = [0,0,0,0]
+
+    def calc_reset(self):
+        for l in self.list:
+            if isinstance(l, LayoutGroup):
+                l.calc_reset()
+            else:
+                l.calc_rect = [0, 0, abs(l.size[0]), abs(l.size[1])]
 
     def calc_max_size(self, layout):
         self.calc_rect = [0,0,0,0]
@@ -45,15 +51,14 @@ class LayoutGroup:
                 self.calc_rect[2] += l.calc_rect[2]
                 if l.calc_rect[3] > 0:
                     self.calc_rect[3] = l.calc_rect[3]
-        #print(f"{self.calc_rect=}")
 
     def calc_tile_size(self):
         for l in self.list:
             if isinstance(l, LayoutGroup):
                 l.calc_tile_size()
-            if l.calc_rect[2] < 0:
+            if l.calc_rect[2] == 0:
                 l.calc_rect[2] = self.calc_rect[2]
-            if l.calc_rect[3] < 0:
+            if l.calc_rect[3] == 0:
                 l.calc_rect[3] = self.calc_rect[3]
 
     def calc_tile_pos(self):
@@ -97,7 +102,10 @@ class Layout:
         self.need_calc = True
 
     def calc(self):
-        if self.need_calc or self.last_overlap != self.overlap:
+        if self.last_overlap != self.overlap:
+            self.group.calc_reset()
+            self.need_calc = True
+        if self.need_calc:
             anchor_tile = None
             self.group.calc(self)
             self.need_calc = False
@@ -119,22 +127,30 @@ class Layout:
 
 layout = Layout(
             LayoutGroup(LayoutGroup.VERT, [
-                LayoutTile("menubar", (-1,11)),
+                LayoutTile("menubar", (0,-11)),
                 LayoutGroup(LayoutGroup.HORIZ, [
                     LayoutGroup(LayoutGroup.VERT, [
                         LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layers", (25,-1)),
-                            LayoutTile("canvas", (320,200), anchor=True),
+                            LayoutTile("layers", (-25,0)),
+                            LayoutTile("canvas", (320,200)),
                             ]),
-                        LayoutTile("animbar", (-1,11)),
+                        LayoutTile("animbar", (0,11)),
                         ]),
-                    LayoutTile("tools", (25,-1)),
+                    LayoutTile("tools", (25,0)),
                     ]),
                 ]),
-            )
+            overlap=False)
 
 print(f"{layout=}")
 
+print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
     print(f"{k=} {layout.get_rect(k)}")
 
+"""
+layout.overlap = True
+print(f"\n{layout.overlap=}")
+for k in layout.lookup.keys():
+    print(f"{k=} {layout.get_rect(k)}")
+
+"""
