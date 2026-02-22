@@ -42,6 +42,8 @@ class LayoutGroup:
             if isinstance(l, LayoutGroup):
                 l.calc_max_size(layout)
             elif isinstance(l, LayoutTile):
+                if not l.visible:
+                    continue
                 layout.lookup[l.name] = l
             if self.direction == LayoutGroup.VERT:
                 self.calc_rect[3] += l.calc_rect[3]
@@ -56,6 +58,9 @@ class LayoutGroup:
         for l in self.list:
             if isinstance(l, LayoutGroup):
                 l.calc_tile_size()
+            elif isinstance(l, LayoutTile):
+                if not l.visible:
+                    continue
             if l.calc_rect[2] == 0:
                 l.calc_rect[2] = self.calc_rect[2]
             if l.calc_rect[3] == 0:
@@ -64,6 +69,9 @@ class LayoutGroup:
     def calc_tile_pos(self):
         pos = [self.calc_rect[0], self.calc_rect[1]]
         for l in self.list:
+            if isinstance(l, LayoutTile):
+                if not l.visible:
+                    continue
             l.calc_rect[0:2] = pos
             if self.direction == LayoutGroup.VERT:
                 pos[1] += l.calc_rect[3]
@@ -76,6 +84,16 @@ class LayoutGroup:
         self.calc_max_size(layout)
         self.calc_tile_size()
         self.calc_tile_pos()
+
+    def find_tile(self, name):
+        retval = None
+        for l in self.list:
+            if isinstance(l, LayoutGroup):
+                retval = l.find_tile(name)
+            elif isinstance(l, LayoutTile):
+                if name == l.name:
+                    return l
+        return retval
 
     def __repr__(self):
         if self.direction == LayoutGroup.VERT:
@@ -191,6 +209,16 @@ class Layout:
         rect = list(tile.calc_rect)
         return rect
 
+    def set_visible(self, name, value):
+        self.calc()
+        tile = self.group.find_tile(name)
+        tile.visible = value
+        self.need_calc = True
+        if value == False and name in self.lookup.keys():
+            del self.lookup[name]
+        self.group.calc_reset()
+        self.calc()
+
     def __repr__(self):
         self.calc()
         outstr = "Layout<"
@@ -221,6 +249,24 @@ print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
     print(f"{k=} {layout.get_rect(k)}")
 
+layout.set_visible("layers", False)
+print(f"\nlayers invisible")
+print(f"{layout=}")
+for k in layout.lookup.keys():
+    print(f"{k=} {layout.get_rect(k)}")
+
+layout.set_visible("layers", True)
+layout.set_visible("menubar", False)
+print(f"\nmenubar invisible")
+print(f"{layout=}")
+layout.overlap = True
+print(f"\n{layout.overlap=}")
+for k in layout.lookup.keys():
+    print(f"{k=} {layout.get_rect(k)}")
+
+layout.set_visible("menubar", True)
+print(f"\nmenubar visible")
+print(f"{layout=}")
 layout.overlap = True
 print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
