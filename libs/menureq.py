@@ -1098,8 +1098,12 @@ Licensed under GPL 3 ############
 or later. See LICENSE############
 for more details.    ############
                      ############
+PYGAMEVERSIONAAAAAAA ############
              [OK]
 """ % (config.copyright,config.version), "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=PPpic, font=config.font)
+
+    pygame_versiong = req.find_gadget("PYGAMEVERSIONAAAAAAA")
+    pygame_versiong.label = config.pygame_version
 
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()

@@ -728,6 +728,11 @@ class pydpainter:
 
         self.display_info = DisplayInfo()
 
+        self.pygame_version = "pygame"
+        if "print_debug_info" in dir(pygame):
+            self.pygame_version += "-ce"
+        self.pygame_version += f" {pygame.version.ver}"
+
         self.xevent = Xevent()
         self.fontx = fontx
         self.fonty = fonty
