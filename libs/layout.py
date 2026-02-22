@@ -118,29 +118,51 @@ class Layout:
                     # adjust rects for overlapping
                     cx, cy, cw, ch = anchor.calc_rect
                     for tile in self.lookup.values():
-                        if tile == anchor:
-                            continue
                         tw, th = tile.size
                         if tw < 0:
-                            tile.calc_rect[0] = cx + tw
+                            tile.calc_rect[0] = 0 + tw
                             tile.calc_rect[2] = abs(tw)
                         elif tw > 0:
-                            tile.calc_rect[0] = cx + cw - tw
+                            tile.calc_rect[0] = 0 + cw - tw
                             tile.calc_rect[2] = tw
                         else:
-                            tile.calc_rect[0] = cx
+                            tile.calc_rect[0] = 0
                             tile.calc_rect[2] = cw
                         if th < 0:
-                            tile.calc_rect[1] = cy + th
+                            tile.calc_rect[1] = 0 + th
                             tile.calc_rect[3] = abs(th)
                         elif th > 0:
-                            tile.calc_rect[1] = cy + ch - th
+                            tile.calc_rect[1] = 0 + ch - th
                             tile.calc_rect[3] = th
                         else:
-                            tile.calc_rect[1] = cy
+                            tile.calc_rect[1] = 0
                             tile.calc_rect[3] = ch
+                    # set anchor (canvas) to 0,0
+                    anchor.calc_rect = [0, 0, cw, ch]
                     # set group rect to anchor's rect
-                    self.group.calc_rect = list(anchor.calc_rect)
+                    self.group.calc_rect = [0, 0, cw, ch]
+                    # set rects for overlapping based on size signs
+                    for tile in self.lookup.values():
+                        tw, th = tile.size
+                        if tw < 0:
+                            tile.calc_rect[0] = 0
+                            tile.calc_rect[2] = abs(tw)
+                        elif tw > 0:
+                            tile.calc_rect[0] = cw - tw
+                            tile.calc_rect[2] = tw
+                        else:
+                            tile.calc_rect[0] = 0
+                            tile.calc_rect[2] = cw
+                        if th < 0:
+                            tile.calc_rect[1] = 0
+                            tile.calc_rect[3] = abs(th)
+                        elif th > 0:
+                            tile.calc_rect[1] = ch - th
+                            tile.calc_rect[3] = th
+                        else:
+                            tile.calc_rect[1] = 0
+                            tile.calc_rect[3] = ch
+                            # else keep cw
             self.need_calc = False
             self.last_overlap = self.overlap
 
