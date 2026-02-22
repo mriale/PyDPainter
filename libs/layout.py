@@ -106,8 +106,41 @@ class Layout:
             self.group.calc_reset()
             self.need_calc = True
         if self.need_calc:
-            anchor_tile = None
             self.group.calc(self)
+            if self.overlap:
+                # find anchor (non-variable size tile, e.g., "canvas")
+                anchor = None
+                for tile in self.lookup.values():
+                    if tile.size[0] > 0 and tile.size[1] > 0:
+                        anchor = tile
+                        break
+                if anchor:
+                    # adjust rects for overlapping
+                    cx, cy, cw, ch = anchor.calc_rect
+                    for tile in self.lookup.values():
+                        if tile == anchor:
+                            continue
+                        tw, th = tile.size
+                        if tw < 0:
+                            tile.calc_rect[0] = cx + tw
+                            tile.calc_rect[2] = abs(tw)
+                        elif tw > 0:
+                            tile.calc_rect[0] = cx + cw - tw
+                            tile.calc_rect[2] = tw
+                        else:
+                            tile.calc_rect[0] = cx
+                            tile.calc_rect[2] = cw
+                        if th < 0:
+                            tile.calc_rect[1] = cy + th
+                            tile.calc_rect[3] = abs(th)
+                        elif th > 0:
+                            tile.calc_rect[1] = cy + ch - th
+                            tile.calc_rect[3] = th
+                        else:
+                            tile.calc_rect[1] = cy
+                            tile.calc_rect[3] = ch
+                    # set group rect to anchor's rect
+                    self.group.calc_rect = list(anchor.calc_rect)
             self.need_calc = False
             self.last_overlap = self.overlap
 
@@ -147,10 +180,9 @@ print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
     print(f"{k=} {layout.get_rect(k)}")
 
-"""
 layout.overlap = True
 print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
     print(f"{k=} {layout.get_rect(k)}")
 
-"""
+
