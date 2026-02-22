@@ -120,7 +120,7 @@ class Layout:
                     for tile in self.lookup.values():
                         tw, th = tile.size
                         if tw < 0:
-                            tile.calc_rect[0] = 0 + tw
+                            tile.calc_rect[0] = 0
                             tile.calc_rect[2] = abs(tw)
                         elif tw > 0:
                             tile.calc_rect[0] = 0 + cw - tw
@@ -129,7 +129,7 @@ class Layout:
                             tile.calc_rect[0] = 0
                             tile.calc_rect[2] = cw
                         if th < 0:
-                            tile.calc_rect[1] = 0 + th
+                            tile.calc_rect[1] = 0
                             tile.calc_rect[3] = abs(th)
                         elif th > 0:
                             tile.calc_rect[1] = 0 + ch - th
@@ -148,9 +148,9 @@ class Layout:
                     for t in self.lookup.values():
                         if t.size[1] < 0:
                             top_fixed_h += abs(t.size[1])
-                        elif t.size[1] > 0:
-                            bottom_fixed_h += abs(t.size[1])
-                        if t.size[0] > 0:
+                        elif t.size[1] > 0 and t != anchor:
+                            bottom_fixed_h += t.size[1]
+                        if t.size[0] > 0 and t != anchor:
                             right_fixed_w += t.size[0]
                     # set rects for overlapping based on size signs, with adjustments for fill
                     for tile in self.lookup.values():
