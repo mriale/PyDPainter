@@ -141,7 +141,18 @@ class Layout:
                     anchor.calc_rect = [0, 0, cw, ch]
                     # set group rect to anchor's rect
                     self.group.calc_rect = [0, 0, cw, ch]
-                    # set rects for overlapping based on size signs
+                    # find total fixed sizes in the layout
+                    top_fixed_h = 0
+                    bottom_fixed_h = 0
+                    right_fixed_w = 0
+                    for t in self.lookup.values():
+                        if t.size[1] < 0:
+                            top_fixed_h += abs(t.size[1])
+                        elif t.size[1] > 0:
+                            bottom_fixed_h += abs(t.size[1])
+                        if t.size[0] > 0:
+                            right_fixed_w += t.size[0]
+                    # set rects for overlapping based on size signs, with adjustments for fill
                     for tile in self.lookup.values():
                         tw, th = tile.size
                         if tw < 0:
@@ -152,7 +163,10 @@ class Layout:
                             tile.calc_rect[2] = tw
                         else:
                             tile.calc_rect[0] = 0
-                            tile.calc_rect[2] = cw
+                            if th > 0:
+                                tile.calc_rect[2] = cw - right_fixed_w
+                            else:
+                                tile.calc_rect[2] = cw
                         if th < 0:
                             tile.calc_rect[1] = 0
                             tile.calc_rect[3] = abs(th)
@@ -160,8 +174,13 @@ class Layout:
                             tile.calc_rect[1] = ch - th
                             tile.calc_rect[3] = th
                         else:
-                            tile.calc_rect[1] = 0
-                            tile.calc_rect[3] = ch
+                            tile.calc_rect[1] = top_fixed_h
+                            if tw < 0:
+                                tile.calc_rect[3] = ch - top_fixed_h - bottom_fixed_h
+                            elif tw > 0:
+                                tile.calc_rect[3] = ch - top_fixed_h
+                            else:
+                                tile.calc_rect[3] = ch
                             # else keep cw
             self.need_calc = False
             self.last_overlap = self.overlap
