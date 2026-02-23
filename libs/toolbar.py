@@ -257,7 +257,7 @@ class Toolbar:
             for toolg in group_list:
                 toolg.group_list = group_list
 
-    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), rect=None):
         if screen == None:
             screen = self.screen
 
@@ -265,6 +265,8 @@ class Toolbar:
             return
 
         self.offset = offset
+        if rect is not None:
+            self.rect = list(rect)
         self.screenrect = (self.rect[0]+offset[0],self.rect[1]+offset[1],self.rect[2],self.rect[3])
         screen.blit(self.image, offset, area=self.rect)
         for toolg in self.tools:

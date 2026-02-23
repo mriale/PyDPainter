@@ -11,14 +11,15 @@ def layout_set_config(config_in):
 
 class LayoutTile:
     """This class describes a single tile in a tiled layout"""
-    def __init__(self, name, size, visible=True):
+    def __init__(self, name, size, visible=True, drawable=None):
         self.name = name
         self.size = size
         self.visible = visible
         self.rect = [0, 0, abs(size[0]), abs(size[1])]
+        self.drawable = drawable
 
     def __repr__(self):
-        return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}>"
+        return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}, drawable={self.drawable}>"
 
 class LayoutGroup:
     """This class describes a vertically or horizontally tiled layout"""
@@ -118,6 +119,7 @@ class Layout:
         self.last_overlap = overlap
         self.rect = [0,0,0,0]
         self.need_calc = True
+        self.anchor = None
 
     def calc(self):
         if self.last_overlap != self.overlap:
@@ -131,6 +133,7 @@ class Layout:
                 for tile in self.lookup.values():
                     if tile.size[0] > 0 and tile.size[1] > 0:
                         anchor = tile
+                        self.anchor = tile
                         break
                 if anchor:
                     # adjust rects for overlapping
@@ -213,11 +216,23 @@ class Layout:
         self.calc()
         tile = self.group.find_tile(name)
         tile.visible = value
+        if tile.drawable is not None and "visible" in dir(tile.visible.drawable):
+            tile.drawable.visible = value
         self.need_calc = True
         if value == False and name in self.lookup.keys():
             del self.lookup[name]
         self.group.calc_reset()
         self.calc()
+
+    def draw(self, screen):
+        #draw anchor first
+        anchor = self.anchor
+        if anchor is not None and anchor.drawable is not None:
+            anchor.drawable.draw(screen, rect=anchor.rect)
+        #draw rest of tiles
+        for tile in self.lookup.values():
+            if tile != anchor and tile.drawable is not None:
+                tile.drawable.draw(screen, rect=tile.rect)
 
     def __repr__(self):
         self.calc()
@@ -226,7 +241,7 @@ class Layout:
         outstr += f", overlap={self.overlap}"
         outstr += ">"
         return outstr;
-
+"""
 layout = Layout(
             LayoutGroup(LayoutGroup.VERT, [
                 LayoutTile("menubar", (0,-11)),
@@ -272,4 +287,4 @@ print(f"\n{layout.overlap=}")
 for k in layout.lookup.keys():
     print(f"{k=} {layout.get_rect(k)}")
 
-
+"""

@@ -18,6 +18,7 @@ from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
 from libs.layer import *
+from libs.layout import *
 from libs.stencil import *
 from libs.tools import *
 from libs.minitools import *
@@ -451,6 +452,22 @@ class pydpainter:
             self.layertoolbar,
         ]
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
+
+        self.layout = Layout(
+            LayoutGroup(LayoutGroup.VERT, [
+                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar),
+                LayoutGroup(LayoutGroup.HORIZ, [
+                    LayoutGroup(LayoutGroup.VERT, [
+                        LayoutGroup(LayoutGroup.HORIZ, [
+                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar),
+                            LayoutTile("canvas", (self.screen_width,self.screen_height)),
+                            ]),
+                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar),
+                        ]),
+                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar),
+                    ]),
+                ]),
+            overlap=True)
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
         for i in range(0, self.screen_height*2, 2):
