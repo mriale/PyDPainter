@@ -15,10 +15,10 @@ class LayoutTile:
         self.name = name
         self.size = size
         self.visible = visible
-        self.calc_rect = [0, 0, abs(size[0]), abs(size[1])]
+        self.rect = [0, 0, abs(size[0]), abs(size[1])]
 
     def __repr__(self):
-        return f"LayoutTile<name=\"{self.name}\", size={self.size}, calc_rect={self.calc_rect}, visible={self.visible}>"
+        return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}>"
 
 class LayoutGroup:
     """This class describes a vertically or horizontally tiled layout"""
@@ -27,17 +27,17 @@ class LayoutGroup:
     def __init__(self, direction, list):
         self.direction = direction
         self.list = list
-        self.calc_rect = [0,0,0,0]
+        self.rect = [0,0,0,0]
 
     def calc_reset(self):
         for l in self.list:
             if isinstance(l, LayoutGroup):
                 l.calc_reset()
             else:
-                l.calc_rect = [0, 0, abs(l.size[0]), abs(l.size[1])]
+                l.rect = [0, 0, abs(l.size[0]), abs(l.size[1])]
 
     def calc_max_size(self, layout):
-        self.calc_rect = [0,0,0,0]
+        self.rect = [0,0,0,0]
         for l in self.list:
             if isinstance(l, LayoutGroup):
                 l.calc_max_size(layout)
@@ -46,13 +46,13 @@ class LayoutGroup:
                     continue
                 layout.lookup[l.name] = l
             if self.direction == LayoutGroup.VERT:
-                self.calc_rect[3] += l.calc_rect[3]
-                if l.calc_rect[2] > 0:
-                    self.calc_rect[2] = l.calc_rect[2]
+                self.rect[3] += l.rect[3]
+                if l.rect[2] > 0:
+                    self.rect[2] = l.rect[2]
             else:
-                self.calc_rect[2] += l.calc_rect[2]
-                if l.calc_rect[3] > 0:
-                    self.calc_rect[3] = l.calc_rect[3]
+                self.rect[2] += l.rect[2]
+                if l.rect[3] > 0:
+                    self.rect[3] = l.rect[3]
 
     def calc_tile_size(self):
         for l in self.list:
@@ -61,22 +61,22 @@ class LayoutGroup:
             elif isinstance(l, LayoutTile):
                 if not l.visible:
                     continue
-            if l.calc_rect[2] == 0:
-                l.calc_rect[2] = self.calc_rect[2]
-            if l.calc_rect[3] == 0:
-                l.calc_rect[3] = self.calc_rect[3]
+            if l.rect[2] == 0:
+                l.rect[2] = self.rect[2]
+            if l.rect[3] == 0:
+                l.rect[3] = self.rect[3]
 
     def calc_tile_pos(self):
-        pos = [self.calc_rect[0], self.calc_rect[1]]
+        pos = [self.rect[0], self.rect[1]]
         for l in self.list:
             if isinstance(l, LayoutTile):
                 if not l.visible:
                     continue
-            l.calc_rect[0:2] = pos
+            l.rect[0:2] = pos
             if self.direction == LayoutGroup.VERT:
-                pos[1] += l.calc_rect[3]
+                pos[1] += l.rect[3]
             else:
-                pos[0] += l.calc_rect[2]
+                pos[0] += l.rect[2]
             if isinstance(l, LayoutGroup):
                 l.calc_tile_pos()
 
@@ -105,7 +105,7 @@ class LayoutGroup:
             outstr += f"{item}"
         outstr = outstr.rstrip(", ")
         outstr += "]"
-        outstr += f", calc_rect={self.calc_rect}"
+        outstr += f", rect={self.rect}"
         outstr += ">"
         return outstr
 
@@ -116,7 +116,7 @@ class Layout:
         self.lookup = {}
         self.overlap = overlap
         self.last_overlap = overlap
-        self.calc_rect = [0,0,0,0]
+        self.rect = [0,0,0,0]
         self.need_calc = True
 
     def calc(self):
@@ -134,31 +134,31 @@ class Layout:
                         break
                 if anchor:
                     # adjust rects for overlapping
-                    cx, cy, cw, ch = anchor.calc_rect
+                    cx, cy, cw, ch = anchor.rect
                     for tile in self.lookup.values():
                         tw, th = tile.size
                         if tw < 0:
-                            tile.calc_rect[0] = 0
-                            tile.calc_rect[2] = abs(tw)
+                            tile.rect[0] = 0
+                            tile.rect[2] = abs(tw)
                         elif tw > 0:
-                            tile.calc_rect[0] = 0 + cw - tw
-                            tile.calc_rect[2] = tw
+                            tile.rect[0] = 0 + cw - tw
+                            tile.rect[2] = tw
                         else:
-                            tile.calc_rect[0] = 0
-                            tile.calc_rect[2] = cw
+                            tile.rect[0] = 0
+                            tile.rect[2] = cw
                         if th < 0:
-                            tile.calc_rect[1] = 0
-                            tile.calc_rect[3] = abs(th)
+                            tile.rect[1] = 0
+                            tile.rect[3] = abs(th)
                         elif th > 0:
-                            tile.calc_rect[1] = 0 + ch - th
-                            tile.calc_rect[3] = th
+                            tile.rect[1] = 0 + ch - th
+                            tile.rect[3] = th
                         else:
-                            tile.calc_rect[1] = 0
-                            tile.calc_rect[3] = ch
+                            tile.rect[1] = 0
+                            tile.rect[3] = ch
                     # set anchor (canvas) to 0,0
-                    anchor.calc_rect = [0, 0, cw, ch]
+                    anchor.rect = [0, 0, cw, ch]
                     # set group rect to anchor's rect
-                    self.group.calc_rect = [0, 0, cw, ch]
+                    self.group.rect = [0, 0, cw, ch]
                     # find total fixed sizes in the layout
                     top_fixed_h = 0
                     bottom_fixed_h = 0
@@ -174,31 +174,31 @@ class Layout:
                     for tile in self.lookup.values():
                         tw, th = tile.size
                         if tw < 0:
-                            tile.calc_rect[0] = 0
-                            tile.calc_rect[2] = abs(tw)
+                            tile.rect[0] = 0
+                            tile.rect[2] = abs(tw)
                         elif tw > 0:
-                            tile.calc_rect[0] = cw - tw
-                            tile.calc_rect[2] = tw
+                            tile.rect[0] = cw - tw
+                            tile.rect[2] = tw
                         else:
-                            tile.calc_rect[0] = 0
+                            tile.rect[0] = 0
                             if th > 0:
-                                tile.calc_rect[2] = cw - right_fixed_w
+                                tile.rect[2] = cw - right_fixed_w
                             else:
-                                tile.calc_rect[2] = cw
+                                tile.rect[2] = cw
                         if th < 0:
-                            tile.calc_rect[1] = 0
-                            tile.calc_rect[3] = abs(th)
+                            tile.rect[1] = 0
+                            tile.rect[3] = abs(th)
                         elif th > 0:
-                            tile.calc_rect[1] = ch - th
-                            tile.calc_rect[3] = th
+                            tile.rect[1] = ch - th
+                            tile.rect[3] = th
                         else:
-                            tile.calc_rect[1] = top_fixed_h
+                            tile.rect[1] = top_fixed_h
                             if tw < 0:
-                                tile.calc_rect[3] = ch - top_fixed_h - bottom_fixed_h
+                                tile.rect[3] = ch - top_fixed_h - bottom_fixed_h
                             elif tw > 0:
-                                tile.calc_rect[3] = ch - top_fixed_h
+                                tile.rect[3] = ch - top_fixed_h
                             else:
-                                tile.calc_rect[3] = ch
+                                tile.rect[3] = ch
                             # else keep cw
             self.need_calc = False
             self.last_overlap = self.overlap
@@ -206,7 +206,7 @@ class Layout:
     def get_rect(self, name):
         self.calc()
         tile = self.lookup[name]
-        rect = list(tile.calc_rect)
+        rect = list(tile.rect)
         return rect
 
     def set_visible(self, name, value):
