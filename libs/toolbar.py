@@ -264,9 +264,12 @@ class Toolbar:
         if not self.visible:
             return
 
+        print(f"{rect=} {offset=}")
         self.offset = offset
         if rect is not None:
-            self.rect = list(rect)
+            self.rect = [0,0, rect[2],rect[3]]
+            offset = [rect[0], rect[1]]
+            self.offset = offset
         self.screenrect = (self.rect[0]+offset[0],self.rect[1]+offset[1],self.rect[2],self.rect[3])
         screen.blit(self.image, offset, area=self.rect)
         for toolg in self.tools:

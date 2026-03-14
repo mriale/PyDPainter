@@ -282,9 +282,11 @@ class Menubar:
         if len(menus) > 1:
             self.add_submenu(menug, menus[1])
 
-    def draw(self, screen=None, offset=None, fgcolor=(0,0,0), bgcolor=(255,255,255)):
+    def draw(self, screen=None, offset=None, fgcolor=(0,0,0), bgcolor=(255,255,255), rect=None):
         if screen == None:
             screen = self.screen
+        if rect == None:
+            offset = [rect[0], rect[1]]
         if offset == None:
             offset = self.offset
         xo, yo = offset

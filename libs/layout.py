@@ -11,15 +11,16 @@ def layout_set_config(config_in):
 
 class LayoutTile:
     """This class describes a single tile in a tiled layout"""
-    def __init__(self, name, size, visible=True, drawable=None):
+    def __init__(self, name, size, visible=True, drawable=None, overlap_offset=[0,0,0,0]):
         self.name = name
         self.size = size
         self.visible = visible
         self.rect = [0, 0, abs(size[0]), abs(size[1])]
         self.drawable = drawable
+        self.overlap_offset = list(overlap_offset)
 
     def __repr__(self):
-        return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}, drawable={self.drawable}>"
+        return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}, drawable={self.drawable}, overlap_offset={self.overlap_offset}>"
 
 class LayoutGroup:
     """This class describes a vertically or horizontally tiled layout"""
@@ -208,15 +209,18 @@ class Layout:
 
     def get_rect(self, name):
         self.calc()
-        tile = self.lookup[name]
-        rect = list(tile.rect)
-        return rect
+        if name in self.lookup.keys():
+            tile = self.lookup[name]
+            rect = list(tile.rect)
+            return rect
+        else:
+            return list([0,0,0,0])
 
     def set_visible(self, name, value):
         self.calc()
         tile = self.group.find_tile(name)
         tile.visible = value
-        if tile.drawable is not None and "visible" in dir(tile.visible.drawable):
+        if tile.drawable is not None and "visible" in dir(tile.drawable):
             tile.drawable.visible = value
         self.need_calc = True
         if value == False and name in self.lookup.keys():
@@ -241,50 +245,50 @@ class Layout:
         outstr += f", overlap={self.overlap}"
         outstr += ">"
         return outstr;
-"""
-layout = Layout(
-            LayoutGroup(LayoutGroup.VERT, [
-                LayoutTile("menubar", (0,-11)),
-                LayoutGroup(LayoutGroup.HORIZ, [
-                    LayoutGroup(LayoutGroup.VERT, [
-                        LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layers", (-25,0)),
-                            LayoutTile("canvas", (320,200)),
+
+if __name__ == "__main__":
+    layout = Layout(
+                LayoutGroup(LayoutGroup.VERT, [
+                    LayoutTile("menubar", (0,-11)),
+                    LayoutGroup(LayoutGroup.HORIZ, [
+                        LayoutGroup(LayoutGroup.VERT, [
+                            LayoutGroup(LayoutGroup.HORIZ, [
+                                LayoutTile("layers", (-25,0)),
+                                LayoutTile("canvas", (320,200)),
+                                ]),
+                            LayoutTile("animbar", (0,11)),
                             ]),
-                        LayoutTile("animbar", (0,11)),
+                        LayoutTile("tools", (25,0)),
                         ]),
-                    LayoutTile("tools", (25,0)),
                     ]),
-                ]),
-            overlap=False)
+                overlap=False)
 
-print(f"{layout=}")
+    print(f"{layout=}")
 
-print(f"\n{layout.overlap=}")
-for k in layout.lookup.keys():
-    print(f"{k=} {layout.get_rect(k)}")
+    print(f"\n{layout.overlap=}")
+    for k in layout.lookup.keys():
+        print(f"{k=} {layout.get_rect(k)}")
 
-layout.set_visible("layers", False)
-print(f"\nlayers invisible")
-print(f"{layout=}")
-for k in layout.lookup.keys():
-    print(f"{k=} {layout.get_rect(k)}")
+    layout.set_visible("layers", False)
+    print(f"\nlayers invisible")
+    print(f"{layout=}")
+    for k in layout.lookup.keys():
+        print(f"{k=} {layout.get_rect(k)}")
 
-layout.set_visible("layers", True)
-layout.set_visible("menubar", False)
-print(f"\nmenubar invisible")
-print(f"{layout=}")
-layout.overlap = True
-print(f"\n{layout.overlap=}")
-for k in layout.lookup.keys():
-    print(f"{k=} {layout.get_rect(k)}")
+    layout.set_visible("layers", True)
+    layout.set_visible("menubar", False)
+    print(f"\nmenubar invisible")
+    print(f"{layout=}")
+    layout.overlap = True
+    print(f"\n{layout.overlap=}")
+    for k in layout.lookup.keys():
+        print(f"{k=} {layout.get_rect(k)}")
 
-layout.set_visible("menubar", True)
-print(f"\nmenubar visible")
-print(f"{layout=}")
-layout.overlap = True
-print(f"\n{layout.overlap=}")
-for k in layout.lookup.keys():
-    print(f"{k=} {layout.get_rect(k)}")
+    layout.set_visible("menubar", True)
+    print(f"\nmenubar visible")
+    print(f"{layout=}")
+    layout.overlap = True
+    print(f"\n{layout.overlap=}")
+    for k in layout.lookup.keys():
+        print(f"{k=} {layout.get_rect(k)}")
 
-"""

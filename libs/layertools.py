@@ -276,7 +276,7 @@ def init_layertoolbar(config_in):
 
     return minitoolbar
 
-def draw_layertoolbar(screen_rgb):
+def draw_layertoolbar(screen_rgb, rect):
     scaleX = config.fontx // 8
     scaleY = config.fonty // 12
 
@@ -285,9 +285,7 @@ def draw_layertoolbar(screen_rgb):
     if config.layertoolbar.visible:
         refresh_layer_gadgets()
 
-        #atbh = config.menubar.rect[3]
-        #atby = config.screen_height - atbh
-        atby = config.menubar.rect[3]
+        atby = rect[1]
         atbh = config.screen_height - atby
         atbw = 23 * scaleX
         pygame.draw.rect(screen_rgb, (119,119,119), (atbw+1*scaleX,atby,scaleX,atbh))

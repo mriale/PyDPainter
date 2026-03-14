@@ -1073,9 +1073,9 @@ class pydpainter:
         state = config.tool_visibility_state
         state = state % len(config.tool_visibility_states[mode])
 
-        config.toolbar.visible     = config.tool_visibility_states[mode][state][0]
-        config.menubar.visible     = config.tool_visibility_states[mode][state][1]
-        config.animtoolbar.visible = config.tool_visibility_states[mode][state][2]
+        config.layout.set_visible("toolbar", config.tool_visibility_states[mode][state][0])
+        config.layout.set_visible("menubar", config.tool_visibility_states[mode][state][1])
+        config.layout.set_visible("animtoolbar", config.tool_visibility_states[mode][state][2])
 
         if config.menubar.visible:
             if config.animtoolbar.visible or config.anim.num_frames == 1:
@@ -1398,13 +1398,16 @@ class pydpainter:
             self.layertoolbar.tip_canvas = None
 
         #blit toolbar layer
-        self.toolbar.draw(screen_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
+        rect = config.layout.get_rect("toolbar")
+        self.toolbar.draw(screen_rgb, rect=rect)
 
         #blit layertoolbar layer
-        draw_layertoolbar(screen_rgb)
+        rect = config.layout.get_rect("layertoolbar")
+        draw_layertoolbar(screen_rgb, rect=rect)
 
         #blit menu layer
-        self.menubar.draw(screen_rgb)
+        rect = config.layout.get_rect("menubar")
+        self.menubar.draw(screen_rgb, rect=rect)
 
         #blit minitoolbar layer
         if self.menubar.visible:
@@ -1415,7 +1418,8 @@ class pydpainter:
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #blit animtoolbar layer
-        draw_animtoolbar(screen_rgb)
+        rect = config.layout.get_rect("animtoolbar")
+        draw_animtoolbar(screen_rgb, offset=rect[0:2])
 
         #scale image double height
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
@@ -2097,6 +2101,8 @@ class pydpainter:
                     if e.mod & KMOD_SHIFT:
                         print("\n***********Debug************")
                         print(f"{config.layers=}")
+                        print("")
+                        print(f"{config.layout=}")
                         config.debug = not config.debug
                     else:
                         config.toolbar.click(config.minitoolbar.tool_id("scanlines"), MOUSEBUTTONDOWN)

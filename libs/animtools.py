@@ -160,7 +160,7 @@ def init_animtoolbar(config_in):
 
     return minitoolbar
 
-def draw_animtoolbar(screen_rgb):
+def draw_animtoolbar(screen_rgb, offset):
     scaleX = config.fontx // 8
     scaleY = config.fonty // 12
 
