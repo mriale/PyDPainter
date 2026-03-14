@@ -455,16 +455,16 @@ class pydpainter:
 
         self.layout = Layout(
             LayoutGroup(LayoutGroup.VERT, [
-                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar),
+                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,1,0]),
                 LayoutGroup(LayoutGroup.HORIZ, [
                     LayoutGroup(LayoutGroup.VERT, [
                         LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar),
+                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[1,0,0,0]),
                             LayoutTile("canvas", (self.screen_width,self.screen_height)),
                             ]),
-                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar),
+                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[1,0,0,0]),
                         ]),
-                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar),
+                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[1,0,0,0]),
                     ]),
                 ]),
             overlap=True)

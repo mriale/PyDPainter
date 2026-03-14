@@ -17,7 +17,7 @@ class LayoutTile:
         self.visible = visible
         self.rect = [0, 0, abs(size[0]), abs(size[1])]
         self.drawable = drawable
-        self.overlap_offset = list(overlap_offset)
+        self.overlap_offset = list(overlap_offset) #top, right, bottom, left
 
     def __repr__(self):
         return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}, drawable={self.drawable}, overlap_offset={self.overlap_offset}>"
@@ -30,6 +30,7 @@ class LayoutGroup:
         self.direction = direction
         self.list = list
         self.rect = [0,0,0,0]
+        self.overlap_offset = [0,0,0,0] #top, right, bottom, left
 
     def calc_reset(self):
         for l in self.list:
@@ -47,12 +48,13 @@ class LayoutGroup:
                 if not l.visible:
                     continue
                 layout.lookup[l.name] = l
+                self.overlap_offset = l.overlap_offset
             if self.direction == LayoutGroup.VERT:
-                self.rect[3] += l.rect[3]
+                self.rect[3] += l.rect[3] - l.overlap_offset[0] - l.overlap_offset[2]
                 if l.rect[2] > 0:
                     self.rect[2] = l.rect[2]
             else:
-                self.rect[2] += l.rect[2]
+                self.rect[2] += l.rect[2] - l.overlap_offset[1] - l.overlap_offset[3]
                 if l.rect[3] > 0:
                     self.rect[3] = l.rect[3]
 
@@ -107,7 +109,7 @@ class LayoutGroup:
             outstr += f"{item}"
         outstr = outstr.rstrip(", ")
         outstr += "]"
-        outstr += f", rect={self.rect}"
+        outstr += f", rect={self.rect}, overlap_offset={self.overlap_offset}"
         outstr += ">"
         return outstr
 
@@ -212,6 +214,8 @@ class Layout:
         if name in self.lookup.keys():
             tile = self.lookup[name]
             rect = list(tile.rect)
+            rect[0] -= tile.overlap_offset[3]
+            rect[1] -= tile.overlap_offset[0]
             return rect
         else:
             return list([0,0,0,0])
@@ -249,16 +253,16 @@ class Layout:
 if __name__ == "__main__":
     layout = Layout(
                 LayoutGroup(LayoutGroup.VERT, [
-                    LayoutTile("menubar", (0,-11)),
+                    LayoutTile("menubar", (0,-12), overlap_offset=[0,0,1,0]),
                     LayoutGroup(LayoutGroup.HORIZ, [
                         LayoutGroup(LayoutGroup.VERT, [
                             LayoutGroup(LayoutGroup.HORIZ, [
-                                LayoutTile("layers", (-25,0)),
+                                LayoutTile("layers", (-25,0), overlap_offset=[1,0,0,0]),
                                 LayoutTile("canvas", (320,200)),
                                 ]),
-                            LayoutTile("animbar", (0,11)),
+                            LayoutTile("animbar", (0,12), overlap_offset=[1,0,0,0]),
                             ]),
-                        LayoutTile("tools", (25,0)),
+                        LayoutTile("tools", (25,0), overlap_offset=[1,0,0,0]),
                         ]),
                     ]),
                 overlap=False)
