@@ -453,18 +453,21 @@ class pydpainter:
         ]
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
 
+        px = self.font.xsize // 8
+        py = self.font.ysize // 8
+
         self.layout = Layout(
             LayoutGroup(LayoutGroup.VERT, [
-                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,1,0]),
+                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,py,0]),
                 LayoutGroup(LayoutGroup.HORIZ, [
                     LayoutGroup(LayoutGroup.VERT, [
                         LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[1,0,0,0]),
+                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[py,0,0,0]),
                             LayoutTile("canvas", (self.screen_width,self.screen_height)),
                             ]),
-                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[1,0,0,0]),
+                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py,0,0,0]),
                         ]),
-                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[1,0,0,0]),
+                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[py,0,0,0]),
                     ]),
                 ]),
             overlap=True)

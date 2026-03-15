@@ -264,7 +264,6 @@ class Toolbar:
         if not self.visible:
             return
 
-        print(f"{rect=} {offset=}")
         self.offset = offset
         if rect is not None:
             self.rect = [0,0, rect[2],rect[3]]
