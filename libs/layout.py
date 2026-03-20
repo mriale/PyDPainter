@@ -216,6 +216,8 @@ class Layout:
             rect = list(tile.rect)
             rect[0] -= tile.overlap_offset[3]
             rect[1] -= tile.overlap_offset[0]
+            rect[2] += tile.overlap_offset[3]
+            rect[3] += tile.overlap_offset[0]
             return rect
         else:
             return list([0,0,0,0])

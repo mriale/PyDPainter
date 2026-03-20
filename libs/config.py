@@ -465,7 +465,7 @@ class pydpainter:
                             LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[py,0,0,0]),
                             LayoutTile("canvas", (self.screen_width,self.screen_height)),
                             ]),
-                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py,0,0,0]),
+                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py*3,0,0,0]),
                         ]),
                     LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[py,0,0,0]),
                     ]),
@@ -1422,7 +1422,7 @@ class pydpainter:
 
         #blit animtoolbar layer
         rect = config.layout.get_rect("animtoolbar")
-        draw_animtoolbar(screen_rgb, offset=rect[0:2])
+        draw_animtoolbar(screen_rgb, rect)
 
         #scale image double height
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)

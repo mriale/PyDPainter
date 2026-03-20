@@ -160,26 +160,18 @@ def init_animtoolbar(config_in):
 
     return minitoolbar
 
-def draw_animtoolbar(screen_rgb, offset):
-    scaleX = config.fontx // 8
-    scaleY = config.fonty // 12
+def draw_animtoolbar(screen_rgb, rect):
+    px = config.fontx // 8
+    py = config.fonty // 12
 
     if config.anim.num_frames == 1:
         config.animtoolbar.visible = False
     if config.animtoolbar.visible:
-        atbh = config.menubar.rect[3]
-        atby = config.screen_height - atbh
-        if config.toolbar.visible:
-            atbw = config.screen_width - config.toolbar.rect[2]
-        else:
-            atbw = config.screen_width
-        atbslx = 80
-        layer_cutout_x = 0
-        if config.layertoolbar.visible:
-            layer_cutout_x = config.layertoolbar.rect[2]
-        pygame.draw.rect(screen_rgb, (0,0,0), (layer_cutout_x,atby-2*scaleY,atbw-layer_cutout_x,scaleY))
-        pygame.draw.rect(screen_rgb, (255,255,255), (0,atby-scaleY,atbw,scaleY))
-        pygame.draw.rect(screen_rgb, (160,160,160), (0,atby,atbw,atbh))
+        config.animtoolbar.rect = [0,0,rect[2],rect[3]]
+        pygame.draw.rect(screen_rgb, (0,0,0), rect)
+        pygame.draw.rect(screen_rgb, (255,255,255), (rect[0], rect[1]+py, rect[2], py))
+        pygame.draw.rect(screen_rgb, (160,160,160), (rect[0], rect[1]+py*2, rect[2], rect[3]-py*2))
+
         config.animtoolbar.tool_id("frameslider").need_redraw = True
         config.animtoolbar.tool_id("framecount").need_redraw = True
 
@@ -194,5 +186,5 @@ def draw_animtoolbar(screen_rgb, offset):
             config.animtoolbar.tool_id("palettekey").state = 2
         
         config.animtoolbar.tool_id("palettekey").need_redraw = True
-        config.animtoolbar.draw(screen_rgb, font=config.font, offset=(0,atby))
+        config.animtoolbar.draw(screen_rgb, font=config.font, offset=(rect[0], rect[1]+py*2))
 

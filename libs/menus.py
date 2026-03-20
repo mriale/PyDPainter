@@ -1612,6 +1612,7 @@ class DoPrefsToolbarsOutside(MenuAction):
             return
         self.gadget.checked = not self.gadget.checked
         config.toolbars_outside = self.gadget.checked
+        config.layout.overlap = not config.toolbars_outside
         config.doKeyAction()
 
 class DoPrefsSave(MenuAction):
