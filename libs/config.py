@@ -462,7 +462,7 @@ class pydpainter:
                 LayoutGroup(LayoutGroup.HORIZ, [
                     LayoutGroup(LayoutGroup.VERT, [
                         LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[py,0,0,0]),
+                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[0,0,0,0]),
                             LayoutTile("canvas", (self.screen_width,self.screen_height)),
                             ]),
                         LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py*3,0,0,0]),

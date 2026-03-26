@@ -284,20 +284,16 @@ def draw_layertoolbar(screen_rgb, rect):
     #    config.layertoolbar.visible = False
     if config.layertoolbar.visible:
         refresh_layer_gadgets()
-
-        atby = rect[1]
-        atbh = config.screen_height - atby
-        atbw = 23 * scaleX
-        pygame.draw.rect(screen_rgb, (119,119,119), (atbw+1*scaleX,atby,scaleX,atbh))
-        pygame.draw.rect(screen_rgb, (0,0,0), (atbw+2*scaleX,atby,scaleX,atbh))
-        pygame.draw.rect(screen_rgb, (160,160,160), (0,atby,atbw+scaleX,atbh))
+        pygame.draw.rect(screen_rgb, (160,160,160), rect)
+        pygame.draw.rect(screen_rgb, (80,80,80), (rect[2]-scaleX*2,rect[1],scaleX,rect[3]))
+        pygame.draw.rect(screen_rgb, (0,0,0), (rect[2]-scaleX,rect[1],scaleX,rect[3]))
         config.layertoolbar.tool_id("opacityslider").need_redraw = True
         for i in range(1,10):
             config.layertoolbar.tool_id(f"layer{i}").need_redraw = True
 
-        screen_rgb.set_clip((0,atby,atbw,atbh))
-        config.layertoolbar.draw(screen_rgb, font=config.font, offset=(0,atby))
+        screen_rgb.set_clip(rect)
+        config.layertoolbar.draw(screen_rgb, font=config.font, offset=(rect[0],rect[1]))
         screen_rgb.set_clip(None)
 
-        config.layertoolbar.screenrect = (0,atby,atbw+2*scaleX,atbh)
+        config.layertoolbar.screenrect = list(rect)
 
