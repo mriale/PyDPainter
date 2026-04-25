@@ -163,6 +163,8 @@ class Layout:
                             tile.rect[3] = ch
                     # set anchor (canvas) to 0,0
                     anchor.rect = [0, 0, cw, ch]
+                    # set layout rect to anchor's rect
+                    self.rect = [0, 0, cw, ch]
                     # set group rect to anchor's rect
                     self.group.rect = [0, 0, cw, ch]
                     # find total fixed sizes in the layout
@@ -206,12 +208,27 @@ class Layout:
                             else:
                                 tile.rect[3] = ch
                             # else keep cw
+            else:
+                # set layer rect to sum of group
+                sumx = 0
+                sumy = 0
+                for o in self.group.list:
+                    sumy += o.rect[3]
+                self.rect = [0, 0, self.group.rect[2], sumy]
+
             self.need_calc = False
             self.last_overlap = self.overlap
 
-    def get_rect(self, name):
+    def get_rect(self, name=None):
         self.calc()
-        if name in self.lookup.keys():
+        if name is None:
+            rect = list(self.rect)
+            rect[2] += self.group.overlap_offset[3]
+            rect[3] += self.group.overlap_offset[0]
+            if not self.overlap:
+                rect[3] += 2
+            return rect
+        elif name in self.lookup.keys():
             tile = self.lookup[name]
             rect = list(tile.rect)
             rect[0] -= tile.overlap_offset[3]
@@ -249,6 +266,7 @@ class Layout:
         outstr = "Layout<"
         outstr += f"group={self.group}"
         outstr += f", overlap={self.overlap}"
+        outstr += f", rect={self.rect}"
         outstr += ">"
         return outstr;
 

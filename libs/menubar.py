@@ -287,6 +287,8 @@ class Menubar:
             screen = self.screen
         if rect == None:
             offset = [rect[0], rect[1]]
+        else:
+            self.rect = list(rect)
         if offset == None:
             offset = self.offset
         xo, yo = offset

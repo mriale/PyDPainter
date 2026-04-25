@@ -438,7 +438,7 @@ class pydpainter:
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
-        self.cursor = cursor(self.scaled_image, self.sm.scaleX, self.sm.scaleY*2, self, cursor_images)
+        self.cursor = cursor(self.sm.scaleX, self.sm.scaleY*2, self, cursor_images)
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
@@ -1294,6 +1294,10 @@ class pydpainter:
             pygame.display.set_caption(config.window_title)
 
     def recompose(self):
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
+
+
         self.calc_tool_visibility_state()
 
         if self.cycling:
@@ -1304,9 +1308,15 @@ class pydpainter:
         self.menubar.indicators["layers"] = self.layers.draw_indicator
 
         self.redraw_window_title()
-
-        scaleX = config.fontx // 8
-        scaleY = config.fonty // 12
+        rect = config.layout.get_rect()
+        self.screen_width = rect[2]
+        self.screen_height = rect[3]
+        if self.scaled_image.get_width() != self.screen_width or \
+           self.scaled_image.get_height() != self.screen_height * 2:
+            self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
+            self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
+            for i in range(0, self.screen_height*2, 2):
+                pygame.draw.line(self.scanline_canvas, Color(0,0,0,100), (0,i), (self.screen_width,i), 1)
 
         config.layers.set("canvas", config.pixel_canvas, priority=1)
         config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
@@ -1428,7 +1438,7 @@ class pydpainter:
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
 
         #draw mouse cursor
-        self.cursor.draw()
+        self.cursor.draw(self.scaled_image)
 
         if self.scanlines == self.SCANLINES_ON:
             #blit scanlines onto double-high image

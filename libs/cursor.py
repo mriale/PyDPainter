@@ -24,10 +24,9 @@ class cursor:
     BUSY=8
     NORMALTO=9
     PICK=10
-    def __init__(self, screen, scaleX, scaleY, config, cursor_images):
+    def __init__(self, scaleX, scaleY, config, cursor_images):
         self.shape = 0
         self.visible = True
-        self.screen = screen
         self.scaleX = scaleX
         self.scaleY = scaleY
         self.config = config
@@ -48,7 +47,7 @@ class cursor:
         self.center.append((1,1))
         self.center.append((1,1))
 
-    def draw(self):
+    def draw(self, screen):
         #draw mouse cursor
         if not pygame.mouse.get_focused():
             return
@@ -58,5 +57,5 @@ class cursor:
 
         mouseX, mouseY = self.config.get_mouse_pointer_pos()
         centerX, centerY = self.center[self.shape]
-        self.screen.blit(self.cursor_images, (mouseX-(centerX*self.scaleX), (mouseY-(centerY*self.scaleY//2))*2), (16*self.shape*self.scaleX,0,16*self.scaleX,self.cursor_images.get_height()))
+        screen.blit(self.cursor_images, (mouseX-(centerX*self.scaleX), (mouseY-(centerY*self.scaleY//2))*2), (16*self.shape*self.scaleX,0,16*self.scaleX,self.cursor_images.get_height()))
 
