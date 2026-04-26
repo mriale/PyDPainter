@@ -21,6 +21,20 @@ enhance it with some features to help it better coexist in the modern world.
 
 ### [Download Latest Release](https://pydpainter.org/download.php)
 
+## Top Features
+
+- Runs on Windows, Mac, and Linux
+- Easy-to-use user interface with tooltips
+- Deluxe Paint III compatible
+- File formats: IFF, ANIM, GIF, BMP, PNG, and more
+- Color Cycling
+- Animation
+- Color gradient fills
+- Complete set of paint tools
+- Painting modes: smear, blend, smooth, and more 
+- Symmetry: mirror, tile, and cyclic
+- 256 levels of undo
+
 YouTube videos:
 * [Quick PyDPainter Demo](https://youtu.be/XwagsCdMj74)
 * [PyDPainter 2.0 Trailer](https://youtu.be/l385Z7_CRB0)
