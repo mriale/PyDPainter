@@ -104,13 +104,7 @@ class LayoutGroup:
             dir_str = "VERT"
         else:
             dir_str = "HORIZ"
-        outstr = f"LayoutGroup<direction={dir_str}, ["
-        for item in self.list:
-            outstr += f"{item}"
-        outstr = outstr.rstrip(", ")
-        outstr += "]"
-        outstr += f", rect={self.rect}, overlap_offset={self.overlap_offset}"
-        outstr += ">"
+        outstr = f"LayoutGroup<direction={dir_str}, rect={self.rect}, overlap_offset={self.overlap_offset}, {self.list}>"
         return outstr
 
 class Layout:
@@ -263,11 +257,7 @@ class Layout:
 
     def __repr__(self):
         self.calc()
-        outstr = "Layout<"
-        outstr += f"group={self.group}"
-        outstr += f", overlap={self.overlap}"
-        outstr += f", rect={self.rect}"
-        outstr += ">"
+        outstr = f"Layout<overlap={self.overlap}, rect={self.rect}, group={self.group}>"
         return outstr;
 
 if __name__ == "__main__":
