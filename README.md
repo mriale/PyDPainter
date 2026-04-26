@@ -24,6 +24,7 @@ enhance it with some features to help it better coexist in the modern world.
 ## Top Features
 
 - Runs on Windows, Mac, and Linux
+- Open Source GPLv3
 - Easy-to-use user interface with tooltips
 - Deluxe Paint III compatible
 - File formats: IFF, ANIM, GIF, BMP, PNG, and more
