@@ -456,21 +456,14 @@ class pydpainter:
         px = self.font.xsize // 8
         py = self.font.ysize // 8
 
-        self.layout = Layout(
-            LayoutGroup(LayoutGroup.VERT, [
-                LayoutTile("menubar", (0,-self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,py,0]),
-                LayoutGroup(LayoutGroup.HORIZ, [
-                    LayoutGroup(LayoutGroup.VERT, [
-                        LayoutGroup(LayoutGroup.HORIZ, [
-                            LayoutTile("layertoolbar", (-self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[0,0,0,0]),
-                            LayoutTile("canvas", (self.screen_width,self.screen_height)),
-                            ]),
-                        LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py*3,0,0,0]),
-                        ]),
-                    LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[py,0,0,0]),
-                    ]),
-                ]),
-            overlap=True)
+        self.layout = Layout([
+                LayoutTile("menubar", (0,self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,py,0]),
+                LayoutTile("layertoolbar", (self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[0,0,0,0]),
+                LayoutTile("canvas", (self.screen_width,self.screen_height)),
+                LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py*2,0,0,0]),
+                LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[py,0,0,0]),
+                ],
+            overlap=not config.toolbars_outside)
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
         for i in range(0, self.screen_height*2, 2):

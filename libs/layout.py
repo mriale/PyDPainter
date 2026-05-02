@@ -15,97 +15,78 @@ class LayoutTile:
         self.name = name
         self.size = size
         self.visible = visible
-        self.rect = [0, 0, abs(size[0]), abs(size[1])]
+        self.rect = [0, 0, 0, 0]
         self.drawable = drawable
         self.overlap_offset = list(overlap_offset) #top, right, bottom, left
 
+    @property
+    def x(self):
+        return self.rect[0]
+
+    @x.setter
+    def x(self, value):
+        self.rect[0] = value
+
+    @property
+    def y(self):
+        return self.rect[1]
+
+    @y.setter
+    def y(self, value):
+        self.rect[1] = value
+
+    @property
+    def w(self):
+        if self.visible:
+            return self.size[0]
+        else:
+            return 0
+
+    @w.setter
+    def w(self, value):
+        self.rect[2] = value
+
+    @property
+    def h(self):
+        if self.visible:
+            return self.size[1]
+        else:
+            return 0
+
+    @h.setter
+    def h(self, value):
+        self.rect[3] = value
+
+    @property
+    def ovt(self):
+        if self.visible:
+            return self.overlap_offset[0]
+        else:
+            return 0
+
+    @property
+    def ovr(self):
+        if self.visible:
+            return self.overlap_offset[1]
+        else:
+            return 0
+
+    @property
+    def ovb(self):
+        if self.visible:
+            return self.overlap_offset[2]
+        else:
+            return 0
+
+    @property
+    def ovl(self):
+        if self.visible:
+            return self.overlap_offset[3]
+        else:
+            return 0
+
     def __repr__(self):
         return f"LayoutTile<name=\"{self.name}\", size={self.size}, rect={self.rect}, visible={self.visible}, drawable={self.drawable}, overlap_offset={self.overlap_offset}>"
-
-class LayoutGroup:
-    """This class describes a vertically or horizontally tiled layout"""
-    VERT = 1
-    HORIZ = 2
-    def __init__(self, direction, list):
-        self.direction = direction
-        self.list = list
-        self.rect = [0,0,0,0]
-        self.overlap_offset = [0,0,0,0] #top, right, bottom, left
-
-    def calc_reset(self):
-        for l in self.list:
-            if isinstance(l, LayoutGroup):
-                l.calc_reset()
-            else:
-                l.rect = [0, 0, abs(l.size[0]), abs(l.size[1])]
-
-    def calc_max_size(self, layout):
-        self.rect = [0,0,0,0]
-        for l in self.list:
-            if isinstance(l, LayoutGroup):
-                l.calc_max_size(layout)
-            elif isinstance(l, LayoutTile):
-                if not l.visible:
-                    continue
-                layout.lookup[l.name] = l
-                self.overlap_offset = l.overlap_offset
-            if self.direction == LayoutGroup.VERT:
-                self.rect[3] += l.rect[3] - l.overlap_offset[0] - l.overlap_offset[2]
-                if l.rect[2] > 0:
-                    self.rect[2] = l.rect[2]
-            else:
-                self.rect[2] += l.rect[2] - l.overlap_offset[1] - l.overlap_offset[3]
-                if l.rect[3] > 0:
-                    self.rect[3] = l.rect[3]
-
-    def calc_tile_size(self):
-        for l in self.list:
-            if isinstance(l, LayoutGroup):
-                l.calc_tile_size()
-            elif isinstance(l, LayoutTile):
-                if not l.visible:
-                    continue
-            if l.rect[2] == 0:
-                l.rect[2] = self.rect[2]
-            if l.rect[3] == 0:
-                l.rect[3] = self.rect[3]
-
-    def calc_tile_pos(self):
-        pos = [self.rect[0], self.rect[1]]
-        for l in self.list:
-            if isinstance(l, LayoutTile):
-                if not l.visible:
-                    continue
-            l.rect[0:2] = pos
-            if self.direction == LayoutGroup.VERT:
-                pos[1] += l.rect[3]
-            else:
-                pos[0] += l.rect[2]
-            if isinstance(l, LayoutGroup):
-                l.calc_tile_pos()
-
-    def calc(self, layout):
-        self.calc_max_size(layout)
-        self.calc_tile_size()
-        self.calc_tile_pos()
-
-    def find_tile(self, name):
-        retval = None
-        for l in self.list:
-            if isinstance(l, LayoutGroup):
-                retval = l.find_tile(name)
-            elif isinstance(l, LayoutTile):
-                if name == l.name:
-                    return l
-        return retval
-
-    def __repr__(self):
-        if self.direction == LayoutGroup.VERT:
-            dir_str = "VERT"
-        else:
-            dir_str = "HORIZ"
-        outstr = f"LayoutGroup<direction={dir_str}, rect={self.rect}, overlap_offset={self.overlap_offset}, {self.list}>"
-        return outstr
 
 class Layout:
     """This class describes a layout of windows"""
@@ -118,97 +99,83 @@ class Layout:
         self.need_calc = True
         self.anchor = None
 
+    def calc_overlap(self):
+        menubar = None
+        layers = None
+        canvas = None
+        animbar = None
+        tools = None
+
+        for tile in self.group:
+            tile.rect = [0, 0, tile.size[0], tile.size[1]]
+            match tile.name:
+                case "menubar":
+                    menubar = tile
+                case "layertoolbar":
+                    layers = tile
+                case "canvas":
+                    canvas = tile
+                case "animtoolbar":
+                    animbar = tile
+                case "toolbar":
+                    tools = tile
+
+        menubar.w = canvas.w
+        layers.y = menubar.h - menubar.ovb
+        layers.h = canvas.h
+        animbar.y = canvas.h - animbar.h - animbar.ovt
+        animbar.w = canvas.w - tools.w
+        tools.x = canvas.w - tools.w
+        tools.y = menubar.h - menubar.ovb
+        tools.h = canvas.h - menubar.h
+        self.anchor = canvas
+        self.rect = list(canvas.rect)
+
+    def calc_no_overlap(self):
+        menubar = None
+        layers = None
+        canvas = None
+        animbar = None
+        tools = None
+
+        for tile in self.group:
+            tile.rect = [0, 0, tile.size[0], tile.size[1]]
+            match tile.name:
+                case "menubar":
+                    menubar = tile
+                case "layertoolbar":
+                    layers = tile
+                case "canvas":
+                    canvas = tile
+                case "animtoolbar":
+                    animbar = tile
+                case "toolbar":
+                    tools = tile
+
+        menubar.w = layers.w + canvas.w + tools.w
+        layers.y = menubar.h - menubar.ovb
+        layers.h = menubar.h + canvas.h + animbar.h
+        canvas.x = layers.w
+        canvas.y = menubar.h - menubar.ovb
+        animbar.y = menubar.h + canvas.h - animbar.ovt
+        animbar.w = layers.w + canvas.w
+        tools.x = layers.w + canvas.w
+        tools.y = menubar.h - menubar.ovb
+        tools.h = canvas.h + animbar.h
+        self.anchor = None
+        self.rect = [0, 0, layers.w + canvas.w + tools.w, menubar.h + canvas.h + animbar.h]
+
     def calc(self):
         if self.last_overlap != self.overlap:
-            self.group.calc_reset()
             self.need_calc = True
         if self.need_calc:
-            self.group.calc(self)
+            for tile in self.group:
+                if tile.visible:
+                    self.lookup[tile.name] = tile
             if self.overlap:
-                # find anchor (non-variable size tile, e.g., "canvas")
-                anchor = None
-                for tile in self.lookup.values():
-                    if tile.size[0] > 0 and tile.size[1] > 0:
-                        anchor = tile
-                        self.anchor = tile
-                        break
-                if anchor:
-                    # adjust rects for overlapping
-                    cx, cy, cw, ch = anchor.rect
-                    for tile in self.lookup.values():
-                        tw, th = tile.size
-                        if tw < 0:
-                            tile.rect[0] = 0
-                            tile.rect[2] = abs(tw)
-                        elif tw > 0:
-                            tile.rect[0] = 0 + cw - tw
-                            tile.rect[2] = tw
-                        else:
-                            tile.rect[0] = 0
-                            tile.rect[2] = cw
-                        if th < 0:
-                            tile.rect[1] = 0
-                            tile.rect[3] = abs(th)
-                        elif th > 0:
-                            tile.rect[1] = 0 + ch - th
-                            tile.rect[3] = th
-                        else:
-                            tile.rect[1] = 0
-                            tile.rect[3] = ch
-                    # set anchor (canvas) to 0,0
-                    anchor.rect = [0, 0, cw, ch]
-                    # set layout rect to anchor's rect
-                    self.rect = [0, 0, cw, ch]
-                    # set group rect to anchor's rect
-                    self.group.rect = [0, 0, cw, ch]
-                    # find total fixed sizes in the layout
-                    top_fixed_h = 0
-                    bottom_fixed_h = 0
-                    right_fixed_w = 0
-                    for t in self.lookup.values():
-                        if t.size[1] < 0:
-                            top_fixed_h += abs(t.size[1])
-                        elif t.size[1] > 0 and t != anchor:
-                            bottom_fixed_h += t.size[1]
-                        if t.size[0] > 0 and t != anchor:
-                            right_fixed_w += t.size[0]
-                    # set rects for overlapping based on size signs, with adjustments for fill
-                    for tile in self.lookup.values():
-                        tw, th = tile.size
-                        if tw < 0:
-                            tile.rect[0] = 0
-                            tile.rect[2] = abs(tw)
-                        elif tw > 0:
-                            tile.rect[0] = cw - tw
-                            tile.rect[2] = tw
-                        else:
-                            tile.rect[0] = 0
-                            if th > 0:
-                                tile.rect[2] = cw - right_fixed_w
-                            else:
-                                tile.rect[2] = cw
-                        if th < 0:
-                            tile.rect[1] = 0
-                            tile.rect[3] = abs(th)
-                        elif th > 0:
-                            tile.rect[1] = ch - th
-                            tile.rect[3] = th
-                        else:
-                            tile.rect[1] = top_fixed_h
-                            if tw < 0:
-                                tile.rect[3] = ch - top_fixed_h - bottom_fixed_h
-                            elif tw > 0:
-                                tile.rect[3] = ch - top_fixed_h
-                            else:
-                                tile.rect[3] = ch
-                            # else keep cw
+                self.calc_overlap()
             else:
-                # set layer rect to sum of group
-                sumx = 0
-                sumy = 0
-                for o in self.group.list:
-                    sumy += o.rect[3]
-                self.rect = [0, 0, self.group.rect[2], sumy]
+                self.calc_no_overlap()
 
             self.need_calc = False
             self.last_overlap = self.overlap
@@ -216,33 +183,26 @@ class Layout:
     def get_rect(self, name=None):
         self.calc()
         if name is None:
-            rect = list(self.rect)
-            rect[2] += self.group.overlap_offset[3]
-            rect[3] += self.group.overlap_offset[0]
-            if not self.overlap:
-                rect[3] += 2
-            return rect
-        elif name in self.lookup.keys():
+            return list(self.rect)
+        if name in self.lookup.keys():
             tile = self.lookup[name]
             rect = list(tile.rect)
-            rect[0] -= tile.overlap_offset[3]
-            rect[1] -= tile.overlap_offset[0]
-            rect[2] += tile.overlap_offset[3]
-            rect[3] += tile.overlap_offset[0]
             return rect
         else:
             return list([0,0,0,0])
 
     def set_visible(self, name, value):
         self.calc()
-        tile = self.group.find_tile(name)
+        for tile in self.group:
+            if tile.name == name:
+                break
         tile.visible = value
         if tile.drawable is not None and "visible" in dir(tile.drawable):
             tile.drawable.visible = value
         self.need_calc = True
         if value == False and name in self.lookup.keys():
             del self.lookup[name]
-        self.group.calc_reset()
+        self.need_calc = True
         self.calc()
 
     def draw(self, screen):
@@ -261,21 +221,13 @@ class Layout:
         return outstr;
 
 if __name__ == "__main__":
-    layout = Layout(
-                LayoutGroup(LayoutGroup.VERT, [
-                    LayoutTile("menubar", (0,-12), overlap_offset=[0,0,1,0]),
-                    LayoutGroup(LayoutGroup.HORIZ, [
-                        LayoutGroup(LayoutGroup.VERT, [
-                            LayoutGroup(LayoutGroup.HORIZ, [
-                                LayoutTile("layers", (-25,0), overlap_offset=[1,0,0,0]),
-                                LayoutTile("canvas", (320,200)),
-                                ]),
-                            LayoutTile("animbar", (0,12), overlap_offset=[1,0,0,0]),
-                            ]),
-                        LayoutTile("tools", (25,0), overlap_offset=[1,0,0,0]),
-                        ]),
-                    ]),
-                overlap=False)
+    layout = Layout([LayoutTile("menubar", (0,12), overlap_offset=[0,0,1,0]),
+                     LayoutTile("layers",  (25,0), overlap_offset=[1,0,0,0]),
+                     LayoutTile("canvas",  (320,200)),
+                     LayoutTile("animbar", (0,12), overlap_offset=[1,0,0,0]),
+                     LayoutTile("tools",   (25,0), overlap_offset=[1,0,0,0]),
+                    ],
+                    overlap=False)
 
     print(f"{layout=}")
 

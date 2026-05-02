@@ -1921,6 +1921,8 @@ class PalGadget(ToolGadget):
 
     def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
         self.visible = True
+        px = config.sm.scaleX
+        py = config.sm.scaleY
         x,y,w,h = self.rect
         xo, yo = offset
         self.offsetx = xo
@@ -1938,6 +1940,8 @@ class PalGadget(ToolGadget):
             self.need_redraw = False
 
             if self.label == "#":
+                h = config.toolbar.rect[3] - y + py
+                self.screenrect = (x+xo,y+yo,w,h)
                 pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
                 # Draw color palette
                 numcolors = len(config.pal)
@@ -1957,7 +1961,7 @@ class PalGadget(ToolGadget):
                 color_rows = colors_shown // color_cols
                 color_width = w // color_cols
                 if numcolors <= 32:
-                    color_height = int(round(h*1.0 / color_rows))
+                    color_height = int(math.floor(h*1.0 / color_rows))
                 else:
                     color_height = int((h-self.palettearrows_image.get_height())*1.0 / color_rows)
 

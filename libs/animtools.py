@@ -111,7 +111,7 @@ def init_animtoolbar(config_in):
     minitools_image = imgload('animtools.png', scaleX=scaleX, scaleY=scaleY, scaledown=scaledown)
     numtools=9
     numsubtools=3
-    h = minitools_image.get_height()//numsubtools
+    h = minitools_image.get_height()//numsubtools + 1
     w = minitools_image.get_width()
     mt_width = config.screen_width - config.toolbar.rect[2]
     minitoolbar_canvas = pygame.Surface((mt_width,h),0)
@@ -170,7 +170,7 @@ def draw_animtoolbar(screen_rgb, rect):
         config.animtoolbar.rect = [0,0,rect[2],rect[3]]
         pygame.draw.rect(screen_rgb, (0,0,0), rect)
         pygame.draw.rect(screen_rgb, (255,255,255), (rect[0], rect[1]+py, rect[2], py))
-        pygame.draw.rect(screen_rgb, (160,160,160), (rect[0], rect[1]+py*2, rect[2], rect[3]-py*2))
+        pygame.draw.rect(screen_rgb, (160,160,160), (rect[0], rect[1]+py*2, rect[2], rect[3]))
 
         config.animtoolbar.tool_id("frameslider").need_redraw = True
         config.animtoolbar.tool_id("framecount").need_redraw = True
