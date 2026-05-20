@@ -1942,6 +1942,10 @@ class PalGadget(ToolGadget):
             if self.label == "#":
                 h = config.toolbar.rect[3] - y + py
                 self.screenrect = (x+xo,y+yo,w,h)
+                old_rect = list(self.rect)
+                self.rect = (x,y,w,h)
+                if old_rect != list(self.rect):
+                    config.toolbar.readd_coords(self)
                 pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
                 # Draw color palette
                 numcolors = len(config.pal)

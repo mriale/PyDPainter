@@ -99,7 +99,7 @@ class Layout:
         self.need_calc = True
         self.anchor = None
 
-    def calc_overlap(self):
+    def calc_assign_vars(self):
         menubar = None
         layers = None
         canvas = None
@@ -107,7 +107,6 @@ class Layout:
         tools = None
 
         for tile in self.group:
-            tile.rect = [0, 0, tile.size[0], tile.size[1]]
             match tile.name:
                 case "menubar":
                     menubar = tile
@@ -119,6 +118,11 @@ class Layout:
                     animbar = tile
                 case "toolbar":
                     tools = tile
+
+        return (menubar, layers, canvas, animbar, tools)
+
+    def calc_overlap(self):
+        menubar, layers, canvas, animbar, tools = self.calc_assign_vars()
 
         menubar.w = canvas.w
         layers.y = menubar.h - menubar.ovb
@@ -132,25 +136,7 @@ class Layout:
         self.rect = list(canvas.rect)
 
     def calc_no_overlap(self):
-        menubar = None
-        layers = None
-        canvas = None
-        animbar = None
-        tools = None
-
-        for tile in self.group:
-            tile.rect = [0, 0, tile.size[0], tile.size[1]]
-            match tile.name:
-                case "menubar":
-                    menubar = tile
-                case "layertoolbar":
-                    layers = tile
-                case "canvas":
-                    canvas = tile
-                case "animtoolbar":
-                    animbar = tile
-                case "toolbar":
-                    tools = tile
+        menubar, layers, canvas, animbar, tools = self.calc_assign_vars()
 
         menubar.w = layers.w + canvas.w + tools.w
         layers.y = menubar.h - menubar.ovb
@@ -170,6 +156,7 @@ class Layout:
             self.need_calc = True
         if self.need_calc:
             for tile in self.group:
+                tile.rect = [0, 0, tile.size[0], tile.size[1]]
                 if tile.visible:
                     self.lookup[tile.name] = tile
             if self.overlap:
