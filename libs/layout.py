@@ -149,7 +149,7 @@ class Layout:
         tools.y = menubar.h - menubar.ovb + animbar.ovt
         tools.h = canvas.h + animbar.h
         self.anchor = None
-        self.rect = [0, 0, layers.w + layers.ovr + canvas.w + tools.w, menubar.h + menubar.ovb + canvas.h + animbar.h + animbar.ovt]
+        self.rect = [0, 0, layers.w + layers.ovr + canvas.w + tools.w, menubar.h + canvas.h + animbar.h + animbar.ovt]
 
     def calc(self):
         if self.last_overlap != self.overlap:
