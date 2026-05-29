@@ -1084,38 +1084,57 @@ class pydpainter:
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible
-        scaleX = config.fontx // 8
-        scaleY = config.fonty // 12
-        tw = 0
-        mh = 0
-        atbh = 0
+        menubar, layers, canvas, animbar, tools = config.layout.calc_assign_vars()
 
-        if config.toolbar.visible:
-            tw = config.toolbar.rect[2]
+        if config.layout.overlap:
+            vp_width = canvas.w - (layers.w + layers.ovr + tools.w + tools.ovl)
+            vp_x = layers.w + layers.ovr
+            vp_height = canvas.h - (menubar.h + menubar.ovb + animbar.h + animbar.ovt)
+            vp_y = menubar.h
 
-        if config.menubar.visible:
-            mh = config.menubar.rect[3]
+            #Restrict to left of page
+            if self.screen_offset_x > vp_x:
+                self.screen_offset_x = vp_x
 
-        if config.animtoolbar.visible:
-            atbh = config.animtoolbar.rect[3] + 3*scaleY
+            #Restrict to top of page
+            if self.screen_offset_y > vp_y:
+                self.screen_offset_y = vp_y
 
-        # Center canvas if smaller than the screen
-        if self.pixel_width < self.screen_width - tw:
-            self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
-        if self.pixel_height < self.screen_height - mh - atbh:
-            self.screen_offset_y = (self.screen_height - self.pixel_height - mh - atbh) // 2
+            #Restrict to bottom of page
+            if self.screen_offset_y < -(config.pixel_height - vp_height - vp_y):
+                self.screen_offset_y = -(config.pixel_height - vp_height - vp_y)
 
-        # Restrict scrolling offset to edges of screen
-        if self.pixel_width >= self.screen_width - tw:
-            if x < self.screen_width - self.pixel_width - tw:
-                self.screen_offset_x = self.screen_width - self.pixel_width - tw
-            elif x > 0:
-                self.screen_offset_x = 0
-        if self.pixel_height >= self.screen_height - mh - atbh:
-            if y < self.screen_height - self.pixel_height - atbh:
-                self.screen_offset_y = self.screen_height - self.pixel_height - atbh
-            elif y > mh:
-                self.screen_offset_y = mh
+            #Restrict to right of page
+            if self.screen_offset_x < -(config.pixel_width - vp_width - vp_x):
+                self.screen_offset_x = -(config.pixel_width - vp_width - vp_x)
+
+            #Center canvas if smaller than the screen
+            if self.pixel_width < vp_width:
+                self.screen_offset_x = layers.w + layers.ovr + (vp_width - self.pixel_width) // 2
+            if self.pixel_height < vp_height:
+                self.screen_offset_y = menubar.h + menubar.ovb + (vp_height - self.pixel_height) // 2
+        else:
+            #Restrict to left of page
+            if self.screen_offset_x > canvas.x:
+                self.screen_offset_x = canvas.x
+
+            #Restrict to top of page
+            if self.screen_offset_y > canvas.y:
+                self.screen_offset_y = canvas.y
+
+            #Restrict to bottom of page
+            if self.screen_offset_y < -(config.pixel_height - canvas.h - canvas.y):
+                self.screen_offset_y = -(config.pixel_height - canvas.h - canvas.y)
+
+            #Restrict to right of page
+            if self.screen_offset_x < -(config.pixel_width - canvas.w - canvas.x):
+                self.screen_offset_x = -(config.pixel_width - canvas.w - canvas.x)
+
+            #Center canvas if smaller than the screen
+            if self.pixel_width < canvas.w:
+                self.screen_offset_x = canvas.x + (canvas.w - self.pixel_width) // 2
+            if self.pixel_height < canvas.h:
+                self.screen_offset_y = canvas.y + (canvas.h - self.pixel_height) // 2
 
     def get_win_pos_from_pixel(self, coords):
         cx, cy = coords
