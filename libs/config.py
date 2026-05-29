@@ -943,6 +943,9 @@ class pydpainter:
                 (False,False,False),
                 (False,False,True),
             ],
+            [ # toolbars outside
+                (True,True,True),
+            ],
         ]
 
         self.wait_for_mouseup = [False, False]
@@ -1059,9 +1062,11 @@ class pydpainter:
         config.set_anim_palettes(config.anim, pal_in, pal, truepal)
 
     def calc_tool_visibility_state(self):
-        #Set mode: 0=animation, 1=single frame, 2=animation playing
+        #Set mode: 0=animation, 1=single frame, 2=animation playing, 3=toolbars outside
         mode=0
-        if config.anim.playing:
+        if config.toolbars_outside:
+            mode=3
+        elif config.anim.playing:
             mode=2
         elif config.anim.num_frames == 1:
             mode=1
