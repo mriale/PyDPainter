@@ -36,6 +36,8 @@ enhance it with some features to help it better coexist in the modern world.
 - Symmetry: mirror, tile, and cyclic
 - 256 levels of undo
 
+[Differences from Deluxe Paint](https://github.com/mriale/PyDPainter/wiki/DPaintDifferences)
+
 YouTube videos:
 * [Quick PyDPainter Demo](https://youtu.be/XwagsCdMj74)
 * [PyDPainter 2.0 Trailer](https://youtu.be/l385Z7_CRB0)
