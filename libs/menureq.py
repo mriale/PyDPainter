@@ -510,14 +510,14 @@ def screen_format_req(screen, new_clicked=False):
 [Interlace  000x000] [  8][128]
 [Hi-Res     000x000] [ 16][256]
                       Out of:
-[NTSC~PAL~VGA]       [4096~16M]
+[NTSC~PAL~VGA~Misc]  [4096~16M]
 
 Resize Page: [Yes~No]
 
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
-    display_names = ["VGA","NTSC","PAL"]
+    display_names = ["VGA","NTSC","PAL","Misc"]
 
     #Get PAL/NTSC from current display mode
     global aspect
@@ -547,6 +547,7 @@ Resize Page: [Yes~No]
     gNTSC = req.gadget_id("0_7")
     gPAL = req.gadget_id("5_7")
     gVGA = req.gadget_id("9_7")
+    gMisc = req.find_gadget("Misc")
 
     #Gather (OCS)ECS/AGA gadgets
     g12bit = req.gadget_id("21_7")
@@ -614,11 +615,17 @@ Resize Page: [Yes~No]
             gNTSC.state = 1
             g12bit.enabled = True
             g12bit.need_redraw = True
-        else:
+        elif aspect == 2:
             gPAL.state = 1
             g12bit.enabled = True
             g12bit.need_redraw = True
-
+        else:
+            gMisc.state = 1
+            g12bit.enabled = False
+            g12bit.need_redraw = True
+            if cdepth == 16:
+                cdepth = 256
+                apply_cdepth()
 
         modes = config.display_info.get_display(display_names[aspect])
         i=0
@@ -734,6 +741,9 @@ Resize Page: [Yes~No]
                 apply_aspect()
             elif ge.gadget == gVGA:
                 aspect = 0
+                apply_aspect()
+            elif ge.gadget == gMisc:
+                aspect = 3
                 apply_aspect()
             elif ge.gadget in gres:
                 for i in range(len(gres)):
@@ -859,8 +869,10 @@ Resize Page: [Yes~No]
             gVGA.state = 1
         elif aspect == 1:
             gNTSC.state = 1
-        else:
+        elif aspect == 2:
             gPAL.state = 1
+        else:
+            gMisc.state = 1
 
         gres[res].state = 1
 

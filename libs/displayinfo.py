@@ -30,6 +30,8 @@ class ScreenMode:
             return "square"
         elif self.display == "VGA":
             return "NTSC"
+        elif self.display == "Misc":
+            return "square"
         else:
             return self.display
 
@@ -53,6 +55,10 @@ class DisplayInfo:
             ScreenMode(0x00039004,"VGA",640,480,640,480,1,1,1,2,2,2,"VGA","PC"),
             ScreenMode(0x00039005,"SVGA",800,600,800,600,1,1,1,2,2,2,"VGA","PC"),
             ScreenMode(0x00039006,"XGA",1024,768,1024,768,1,1,1,4,4,1,"VGA","PC"),
+            ScreenMode(0x00041000,"720p",1280,720,1280,720,1,1,1,4,4,2,"Misc","PC"),
+            ScreenMode(0x00049004,"1080p",1920,1080,1920,1080,1,1,1,2,2,2,"Misc","PC"),
+            ScreenMode(0x00049005,"SVGA",800,600,800,600,1,1,1,2,2,2,"Misc","PC"),
+            ScreenMode(0x00049006,"Custom",1024,768,1024,768,1,1,1,4,4,1,"Misc","PC"),
         ]
 
     def __str__(self):
