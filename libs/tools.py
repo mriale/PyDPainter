@@ -794,7 +794,7 @@ class DoCircle(ToolDragAction):
             if ax == ay:
                 drawcircle(config.pixel_canvas, config.bgcolor, self.p1, radius, filled=config.subtool_selected, erase=True)
             else:
-                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radiusax, radius*ay, filled=config.subtool_selected, erase=True)
+                drawellipse(config.pixel_canvas, config.bgcolor, self.p1, radius*ax, radius*ay, filled=config.subtool_selected, erase=True)
         config.save_undo()
         config.brush.pen_down = False
         if config.subtool_selected:
