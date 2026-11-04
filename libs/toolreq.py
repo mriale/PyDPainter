@@ -553,7 +553,7 @@ class BrushReqProps(object):
         return handle_num
 
     def valid_number(self, g):
-        if re.fullmatch(r'^-?\d*\.?\d+$', g.value):
+        if re.fullmatch(r'^-?\d+$', g.value):
             if g.spinnerg is None:
                 return True
             elif int(g.value) >= g.spinnerg.minvalue and \

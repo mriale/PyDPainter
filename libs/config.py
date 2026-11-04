@@ -641,6 +641,8 @@ class pydpainter:
         try:
             f = open(config.args.config,"r")
             for line in f:
+                if len(line) < 1 or line.find("=") < 0:
+                    continue
                 if line.lstrip()[0] == '#':
                     continue
                 vars = line.strip().split("=")
@@ -1763,6 +1765,7 @@ class pydpainter:
         buttons = list(config.get_mouse_pressed())
         zoom_drag = None
         pan_drag = None
+        curr_action = None
 
         last_wait_for_mouseup_gui = False
 
