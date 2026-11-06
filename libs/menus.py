@@ -161,6 +161,7 @@ class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         config.pick_canvas = None
+        config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
         merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
