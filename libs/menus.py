@@ -90,14 +90,15 @@ class DoNew(MenuAction):
             config.filename = ""
             config.anim.__init__()
 
-def io_error_req(title, message, filename, linelen=33):
+def io_error_req(title, message, filename, *args):
+    linelen = 33
     if len(filename) > linelen:
         short_file = "..." + filename[-(linelen-3):]
     else:
         short_file = filename
     dummy = question_req(config.pixel_req_canvas,
              title,
-             message % (short_file),
+             message % (short_file, *args),
              ["OK"],
              [K_RETURN])
 
@@ -134,7 +135,7 @@ class DoOpen(MenuAction):
                 config.modified_count = 0
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoSave(MenuAction):
@@ -153,7 +154,7 @@ class DoSave(MenuAction):
                 config.filename = filename
                 config.modified_count = 0
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save image:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoSaveAs(MenuAction):
@@ -167,7 +168,7 @@ class DoSaveAs(MenuAction):
             try:
                 save_pic(filename, merge_config, overwrite=True)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save image:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
                 return
             config.filename = filename
             config.modified_count = 0
@@ -209,7 +210,7 @@ class DoRevert(MenuAction):
                 config.modified_count = 0
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
 
 class DoPictureFlipX(MenuActionMulti):
     def get_name(self):
@@ -442,7 +443,7 @@ class DoBrushOpen(MenuAction):
                 config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
             except Exception as ex:
-                io_error_req("Load Error", "Unable to open brush:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open brush:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoBrushSaveAs(MenuAction):
@@ -459,7 +460,7 @@ class DoBrushSaveAs(MenuAction):
             try:
                 save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save brush:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save brush:\n%s\n%s", filename, str(ex))
                 return
 
 class DoBrushRestore(MenuActionBrush):
@@ -1335,7 +1336,7 @@ class DoAnimBrushOpen(MenuAction):
                 config.setDrawMode(DrawMode.MATTE)
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open animbrush:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open animbrush:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoAnimBrushSave(MenuAction):
@@ -1356,7 +1357,7 @@ class DoAnimBrushSave(MenuAction):
             try:
                 save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save brush:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save brush:\n%s\n%s", filename, str(ex))
                 return
 
 class DoAnimBrushGrabFrames(MenuAction):
@@ -1469,7 +1470,7 @@ class DoBackgroundOpen(MenuAction):
                 config.bgcolor = 0;
                 config.pixel_canvas.set_colorkey(config.bgcolor)
             except Exception as ex:
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoBackgroundOnOff(MenuAction):

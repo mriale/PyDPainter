@@ -1822,7 +1822,7 @@ class pydpainter:
                             config.anim.show_curr_frame()
                     except Exception as ex:
                         close_progress_req(progress_req)
-                        io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                        io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
 
 
             #Intercept keys for toolbar
