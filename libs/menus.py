@@ -44,7 +44,7 @@ class MenuActionMulti(MenuAction):
             if self.is_ask_multi():
                 frame_range = config.anim.ask_apply_multi(self.get_name())
             else:
-                frame_range = range(config.anim.num_frames)
+                frame_range = range(1, config.anim.num_frames + 1)
             curr_frame_bak = config.anim.curr_frame
             for frame_no in frame_range:
                 config.anim.save_curr_frame()
