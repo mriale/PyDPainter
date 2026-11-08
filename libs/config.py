@@ -354,6 +354,9 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
+        if sm is None:
+            self.display_mode = 0x00011000
+            sm = config.display_info.get_id(self.display_mode)
         pixel_size = self.pixel_canvas.get_size()
         if pixel_size[0] >= sm.x and pixel_size[0] <= sm.max_x and \
            pixel_size[1] >= sm.y and pixel_size[1] <= sm.max_y:
