@@ -354,6 +354,9 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
+        if sm is None:
+            self.display_mode = 0x00011000
+            sm = config.display_info.get_id(self.display_mode)
         pixel_size = self.pixel_canvas.get_size()
         if pixel_size[0] >= sm.x and pixel_size[0] <= sm.max_x and \
            pixel_size[1] >= sm.y and pixel_size[1] <= sm.max_y:
@@ -641,6 +644,8 @@ class pydpainter:
         try:
             f = open(config.args.config,"r")
             for line in f:
+                if len(line) < 1 or line.find("=") < 0:
+                    continue
                 if line.lstrip()[0] == '#':
                     continue
                 vars = line.strip().split("=")
@@ -1763,6 +1768,7 @@ class pydpainter:
         buttons = list(config.get_mouse_pressed())
         zoom_drag = None
         pan_drag = None
+        curr_action = None
 
         last_wait_for_mouseup_gui = False
 
@@ -1819,7 +1825,7 @@ class pydpainter:
                             config.anim.show_curr_frame()
                     except Exception as ex:
                         close_progress_req(progress_req)
-                        io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                        io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
 
 
             #Intercept keys for toolbar

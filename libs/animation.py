@@ -27,14 +27,15 @@ def animation_set_config(config_in):
     global config
     config = config_in
 
-def io_error_anim_req(title, message, filename, linelen=33):
+def io_error_anim_req(title, message, filename, *args):
+    linelen = 33
     if len(filename) > linelen:
         short_file = "..." + filename[-(linelen-3):]
     else:
         short_file = filename
     dummy = question_req(config.pixel_req_canvas,
              title,
-             message % (short_file),
+             message % (short_file, *args),
              ["OK"],
              [K_RETURN])
 
@@ -421,7 +422,7 @@ class Animation:
                 config.anim.show_curr_frame()
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Load Error", "Unable to open anim:\n%s\n" + str(ex), filename)
+                io_error_anim_req("Load Error", "Unable to open anim:\n%s\n%s", filename, str(ex))
 
     def import_frames(self):
         global progress_req
@@ -445,7 +446,7 @@ class Animation:
                 config.anim.show_curr_frame()
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Load Error", "Unable to import frames:\n%s\n" + str(ex), filename)
+                io_error_anim_req("Load Error", "Unable to import frames:\n%s\n%s", filename, str(ex))
 
     def export_frames(self):
         global progress_req
@@ -474,7 +475,7 @@ class Animation:
 
             close_progress_req(progress_req)
             if len(error) > 0:
-                io_error_anim_req("Save Error", "Unable to save frame:\n%s\n" + error, frame_filename)
+                io_error_anim_req("Save Error", "Unable to save frame:\n%s\n%s", frame_filename, error)
 
     def save_file(self):
         global progress_req
@@ -494,7 +495,7 @@ class Animation:
                 config.anim.show_curr_frame()
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_anim_req("Save Error", "Unable to save anim:\n%s\n" + str(ex), filename)
+                io_error_anim_req("Save Error", "Unable to save anim:\n%s\n%s", filename, str(ex))
 
     def handle_events(self, event):
         if event.type == KEYDOWN:
