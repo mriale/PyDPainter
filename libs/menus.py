@@ -433,6 +433,7 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
+                brush_config.anim = Animation()
                 newimage = load_pic(filename, brush_config, is_brush=True)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
