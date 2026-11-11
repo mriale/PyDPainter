@@ -3105,11 +3105,19 @@ def convert8(pixel_canvas_rgb, pal, status_func=None):
 
 def get_truecolor_palette(canvas, num_colors):
     surf_array = pygame.surfarray.pixels2d(canvas)
-    #get rid of alpha channel and make 12 bit
-    surf_array &= 0x00f0f0f0
-    surf_array |= surf_array >> 4
+    #get rid of alpha channel
+    surf_array &= 0x00FFFFFF
     #find unique color indexes and counts of color indexes in pic
     unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
+    #only quantize to 12 bit if there are too many colors to fit in the palette
+    too_many_colors = False
+    if len(unique_colors) > num_colors:
+        too_many_colors = True
+        #make 12 bit
+        surf_array &= 0x00f0f0f0
+        surf_array |= surf_array >> 4
+        #find unique color indexes and counts of color indexes in pic
+        unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
     surf_array = None
     #put counts and color indexes into matrix together into histogram
     hist_array = np.asarray((unique_colors, counts_colors)).transpose()
@@ -3121,8 +3129,13 @@ def get_truecolor_palette(canvas, num_colors):
     colorlist = np.sort(sorted_hist_array[0:num_colors, 0])
     #make sure to preserve color 0
     if colorlist[0] != 0:
-        colorlist = np.sort(sorted_hist_array[0:num_colors-1, 0])
-        colorlist = np.insert(colorlist, 0, 0)
+        if len(colorlist) < num_colors:
+            #room in palette for color 0, so add it
+            colorlist = np.insert(colorlist, 0, 0)
+        elif too_many_colors:
+            #no room in palette for color 0, so replace the least used color
+            colorlist = np.sort(sorted_hist_array[0:num_colors-1, 0])
+            colorlist = np.insert(colorlist, 0, 0)
     #print(colorlist)
     #convert to palette array
     pal=[]
