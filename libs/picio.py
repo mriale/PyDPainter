@@ -644,7 +644,7 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
                 palframe = ((maxframe - firstframe) // 3) + firstframe
                 answer = config.anim.num_req(config.pixel_req_canvas, "Palette From Frame", "Frame", palframe)
                 if answer == None:
-                    return
+                    return config.pixel_canvas
                 else:
                     palframe = answer
                 palfilename = filename_in.replace(seq_matches[0], (len(seq_matches[0]) - len(str(palframe))) * "0" + str(palframe))
@@ -769,7 +769,9 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             elif is_brush and gif.frames[0]["transparency"]:
                 config.bgcolor = gif.frames[0]["transparent_color_index"]
             config.display_mode = -1
-            config.cranges = 6 * [colorrange(0,1,0,0)]
+            config.cranges = []
+            for _ in range(6):
+                config.cranges.append(colorrange(0,1,0,0))
         elif pictype != "NONE":
             pic = load_pygame_pic(filename, config, force_pal=global_palette)
             if status_func != None:

@@ -38,6 +38,8 @@ class HotKeyMap:
 
     def press(self, event):
         if event.type == KEYDOWN:
+            if event.unicode == " ":
+                return
             mod = self.build_mod(event)
             if event.unicode in self.hotkey_map:
                 hotkey = self.hotkey_map[event.unicode]

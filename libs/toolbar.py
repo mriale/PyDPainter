@@ -174,6 +174,10 @@ class Toolbar:
         self.live_tip = False
         self.tipg = None
 
+    def __repr__(self):
+        outstr = f"Toolbar<rect={self.rect}, screen={self.screen}>"
+        return outstr
+
     def hash_coords(self, x, y):
         return "%dx_%dx" % (x//10,y//10)
 
@@ -186,6 +190,12 @@ class Toolbar:
                     self.coord_map[h].append(toolg)
                 else:
                     self.coord_map[h] = [toolg]
+
+    def readd_coords(self, toolg):
+        for glist in self.coord_map.values():
+            if toolg in glist:
+                glist.remove(toolg)
+        self.add_coords(toolg)
 
     def get_tools_by_coords(self, x, y):
         h = self.hash_coords(x,y)
@@ -257,7 +267,7 @@ class Toolbar:
             for toolg in group_list:
                 toolg.group_list = group_list
 
-    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+    def draw(self, screen=None, font=None, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224), rect=None):
         if screen == None:
             screen = self.screen
 
@@ -265,6 +275,10 @@ class Toolbar:
             return
 
         self.offset = offset
+        if rect is not None and self.rect != rect:
+            self.rect = [0,0, rect[2],rect[3]]
+            offset = [rect[0], rect[1]]
+            self.offset = offset
         self.screenrect = (self.rect[0]+offset[0],self.rect[1]+offset[1],self.rect[2],self.rect[3])
         screen.blit(self.image, offset, area=self.rect)
         for toolg in self.tools:

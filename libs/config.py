@@ -18,6 +18,7 @@ from libs.prim import *
 from libs.palreq import *
 from libs.picio import *
 from libs.layer import *
+from libs.layout import *
 from libs.stencil import *
 from libs.tools import *
 from libs.minitools import *
@@ -353,6 +354,9 @@ class pydpainter:
 
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
+        if sm is None:
+            self.display_mode = 0x00011000
+            sm = config.display_info.get_id(self.display_mode)
         pixel_size = self.pixel_canvas.get_size()
         if pixel_size[0] >= sm.x and pixel_size[0] <= sm.max_x and \
            pixel_size[1] >= sm.y and pixel_size[1] <= sm.max_y:
@@ -437,7 +441,7 @@ class pydpainter:
 
         self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
         cursor_images = pygame.image.load(os.path.join('data', 'cursors.png'))
-        self.cursor = cursor(self.scaled_image, self.sm.scaleX, self.sm.scaleY*2, self, cursor_images)
+        self.cursor = cursor(self.sm.scaleX, self.sm.scaleY*2, self, cursor_images)
         self.toolbar = init_toolbar(config)
         self.menubar = init_menubar(config)
         self.minitoolbar = init_minitoolbar(config)
@@ -451,6 +455,18 @@ class pydpainter:
             self.layertoolbar,
         ]
         self.smooth_example_image = pygame.image.load(os.path.join('data', 'smooth_example.png'))
+
+        px = self.font.xsize // 8
+        py = self.font.ysize // 8
+
+        self.layout = Layout([
+                LayoutTile("menubar", (0,self.menubar.rect[3]), drawable=self.menubar, overlap_offset=[0,0,py,0]),
+                LayoutTile("layertoolbar", (self.layertoolbar.rect[2],0), visible=False, drawable=self.layertoolbar, overlap_offset=[0,0,0,0]),
+                LayoutTile("canvas", (self.screen_width,self.screen_height)),
+                LayoutTile("animtoolbar", (0,self.animtoolbar.rect[3]), visible=False, drawable=self.animtoolbar, overlap_offset=[py*2,0,0,0]),
+                LayoutTile("toolbar", (self.toolbar.rect[2],0), drawable=self.toolbar, overlap_offset=[py,0,0,0]),
+                ],
+            overlap=not config.toolbars_outside)
 
         self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
         for i in range(0, self.screen_height*2, 2):
@@ -476,6 +492,7 @@ class pydpainter:
         self.menubar.menu_id("prefs").menu_id("truesymmetry").checked = self.true_symmetry
         self.menubar.menu_id("prefs").menu_id("sysfiledialog").checked = self.sys_file_dialog
         self.menubar.menu_id("prefs").menu_id("ctrlpickoverride").checked = self.ctrl_pick_override
+        self.menubar.menu_id("prefs").menu_id("toolbarsoutside").checked = self.toolbars_outside
         self.menubar.hide_menus = self.hide_menus
 
         self.brush = Brush()
@@ -615,6 +632,7 @@ class pydpainter:
             f.write("true_symmetry=%s\n" % (self.true_symmetry))
             f.write("sys_file_dialog=%s\n" % (self.sys_file_dialog))
             f.write("ctrl_pick_override=%s\n" % (self.ctrl_pick_override))
+            f.write("toolbars_outside=%s\n" % (self.toolbars_outside))
             for k in self.user_hotkeys.keys():
                 h = self.user_hotkeys[k]
                 f.write("hotkey_%s=%s\n" % (str(h), str(h.attrs["map_to"])))
@@ -626,6 +644,8 @@ class pydpainter:
         try:
             f = open(config.args.config,"r")
             for line in f:
+                if len(line) < 1 or line.find("=") < 0:
+                    continue
                 if line.lstrip()[0] == '#':
                     continue
                 vars = line.strip().split("=")
@@ -683,6 +703,8 @@ class pydpainter:
                         self.sys_file_dialog = True if vars[1] == "True" else False
                     elif vars[0] == "ctrl_pick_override":
                         self.ctrl_pick_override = True if vars[1] == "True" else False
+                    elif vars[0] == "toolbars_outside":
+                        self.toolbars_outside = True if vars[1] == "True" else False
                     elif vars[0][:7] == "hotkey_":
                         map_to = vars[0][7:]
                         map_from = vars[1]
@@ -723,6 +745,11 @@ class pydpainter:
         self.OCS_MODES = self.MODE_LACE | self.MODE_EXTRA_HALFBRIGHT | self.MODE_HAM | self.MODE_HIRES | self.NTSC_MONITOR_ID | self.PAL_MONITOR_ID
 
         self.display_info = DisplayInfo()
+
+        self.pygame_version = "pygame"
+        if "print_debug_info" in dir(pygame):
+            self.pygame_version += "-ce"
+        self.pygame_version += f" {pygame.version.ver}"
 
         self.xevent = Xevent()
         self.fontx = fontx
@@ -831,6 +858,7 @@ class pydpainter:
         self.true_symmetry = False
         self.sys_file_dialog = False
         self.ctrl_pick_override = False
+        self.toolbars_outside = False
         self.user_hotkeys = HotKeyMap()
         config.resize_display()
         pygame.display.set_caption("PyDPainter")
@@ -1038,17 +1066,23 @@ class pydpainter:
     def calc_tool_visibility_state(self):
         #Set mode: 0=animation, 1=single frame, 2=animation playing
         mode=0
-        if config.anim.playing:
+        state = config.tool_visibility_state
+
+        if config.toolbars_outside:
+            if config.anim.num_frames == 1:
+                mode=1
+            if state > 1:
+                state = 0
+        elif config.anim.playing:
             mode=2
         elif config.anim.num_frames == 1:
             mode=1
 
-        state = config.tool_visibility_state
         state = state % len(config.tool_visibility_states[mode])
 
-        config.toolbar.visible     = config.tool_visibility_states[mode][state][0]
-        config.menubar.visible     = config.tool_visibility_states[mode][state][1]
-        config.animtoolbar.visible = config.tool_visibility_states[mode][state][2]
+        config.layout.set_visible("toolbar", config.tool_visibility_states[mode][state][0])
+        config.layout.set_visible("menubar", config.tool_visibility_states[mode][state][1])
+        config.layout.set_visible("animtoolbar", config.tool_visibility_states[mode][state][2])
 
         if config.menubar.visible:
             if config.animtoolbar.visible or config.anim.num_frames == 1:
@@ -1061,38 +1095,57 @@ class pydpainter:
 
     def set_screen_offset(self, x, y):
         # calculate offsets for toolbars and menubar if visible
-        scaleX = config.fontx // 8
-        scaleY = config.fonty // 12
-        tw = 0
-        mh = 0
-        atbh = 0
+        menubar, layers, canvas, animbar, tools = config.layout.calc_assign_vars()
 
-        if config.toolbar.visible:
-            tw = config.toolbar.rect[2]
+        if config.layout.overlap:
+            vp_width = canvas.w - (layers.w + layers.ovr + tools.w + tools.ovl)
+            vp_x = layers.w + layers.ovr
+            vp_height = canvas.h - (menubar.h + menubar.ovb + animbar.h + animbar.ovt)
+            vp_y = menubar.h
 
-        if config.menubar.visible:
-            mh = config.menubar.rect[3]
+            #Restrict to left of page
+            if self.screen_offset_x > vp_x:
+                self.screen_offset_x = vp_x
 
-        if config.animtoolbar.visible:
-            atbh = config.animtoolbar.rect[3] + 3*scaleY
+            #Restrict to top of page
+            if self.screen_offset_y > vp_y:
+                self.screen_offset_y = vp_y
 
-        # Center canvas if smaller than the screen
-        if self.pixel_width < self.screen_width - tw:
-            self.screen_offset_x = (self.screen_width - self.pixel_width - tw) // 2
-        if self.pixel_height < self.screen_height - mh - atbh:
-            self.screen_offset_y = (self.screen_height - self.pixel_height - mh - atbh) // 2
+            #Restrict to bottom of page
+            if self.screen_offset_y < -(config.pixel_height - vp_height - vp_y):
+                self.screen_offset_y = -(config.pixel_height - vp_height - vp_y)
 
-        # Restrict scrolling offset to edges of screen
-        if self.pixel_width >= self.screen_width - tw:
-            if x < self.screen_width - self.pixel_width - tw:
-                self.screen_offset_x = self.screen_width - self.pixel_width - tw
-            elif x > 0:
-                self.screen_offset_x = 0
-        if self.pixel_height >= self.screen_height - mh - atbh:
-            if y < self.screen_height - self.pixel_height - atbh:
-                self.screen_offset_y = self.screen_height - self.pixel_height - atbh
-            elif y > mh:
-                self.screen_offset_y = mh
+            #Restrict to right of page
+            if self.screen_offset_x < -(config.pixel_width - vp_width - vp_x):
+                self.screen_offset_x = -(config.pixel_width - vp_width - vp_x)
+
+            #Center canvas if smaller than the screen
+            if self.pixel_width < vp_width:
+                self.screen_offset_x = layers.w + layers.ovr + (vp_width - self.pixel_width) // 2
+            if self.pixel_height < vp_height:
+                self.screen_offset_y = menubar.h + menubar.ovb + (vp_height - self.pixel_height) // 2
+        else:
+            #Restrict to left of page
+            if self.screen_offset_x > canvas.x:
+                self.screen_offset_x = canvas.x
+
+            #Restrict to top of page
+            if self.screen_offset_y > canvas.y:
+                self.screen_offset_y = canvas.y
+
+            #Restrict to bottom of page
+            if self.screen_offset_y < -(config.pixel_height - canvas.h - canvas.y):
+                self.screen_offset_y = -(config.pixel_height - canvas.h - canvas.y)
+
+            #Restrict to right of page
+            if self.screen_offset_x < -(config.pixel_width - canvas.w - canvas.x):
+                self.screen_offset_x = -(config.pixel_width - canvas.w - canvas.x)
+
+            #Center canvas if smaller than the screen
+            if self.pixel_width < canvas.w:
+                self.screen_offset_x = canvas.x + (canvas.w - self.pixel_width) // 2
+            if self.pixel_height < canvas.h:
+                self.screen_offset_y = canvas.y + (canvas.h - self.pixel_height) // 2
 
     def get_win_pos_from_pixel(self, coords):
         cx, cy = coords
@@ -1264,6 +1317,10 @@ class pydpainter:
             pygame.display.set_caption(config.window_title)
 
     def recompose(self):
+        scaleX = config.fontx // 8
+        scaleY = config.fonty // 12
+
+
         self.calc_tool_visibility_state()
 
         if self.cycling:
@@ -1274,9 +1331,15 @@ class pydpainter:
         self.menubar.indicators["layers"] = self.layers.draw_indicator
 
         self.redraw_window_title()
-
-        scaleX = config.fontx // 8
-        scaleY = config.fonty // 12
+        rect = config.layout.get_rect()
+        self.screen_width = rect[2]
+        self.screen_height = rect[3]
+        if self.scaled_image.get_width() != self.screen_width or \
+           self.scaled_image.get_height() != self.screen_height * 2:
+            self.scaled_image = pygame.Surface((self.screen_width, self.screen_height*2))
+            self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
+            for i in range(0, self.screen_height*2, 2):
+                pygame.draw.line(self.scanline_canvas, Color(0,0,0,100), (0,i), (self.screen_width,i), 1)
 
         config.layers.set("canvas", config.pixel_canvas, priority=1)
         config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
@@ -1371,13 +1434,16 @@ class pydpainter:
             self.layertoolbar.tip_canvas = None
 
         #blit toolbar layer
-        self.toolbar.draw(screen_rgb, offset=(self.screen_width-self.toolbar.rect[2], self.fonty-1 if self.menubar.visible else 0))
+        rect = config.layout.get_rect("toolbar")
+        self.toolbar.draw(screen_rgb, rect=rect)
 
         #blit layertoolbar layer
-        draw_layertoolbar(screen_rgb)
+        rect = config.layout.get_rect("layertoolbar")
+        draw_layertoolbar(screen_rgb, rect=rect)
 
         #blit menu layer
-        self.menubar.draw(screen_rgb)
+        rect = config.layout.get_rect("menubar")
+        self.menubar.draw(screen_rgb, rect=rect)
 
         #blit minitoolbar layer
         if self.menubar.visible:
@@ -1388,13 +1454,14 @@ class pydpainter:
             self.minitoolbar.draw(screen_rgb, offset=(mtbx, 0))
 
         #blit animtoolbar layer
-        draw_animtoolbar(screen_rgb)
+        rect = config.layout.get_rect("animtoolbar")
+        draw_animtoolbar(screen_rgb, rect)
 
         #scale image double height
         pygame.transform.scale(screen_rgb, (self.screen_width, self.screen_height*2), self.scaled_image)
 
         #draw mouse cursor
-        self.cursor.draw()
+        self.cursor.draw(self.scaled_image)
 
         if self.scanlines == self.SCANLINES_ON:
             #blit scanlines onto double-high image
@@ -1701,6 +1768,7 @@ class pydpainter:
         buttons = list(config.get_mouse_pressed())
         zoom_drag = None
         pan_drag = None
+        curr_action = None
 
         last_wait_for_mouseup_gui = False
 
@@ -1757,7 +1825,7 @@ class pydpainter:
                             config.anim.show_curr_frame()
                     except Exception as ex:
                         close_progress_req(progress_req)
-                        io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                        io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
 
 
             #Intercept keys for toolbar
@@ -2070,6 +2138,8 @@ class pydpainter:
                     if e.mod & KMOD_SHIFT:
                         print("\n***********Debug************")
                         print(f"{config.layers=}")
+                        print("")
+                        print(f"{config.layout=}")
                         config.debug = not config.debug
                     else:
                         config.toolbar.click(config.minitoolbar.tool_id("scanlines"), MOUSEBUTTONDOWN)

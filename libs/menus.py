@@ -44,7 +44,7 @@ class MenuActionMulti(MenuAction):
             if self.is_ask_multi():
                 frame_range = config.anim.ask_apply_multi(self.get_name())
             else:
-                frame_range = range(config.anim.num_frames)
+                frame_range = range(1, config.anim.num_frames + 1)
             curr_frame_bak = config.anim.curr_frame
             for frame_no in frame_range:
                 config.anim.save_curr_frame()
@@ -90,14 +90,15 @@ class DoNew(MenuAction):
             config.filename = ""
             config.anim.__init__()
 
-def io_error_req(title, message, filename, linelen=33):
+def io_error_req(title, message, filename, *args):
+    linelen = 33
     if len(filename) > linelen:
         short_file = "..." + filename[-(linelen-3):]
     else:
         short_file = filename
     dummy = question_req(config.pixel_req_canvas,
              title,
-             message % (short_file),
+             message % (short_file, *args),
              ["OK"],
              [K_RETURN])
 
@@ -134,7 +135,7 @@ class DoOpen(MenuAction):
                 config.modified_count = 0
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoSave(MenuAction):
@@ -153,13 +154,14 @@ class DoSave(MenuAction):
                 config.filename = filename
                 config.modified_count = 0
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save image:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoSaveAs(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
         config.pick_canvas = None
+        config.clear_pixel_draw_canvas()
         merge_config = copy.copy(config)
         merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
@@ -167,7 +169,7 @@ class DoSaveAs(MenuAction):
             try:
                 save_pic(filename, merge_config, overwrite=True)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save image:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
                 return
             config.filename = filename
             config.modified_count = 0
@@ -209,7 +211,7 @@ class DoRevert(MenuAction):
                 config.modified_count = 0
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
 
 class DoPictureFlipX(MenuActionMulti):
     def get_name(self):
@@ -431,6 +433,7 @@ class DoBrushOpen(MenuAction):
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
+                brush_config.anim = Animation()
                 newimage = load_pic(filename, brush_config, is_brush=True)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
@@ -442,7 +445,7 @@ class DoBrushOpen(MenuAction):
                 config.brush.image_orig = reduced
                 config.setDrawMode(DrawMode.MATTE)
             except Exception as ex:
-                io_error_req("Load Error", "Unable to open brush:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open brush:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoBrushSaveAs(MenuAction):
@@ -459,7 +462,7 @@ class DoBrushSaveAs(MenuAction):
             try:
                 save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save brush:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save brush:\n%s\n%s", filename, str(ex))
                 return
 
 class DoBrushRestore(MenuActionBrush):
@@ -1335,7 +1338,7 @@ class DoAnimBrushOpen(MenuAction):
                 config.setDrawMode(DrawMode.MATTE)
             except Exception as ex:
                 close_progress_req(progress_req)
-                io_error_req("Load Error", "Unable to open animbrush:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open animbrush:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoAnimBrushSave(MenuAction):
@@ -1356,7 +1359,7 @@ class DoAnimBrushSave(MenuAction):
             try:
                 save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except Exception as ex:
-                io_error_req("Save Error", "Unable to save brush:\n%s\n" + str(ex), filename)
+                io_error_req("Save Error", "Unable to save brush:\n%s\n%s", filename, str(ex))
                 return
 
 class DoAnimBrushGrabFrames(MenuAction):
@@ -1469,7 +1472,7 @@ class DoBackgroundOpen(MenuAction):
                 config.bgcolor = 0;
                 config.pixel_canvas.set_colorkey(config.bgcolor)
             except Exception as ex:
-                io_error_req("Load Error", "Unable to open image:\n%s\n" + str(ex), filename)
+                io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoBackgroundOnOff(MenuAction):
@@ -1604,6 +1607,16 @@ class DoPrefsCtrlPickOverride(MenuAction):
             return
         self.gadget.checked = not self.gadget.checked
         config.ctrl_pick_override = self.gadget.checked
+        config.doKeyAction()
+
+class DoPrefsToolbarsOutside(MenuAction):
+    def selected(self, attrs):
+        if not self.gadget.enabled:
+            return
+        self.gadget.checked = not self.gadget.checked
+        config.toolbars_outside = self.gadget.checked
+        config.layout.overlap = not config.toolbars_outside
+        config.tool_visibility_state = 1
         config.doKeyAction()
 
 class DoPrefsSave(MenuAction):
@@ -1777,6 +1790,7 @@ def init_menubar(config_in):
             ["/True Symmetry", " ", DoPrefsTrueSymmetry],
             ["/Sys File Dialog", " ", DoPrefsSysFileDialog],
             ["/CTRL Pick Override", " ", DoPrefsCtrlPickOverride],
+            ["/Toolbars Outside", " ", DoPrefsToolbarsOutside],
             ["/Coords", [
                 ["/Show", "|", DoPrefsCoords],
                 ["/Flip", " ", DoPrefsFlipCoords],
