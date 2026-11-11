@@ -20,6 +20,7 @@ from libs.picio import *
 from libs.layer import *
 from libs.layout import *
 from libs.stencil import *
+from libs.grid import *
 from libs.tools import *
 from libs.minitools import *
 from libs.animtools import *
@@ -175,6 +176,7 @@ class pydpainter:
         menureq_set_config(self)
         picio_set_config(self)
         stencil_set_config(self)
+        grid_set_config(self)
         layer_set_config(self)
         colorrange_set_config(self)
         version_set_config(self)
@@ -833,6 +835,11 @@ class pydpainter:
         self.grid_on = False
         self.grid_size = (10,10)
         self.grid_offset = (0,0)
+        self.grid_visible = False
+        self.grid_style = GRID_DOTTED
+        self.grid_color = (255,255,255)
+        self.grid_alpha = 128
+        self.grid = Grid()
         self.symm_on = False
         self.symm_center = (160,100)
         self.symm_mode = 0
@@ -1405,11 +1412,13 @@ class pydpainter:
             # Draw left unzoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (0,0,w,self.screen_height))
             config.layers.blit(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
+            self.grid.draw(screen_rgb, (0,0), (self.zoom.xoffset,self.zoom.yoffset, w,self.screen_height))
 
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
             config.layers.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
+            self.grid.draw(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
             screen_rgb.blit(zoom_canvas_scaled, (w,menu_bar_height), (0,0,zxsize,zysize))
 
@@ -1422,6 +1431,7 @@ class pydpainter:
             screen_rgb = pygame.Surface((self.screen_width, self.screen_height),0)
             screen_rgb.fill((128,128,128)); # out of page bounds
             config.layers.blit(screen_rgb, (self.screen_offset_x, self.screen_offset_y))
+            self.grid.draw(screen_rgb, (self.screen_offset_x, self.screen_offset_y))
 
         #blit requestor layer
         if self.pixel_req_rect != None:

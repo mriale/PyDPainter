@@ -8,6 +8,7 @@ import libs.gadget
 from libs.gadget import *
 
 from libs.prim import *
+from libs.grid import *
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -1036,14 +1037,81 @@ Align:  [<>   ][^v   ]
 
     return
 
+class GridColorGadget(Gadget):
+    """
+    Gadget that displays a row of color swatches to choose
+    the color of the grid overlay
+    """
+    grid_colors = [(0,0,0), (85,85,85), (170,170,170), (255,255,255),
+                   (255,0,0), (255,255,0), (0,255,0), (0,255,255),
+                   (0,0,255), (255,0,255)]
+
+    def __init__(self, type, label, rect, value=None, maxvalue=None, id=None, enabled=True, minvalue=None):
+        super(GridColorGadget, self).__init__(type, label, rect, value, maxvalue, id, enabled, minvalue)
+        if type == Gadget.TYPE_CUSTOM and label == "#":
+            #find the swatch that matches the current grid color
+            self.value = -1
+            for i in range(len(self.grid_colors)):
+                if tuple(self.grid_colors[i]) == tuple(config.grid_color):
+                    self.value = i
+                    break
+
+    def draw(self, screen, font, offset=(0,0), fgcolor=(0,0,0), bgcolor=(160,160,160), hcolor=(208,208,224)):
+        if self.type == Gadget.TYPE_CUSTOM and self.label == "#":
+            if not self.need_redraw:
+                return
+            self.need_redraw = False
+            self.visible = True
+            x,y,w,h = self.rect
+            xo, yo = offset
+            self.offsetx = xo
+            self.offsety = yo
+            self.screenrect = (x+xo,y+yo,w,h)
+            #draw border and color swatches
+            pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
+            numcolors = len(self.grid_colors)
+            color_width = w // numcolors
+            for i in range(numcolors):
+                swrect = (x+xo+1+i*color_width, y+yo+1, color_width-1, h-2)
+                pygame.draw.rect(screen, self.grid_colors[i], swrect, 0)
+                if i == self.value:
+                    #highlight the selected color
+                    pygame.draw.rect(screen, (255,255,255), (x+xo+i*color_width, y+yo, color_width+1, h), 1)
+        else:
+            super(GridColorGadget, self).draw(screen, font, offset, fgcolor, bgcolor, hcolor)
+
+    def process_event(self, screen, event, mouse_pixel_mapper):
+        ge = []
+        if self.type == Gadget.TYPE_CUSTOM and self.label == "#":
+            x,y = mouse_pixel_mapper()
+            if event.type == MOUSEBUTTONDOWN and event.button == 1 and \
+               self.pointin((x,y), self.screenrect):
+                numcolors = len(self.grid_colors)
+                i = (x - self.screenrect[0]) * numcolors // self.screenrect[2]
+                if i >= numcolors:
+                    i = numcolors - 1
+                if self.value != i:
+                    self.value = i
+                    self.need_redraw = True
+                    config.grid_color = tuple(self.grid_colors[i])
+                    ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, self))
+        else:
+            ge.extend(super(GridColorGadget, self).process_event(screen, event, mouse_pixel_mapper))
+        return ge
+
 def grid_req(screen):
     req = str2req("Grid", """
           X     Y
 Size:   ____~ ____~
 Offset: ____~ ____~
 [Visual][From Brush]
+
+Visible: [Off~On]
+Style:   [Dotted~Solid]
+Color:   ##########
+Alpha:   ----------
 [Cancel][OK]
-""", "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
+""", "#", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=GridColorGadget, font=config.font)
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
@@ -1052,6 +1120,12 @@ Offset: ____~ ____~
     offsetXg = req.gadget_id("8_2")
     offsetYg = req.gadget_id("14_2")
     visualg = req.gadget_id("0_3")
+    offg = req.gadget_id("9_5")
+    ong = req.gadget_id("13_5")
+    dottedg = req.gadget_id("9_6")
+    solidg = req.gadget_id("16_6")
+    colorg = req.gadget_id("9_7")
+    alphag = req.gadget_id("9_8")
 
     sizeXg.value = str(config.grid_size[0])
     sizeXg.spinnerg.minvalue = 1
@@ -1061,50 +1135,115 @@ Offset: ____~ ____~
     offsetXg.numonly = True
     offsetYg.value = str(config.grid_offset[1])
     offsetYg.numonly = True
+    alphag.maxvalue = 256
+    alphag.scrolldelta = 8
+    alphag.value = config.grid_alpha
+
+    #set initial radio button states
+    ong.state = 1 if config.grid_visible else 0
+    offg.state = 0 if config.grid_visible else 1
+    dottedg.state = 1 if config.grid_style == GRID_DOTTED else 0
+    solidg.state = 0 if config.grid_style == GRID_DOTTED else 1
+
+    #save grid settings to restore if the requestor is cancelled
+    grid_backup = (config.grid_size, config.grid_offset, config.grid_visible,
+                   config.grid_style, config.grid_color, config.grid_alpha,
+                   config.grid_on)
+    #turn on the grid to preview changes while the requestor is open
+    config.grid_on = True
+
+    def get_grid_values():
+        """Read size and offset from the requestor, or None if invalid"""
+        try:
+            sx = int(sizeXg.value)
+            sy = int(sizeYg.value)
+            if sx > 0 and sy > 0:
+                return ((sx, sy), (int(offsetXg.value) % sx, int(offsetYg.value) % sy))
+        except ValueError:
+            pass
+        return None
 
     req.draw(screen)
     config.recompose()
 
     running = 1
+    cancelled = False
     while running:
         event = config.xevent.wait()
         gevents = req.process_event(screen, event)
 
         if event.type == KEYDOWN and event.key == K_ESCAPE:
-            running = 0 
+            running = 0
+            cancelled = True
 
         for ge in gevents:
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == "OK" and not req.has_error():
-                    config.grid_size = (int(sizeXg.value), int(sizeYg.value))
-                    config.grid_offset = (int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value))
-                    if not config.grid_on:
-                        config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN)
-                    running = 0
+                    grid_values = get_grid_values()
+                    if grid_values != None:
+                        config.grid_size, config.grid_offset = grid_values
+                        config.grid_on = grid_backup[6]
+                        if not config.grid_on:
+                            config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN)
+                        running = 0
                 elif ge.gadget.label == "Cancel":
-                    running = 0 
+                    running = 0
+                    cancelled = True
+                elif ge.gadget in [ong, offg]:
+                    config.grid_visible = (ge.gadget == ong)
+                elif ge.gadget in [dottedg, solidg]:
+                    config.grid_style = GRID_DOTTED if ge.gadget == dottedg else GRID_SOLID
                 elif ge.gadget.label == "From Brush":
                     sizeXg.value = str(config.brush.rect[2])
                     sizeXg.need_redraw = True
                     sizeYg.value = str(config.brush.rect[3])
                     sizeYg.need_redraw = True
                 elif ge.gadget == visualg and not req.has_error():
-                    gcoords = place_grid((int(offsetXg.value)%int(sizeXg.value), int(offsetYg.value)%int(sizeYg.value), int(sizeXg.value), int(sizeYg.value)))
-                    offsetXg.value = str(gcoords[0])
-                    offsetXg.need_redraw = True
-                    offsetYg.value = str(gcoords[1])
-                    offsetYg.need_redraw = True
-                    sizeXg.value = str(gcoords[2])
-                    sizeXg.need_redraw = True
-                    sizeYg.value = str(gcoords[3])
-                    sizeYg.need_redraw = True
-                    req.draw(screen)
+                    grid_values = get_grid_values()
+                    if grid_values != None:
+                        (offsetX, offsetY), (sizeX, sizeY) = grid_values
+                        gcoords = place_grid((offsetX % sizeX, offsetY % sizeY, sizeX, sizeY))
+                        offsetXg.value = str(gcoords[0])
+                        offsetXg.need_redraw = True
+                        offsetYg.value = str(gcoords[1])
+                        offsetYg.need_redraw = True
+                        sizeXg.value = str(gcoords[2])
+                        sizeXg.need_redraw = True
+                        sizeYg.value = str(gcoords[3])
+                        sizeYg.need_redraw = True
+                        req.draw(screen)
+
+        #live-apply current settings so the grid preview updates
+        grid_values = get_grid_values()
+        if grid_values != None:
+            config.grid_size, config.grid_offset = grid_values
+        config.grid_alpha = alphag.value
 
         if not config.xevent.peek((KEYDOWN, KEYUP, MOUSEBUTTONDOWN, MOUSEBUTTONUP, MOUSEMOTION, VIDEORESIZE)):
+            #update radio button states - only re-assert the selected one so
+            #that a button click between MOUSEBUTTONDOWN and MOUSEBUTTONUP is
+            #not interrupted
+            if config.grid_visible:
+                ong.state = 1
+            else:
+                offg.state = 1
+
+            if config.grid_style == GRID_DOTTED:
+                dottedg.state = 1
+            else:
+                solidg.state = 1
+
             req.draw(screen)
             config.recompose()
 
     config.pixel_req_rect = None
+
+    if cancelled:
+        #restore the grid settings from before the requestor was opened
+        (config.grid_size, config.grid_offset, config.grid_visible,
+         config.grid_style, config.grid_color, config.grid_alpha,
+         config.grid_on) = grid_backup
+
     config.recompose()
 
     return
