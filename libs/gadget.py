@@ -27,6 +27,7 @@ from pygame.locals import *
 
 import libs.pixelfont
 from libs.pixelfont import *
+from libs.clipboard import clipboard_get_text, clipboard_set_text
 
 #Workaround for pygame timer bug:
 #  https://github.com/pygame/pygame/issues/3128
@@ -529,7 +530,18 @@ class Gadget(object):
                     g.need_redraw = True
                     ge.append(GadgetEvent(GadgetEvent.TYPE_KEY, event, g))
                     hi_pos = g.scrollpos + (g.screenrect[2] // fontx) - 1
-                    if event.key == K_RIGHT:
+                    if event.mod & KMOD_CTRL and event.key == K_c:
+                        clipboard_set_text(self.value)
+                    elif (event.mod & KMOD_CTRL and event.key == K_v) or (event.mod & KMOD_SHIFT and event.key == K_INSERT):
+                        text = clipboard_get_text()
+                        if text:
+                            text = text.replace("\r\n", " ").replace("\n", " ").replace("\r", " ")
+                            avail = max(0, self.maxvalue - len(self.value))
+                            text = text[:avail]
+                            if text:
+                                self.value = self.value[:self.pos] + text + self.value[self.pos:]
+                                self.pos += len(text)
+                    elif event.key == K_RIGHT:
                         if self.pos < len(self.value):
                             self.pos += 1
                     elif event.key == K_LEFT:
@@ -549,19 +561,6 @@ class Gadget(object):
                     elif event.key == K_RETURN or event.key == K_KP_ENTER or event.key == K_ESCAPE:
                         self.state = 0
                         ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
-                        """
-                    elif event.key == K_c and event.mod & KMOD_CTRL:
-                        pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
-                        pygame.scrap.put(pygame.SCRAP_TEXT, self.value.encode("utf-8"))
-                    elif event.key == K_v and event.mod & KMOD_CTRL:
-                        text = None
-                        for t in pygame.scrap.get_types():
-                            if "text" in t and pygame.scrap.get(t) != None:
-                                text = pygame.scrap.get(t).decode("utf-8")
-                        if text != None:
-                            self.value = self.value[:self.pos] + text + self.value[self.pos:]
-                            self.pos += len(text)
-                        """
                     elif len(event.unicode) == 1 and ord(event.unicode) >= 32 and ord(event.unicode) < 128:
                         if len(g.value) < self.maxvalue:
                             self.value = self.value[:self.pos] + event.unicode + self.value[self.pos:]

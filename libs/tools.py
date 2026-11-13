@@ -1453,7 +1453,16 @@ class DoText(ToolSingleAction):
             clipboard_text = clipboard_get_text()
 
             if clipboard_text:
-                self.text = self.text + clipboard_text
+                ay = 1
+                if config.aspectX != config.aspectY and config.aspectX == 2:
+                    ay = 2
+                lines = clipboard_text.replace("\r\n", "\n").replace("\r", "\n").split("\n")
+                for i, line in enumerate(lines):
+                    self.text += line
+                    if i < len(lines) - 1:
+                        pos = self.pos
+                        self.stamptext()
+                        self.pos = [pos[0], pos[1] + (self.fontsize[1] // ay)]
         elif mod & KMOD_CTRL or mod & KMOD_ALT or mod & KMOD_META:
             return False
         else:

@@ -24,12 +24,23 @@ def clipboard_init():
         pygame.scrap.init()
         pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
 
-def clipboard_get_text():
+
+def clipboard_set_text(text):
     if xerox:
-        clipboard_text = xerox.paste()
+        xerox.copy(text)
+    elif is_pygamece:
+        pygame.scrap.put_text(text)
+    else:
+        if "scrap" in dir(pygame) and "put" in dir(pygame.scrap):
+            pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
+
+def clipboard_get_text():
+    clipboard_text = ""
+    if xerox:
+        clipboard_text = xerox.paste() or ""
     elif is_pygamece:
         # pygame-ce
-        clipboard_text = pygame.scrap.get_text()
+        clipboard_text = pygame.scrap.get_text() or ""
     else:
         # pygame
         for t in pygame.scrap.get_types():
@@ -39,9 +50,8 @@ def clipboard_get_text():
                 else:
                     clipboard_text = pygame.scrap.get(t).decode("utf-8", "ignore")
                 break
-        if clipboard_text:
-            if clipboard_text.endswith('\x00'):
-                clipboard_text = clipboard_text[:-1]
+        if clipboard_text.endswith('\x00'):
+            clipboard_text = clipboard_text[:-1]
 
     return clipboard_text
 
