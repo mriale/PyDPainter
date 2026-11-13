@@ -1066,7 +1066,7 @@ class GridColorGadget(Gadget):
             xo, yo = offset
             self.offsetx = xo
             self.offsety = yo
-            self.screenrect = (x+xo,y+yo,w,h)
+            self.screenrect = (x+xo,y+yo,w+1,h)
             #draw border and color swatches
             pygame.draw.rect(screen, fgcolor, self.screenrect, 0)
             numcolors = len(self.grid_colors)
@@ -1149,8 +1149,6 @@ Alpha:   ----------
     grid_backup = (config.grid_size, config.grid_offset, config.grid_visible,
                    config.grid_style, config.grid_color, config.grid_alpha,
                    config.grid_on)
-    #turn on the grid to preview changes while the requestor is open
-    config.grid_on = True
 
     def get_grid_values():
         """Read size and offset from the requestor, or None if invalid"""
@@ -1182,9 +1180,6 @@ Alpha:   ----------
                     grid_values = get_grid_values()
                     if grid_values != None:
                         config.grid_size, config.grid_offset = grid_values
-                        config.grid_on = grid_backup[6]
-                        if not config.grid_on:
-                            config.toolbar.click(config.toolbar.tool_id("grid"), MOUSEBUTTONDOWN)
                         running = 0
                 elif ge.gadget.label == "Cancel":
                     running = 0

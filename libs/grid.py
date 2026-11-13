@@ -71,7 +71,7 @@ class Grid:
         """Draw the grid overlay onto a screen using the same offset
         and rect that the LayerStack was blitted with, so that the
         grid lines line up exactly with the pixels they snap to"""
-        if not config.grid_on or not config.grid_visible:
+        if not config.grid_visible:
             return
         params = (config.pixel_canvas.get_size(), config.grid_size,
                   config.grid_offset, config.grid_style,
