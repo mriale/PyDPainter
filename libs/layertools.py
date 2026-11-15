@@ -6,6 +6,8 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+import re
+
 from libs.toolbar import *
 from libs.toolreq import *
 from libs.gadget import *
@@ -15,6 +17,12 @@ config = None
 
 palette_key_labels = ["Global (same for all)", "None ({}-{})", "Local ({}-{})"]
 
+# Sprite columns in layertools.png.  Column 0 is a normal, enabled button;
+# the layer toolbar is drawn with draw_state_zero so it is visible.
+STATE_NORMAL = 0
+STATE_PRESSED = 1
+STATE_DISABLED = 2
+
 class LayerToolAction(Action):
     def get_tip(self):
         if self.gadget.id in tiptext:
@@ -22,91 +30,91 @@ class LayerToolAction(Action):
         else:
             return [self.gadget.id]
 
+    def current_layer(self):
+        return config.layers.get()
+
+    def current_user_layer(self):
+        layer = self.current_layer()
+        if layer is not None and layer.kind == "user":
+            return layer
+        return None
+
+    def store_undo(self, structural=False):
+        config.save_undo(structural=structural)
+        config.doKeyAction()
+
 def refresh_layer_gadgets(minitoolbar=None):
     if minitoolbar is None:
         minitoolbar = config.layertoolbar
 
-    # Backup tools states
-    tool_names = ["merge", "clone", "movelayer", "addlayer", "dellayer"]
-    all_prev_tools_state = {}
-    all_tools_state = {}
-    for tname in tool_names:
-        state = minitoolbar.tool_id(tname).state
-        all_prev_tools_state[tname] = state
-        all_tools_state[tname] = state
-
-    tools_state = all_tools_state["dellayer"]
+    layers = config.layers
+    current_name = layers.current_layer_name
 
     opacity = 0
-    special_layer = False
+    opacity_enabled = False
 
-    for i in range(0,11):
-        layer_name = config.layers.get_priority_name(i)
-        if config.layers.has_key(layer_name):
-            layer = config.layers.get(layer_name)
+    for i in range(0, 11):
+        layer_name = layers.get_priority_name(i)
+        layer = layers.get(layer_name) if layer_name is not None else None
+        is_current = layer_name is not None and layer_name == current_name
+
+        if layer is None:
+            layer_select = 5 if is_current else 4
+            layer_visible = 5 if is_current else 4
         else:
-            layer = None
-            layer_name = f"layer{i}"
-
-        prev_layer_select = minitoolbar.tool_id(f"layer{i}").state
-        prev_layer_visible = minitoolbar.tool_id(f"visible{i}").state
-
-        if layer_name == config.layers.current_layer_name:
-            if i == 0 or i == 10:
-                special_layer = True
-            if layer is None:
-                layer_select = 3
-                layer_visible = 5
-                tools_state = 2
-            elif layer.visible:
-                layer_select = 1
-                layer_visible = 1
-                tools_state = 0
-                opacity = layer.opacity
+            layer_select = 1 if is_current else 0
+            if i == 10:
+                # The stencil's own enable flag is authoritative.
+                layer.visible = config.stencil.enable
+            if layer.visible:
+                layer_visible = 1 if is_current else 0
             else:
-                layer_select = 1
-                layer_visible = 3
-                tools_state = 0
+                layer_visible = 3 if is_current else 2
+            if is_current:
                 opacity = layer.opacity
-        else:
-            if layer is None:
-                layer_select = 2
-                layer_visible = 4
-            elif layer.visible:
-                layer_select = 0
-                layer_visible = 0
-            else:
-                layer_select = 0
-                layer_visible = 2
-                
-        if prev_layer_select != layer_select:
-            minitoolbar.tool_id(f"layer{i}").state = layer_select
-            minitoolbar.tool_id(f"layer{i}").need_redraw = True
+                opacity_enabled = layer.kind in ("canvas", "user", "background") and \
+                                  isinstance(layer.image, pygame.Surface)
 
-        if prev_layer_visible != layer_visible:
-            minitoolbar.tool_id(f"visible{i}").state = layer_visible
-            minitoolbar.tool_id(f"visible{i}").need_redraw = True
+        layer_gadget = minitoolbar.tool_id(f"layer{i}")
+        if layer_gadget is not None and layer_gadget.state != layer_select:
+            layer_gadget.state = layer_select
+            layer_gadget.need_redraw = True
 
-    if special_layer:
-        all_tools_state["merge"] = 2
-        all_tools_state["clone"] = 2
-        all_tools_state["movelayer"] = 2
-    else:
-        all_tools_state["merge"] = tools_state
-        all_tools_state["clone"] = tools_state
-        all_tools_state["movelayer"] = tools_state
-    
-    all_tools_state["addlayer"] = (tools_state+2)%4
-    all_tools_state["dellayer"] = tools_state
-    minitoolbar.tool_id("opacityslider").enabled = not(tools_state & 2)
-    minitoolbar.tool_id("opacityslider").need_redraw = True
-    minitoolbar.tool_id("opacityslider").value = opacity // 16
+        visible_gadget = minitoolbar.tool_id(f"visible{i}")
+        if visible_gadget is not None and visible_gadget.state != layer_visible:
+            visible_gadget.state = layer_visible
+            visible_gadget.need_redraw = True
 
-    # Redraw tools only if needed
-    for tname in tool_names:
-        if all_prev_tools_state[tname] != all_tools_state[tname]:
-            minitoolbar.tool_id(tname).state = all_tools_state[tname]
-            minitoolbar.tool_id(tname).need_redraw = True
+    current = layers.get()
+    is_user = current is not None and current.kind == "user"
+    free_slot = config.first_free_layer_slot() is not None
+    can_merge = False
+    if is_user:
+        for other in layers.sorted_layers():
+            if other.priority >= current.priority:
+                break
+            if isinstance(other.image, pygame.Surface):
+                can_merge = True
+
+    tool_enabled = {
+        "merge": can_merge,
+        "clone": is_user and free_slot,
+        "movelayer": is_user,
+        "addlayer": free_slot,
+        "dellayer": is_user,
+    }
+    for tname, enabled in tool_enabled.items():
+        gadget = minitoolbar.tool_id(tname)
+        state = STATE_NORMAL if enabled else STATE_DISABLED
+        if gadget is not None and gadget.state != state:
+            gadget.state = state
+            gadget.need_redraw = True
+
+    opacity_gadget = minitoolbar.tool_id("opacityslider")
+    if opacity_gadget is not None:
+        opacity_gadget.enabled = opacity_enabled
+        opacity_gadget.need_redraw = True
+        opacity_gadget.value = max(0, min(15, int(round(opacity / 17.0))))
 
 class DoVisible(LayerToolAction):
     """
@@ -119,15 +127,18 @@ class DoVisible(LayerToolAction):
         self.clicked(attrs)
 
     def clicked(self, attrs):
-        print(attrs)
-        print(f"{self.gadget.id=}")
-        print(f"{self.gadget.state=}")
         gadget_num = int(self.gadget.id[7:])
-        print(f"{gadget_num=}")
         layer_name = config.layers.get_priority_name(gadget_num)
-        if config.layers.has_key(layer_name):
+        if gadget_num == 10:
+            config.stencil.enable = not config.stencil.enable
+            config.set_layer_visible("fg", config.stencil.enable)
+        elif layer_name is not None:
             layer = config.layers.get(layer_name)
-            layer.visible = not layer.visible
+            # Visibility belongs to the layer, not to one animation frame.
+            config.set_layer_visible(layer_name, not layer.visible)
+        else:
+            return
+        self.store_undo()
 
 class DoLayer(LayerToolAction):
     """
@@ -137,53 +148,117 @@ class DoLayer(LayerToolAction):
         self.clicked(attrs)
 
     def deselected(self, attrs):
+        # Layer rows use more than two visual states (visible, hidden, empty),
+        # so a click can arrive as a deselection.  Treat both as a click.
         self.clicked(attrs)
 
     def clicked(self, attrs):
-        print(attrs)
-        print(f"{self.gadget.id=}")
-        print(f"{self.gadget.state=}")
         gadget_num = int(self.gadget.id[5:])
-        print(f"{gadget_num=}")
         layer_name = config.layers.get_priority_name(gadget_num)
-        if not config.layers.has_key(layer_name):
-            layer_name = f"layer{gadget_num}"
-        config.layers.current_layer_name = layer_name
+
+        # Drop any brush preview left on the previously selected layer before
+        # switching, and give the new layer a fresh preview baseline.
+        config.clear_pixel_draw_canvas()
+
+        if layer_name is None:
+            if 2 <= gadget_num <= 9 and config.layer_slot_is_free(gadget_num):
+                # Selecting an empty user slot creates it, like Deluxe Paint.
+                config.stash_structural()
+                layer_name = config.add_layer(priority=gadget_num)
+                if layer_name is not None:
+                    config.save_undo(structural=True)
+            elif gadget_num == 10 and not config.layers.has_key("fg"):
+                config.layers.set("fg", config.stencil, priority=10,
+                                  visible=config.stencil.enable, kind="stencil")
+                layer_name = "fg"
+
+        if layer_name is not None:
+            if config.select_layer(layer_name):
+                config.reset_draw_baseline()
 
 class DoMerge(LayerToolAction):
     """
     Merge layer down
     """
     def selected(self, attrs):
-        print("DoMerge")
+        layer = self.current_user_layer()
+        if layer is None:
+            return
+        config.stash_structural()
+        if config.merge_layer_down(config.layers.current_layer_name):
+            self.store_undo(structural=True)
 
 class DoClone(LayerToolAction):
     """
     Clone layer to another slot
     """
     def selected(self, attrs):
-        print("DoClone")
+        if self.current_user_layer() is None:
+            return
+        if config.first_free_layer_slot() is None:
+            return
+        config.stash_structural()
+        if config.clone_layer() is not None:
+            self.store_undo(structural=True)
 
 class DoAddLayer(LayerToolAction):
     """
-    Clone layer to another slot
+    Add a new empty layer
     """
     def selected(self, attrs):
-        print("DoAddLayer")
+        slot = None
+        # If an empty slot is selected, add the layer there.
+        match = re.fullmatch(r"layer([2-9])", config.layers.current_layer_name or "")
+        if match is not None:
+            slot = int(match.group(1))
+            if not config.layer_slot_is_free(slot):
+                slot = None
+        if slot is None:
+            slot = config.first_free_layer_slot()
+        if slot is None:
+            return
+
+        config.stash_structural()
+        if config.add_layer(priority=slot) is not None:
+            self.store_undo(structural=True)
 
 class DoDelLayer(LayerToolAction):
     """
-    Clone layer to another slot
+    Delete the current layer
     """
     def selected(self, attrs):
-        print("DoDelLayer")
+        layer = self.current_user_layer()
+        if layer is None:
+            return
+        config.stash_structural()
+        if config.delete_layer(config.layers.current_layer_name):
+            self.store_undo(structural=True)
 
 class DoMoveLayer(LayerToolAction):
     """
-    Clone layer to another slot
+    Move the current layer up or down.
+
+    The toolbar button shows an up arrow in its top half and a down arrow in
+    its bottom half; clicking a half moves the layer that way.  Right-click
+    still moves down, and the menu action always moves up.
     """
     def selected(self, attrs):
-        print("DoMoveLayer")
+        layer = self.current_user_layer()
+        if layer is None:
+            return
+        if "top_half" in attrs:
+            direction = 1 if attrs["top_half"] else -1
+        elif attrs.get("rightclick"):
+            direction = -1
+        else:
+            direction = 1
+        target = layer.priority + direction
+        if target < 2 or target > 9:
+            return
+        name = layer.parent.get_priority_name(layer.priority)
+        config.stash_structural()
+        if config.move_layer(name, target):
+            self.store_undo(structural=True)
 
 
 class LayerToolbar(Toolbar):
@@ -218,6 +293,8 @@ def init_layertoolbar(config_in):
 
     minitoolbar = LayerToolbar(minitoolbar_canvas, config.cursor, (0,0,mt_width,mt_height), minitools_image, width=numsubtools, tip_event=config.TOOLTIPEVENT)
     minitoolbar.tip_quadrant = 2 #tip on right
+    # Column 0 is the normal (unpressed) button state for this panel.
+    minitoolbar.draw_state_zero = True
 
     minitoolbar.add_grid((9*scaleX,0, w-9*scaleX,h), 1, numtools, attr_list=[
         ["merge",      ToolGadget.TT_TOGGLE, "", DoMerge],
@@ -280,20 +357,18 @@ def draw_layertoolbar(screen_rgb, rect):
     scaleX = config.fontx // 8
     scaleY = config.fonty // 12
 
-    #if config.anim.num_frames == 1:
-    #    config.layertoolbar.visible = False
     if config.layertoolbar.visible:
         refresh_layer_gadgets()
         pygame.draw.rect(screen_rgb, (160,160,160), rect)
         pygame.draw.rect(screen_rgb, (80,80,80), (rect[2]-scaleX*2,rect[1],scaleX,rect[3]))
         pygame.draw.rect(screen_rgb, (0,0,0), (rect[2]-scaleX,rect[1],scaleX,rect[3]))
         config.layertoolbar.tool_id("opacityslider").need_redraw = True
-        for i in range(1,10):
+        for i in range(0,11):
             config.layertoolbar.tool_id(f"layer{i}").need_redraw = True
+            config.layertoolbar.tool_id(f"visible{i}").need_redraw = True
 
         screen_rgb.set_clip(rect)
         config.layertoolbar.draw(screen_rgb, font=config.font, offset=(rect[0],rect[1]))
         screen_rgb.set_clip(None)
 
         config.layertoolbar.screenrect = list(rect)
-

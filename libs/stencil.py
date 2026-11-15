@@ -28,10 +28,11 @@ class Stencil:
     def copy(self):
         st = Stencil()
         st.__enable = self.__enable
-        st.is_color = self.is_color
+        st.is_color = self.is_color.copy()
         if not self.image is None:
             st.image = self.image.copy()
         st.mask = self.mask
+        return st
 
     @property
     def enable(self):
@@ -96,9 +97,9 @@ class Stencil:
             self.is_color = np.invert(self.is_color)
 
     def free(self):
-        config.stencil.__enable = False
-        config.stencil.image = None
-        config.stencil.mask = None
+        self.__enable = False
+        self.image = None
+        self.mask = None
  
     def draw(self, screen, offset=(0,0), rect=None):
         if self.__enable and self.image != None and self.mask != None:

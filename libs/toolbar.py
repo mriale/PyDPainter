@@ -173,6 +173,9 @@ class Toolbar:
         self.wait_for_tip = False
         self.live_tip = False
         self.tipg = None
+        # Some toolbars (notably the layer panel) use sprite column 0 as a
+        # legitimate "normal" state rather than "do not draw".
+        self.draw_state_zero = False
 
     def __repr__(self):
         outstr = f"Toolbar<rect={self.rect}, screen={self.screen}>"
@@ -283,7 +286,7 @@ class Toolbar:
         screen.blit(self.image, offset, area=self.rect)
         for toolg in self.tools:
             if isinstance(toolg, ToolGadget) and toolg.tool_type != ToolGadget.TT_CUSTOM:
-                if toolg.state != 0:
+                if toolg.state != 0 or self.draw_state_zero:
                     toolg.draw(screen, font, offset=offset)
             else:
                 toolg.draw(screen, font, offset=offset, fgcolor=fgcolor, bgcolor=bgcolor, hcolor=hcolor)
@@ -371,13 +374,18 @@ class Toolbar:
                 if toolg.pointin((x,y), toolg.rect):
                     self.wait_for_mouseup[event.button] = True
                     if isinstance(toolg, ToolGadget) and toolg.tool_type != ToolGadget.TT_CUSTOM:
-                        x1, y1, size, dummy = toolg.rect
+                        x1, y1, size, gheight = toolg.rect
                         subtool = False
                         if toolg.tool_type in [ToolGadget.TT_GROUP, ToolGadget.TT_SINGLE]:
                             if toolg.has_subtool:
                                 if size-(x - x1) <= (y - y1):
                                     subtool = True
-                        ge.extend(self.click(toolg, event.type, subtool=subtool, rightclick=rightclick))
+                        # Tools that draw two stacked arrows (e.g. move layer)
+                        # use the half that was clicked to pick a direction.
+                        top_half = (y - y1) < (gheight // 2)
+                        ge.extend(self.click(toolg, event.type, subtool=subtool,
+                                             rightclick=rightclick,
+                                             attrlist=[["top_half", top_half]]))
                     else:
                         ge.extend(toolg.process_event(screen, event, mouse_pixel_mapper))
         elif (event.type == MOUSEBUTTONUP and event.button in [1,3]) or \

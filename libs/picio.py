@@ -5,6 +5,9 @@ import math
 import os.path
 import random
 import re
+import io
+import zipfile
+import xml.etree.ElementTree as ET
 
 import numpy as np
 
@@ -35,6 +38,9 @@ def w2b(w):
 #check to see if a file is an IFF file
 def pic_type(filename):
     retval = ""
+
+    if filename.lower().endswith(".ora"):
+        return "ORA"
 
     try:
         pic_file = open(filename,'rb')
@@ -611,6 +617,223 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     return pic
 
 
+def _png_bytes(surface):
+    buf = io.BytesIO()
+    pygame.image.save(surface, buf, "layer.png")
+    return buf.getvalue()
+
+def _surface_from_png(data, pal):
+    img = pygame.image.load(io.BytesIO(data), "layer.png")
+    if img.get_bytesize() == 1:
+        if pal is not None:
+            imgpal = img.get_palette()
+            current = [tuple(c) for c in imgpal] if imgpal is not None else None
+            if current != pal:
+                tmp = pygame.Surface(img.get_size(), 0, 8)
+                tmp.set_palette(pal)
+                tmp.blit(img, (0, 0))
+                img = tmp
+        return img
+
+    # RGB(A) PNG: map to the indexed palette, keeping fully transparent
+    # pixels on index 0.
+    rgba = pygame.Surface(img.get_size(), pygame.SRCALPHA)
+    rgba.blit(img, (0, 0))
+    alpha = pygame.surfarray.array_alpha(rgba)
+    rgb = pygame.Surface(img.get_size(), 0)
+    rgb.blit(img, (0, 0))
+    out = convert8(rgb, pal if pal is not None else config.pal)
+    if alpha is not None:
+        arr = pygame.surfarray.pixels2d(out)
+        try:
+            arr[alpha == 0] = 0
+        finally:
+            del arr
+    out.set_palette(pal if pal is not None else config.pal)
+    return out
+
+def _ora_layer_list(config):
+    layers = []
+    for name in config.layers.names():
+        layer = config.layers.get(name)
+        if layer.kind == "stencil" or layer.indicator == "R":
+            continue
+        if not isinstance(layer.image, pygame.Surface):
+            continue
+        layers.append((name, layer))
+    return layers
+
+def save_ora(filename, config):
+    layers = _ora_layer_list(config)
+    merged = config.layers.get_flattened(exclude=["R"])
+    w, h = config.pixel_width, config.pixel_height
+    pydns = "https://github.com/mriale/pydpainter"
+    ET.register_namespace("pyd", pydns)
+
+    with zipfile.ZipFile(filename, "w", zipfile.ZIP_DEFLATED) as z:
+        # The mimetype entry must be first and uncompressed.
+        zi = zipfile.ZipInfo("mimetype")
+        zi.compress_type = zipfile.ZIP_STORED
+        z.writestr(zi, b"image/openraster")
+
+        for i, (name, layer) in enumerate(layers):
+            z.writestr(f"data/layer{i}.png", _png_bytes(layer.image))
+        z.writestr("mergedimage.png", _png_bytes(merged))
+
+        root = ET.Element("image", {
+            "w": str(w), "h": str(h), "version": "0.0.1",
+        })
+        stack = ET.SubElement(root, "stack", {"name": "root"})
+        # OpenRaster lists layers topmost first.
+        for i in range(len(layers)-1, -1, -1):
+            name, layer = layers[i]
+            attrs = {
+                "name": name,
+                "src": f"data/layer{i}.png",
+                "x": "0", "y": "0",
+                "visibility": "visible" if layer.visible else "hidden",
+                "opacity": f"{layer.opacity/255.0:.4f}",
+            }
+            attrs["{%s}kind" % pydns] = layer.kind
+            attrs["{%s}indicator" % pydns] = layer.indicator
+            ET.SubElement(stack, "layer", attrs)
+        z.writestr("stack.xml",
+                   ET.tostring(root, encoding="UTF-8", xml_declaration=True))
+
+def _merge_keyed(dst, src):
+    """Copy non-transparent pixels of an 8-bit surface onto another."""
+    src_array = pygame.surfarray.array2d(src)
+    dst_array = pygame.surfarray.pixels2d(dst)
+    try:
+        mask = src_array != 0
+        dst_array[mask] = src_array[mask]
+    finally:
+        del dst_array
+
+def load_ora(filename, config):
+    pydns = "https://github.com/mriale/pydpainter"
+    merged = None
+    pal = None
+    entries = []
+    with zipfile.ZipFile(filename) as z:
+        names = set(z.namelist())
+        if "stack.xml" not in names:
+            raise Exception("Not an OpenRaster file")
+        if "mergedimage.png" in names:
+            merged = pygame.image.load(io.BytesIO(z.read("mergedimage.png")), "mergedimage.png")
+            if merged.get_bytesize() == 1:
+                p = merged.get_palette()
+                if p is not None:
+                    pal = [tuple(c) for c in p]
+
+        root = ET.fromstring(z.read("stack.xml"))
+        w = int(root.get("w") or config.pixel_width)
+        h = int(root.get("h") or config.pixel_height)
+        for node in root.iter():
+            if node.tag.rsplit("}", 1)[-1] != "layer":
+                continue
+            src = node.get("src")
+            if not src or src not in names:
+                continue
+            img = _surface_from_png(z.read(src), pal)
+            if pal is None and img.get_bytesize() == 1:
+                p = img.get_palette()
+                if p is not None:
+                    pal = [tuple(c) for c in p]
+            entries.append({
+                "name": node.get("name") or "layer",
+                "image": img,
+                "visible": node.get("visibility", "visible") != "hidden",
+                "opacity": max(0, min(255, int(round(float(node.get("opacity", "1.0")) * 255)))),
+                "kind": node.get("{%s}kind" % pydns, ""),
+                "indicator": node.get("{%s}indicator" % pydns, ""),
+            })
+
+    if not entries:
+        raise Exception("OpenRaster file contains no layers")
+    if pal is None:
+        pal = [tuple(c) for c in config.pal]
+    for entry in entries:
+        if entry["image"].get_bytesize() == 1:
+            entry["image"].set_palette(pal)
+
+    bottom_up = list(reversed(entries))
+    has_kinds = any(entry["kind"] for entry in entries)
+    canvas_entry = None
+    background_entry = None
+    users = []
+    if has_kinds:
+        for entry in bottom_up:
+            if entry["kind"] == "canvas" and canvas_entry is None:
+                canvas_entry = entry
+            elif entry["kind"] == "background" and background_entry is None:
+                background_entry = entry
+            else:
+                users.append(entry)
+    else:
+        canvas_entry = bottom_up[0]
+        users = bottom_up[1:]
+    if canvas_entry is None and users:
+        canvas_entry = users.pop(0)
+
+    pending = []
+    used = {"canvas", "background", "fg"}
+    def unique_name(name):
+        name = name or "layer"
+        while name in used:
+            name += "_"
+        used.add(name)
+        return name
+
+    if canvas_entry is None:
+        blank = pygame.Surface((w, h), 0, 8)
+        blank.set_palette(pal)
+        blank.fill(0)
+        canvas_entry = {"name": "canvas", "image": blank, "visible": True,
+                        "opacity": 255, "kind": "canvas", "indicator": ""}
+    pending.append({
+        "name": "canvas", "image": canvas_entry["image"], "priority": 1,
+        "visible": canvas_entry["visible"], "opacity": canvas_entry["opacity"],
+        "kind": "canvas", "indicator": canvas_entry["indicator"],
+    })
+    if background_entry is not None:
+        pending.append({
+            "name": "background", "image": background_entry["image"],
+            "priority": 0, "visible": background_entry["visible"],
+            "opacity": background_entry["opacity"], "kind": "background",
+            "indicator": background_entry["indicator"] or "B",
+        })
+
+    slot = 2
+    top_user = None
+    for entry in users:
+        if slot > 9:
+            # The panel only has eight user slots; keep the picture intact
+            # by merging any extra layers onto the topmost user layer.
+            if top_user is None:
+                top_user = pending[0]["image"]
+            _merge_keyed(top_user, entry["image"])
+            continue
+        name = unique_name(entry["name"])
+        pending.append({
+            "name": name, "image": entry["image"], "priority": slot,
+            "visible": entry["visible"], "opacity": entry["opacity"],
+            "kind": "user", "indicator": entry["indicator"],
+        })
+        top_user = entry["image"]
+        slot += 1
+
+    if merged is None:
+        merged = pygame.Surface((w, h), 0, 8)
+        merged.set_palette(pal)
+        for entry in bottom_up:
+            _merge_keyed(merged, entry["image"])
+
+    config.pal = list(pal)
+    config.truepal = list(pal)
+    config.pending_ora_layers = pending
+    return merged
+
 def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False, is_brush=False):
     filename = filename_in
     pic = config.pixel_canvas
@@ -772,6 +995,10 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.cranges = []
             for _ in range(6):
                 config.cranges.append(colorrange(0,1,0,0))
+        elif pictype == "ORA":
+            pic = load_ora(filename, config)
+            if not is_brush:
+                config.layers_loaded = True
         elif pictype != "NONE":
             pic = load_pygame_pic(filename, config, force_pal=global_palette)
             if status_func != None:
@@ -830,7 +1057,8 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
     if config.anim.num_frames > 1:
         # Add layers to all frames
         for i in range(len(config.anim.frame)):
-            config.anim.frame[i].layers.set("canvas", config.anim.frame[i].image, priority=1)
+            config.anim.frame[i].layers.set("canvas", config.anim.frame[i].image,
+                                            priority=1, kind="canvas")
 
     config.color_depth = config.guess_color_depth(config.truepal)
     config.truepal = config.quantize_palette(config.truepal, config.color_depth)
@@ -1046,8 +1274,10 @@ def save_pic(filename, config, overwrite=True, bgcolor=-1):
     if overwrite == False and os.path.isfile(filename):
         return False
 
-    if (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
-       (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
+    if len(filename) > 4 and filename[-4:].lower() == ".ora":
+        save_ora(filename, config)
+    elif (len(filename) > 4 and filename[-4:].lower() == ".iff") or \
+         (len(filename) > 5 and filename[-5:].lower() == ".ilbm"):
         save_iff(filename, config, "ILBM", bgcolor=bgcolor)
     elif len(filename) > 4 and filename[-4:].lower() == ".lbm":
         save_iff(filename, config, "PBM", bgcolor=bgcolor)
@@ -1298,7 +1528,7 @@ def save_iff_anim(filename, config, status_func=None, animbrush=False, transpare
     write_chunk(newfile, b'CAMG', pack(">I", config.display_mode))
 
     body = b''
-    out_canvas = image16(config.anim.frame[0].layers.get_flattened())
+    out_canvas = image16(config.anim.frame[0].layers.get_flattened(exclude=["R"]))
     surf_array = pygame.surfarray.pixels2d(out_canvas)  # Create an array from the surface.
     planes_out = c2p(surf_array)
 
@@ -1347,8 +1577,8 @@ def save_iff_anim(filename, config, status_func=None, animbrush=False, transpare
         dlta_bytes = b''
         pdelta = [0] * 16
 
-        out_canvas1 = image16(config.anim.frame[curri].layers.get_flattened())
-        out_canvas0 = image16(config.anim.frame[previ].layers.get_flattened())
+        out_canvas1 = image16(config.anim.frame[curri].layers.get_flattened(exclude=["R"]))
+        out_canvas0 = image16(config.anim.frame[previ].layers.get_flattened(exclude=["R"]))
 
         # make previous and current frames into bitplanes
         surf_array0 = pygame.surfarray.pixels2d(out_canvas0)
@@ -1417,7 +1647,7 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
             localpal = None
         else:
             localpal = config.anim.frame[i].truepal
-        surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].layers.get_flattened())
+        surf_array = pygame.surfarray.pixels2d(config.anim.frame[i].layers.get_flattened(exclude=["R"]))
         disposal_method = 0
         transparency = 0
         transparent_color_index = 0
@@ -1429,7 +1659,7 @@ def save_gif_anim(filename, config, status_func=None, transparent_color=-1):
         # frame compression using differences
         if i > 0 and not config.anim.frame[i].is_pal_key:
             # Do difference from previous frame
-            prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].layers.get_flattened())
+            prev_array = pygame.surfarray.pixels2d(config.anim.frame[i-1].layers.get_flattened(exclude=["R"]))
             surf_diff = np.equal(prev_array, surf_array)
             surf_diff_ne = np.not_equal(prev_array, surf_array)
 

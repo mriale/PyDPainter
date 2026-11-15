@@ -1,7 +1,7 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-import contextlib
+import contextlib, copy
 with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
@@ -192,11 +192,17 @@ class Animation:
     def save_curr_frame(self):
         f = self.curr_frame-1
         config.clear_pixel_draw_canvas()
-        self.frame[f].image = config.pixel_canvas.copy()
-        self.frame[f].pal = list(config.pal)
-        self.frame[f].truepal = list(config.truepal)
-        self.frame[f].loadpal = list(config.loadpal)
-        self.frame[f].layers = config.layers.copy()
+        frame = self.frame[f]
+        config.ensure_frame_layers(frame)
+        # Adopt the live stack: the frame and the editor share the same
+        # layer surfaces, so no copies are needed when switching frames.
+        frame.layers = config.layers
+        canvas = frame.layers.get("canvas")
+        if canvas is not None and isinstance(canvas.image, pygame.Surface):
+            frame.image = canvas.image
+        frame.pal = list(config.pal)
+        frame.truepal = list(config.truepal)
+        frame.loadpal = list(config.loadpal)
 
     def show_curr_frame(self, doAction=True):
         if self.curr_frame > self.num_frames:
@@ -204,17 +210,25 @@ class Animation:
         elif self.curr_frame < 1:
             self.curr_frame = 1
         f = self.curr_frame-1
-        if self.frame[f].image == None:
-            config.pixel_canvas.fill(config.bgcolor);
+        frame = self.frame[f]
+        if frame.image == None:
+            frame.image = pygame.Surface((config.pixel_width, config.pixel_height), 0, 8)
+            frame.image.set_palette(frame.pal)
+            frame.image.fill(config.bgcolor)
         else:
-            self.frame[f].image.set_palette(self.frame[f].pal)
-            config.set_all_palettes(self.frame[f].pal)
-            config.pal = list(self.frame[f].pal)
-            config.truepal = list(self.frame[f].truepal)
-            config.loadpal = list(self.frame[f].loadpal)
-            config.pixel_canvas = self.frame[f].image.copy()
-            config.layers = self.frame[f].layers.copy()
-            config.stencil.reframe(config.pixel_canvas)
+            frame.image.set_palette(frame.pal)
+            config.set_all_palettes(frame.pal)
+            config.pal = list(frame.pal)
+            config.truepal = list(frame.truepal)
+            config.loadpal = list(frame.loadpal)
+
+        frame.layers = config.ensure_frame_layers(frame)
+        config.layers = frame.layers
+        config.proj[config.proj_index].layers = config.layers
+        name = frame.layers.current_layer_name
+        if not config.select_layer(name):
+            config.select_layer("canvas")
+        config.stencil.reframe(config.pixel_canvas)
 
         framestr = f"{self.curr_frame}/{self.num_frames}"
         framestr = ((9-len(framestr)) * " ") + framestr
@@ -233,7 +247,7 @@ class Animation:
         self.global_palette = True
         for bframe in config.brush.frame:
             frame = Frame(bframe.image.copy())
-            frame.layers.set("canvas", bframe.image.copy())
+            frame.layers.set("canvas", bframe.image.copy(), priority=1, kind="canvas")
             frame.layers.config = config
             self.frame.append(frame)
             self.num_frames += 1
@@ -415,6 +429,7 @@ class Animation:
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
+                config.layers_loaded = True
                 config.initialize_surfaces()
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
@@ -439,6 +454,7 @@ class Animation:
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
+                config.layers_loaded = True
                 config.initialize_surfaces()
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
@@ -467,7 +483,9 @@ class Animation:
                 for i in range(0, self.num_frames):
                     load_progress_anim(self.curr_frame / self.num_frames)
                     frame_filename = file_root + ("%04d"%i) + "." + file_ext
-                    libs.picio.save_pic(frame_filename, config)
+                    frame_config = copy.copy(config)
+                    frame_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    libs.picio.save_pic(frame_filename, frame_config)
                     self.next_frame()
                     self.show_curr_frame(doAction=False)
             except Exception as ex:

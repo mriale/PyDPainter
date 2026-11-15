@@ -67,8 +67,23 @@ def write_recover():
     with open("stackdump.txt", "w") as f:
         f.write(traceback.format_exc())
     print(traceback.format_exc())
-    pygame.image.save(config.undo_image[config.undo_index], "recover.bmp")
-    pygame.image.save(config.undo_image[config.undo_index], "recover.png")
+    layers = getattr(config, "layers", None)
+    if layers is not None:
+        flat = layers.get_flattened(exclude=["R"])
+        pygame.image.save(flat, "recover.bmp")
+        pygame.image.save(flat, "recover.png")
+        # Keep every layer as a separate PNG so the stack can be rebuilt or
+        # inspected after a crash.
+        try:
+            for i, name in enumerate(layers.names()):
+                layer = layers.get(name)
+                if layer is not None and isinstance(layer.image, pygame.Surface):
+                    pygame.image.save(layer.image, f"recover_layer{i}.png")
+        except Exception:
+            pass
+    else:
+        pygame.image.save(config.undo_image[config.undo_index], "recover.bmp")
+        pygame.image.save(config.undo_image[config.undo_index], "recover.png")
     save_iffinfo("recover.bmp")
     with open("platform.txt", "w") as f:
         f.write(str(platform.uname()))
