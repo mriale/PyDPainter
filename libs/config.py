@@ -1757,12 +1757,18 @@ class pydpainter:
                 atbh = self.animtoolbar.rect[3] + 3*scaleY
                 zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
+            # The layer panel overlaps the left (unzoomed) half of the view.
+            # Allow that half to scroll far enough left that the page's left
+            # edge appears to the right of the panel instead of under it.
+            panel_rect = config.layout.get_rect("layertoolbar")
+            left_inset = panel_rect[0] + panel_rect[2]
+
             self.zoom.xoffset = zxc - (w//2)
             self.zoom.yoffset = zyc - ((self.screen_height-menu_bar_height) // 2)
 
-            if self.zoom.xoffset < 0:
-                self.zoom.xoffset = 0
-            elif self.zoom.xoffset > self.pixel_width - w + 6:
+            if self.zoom.xoffset < -left_inset:
+                self.zoom.xoffset = -left_inset
+            if self.zoom.xoffset > self.pixel_width - w + 6:
                 self.zoom.xoffset = self.pixel_width - w + 6
 
             if self.zoom.yoffset < -menu_bar_height:
@@ -1775,8 +1781,13 @@ class pydpainter:
 
             if zx0+zoom_width > self.pixel_width:
                 zx0 = self.pixel_width - zoom_width
-            if zx0 < 0:
-                zx0 = 0
+            # At low zoom factors the magnified region is wide enough that
+            # its centre cannot otherwise scroll the unzoomed half past the
+            # page edge.  Let it show a small grey margin so both halves can
+            # reach the left edge of the page.
+            zx0_min = min(0, -left_inset + (w//2) - (zoom_width//2))
+            if zx0 < zx0_min:
+                zx0 = zx0_min
 
             if zy0+zoom_height > self.pixel_height:
                 zy0 = self.pixel_height - zoom_height
@@ -1804,6 +1815,7 @@ class pydpainter:
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
+            zoom_canvas.fill((128,128,128))
             config.layers.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             self.grid.draw(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
