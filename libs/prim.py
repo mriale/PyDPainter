@@ -496,7 +496,10 @@ class Brush:
         if self.__rotate == 0:
             self.handle_frac = list(self.handle_frac_orig)
 
-        self.handle = [int(w*self.handle_frac[0]), int(h*self.handle_frac[1])]
+        self.handle = [
+            w - 1 if self.handle_frac[0] >= 1.0 else max(0, int(w*self.handle_frac[0])),
+            h - 1 if self.handle_frac[1] >= 1.0 else max(0, int(h*self.handle_frac[1])),
+        ]
         self.rect = [-self.handle[0], -self.handle[1], w, h]
 
     def get_wh(self):
