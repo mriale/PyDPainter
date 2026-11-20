@@ -11,6 +11,8 @@ from libs.menureq import *
 from libs.gadget import *
 from libs.picio import *
 from libs.stencil import *
+from libs.layer import LayerStack
+from libs.layertools import DoAddLayer, DoDelLayer, DoClone, DoMerge, DoMoveLayer
 
 config = None
 
@@ -23,6 +25,7 @@ pic_filetype_list = np.array([
 ["JPG", "JPEG image (lossy)"],
 ["JPEG","JPEG image (lossy)"],
 ["PNG", "PNG image"],
+["ORA", "OpenRaster layered image"],
 ["TGA", "Targa image"],
 ])
 
@@ -85,10 +88,14 @@ class DoNew(MenuAction):
     def selected(self, attrs):
         config.pick_canvas = None
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
+        prev_layers_loaded = config.layers_loaded
+        config.layers_loaded = True
         if screen_format_req(config.pixel_req_canvas,new_clicked=True):
             config.modified_count = 0
             config.filename = ""
             config.anim.__init__()
+        else:
+            config.layers_loaded = prev_layers_loaded
 
 def io_error_req(title, message, filename, *args):
     linelen = 33
@@ -129,6 +136,7 @@ class DoOpen(MenuAction):
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
+                config.layers_loaded = True
                 config.initialize_surfaces()
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
@@ -143,14 +151,17 @@ class DoSave(MenuAction):
         config.stop_cycling()
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
-        merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = config.filename
         if filename == "":
             filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
-                save_pic(filename, merge_config)
+                if filename.lower().endswith(".ora"):
+                    save_pic(filename, config)
+                else:
+                    merge_config = copy.copy(config)
+                    merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    save_pic(filename, merge_config)
                 config.filename = filename
                 config.modified_count = 0
             except Exception as ex:
@@ -162,12 +173,15 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
-        merge_config = copy.copy(config)
-        merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
         filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
         if filename != (()) and filename != "":
             try:
-                save_pic(filename, merge_config, overwrite=True)
+                if filename.lower().endswith(".ora"):
+                    save_pic(filename, config, overwrite=True)
+                else:
+                    merge_config = copy.copy(config)
+                    merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    save_pic(filename, merge_config, overwrite=True)
             except Exception as ex:
                 io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
                 return
@@ -205,6 +219,7 @@ class DoRevert(MenuAction):
                 close_progress_req(progress_req)
                 config.truepal = list(config.pal)
                 config.pal = config.unique_palette(config.pal)
+                config.layers_loaded = True
                 config.initialize_surfaces()
                 config.filepath = os.path.dirname(filename)
                 config.filename = filename
@@ -220,7 +235,7 @@ class DoPictureFlipX(MenuActionMulti):
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.free()
-        config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, True, False)
+        config.transform_layers(lambda img: pygame.transform.flip(img, True, False))
 
 class DoPictureFlipY(MenuActionMulti):
     def get_name(self):
@@ -229,7 +244,7 @@ class DoPictureFlipY(MenuActionMulti):
     def selectedMulti(self, attrs):
         config.clear_pixel_draw_canvas()
         config.stencil.free()
-        config.pixel_canvas = pygame.transform.flip(config.pixel_canvas, False, True)
+        config.transform_layers(lambda img: pygame.transform.flip(img, False, True))
 
 class DoPalette(MenuAction):
     def selected(self, attrs):
@@ -325,10 +340,47 @@ class DoPictureRemap(MenuActionMulti):
         config.stop_cycling()
         config.stencil.clear()
         config.stencil.free()
-        config.pixel_canvas.set_palette(config.loadpal)
-        config.pixel_canvas = convert8(config.pixel_canvas.convert(), config.pal)
+
+        def remap(img):
+            if img.get_bytesize() != 1:
+                return img
+            original = pygame.surfarray.array2d(img)
+            img.set_palette(config.loadpal)
+            rgb = pygame.Surface(img.get_size(), 0)
+            rgb.blit(img, (0, 0))
+            newimg = convert8(rgb, config.pal)
+            arr = pygame.surfarray.pixels2d(newimg)
+            try:
+                arr[original == 0] = 0
+            finally:
+                del arr
+            newimg.set_palette(config.pal)
+            return newimg
+
+        config.transform_layers(remap, kinds=("canvas", "user", "background"))
         config.set_all_palettes(config.pal)
         config.clear_undo()
+
+def spare_frame(index=None):
+    """Return (project, frame, stack) for a spare page."""
+    if index is None:
+        index = (config.proj_index + 1) % len(config.proj)
+    proj = config.proj[index]
+    if proj.anim is not None and len(proj.anim.frame) > 0:
+        frame = proj.anim.frame[proj.anim.curr_frame-1]
+        st = config.ensure_frame_layers(frame)
+        return proj, frame, st
+    if proj.layers is None:
+        proj.layers = LayerStack(indicatorx=config.LAYER_INDICATORX)
+    return proj, None, proj.layers
+
+def spare_image(index=None):
+    proj, frame, st = spare_frame(index)
+    if st is not None and st.has_key("canvas"):
+        return st.get_flattened(exclude=["R"])
+    if proj.pixel_canvas is not None:
+        return proj.pixel_canvas.copy()
+    return None
 
 class DoSpareSwap(MenuAction):
     def selected(self, attrs):
@@ -349,13 +401,13 @@ class DoSpareSwap(MenuAction):
         #Switch to new canvas
         config.proj_index = (config.proj_index + 1) % len(config.proj)
         i = config.proj_index
-        config.pixel_canvas = config.proj[i].pixel_canvas
         config.filepath = config.proj[i].filepath
         config.filename = config.proj[i].filename
         config.modified_count = config.proj[i].modified_count
         config.anim = config.proj[i].anim
         config.layers = config.proj[i].layers
         config.stencil = config.proj[i].stencil
+        config.set_active_canvas(config.proj[i].pixel_canvas)
 
         if config.proj[i].indicators is None:
             config.menubar.indicators = {}
@@ -372,8 +424,22 @@ class DoSpareCopy(MenuAction):
     def selected(self, attrs):
         sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        config.proj[sparei].pixel_canvas.blit(config.pixel_canvas, (0,0))
-        config.proj[sparei].anim.frame[config.proj[sparei].anim.curr_frame-1].image.blit(config.pixel_canvas, (0,0))
+        flat = config.layers.get_flattened(exclude=["R"])
+        proj, frame, st = spare_frame(sparei)
+
+        # Replace the spare page with a single flattened canvas.
+        for name in list(st.layers.keys()):
+            st.delete(name)
+        st.set("canvas", flat.copy(), priority=1, kind="canvas")
+        st.set("fg", proj.stencil, priority=10,
+               visible=proj.stencil.enable, kind="stencil")
+        st.current_layer_name = "canvas"
+        proj.pixel_canvas = st.get("canvas").image
+        proj.layers = st
+        if frame is not None:
+            frame.image = proj.pixel_canvas
+            frame.layers = st
+
         config.clear_undo()
         config.save_undo()
 
@@ -384,9 +450,16 @@ class DoMergeFront(MenuActionMulti):
     def selectedMulti(self, attrs):
         sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        config.proj[sparei].pixel_canvas.set_colorkey(config.bgcolor)
-        config.pixel_canvas.blit(config.proj[sparei].pixel_canvas, (0,0))
-        config.proj[sparei].pixel_canvas.set_colorkey(None)
+        src = spare_image(sparei)
+        if src is None:
+            return
+        src_array = pygame.surfarray.array2d(src)
+        dst = pygame.surfarray.pixels2d(config.pixel_canvas)
+        try:
+            mask = src_array != config.bgcolor
+            dst[mask] = src_array[mask]
+        finally:
+            del dst
 
 class DoMergeBack(MenuActionMulti):
     def get_name(self):
@@ -395,12 +468,18 @@ class DoMergeBack(MenuActionMulti):
     def selectedMulti(self, attrs):
         sparei = (config.proj_index + 1) % len(config.proj)
         config.clear_pixel_draw_canvas()
-        newimage = pygame.Surface(config.pixel_canvas.get_size(), 0, config.pixel_canvas)
+        src = spare_image(sparei)
+        if src is None:
+            return
+        newimage = src.copy()
         newimage.set_palette(config.pal)
-        newimage.blit(config.proj[sparei].pixel_canvas, (0,0))
-        config.pixel_canvas.set_colorkey(config.bgcolor)
-        newimage.blit(config.pixel_canvas, (0,0))
-        config.pixel_canvas.set_colorkey(None)
+        current = pygame.surfarray.array2d(config.pixel_canvas)
+        arr = pygame.surfarray.pixels2d(newimage)
+        try:
+            mask = current != config.bgcolor
+            arr[mask] = current[mask]
+        finally:
+            del arr
         config.pixel_canvas.blit(newimage, (0,0))
         newimage = None
 
@@ -417,6 +496,13 @@ class DoShowPage(MenuAction):
 class DoScreenFormat(MenuAction):
     def selected(self, attrs):
         screen_format_req(config.pixel_req_canvas)
+
+class DoLayerPanel(MenuAction):
+    def selected(self, attrs):
+        show = not config.layertoolbar.visible
+        config.layout.set_visible("layertoolbar", show)
+        config.layertoolbar.visible = show
+        config.doKeyAction()
 
 class DoAbout(MenuAction):
     def selected(self, attrs):
@@ -1448,14 +1534,22 @@ class DoBackgroundFix(MenuAction):
     def selected(self, attrs):
         config.menubar.menu_id("effect").menu_id("background").menu_id("free").action.selected("")
         config.clear_pixel_draw_canvas()
-        for frame_no in config.anim:
-            bg_img = config.pixel_canvas.copy()
-            config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="B")
-            config.brush.pen_down = False
-            config.bgcolor = 0;
-            config.pixel_canvas.fill(config.bgcolor);
-            config.pixel_canvas.set_colorkey(config.bgcolor)
-        config.save_undo()
+        if config.anim.num_frames > 1:
+            config.anim.save_curr_frame()
+        config.stash_structural()
+        for st in config.frame_layer_stacks():
+            canvas_layer = st.get("canvas")
+            if canvas_layer is None or \
+               not isinstance(canvas_layer.image, pygame.Surface):
+                continue
+            bg_img = canvas_layer.image.copy()
+            st.set("background", bg_img, priority=config.LAYER_BG_PRIORITY,
+                   visible=True, indicator="B", kind="background", opacity=255)
+            canvas_layer.image.fill(0)
+        config.select_layer("canvas")
+        config.brush.pen_down = False
+        config.bgcolor = 0
+        config.save_undo(structural=True)
         config.toolbar.tool_id("text").action.cleartext()
         config.doKeyAction()
 
@@ -1467,55 +1561,80 @@ class DoBackgroundOpen(MenuAction):
             try:
                 bg_img = pygame.image.load(filename)
                 bg_img = pygame.transform.smoothscale(bg_img.convert(), config.pixel_canvas.get_size())
-                for frame_no in config.anim:
-                    config.layers.set("background", bg_img, priority=config.LAYER_BG_PRIORITY, visible=True, indicator="R")
-                config.bgcolor = 0;
-                config.pixel_canvas.set_colorkey(config.bgcolor)
+                if config.anim.num_frames > 1:
+                    config.anim.save_curr_frame()
+                config.stash_structural()
+                for st in config.frame_layer_stacks():
+                    st.set("background", bg_img.copy(),
+                           priority=config.LAYER_BG_PRIORITY, visible=True,
+                           indicator="R", kind="reference", opacity=255)
+                config.select_layer("canvas")
+                config.bgcolor = 0
+                config.save_undo(structural=True)
             except Exception as ex:
                 io_error_req("Load Error", "Unable to open image:\n%s\n%s", filename, str(ex))
         config.doKeyAction()
 
 class DoBackgroundOnOff(MenuAction):
     def selected(self, attrs):
-        if config.layers.has_key("background"):
-            if config.layers.get("background").indicator == "":
-                return
-            opacity = config.layers.get("canvas").opacity
-            enable_state = config.layers.get("background").visible
-            if enable_state:
-                if opacity == 255:
-                    opacity = 128
-                else:
-                    enable_state = False
-                    opacity = 255
+        if not config.layers.has_key("background"):
+            return
+        if config.layers.get("background").indicator == "":
+            return
+        canvas = config.layers.get("canvas")
+        if canvas is None:
+            return
+        opacity = canvas.opacity
+        enable_state = config.layers.get("background").visible
+        if enable_state:
+            if opacity == 255:
+                opacity = 128
             else:
-                enable_state = True
+                enable_state = False
                 opacity = 255
+        else:
+            enable_state = True
+            opacity = 255
 
-            for f in config.anim.frame:
-                if "background" in f.layers.layers:
-                    f.layers.get("background").visible = enable_state
-                f.layers.get("canvas").opacity = opacity
-            config.layers.get("background").visible = enable_state
-            config.layers.get("canvas").opacity = opacity
-            opacity = config.layers.get("canvas").opacity
-            config.doKeyAction()
+        config.stash_structural()
+        for st in config.frame_layer_stacks():
+            if st.has_key("background"):
+                st.get("background").visible = enable_state
+            canvas_layer = st.get("canvas")
+            if canvas_layer is not None:
+                canvas_layer.opacity = opacity
+        config.save_undo(structural=True)
+        config.doKeyAction()
 
 class DoBackgroundFree(MenuAction):
     def selected(self, attrs):
-        if config.layers.has_key("background"):
-            config.clear_pixel_draw_canvas()
-            for frame_no in config.anim:
-                bglayer = config.layers.get("background")
-                if bglayer.image != None and bglayer.indicator != "R":
-                    config.pixel_canvas.set_colorkey(0)
-                    bglayer.image.blit(config.pixel_canvas, (0,0))
-                    config.pixel_canvas.blit(bglayer.image, (0,0))
-                    config.pixel_canvas.set_colorkey(None)
-                    config.save_undo()
-                config.layers.delete("background")
-                config.layers.get("canvas").opacity = 255
-            config.doKeyAction()
+        if not config.layers.has_key("background"):
+            return
+        config.clear_pixel_draw_canvas()
+        if config.anim.num_frames > 1:
+            config.anim.save_curr_frame()
+        config.stash_structural()
+        for st in config.frame_layer_stacks():
+            if not st.has_key("background"):
+                continue
+            bglayer = st.get("background")
+            canvas_layer = st.get("canvas")
+            if bglayer.image is not None and bglayer.indicator != "R" and \
+               canvas_layer is not None and \
+               isinstance(canvas_layer.image, pygame.Surface):
+                # Flatten the fixed background below the transparent canvas.
+                merged = bglayer.image.copy()
+                merged.set_palette(config.pal)
+                top = canvas_layer.image.copy()
+                top.set_colorkey(0)
+                merged.blit(top, (0,0))
+                canvas_layer.image = merged
+            st.delete("background")
+            if canvas_layer is not None:
+                canvas_layer.opacity = 255
+        config.select_layer("canvas")
+        config.save_undo(structural=True)
+        config.doKeyAction()
 
 class DoPrefsCoords(MenuAction):
     def selected(self, attrs):
@@ -1776,6 +1895,15 @@ def init_menubar(config_in):
                 ["Open...", " ", DoBackgroundOpen],
                 ["On/Off", "ctrl-b", DoBackgroundOnOff],
                 ["Free", " ", DoBackgroundFree],
+            ]],
+            ["Layers", [
+                ["Panel", "ctrl-l", DoLayerPanel],
+                ["---"],
+                ["Add", " ", DoAddLayer],
+                ["Clone", " ", DoClone],
+                ["Merge Down", " ", DoMerge],
+                ["Delete", " ", DoDelLayer],
+                ["Move Up", " ", DoMoveLayer],
             ]],
             ["!Perspective"],
         ]])

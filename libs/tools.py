@@ -8,6 +8,8 @@ with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
 
+import numpy as np
+
 from libs.toolbar import *
 from libs.toolreq import *
 from libs.gadget import *
@@ -1394,10 +1396,46 @@ class DoText(ToolSingleAction):
                 else:
                     surf = pygame.transform.scale(surf, (sx,sy))
 
-            pixel_canvas_rgb = pygame.Surface(surf.get_size(),0)
-            pixel_canvas_rgb.blit(config.undo_image[config.undo_index], (0,0), (mx,my,surf.get_width(),surf.get_height()))
-            pixel_canvas_rgb.blit(surf, (0, 0))
-            config.pixel_canvas.blit(convert8(pixel_canvas_rgb, config.pal), (mx,my))
+            w, h = config.pixel_canvas.get_size()
+            x0 = max(0, mx)
+            y0 = max(0, my)
+            x1 = min(w, mx + surf.get_width())
+            y1 = min(h, my + surf.get_height())
+            if x1 <= x0 or y1 <= y0:
+                return
+            sub = surf.subsurface((x0 - mx, y0 - my, x1 - x0, y1 - y0))
+
+            # Work out which pixels belong to the glyphs so only those get
+            # written to the layer; the rest of the box stays untouched.
+            if sub.get_flags() & pygame.SRCALPHA:
+                alpha = pygame.surfarray.array_alpha(sub)
+                mask = alpha > 0
+            else:
+                key = sub.get_colorkey()
+                glyph_rgb = pygame.surfarray.array3d(sub)
+                if key is None:
+                    mask = np.ones(glyph_rgb.shape[:2], dtype=bool)
+                else:
+                    mask = np.any(glyph_rgb != np.array(key[:3], dtype=glyph_rgb.dtype),
+                                  axis=2)
+            if not mask.any():
+                return
+
+            # Anti-alias against the composite, not the active layer, so
+            # transparent layers do not produce fringes.
+            composite = config.layers.composite()
+            region = composite.subsurface((x0, y0, x1 - x0, y1 - y0)).copy()
+            backdrop = pygame.Surface(region.get_size(), 0)
+            backdrop.blit(region, (0, 0))
+            backdrop.blit(sub, (0, 0))
+            text_img = convert8(backdrop, config.pal)
+
+            src = pygame.surfarray.array2d(text_img)
+            dst = pygame.surfarray.pixels2d(config.pixel_canvas)
+            try:
+                dst[x0:x1, y0:y1][mask] = src[mask]
+            finally:
+                del dst
 
     def stamptext(self):
         config.clear_pixel_draw_canvas()
@@ -1906,7 +1944,13 @@ class DoClear(ToolActionMulti):
 
     def selectedMulti(self, attrs):
         config.brush.pen_down = False
-        config.pixel_canvas.fill(config.bgcolor);
+        fill_color = config.bgcolor
+        layer = config.layers.get()
+        if layer is not None and layer.kind == "user":
+            # Index 0 is transparent on user layers, so clearing must not
+            # paint the background colour over the layers below.
+            fill_color = layer.transparent_index
+        config.pixel_canvas.fill(fill_color)
         config.toolbar.tool_id("text").action.cleartext()
 
 class DoSwatch(ToolAction):
@@ -2071,21 +2115,23 @@ class PalGadget(ToolGadget):
                 event = config.xevent.wait()
 
             mouseX, mouseY = config.get_mouse_pixel_pos(event, ignore_grid=True)
-            color_hover = config.pixel_canvas.get_at_mapped((mouseX,mouseY))
+            # Pick from the composite so transparent user layers do not hide
+            # the colours visible underneath them.
+            color_hover = config.layers.get_at_index((mouseX, mouseY))
             config.clear_pixel_draw_canvas()
             mouseXY = config.get_mouse_pointer_pos(event)
             config.draw_rgb_dropper(mouseXY, color_hover)
             if event.type == MOUSEMOTION and True in event.buttons and wait_for_mouseup:
                 if event.buttons[0]:
-                    config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
+                    config.color = color_hover
                 elif event.buttons[2]:
-                    config.bgcolor = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
+                    config.bgcolor = color_hover
             elif event.type == MOUSEBUTTONDOWN:
                 color_picked = True
                 if event.button == 1:
-                    config.color = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
+                    config.color = color_hover
                 elif event.button == 3:
-                    config.bgcolor = config.pixel_canvas.get_at_mapped((mouseX, mouseY))
+                    config.bgcolor = color_hover
             elif event.type == MOUSEBUTTONUP and wait_for_mouseup:
                 wait_for_mouseup -= 1
 

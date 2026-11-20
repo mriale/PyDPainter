@@ -236,7 +236,7 @@ def file_req_system(screen, title, action_label, filepath, filename, filetype_li
     config.cursor.visible = False
     w,h = screen.get_size()
     screen.fill((128,128,128))
-    screen.blit(config.pixel_canvas, (config.screen_offset_x,config.screen_offset_y))
+    config.layers.blit(screen, (config.screen_offset_x,config.screen_offset_y))
     surf_array = pygame.surfarray.pixels2d(screen)
     surf_array[0::2,0::2] = 0x88888888
     surf_array[1::2,1::2] = 0x88888888
@@ -658,7 +658,8 @@ Resize Page: [Yes~No]
     apply_mode()
 
     def get_top_colors(num_colors):
-        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        pic = config.layers.composite()
+        surf_array = pygame.surfarray.array2d(pic)
         #find unique color indexes and counts of color indexes in pic
         unique_colors, counts_colors = np.unique(surf_array, return_counts=True)
         surf_array = None
@@ -704,7 +705,7 @@ Resize Page: [Yes~No]
         return newpal
 
     def get_max_color_index():
-        surf_array = pygame.surfarray.pixels2d(config.pixel_canvas)
+        surf_array = pygame.surfarray.array2d(config.layers.composite())
         max_color_index = np.max(surf_array)
         surf_array = None
         return max_color_index
@@ -770,83 +771,86 @@ Resize Page: [Yes~No]
                     config.color = 1
                     config.bgcolor = 0
 
-                    for frame_no in config.anim:
-                        if new_clicked:
-                            reinit = True
-                        elif num_colors < config.NUM_COLORS:
-                            #reduce palette to highest frequency color indexes
-                            reinit = False
+                    if new_clicked:
+                        reinit = True
+                    elif num_colors < config.NUM_COLORS:
+                        #reduce palette to highest frequency color indexes
+                        reinit = False
 
-                            num_top_colors = num_colors
-                            if halfbright:
-                                num_top_colors = 32
+                        num_top_colors = num_colors
+                        if halfbright:
+                            num_top_colors = 32
 
-                            if get_max_color_index() < num_colors:
-                                config.pal = config.pal[0:num_colors]
-                                config.truepal = config.truepal[0:num_colors]
-                            else:
-                                colorlist = get_top_colors(num_top_colors)
+                        if get_max_color_index() < num_colors:
+                            config.pal = config.pal[0:num_colors]
+                            config.truepal = config.truepal[0:num_colors]
+                        else:
+                            colorlist = get_top_colors(num_top_colors)
 
-                                newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
+                            newpal = get_top_pal(config.pal, colorlist, num_colors, halfbright)
 
-                                #convert colors to reduced palette using blit
-                                new_pixel_canvas = pygame.Surface((config.pixel_width, config.pixel_height),0,8)
-                                new_pixel_canvas.set_palette(newpal)
-                                new_pixel_canvas.blit(config.pixel_canvas, (0,0))
+                            # Remap every layer into the reduced palette.  An
+                            # 8-bit -> 8-bit blit matches colours between the
+                            # two palettes, and index 0 stays index 0 because
+                            # get_top_pal always preserves the background.
+                            def remap_layer(img):
+                                newimg = pygame.Surface(img.get_size(), 0, 8)
+                                newimg.set_palette(newpal)
+                                newimg.blit(img, (0,0))
+                                return newimg
 
-                                #substitute new canvas for the higher color one
-                                config.pixel_canvas = new_pixel_canvas
-                                config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
-                                config.truepal = config.quantize_palette(config.truepal, cdepth)
-                                config.pal = list(config.truepal)
-                                config.pal = config.unique_palette(config.pal)
-
-                            config.backuppal = list(config.pal)
-                            config.pixel_canvas.set_palette(config.pal)
-                            for frame in config.anim.frame:
-                                frame.is_pal_key = True
-                            config.anim.global_palette = False
-                        elif num_colors == config.NUM_COLORS:
-                            reinit = False
-                        elif num_colors > config.NUM_COLORS:
-                            reinit = False
-
+                            config.transform_layers(remap_layer,
+                                kinds=("canvas", "user", "background"))
+                            config.truepal = get_top_pal(config.truepal, colorlist, num_colors, halfbright)[0:num_colors]
                             config.truepal = config.quantize_palette(config.truepal, cdepth)
-                            newpal = config.get_default_palette(num_colors)
-                            config.truepal.extend(newpal[config.NUM_COLORS:num_colors])
-                            if halfbright:
-                                for i in range(0,32):
-                                    config.truepal[i+32] = \
-                                              ((config.truepal[i][0] & 0xee) // 2,
-                                               (config.truepal[i][1] & 0xee) // 2,
-                                               (config.truepal[i][2] & 0xee) // 2)
                             config.pal = list(config.truepal)
                             config.pal = config.unique_palette(config.pal)
-                            config.backuppal = list(config.pal)
-                            config.pixel_canvas.set_palette(config.pal)
 
-                        sm = config.display_info.get_display(display_names[aspect])[res]
-                        dmode = sm.mode_id
-                        px = sm.x
-                        py = sm.y
+                        config.backuppal = list(config.pal)
+                        config.set_all_palettes(config.pal)
+                        for frame in config.anim.frame:
+                            frame.is_pal_key = True
+                        config.anim.global_palette = False
+                    elif num_colors == config.NUM_COLORS:
+                        reinit = False
+                    elif num_colors > config.NUM_COLORS:
+                        reinit = False
 
+                        config.truepal = config.quantize_palette(config.truepal, cdepth)
+                        newpal = config.get_default_palette(num_colors)
+                        config.truepal.extend(newpal[config.NUM_COLORS:num_colors])
                         if halfbright:
-                            dmode |= config.MODE_EXTRA_HALFBRIGHT
+                            for i in range(0,32):
+                                config.truepal[i+32] = \
+                                          ((config.truepal[i][0] & 0xee) // 2,
+                                           (config.truepal[i][1] & 0xee) // 2,
+                                           (config.truepal[i][2] & 0xee) // 2)
+                        config.pal = list(config.truepal)
+                        config.pal = config.unique_palette(config.pal)
+                        config.backuppal = list(config.pal)
+                        config.set_all_palettes(config.pal)
 
-                        if not new_clicked and resize_page and (px != config.pixel_width or py != config.pixel_height):
-                            new_pixel_canvas = pygame.transform.scale(config.pixel_canvas, (px, py))
-                            new_pixel_canvas.set_palette(config.pal)
-                            config.pixel_canvas = new_pixel_canvas
-                            reinit = False
+                    sm = config.display_info.get_display(display_names[aspect])[res]
+                    dmode = sm.mode_id
+                    px = sm.x
+                    py = sm.y
+
+                    if halfbright:
+                        dmode |= config.MODE_EXTRA_HALFBRIGHT
 
                     config.display_mode = dmode
-                    config.pixel_width = px
-                    config.pixel_height = py
                     config.color_depth = cdepth
                     config.NUM_COLORS = num_colors
                     config.pal = list(config.truepal)
                     config.pal = config.unique_palette(config.pal)
                     config.set_all_palettes(config.pal, config.truepal)
+
+                    if not new_clicked and resize_page and (px != config.pixel_width or py != config.pixel_height):
+                        config.size_canvas(px, py, True)
+                        reinit = False
+                    else:
+                        config.pixel_width = px
+                        config.pixel_height = py
                     if ge.gadget.label == "Make Default":
                         config.saveConfig()
                     running = 0

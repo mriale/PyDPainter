@@ -209,6 +209,7 @@ class pydpainter:
             config.pixel_canvas = load_pic(filename, config)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
+            config.layers_loaded = True
             config.initialize_surfaces()
             config.modified_count = 0
 
@@ -218,6 +219,7 @@ class pydpainter:
             config.pixel_canvas = load_pic(filename, config, cmd_load=True)
             config.truepal = list(config.pal)
             config.pal = config.unique_palette(config.pal)
+            config.layers_loaded = True
             config.initialize_surfaces()
             config.filepath = os.path.dirname(filename)
             config.filename = filename
@@ -354,6 +356,354 @@ class pydpainter:
                 return crange
         return None
 
+    def new_layer_stack(self, canvas):
+        """Create a fresh layer stack containing the canvas and stencil."""
+        ls = LayerStack(indicatorx=self.LAYER_INDICATORX)
+        ls.config = self
+        if self.stencil is None:
+            self.stencil = Stencil()
+        ls.set("canvas", canvas, priority=1, kind="canvas")
+        ls.current_layer_name = "canvas"
+        ls.set("fg", self.stencil, priority=10, visible=self.stencil.enable, kind="stencil")
+        return ls
+
+    def reset_layers(self, canvas=None):
+        """Discard all layers and start again with a single canvas layer."""
+        if canvas is None:
+            canvas = self.pixel_canvas
+        self.layers = self.new_layer_stack(canvas)
+        self.set_active_canvas(canvas)
+        if "proj" in dir(self):
+            self.proj[self.proj_index].layers = self.layers
+
+    def set_active_canvas(self, surface):
+        """Bind config.pixel_canvas to the active layer's surface.
+
+        This is the only supported way to replace pixel_canvas: all tools,
+        undo and file operations draw on pixel_canvas, so the active layer
+        must own the very same Surface object.
+        """
+        if surface is None:
+            return
+        self.pixel_canvas = surface
+        if self.layers is None:
+            return
+        layer = self.layers.get()
+        if layer is not None and layer.kind in ("canvas", "user") and \
+           isinstance(layer.image, pygame.Surface):
+            layer.image = surface
+
+    def select_layer(self, name):
+        """Select a layer and make its surface the active drawing canvas."""
+        if self.layers is None or not self.layers.has_key(name):
+            return False
+        layer = self.layers.get(name)
+        if layer.kind not in ("canvas", "user"):
+            return False
+        if not isinstance(layer.image, pygame.Surface):
+            return False
+        self.layers.current_layer_name = name
+        self.set_active_canvas(layer.image)
+        # Layer selection is a property of the whole animation, not of one
+        # frame.  Keep every frame pointing at the same layer so animpaint
+        # (ALT + draw) stamps onto the selected layer in all frames.
+        for st in self.layer_stacks():
+            other = st.get(name) if st is not None and st.has_key(name) else None
+            if other is not None and other.kind in ("canvas", "user"):
+                st.current_layer_name = name
+        return True
+
+    def set_layer_visible(self, name, visible):
+        """Show or hide the same layer in every animation frame."""
+        for st in self.layer_stacks():
+            layer = st.get(name) if st is not None and st.has_key(name) else None
+            if layer is not None:
+                layer.visible = visible
+
+    def set_layer_opacity(self, name, opacity):
+        """Set the same layer opacity in every animation frame."""
+        for st in self.layer_stacks():
+            layer = st.get(name) if st is not None and st.has_key(name) else None
+            if layer is not None:
+                layer.opacity = opacity
+
+    def reset_draw_baseline(self):
+        """Re-point the current undo tip at the active layer's pixels.
+
+        Tools use ``clear_pixel_draw_canvas()`` to erase their on-screen
+        preview between mouse moves.  That only works when the undo tip was
+        captured for the layer being drawn on.  Selecting a different layer
+        used to leave the tip tagged with the old layer, so every preview
+        stayed on the new layer and looked like a held-down mouse button.
+        Refresh just the tip; older undo history is left untouched.
+        """
+        idx = self.undo_index
+        if idx < 0 or idx >= len(self.undo_image):
+            return
+        if not isinstance(self.pixel_canvas, pygame.Surface):
+            return
+        img = pygame.Surface(self.pixel_canvas.get_size(), 0, self.pixel_canvas)
+        img.set_palette(self.pal)
+        img.blit(self.pixel_canvas, (0, 0))
+        self.undo_image[idx] = img
+        while len(self.undo_layer) <= idx:
+            self.undo_layer.append(None)
+        self.undo_layer[idx] = self.layers.current_layer_name
+        while len(self.undo_meta) <= idx:
+            self.undo_meta.append(None)
+        self.undo_meta[idx] = self._undo_meta()
+        self.drawing_interrupted = False
+
+    def layer_stacks(self):
+        """Yield every layer stack in this project (current and animation)."""
+        seen = set()
+        stacks = [self.layers]
+        anim = getattr(self, "anim", None)
+        if anim is not None:
+            stacks.extend([f.layers for f in anim.frame])
+        for st in stacks:
+            if st is not None and id(st) not in seen:
+                seen.add(id(st))
+                yield st
+
+    def frame_layer_stacks(self):
+        """Return the stacks that represent the visible animation frames.
+
+        Single-frame pictures are edited through the live stack only; for
+        animations every frame owns its own live stack.
+        """
+        if self.anim is None or self.anim.num_frames <= 1 or \
+           len(self.anim.frame) <= 1:
+            return [self.layers]
+        return [self.ensure_frame_layers(f) for f in self.anim.frame]
+
+    def ensure_frame_layers(self, frame):
+        if frame.image is None:
+            frame.image = pygame.Surface((self.pixel_width, self.pixel_height), 0, 8)
+            frame.image.set_palette(self.pal)
+        if frame.layers is None or not frame.layers.has_key("canvas"):
+            frame.layers = self.new_layer_stack(frame.image)
+        return frame.layers
+
+    def first_free_layer_slot(self):
+        used = set()
+        for st in self.layer_stacks():
+            for name in st.layers:
+                layer = st.get(name)
+                if layer.kind == "user":
+                    used.add(layer.priority)
+        for slot in range(2, 10):
+            if slot not in used:
+                return slot
+        return None
+
+    def layer_slot_is_free(self, slot):
+        for st in self.layer_stacks():
+            name = st.get_priority_name(slot)
+            if name is not None and st.get(name).kind == "user":
+                return False
+        return True
+
+    def add_layer(self, name=None, priority=None):
+        if priority is None:
+            priority = self.first_free_layer_slot()
+        if priority is None:
+            return None
+        if name is None:
+            name = f"layer{priority}"
+        base = name
+        n = 2
+        while self.layers.has_key(name):
+            name = f"{base}_{n}"
+            n += 1
+        surface = pygame.Surface((self.pixel_width, self.pixel_height), 0, 8)
+        surface.set_palette(self.pal)
+        surface.fill(0)
+        self.layers.set(name, surface, priority=priority, kind="user")
+        for st in self.layer_stacks():
+            if st is self.layers:
+                continue
+            if not st.has_key("canvas"):
+                continue
+            if not st.has_key(name):
+                img = pygame.Surface((self.pixel_width, self.pixel_height), 0, 8)
+                img.set_palette(self.pal)
+                img.fill(0)
+                st.set(name, img, priority=priority, kind="user")
+        self.select_layer(name)
+        return name
+
+    def delete_layer(self, name=None):
+        if name is None:
+            name = self.layers.current_layer_name
+        layer = self.layers.get(name)
+        if layer is None or layer.kind != "user":
+            return False
+        for st in self.layer_stacks():
+            st.delete(name)
+        if not self.select_layer("canvas"):
+            # fall back to the topmost remaining user layer
+            for st in [self.layers]:
+                for other in reversed(st.sorted_layers()):
+                    if other.kind == "user" and self.select_layer(st.get_priority_name(other.priority)):
+                        break
+        return True
+
+    def move_layer(self, name, priority):
+        """Move a layer to another slot, swapping with any layer already there."""
+        layer = self.layers.get(name)
+        if layer is None or layer.kind != "user" or priority in (0, 1, 10):
+            return False
+        if priority < 2 or priority > 9:
+            return False
+        old_priority = layer.priority
+        other_name = self.layers.get_priority_name(priority)
+        for st in self.layer_stacks():
+            moving = st.get(name)
+            if moving is None:
+                continue
+            other = st.get(other_name) if other_name is not None else None
+            moving.priority = priority
+            if other is not None and other is not moving:
+                other.priority = old_priority
+        self.layers.current_layer_name = name
+        return True
+
+    def clone_layer(self, name=None):
+        if name is None:
+            name = self.layers.current_layer_name
+        layer = self.layers.get(name)
+        if layer is None or layer.kind != "user":
+            return None
+        slot = self.first_free_layer_slot()
+        if slot is None:
+            return None
+        new_name = self.add_layer(priority=slot)
+        new_layer = self.layers.get(new_name)
+        if new_layer is not None and isinstance(layer.image, pygame.Surface):
+            new_layer.image.blit(layer.image, (0, 0))
+        # Give the same starting image to the other frames.
+        for st in self.layer_stacks():
+            if st is self.layers:
+                continue
+            target = st.get(new_name)
+            if target is not None and isinstance(target.image, pygame.Surface):
+                target.image.blit(layer.image, (0, 0))
+        return new_name
+
+    def merge_layer_down(self, name=None):
+        if name is None:
+            name = self.layers.current_layer_name
+        merged = False
+        for st in self.layer_stacks():
+            if st.has_key(name):
+                if st is self.layers:
+                    merged = st.merge_down(name)
+                else:
+                    # Merge into the layer below without disturbing the selection.
+                    old_current = st.current_layer_name
+                    st.current_layer_name = name
+                    st.merge_down(name)
+                    st.current_layer_name = old_current
+                    if not st.has_key(st.current_layer_name):
+                        st.current_layer_name = "canvas"
+        if self.layers.has_key(name):
+            self.layers.delete(name)
+        if not self.layers.has_key(self.layers.current_layer_name):
+            self.select_layer("canvas")
+        return merged
+
+    def transform_layers(self, func, kinds=("canvas", "user", "background", "reference")):
+        """Apply a surface transformation to every 8-bit layer."""
+        for st in self.layer_stacks():
+            for name in list(st.layers.keys()):
+                layer = st.get(name)
+                if layer is None or layer.kind not in kinds:
+                    continue
+                if isinstance(layer.image, pygame.Surface):
+                    layer.image = func(layer.image)
+                    if layer.image.get_bytesize() == 1:
+                        layer.image.set_palette(self.pal)
+        current = self.layers.current_layer_name
+        if not self.select_layer(current):
+            self.select_layer("canvas")
+
+    def fit_layers_to_page(self, scale=True):
+        """Resize every layer (except the canvas) to the current page size."""
+        w, h = self.pixel_width, self.pixel_height
+        for st in self.layer_stacks():
+            for name, layer in list(st.layers.items()):
+                if name == "canvas" or not isinstance(layer.image, pygame.Surface):
+                    continue
+                if layer.image.get_size() == (w, h):
+                    continue
+                layer.image = self._resize_surface(layer.image, w, h, scale)
+
+    def bootstrap_layers(self):
+        """Bind the layer stack to the freshly loaded pixel canvas.
+
+        Called from initialize_surfaces() after a picture has been loaded,
+        resized or a new screen format has been selected.
+        """
+        pending = getattr(self, "pending_ora_layers", None)
+        if pending:
+            self.layers = self.new_layer_stack(self.pixel_canvas)
+            canvas_image = self.pixel_canvas
+            for item in pending:
+                name = item.get("name", "layer")
+                img = item.get("image")
+                if img is not None and img.get_bytesize() == 1:
+                    img.set_palette(self.pal)
+                if name == "canvas":
+                    # Replace the canvas that new_layer_stack() just made.
+                    self.layers.set("canvas", img, priority=1,
+                                    visible=item.get("visible", True),
+                                    opacity=item.get("opacity", 255),
+                                    kind="canvas",
+                                    indicator=item.get("indicator", ""))
+                    canvas_image = img
+                    continue
+                while self.layers.has_key(name):
+                    name += "_"
+                self.layers.set(name, img, priority=item.get("priority", 2),
+                                visible=item.get("visible", True),
+                                opacity=item.get("opacity", 255),
+                                kind=item.get("kind", "user"),
+                                indicator=item.get("indicator", ""))
+            self.layers.current_layer_name = "canvas"
+            self.pixel_canvas = canvas_image
+            self.pending_ora_layers = None
+            self.layers_loaded = False
+        elif self.layers_loaded or self.layers is None or \
+             not self.layers.has_key("canvas"):
+            # A new picture was loaded: discard the old layer structure.
+            self.layers = self.new_layer_stack(self.pixel_canvas)
+            self.layers_loaded = False
+        else:
+            # Resizing / screen-format change: keep the existing layers.
+            self.layers.set("fg", self.stencil, priority=10,
+                            visible=self.stencil.enable, kind="stencil")
+            canvas_layer = self.layers.get("canvas")
+            if canvas_layer is None or not isinstance(canvas_layer.image, pygame.Surface):
+                self.layers.set("canvas", self.pixel_canvas, priority=1, kind="canvas")
+            if not self.layers.has_key(self.layers.current_layer_name):
+                self.layers.current_layer_name = "canvas"
+            self.fit_layers_to_page(scale=False)
+
+        self.set_active_canvas(self.pixel_canvas)
+        if "anim" in dir(self) and self.anim is not None and \
+           0 <= self.anim.curr_frame-1 < len(self.anim.frame):
+            # The frame the editor is showing must share the live stack.
+            frame = self.anim.frame[self.anim.curr_frame-1]
+            frame.layers = self.layers
+            canvas_layer = self.layers.get("canvas")
+            if canvas_layer is not None and \
+               isinstance(canvas_layer.image, pygame.Surface):
+                frame.image = canvas_layer.image
+        if "proj" in dir(self):
+            self.proj[self.proj_index].layers = self.layers
+            self.proj[self.proj_index].pixel_canvas = self.pixel_canvas
+
     def initialize_surfaces(self, reinit=False, first_init=False):
         sm = config.display_info.get_id(self.display_mode)
         if sm is None:
@@ -398,6 +748,8 @@ class pydpainter:
         self.pixel_req_rect = None
 
         self.symm_center = (self.pixel_width//2, self.pixel_height//2)
+
+        self.bootstrap_layers()
 
         #adjust fonts
         self.fontx = self.closest_scale4(32, self.screen_width // 40)
@@ -881,10 +1233,10 @@ class pydpainter:
         self.pixel_canvas.set_palette(self.pal)
 
         self.layers = LayerStack(indicatorx=self.LAYER_INDICATORX)
-        self.layers.set("canvas", self.pixel_canvas, priority=1)
+        self.layers.set("canvas", self.pixel_canvas, priority=1, kind="canvas")
         self.layers.current_layer_name = "canvas"
         self.stencil = Stencil()
-        self.layers.set("fg", self.stencil.image, 10, visible=False)
+        self.layers.set("fg", self.stencil, 10, visible=self.stencil.enable, kind="stencil")
 
         self.anim = Animation()
         self.proj[0].anim = self.anim
@@ -932,28 +1284,33 @@ class pydpainter:
         self.proj[1].modified_count = -1
         self.UNDO_INDEX_MAX = 256
         self.undo_image = []
+        self.undo_layer = []
+        self.undo_stack = []
+        self.undo_meta = []
         self.undo_index = -1
+        self.layers_loaded = False
+        self.pending_ora_layers = None
         self.suppress_undo = False
         self.suppress_redraw = False
         self.running = True
 
         self.tool_visibility_state = 1
         self.tool_visibility_states = [
-            #toolbar, menubar, animtoolbar
+            #toolbar, menubar, animtoolbar, layertoolbar
             [ #animation
-                (False,False,False),
-                (True,True,True),
-                (True,True,False),
-                (False,True,False),
-                (False,False,True),
+                (False,False,False,False),
+                (True,True,True,None),
+                (True,True,False,None),
+                (False,True,False,None),
+                (False,False,True,None),
             ],
             [ # single frame
-                (False,False,False),
-                (True,True,False),
+                (False,False,False,False),
+                (True,True,False,None),
             ],
             [ # animation playing
-                (False,False,False),
-                (False,False,True),
+                (False,False,False,False),
+                (False,False,True,None),
             ],
         ]
 
@@ -1056,17 +1413,40 @@ class pydpainter:
             #Fill upper palette with BG color so smoothing gets valid colors
             pal = list(pal_in)
             pal.extend([pal_in[0]] * (256 - len(pal)))
+
+        # Collect every layer stack: live stack, animation frames, and the
+        # spare project.  Previously only stale copies were updated, so an
+        # 8-bit background kept its old palette after a colour change.
+        stacks = []
+        seen = set()
+        def add_stack(st):
+            if st is not None and id(st) not in seen:
+                seen.add(id(st))
+                stacks.append(st)
+
+        add_stack(config.layers)
+        if config.anim is not None:
+            for frame in config.anim.frame:
+                add_stack(frame.layers)
+        for proj in config.proj:
+            add_stack(proj.layers)
+            if proj.anim is not None:
+                for frame in proj.anim.frame:
+                    add_stack(frame.layers)
+            if proj.pixel_canvas is not None:
+                proj.pixel_canvas.set_palette(pal)
+            if proj.anim is not None:
+                config.set_anim_palettes(proj.anim, pal_in, pal, truepal)
+
         config.pixel_canvas.set_palette(pal)
-        for i in range(len(config.proj)):
-            if config.proj[i].pixel_canvas:
-                config.proj[i].pixel_canvas.set_palette(pal)
-                config.set_anim_palettes(config.proj[i].anim, pal_in, pal, truepal)
-                config.proj[i].layers.set_palette(pal)
+        for st in stacks:
+            st.set_palette(pal)
 
         config.brush.set_palettes(pal)
 
         for img in config.undo_image:
-            img.set_palette(pal)
+            if isinstance(img, pygame.Surface):
+                img.set_palette(pal)
 
         config.set_anim_palettes(config.anim, pal_in, pal, truepal)
 
@@ -1090,6 +1470,9 @@ class pydpainter:
         config.layout.set_visible("toolbar", config.tool_visibility_states[mode][state][0])
         config.layout.set_visible("menubar", config.tool_visibility_states[mode][state][1])
         config.layout.set_visible("animtoolbar", config.tool_visibility_states[mode][state][2])
+        layer_state = config.tool_visibility_states[mode][state][3]
+        if layer_state is not None:
+            config.layout.set_visible("layertoolbar", layer_state)
 
         if config.menubar.visible:
             if config.animtoolbar.visible or config.anim.num_frames == 1:
@@ -1348,8 +1731,12 @@ class pydpainter:
             for i in range(0, self.screen_height*2, 2):
                 pygame.draw.line(self.scanline_canvas, Color(0,0,0,100), (0,i), (self.screen_width,i), 1)
 
-        config.layers.set("canvas", config.pixel_canvas, priority=1)
-        config.layers.set("fg", config.stencil, priority=10, visible=config.stencil.enable)
+        # Keep the stencil pseudo-layer in sync.  The active drawing layer is
+        # never rebound here: config.pixel_canvas already *is* that layer.
+        config.layers.set("fg", config.stencil, priority=10,
+                          visible=config.stencil.enable, kind="stencil")
+        if not config.layers.has_key(config.layers.current_layer_name):
+            config.select_layer("canvas")
 
         screen_rgb = None
         if self.zoom.on:
@@ -1370,12 +1757,18 @@ class pydpainter:
                 atbh = self.animtoolbar.rect[3] + 3*scaleY
                 zoom_height -= int(math.ceil(atbh / self.zoom.factor))
 
+            # The layer panel overlaps the left (unzoomed) half of the view.
+            # Allow that half to scroll far enough left that the page's left
+            # edge appears to the right of the panel instead of under it.
+            panel_rect = config.layout.get_rect("layertoolbar")
+            left_inset = panel_rect[0] + panel_rect[2]
+
             self.zoom.xoffset = zxc - (w//2)
             self.zoom.yoffset = zyc - ((self.screen_height-menu_bar_height) // 2)
 
-            if self.zoom.xoffset < 0:
-                self.zoom.xoffset = 0
-            elif self.zoom.xoffset > self.pixel_width - w + 6:
+            if self.zoom.xoffset < -left_inset:
+                self.zoom.xoffset = -left_inset
+            if self.zoom.xoffset > self.pixel_width - w + 6:
                 self.zoom.xoffset = self.pixel_width - w + 6
 
             if self.zoom.yoffset < -menu_bar_height:
@@ -1388,8 +1781,13 @@ class pydpainter:
 
             if zx0+zoom_width > self.pixel_width:
                 zx0 = self.pixel_width - zoom_width
-            if zx0 < 0:
-                zx0 = 0
+            # At low zoom factors the magnified region is wide enough that
+            # its centre cannot otherwise scroll the unzoomed half past the
+            # page edge.  Let it show a small grey margin so both halves can
+            # reach the left edge of the page.
+            zx0_min = min(0, -left_inset + (w//2) - (zoom_width//2))
+            if zx0 < zx0_min:
+                zx0 = zx0_min
 
             if zy0+zoom_height > self.pixel_height:
                 zy0 = self.pixel_height - zoom_height
@@ -1417,6 +1815,7 @@ class pydpainter:
             # Draw right zoomed image
             pygame.draw.rect(screen_rgb, (128,128,128), (w,menu_bar_height,self.screen_width,self.screen_height))
             zoom_canvas = pygame.Surface((zoom_width, zoom_height),0, screen_rgb)
+            zoom_canvas.fill((128,128,128))
             config.layers.blit(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             self.grid.draw(zoom_canvas, (0,0), (zx0,zy0,zoom_width,zoom_height))
             zoom_canvas_scaled = pygame.transform.scale(zoom_canvas, (zoom_width*self.zoom.factor,zoom_height*self.zoom.factor))
@@ -1552,7 +1951,92 @@ class pydpainter:
         self.last_recompose_timer = pygame.time.get_ticks()
 
 
-    def save_undo(self):
+    def _stack_undo_meta(self, stack):
+        """Cheap structural metadata for one stack (no image copies)."""
+        if stack is None:
+            return []
+        meta = []
+        for name in stack.names():
+            layer = stack.get(name)
+            meta.append((name, layer.priority, layer.visible, layer.opacity,
+                         layer.kind, layer.indicator, layer.transparent_index))
+        return meta
+
+    def _undo_meta(self):
+        """Metadata for the live stack and every animation frame.
+
+        Visibility and opacity are shared by all frames, so an undo entry
+        has to remember them for every frame, not just the one on screen.
+        """
+        frames = []
+        if self.anim is not None:
+            frames = [self._stack_undo_meta(f.layers) for f in self.anim.frame]
+        return {"live": self._stack_undo_meta(self.layers), "frames": frames}
+
+    def _apply_stack_undo_meta(self, stack, meta):
+        if stack is None or not meta:
+            return
+        for (name, priority, visible, opacity, kind, indicator,
+             transparent_index) in meta:
+            if not stack.has_key(name):
+                continue
+            layer = stack.get(name)
+            layer.priority = priority
+            layer.visible = visible
+            layer.opacity = opacity
+            layer.kind = kind
+            layer.indicator = indicator
+            layer.transparent_index = transparent_index
+
+    def _apply_undo_meta(self, meta):
+        if not meta:
+            return
+        if isinstance(meta, dict):
+            self._apply_stack_undo_meta(self.layers, meta.get("live"))
+            if self.anim is not None:
+                frames = meta.get("frames") or []
+                for i, frame in enumerate(self.anim.frame):
+                    if i < len(frames):
+                        self._apply_stack_undo_meta(frame.layers, frames[i])
+        else:
+            # Older list-shaped metadata only covers the live stack.
+            self._apply_stack_undo_meta(self.layers, meta)
+
+    def _snapshot_stacks(self):
+        """Deep-copy every stack a structural operation can touch.
+
+        Layer operations apply to all animation frames, so an undo has to
+        restore all of them; otherwise frames would end up with different
+        layer structures.
+        """
+        snapshot = {"live": self.layers.copy(), "frames": []}
+        if self.anim is not None and self.anim.num_frames > 1:
+            for frame in self.anim.frame:
+                if frame.layers is None:
+                    snapshot["frames"].append(None)
+                else:
+                    snapshot["frames"].append(frame.layers.copy())
+        return snapshot
+
+    def stash_structural(self):
+        """Remember the current stack before a structural layer change.
+
+        Called by layer operations so that a later undo can restore the
+        layers that were added, deleted or reordered.
+        """
+        if not hasattr(self, "undo_stack"):
+            return
+        idx = self.undo_index
+        while len(self.undo_stack) <= idx:
+            self.undo_stack.append(None)
+            self.undo_meta.append([])
+            self.undo_layer.append(None)
+        if 0 <= idx:
+            self.undo_stack[idx] = self._snapshot_stacks()
+            self.undo_meta[idx] = self._undo_meta()
+            self.undo_layer[idx] = self.layers.current_layer_name
+
+    def save_undo(self, structural=False):
         if self.suppress_undo:
             self.suppress_undo = False
             return
@@ -1563,33 +2047,86 @@ class pydpainter:
         self.undo_index = self.undo_index + 1
         if self.undo_index > self.UNDO_INDEX_MAX:
             self.undo_index = self.UNDO_INDEX_MAX
-            self.undo_image.pop(0)
+            for lst in (self.undo_image, self.undo_layer,
+                        self.undo_stack, self.undo_meta):
+                lst.pop(0)
 
-        #print("self.undo_index=" + str(self.undo_index) + "  len(self.undo_image)-1=" + str(len(self.undo_image)-1))
-
-        if self.undo_index > len(self.undo_image)-1:
-            self.undo_image.append("")
-
-        while len(self.undo_image)-1 > self.undo_index:
-            self.undo_image.pop()
+        for lst in (self.undo_image, self.undo_layer,
+                    self.undo_stack, self.undo_meta):
+            while self.undo_index > len(lst)-1:
+                lst.append("" if lst is self.undo_image else None)
+            while len(lst)-1 > self.undo_index:
+                lst.pop()
 
         config.stencil.draw(self.pixel_canvas)
         self.undo_image[self.undo_index] = pygame.Surface(self.pixel_canvas.get_size(),0, self.pixel_canvas)
         self.undo_image[self.undo_index].set_palette(self.pal)
         self.undo_image[self.undo_index].blit(self.pixel_canvas, (0,0))
+        self.undo_layer[self.undo_index] = self.layers.current_layer_name
+        self.undo_meta[self.undo_index] = self._undo_meta()
+        self.undo_stack[self.undo_index] = self._snapshot_stacks() if structural else None
 
     def clear_undo(self):
         self.suppress_undo = False
         self.undo_image = []
+        self.undo_layer = []
+        self.undo_stack = []
+        self.undo_meta = []
         self.undo_index = -1
         self.save_undo()
         self.suppress_undo = True
+
+    def _restore_undo_image(self):
+        idx = self.undo_index
+        if idx < 0 or idx >= len(self.undo_image):
+            return
+        snapshot = self.undo_stack[idx]
+        if snapshot is not None:
+            # Structural change: restore the whole layer stack (and every
+            # animation frame's stack).
+            if isinstance(snapshot, dict):
+                live = snapshot.get("live")
+                if live is not None:
+                    self.layers = live.copy()
+                frames = snapshot.get("frames") or []
+                if self.anim is not None:
+                    if frames:
+                        for i, frame in enumerate(self.anim.frame):
+                            if i >= len(frames) or frames[i] is None:
+                                continue
+                            restored = frames[i].copy()
+                            if i == self.anim.curr_frame - 1:
+                                self.layers = restored
+                            frame.layers = restored
+                            if restored.has_key("canvas"):
+                                frame.image = restored.get("canvas").image
+                    elif 0 <= self.anim.curr_frame - 1 < len(self.anim.frame):
+                        frame = self.anim.frame[self.anim.curr_frame - 1]
+                        frame.layers = self.layers
+                        if self.layers.has_key("canvas"):
+                            frame.image = self.layers.get("canvas").image
+            else:
+                self.layers = snapshot.copy()
+            self.proj[self.proj_index].layers = self.layers
+            name = self.undo_layer[idx]
+            if not self.select_layer(name):
+                self.select_layer("canvas")
+        else:
+            if idx < len(self.undo_meta):
+                self._apply_undo_meta(self.undo_meta[idx])
+            name = self.undo_layer[idx] if idx < len(self.undo_layer) else None
+            if name is not None and self.layers.has_key(name):
+                self.select_layer(name)
+        img = self.undo_image[idx]
+        if isinstance(img, pygame.Surface) and \
+           img.get_size() == self.pixel_canvas.get_size():
+            self.pixel_canvas.blit(img, (0,0))
 
     def redo(self):
         config.undo_index = config.undo_index + 1
         if config.undo_index > len(config.undo_image) - 1:
             config.undo_index = len(config.undo_image) - 1
-        config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        config._restore_undo_image()
         if config.stencil.enable:
             # Recalculate stencil
             config.stencil.enable = True
@@ -1599,7 +2136,7 @@ class pydpainter:
         config.undo_index = config.undo_index - 1
         if config.undo_index < 0:
             config.undo_index = 0
-        config.pixel_canvas.blit(config.undo_image[config.undo_index], (0,0))
+        config._restore_undo_image()
         if config.stencil.enable:
             # Recalculate stencil
             config.stencil.enable = True
@@ -1615,7 +2152,17 @@ class pydpainter:
         return ((xc+x, yc+y))
 
     def clear_pixel_draw_canvas(self):
-        self.pixel_canvas.blit(self.undo_image[self.undo_index],(0,0))
+        idx = self.undo_index
+        if 0 <= idx < len(self.undo_image):
+            # Only restore a snapshot that belongs to the layer being drawn
+            # on; otherwise an undo entry from another layer would be copied
+            # into this one.
+            name = self.undo_layer[idx] if idx < len(self.undo_layer) else None
+            if name is None or name == self.layers.current_layer_name:
+                img = self.undo_image[idx]
+                if isinstance(img, pygame.Surface) and \
+                   img.get_size() == self.pixel_canvas.get_size():
+                    self.pixel_canvas.blit(img, (0,0))
         self.drawing_interrupted = False
 
     def stop_cycling(self):
@@ -1638,31 +2185,74 @@ class pydpainter:
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], TIMEROFF)
                 pygame.time.set_timer(self.CYCLEEVENTS[rangenum], crange.rate_to_milli())
 
-    def size_canvas(self, width, height, resize):
-        for frame_no in config.anim:
-            # Crop or expand pixel canvas
-            new_pixel_canvas = pygame.Surface((width, height),0,8)
-            new_pixel_canvas.set_palette(config.pal)
-            if resize:
-                pygame.transform.scale(config.pixel_canvas, (width, height), new_pixel_canvas)
-            else:
-                new_pixel_canvas.blit(config.pixel_canvas, (0,0))
-            config.pixel_canvas = new_pixel_canvas
-            config.pixel_width = width
-            config.pixel_height = height
+    def _resize_surface(self, image, width, height, resize):
+        new_image = pygame.Surface((width, height), 0, 8)
+        new_image.set_palette(self.pal)
+        if resize:
+            src = image
+            if src.get_bytesize() != 1:
+                # transform.scale() requires matching formats.  Reference
+                # backgrounds can be RGB, so convert them to the palette first.
+                src = pygame.Surface(src.get_size(), 0, 8)
+                src.set_palette(self.pal)
+                src.blit(image, (0, 0))
+            pygame.transform.scale(src, (width, height), new_image)
+        else:
+            new_image.blit(image, (0, 0))
+        return new_image
 
-            # Crop or expand all project pixel canvas
-            new_pixel_canvas = pygame.Surface((width, height),0,8)
-            new_pixel_canvas.set_palette(config.pal)
-            for i in range(len(self.proj)):
-                if i == self.proj_index:
-                    config.proj[i].pixel_canvas = config.pixel_canvas
+    def _resize_stack_layers(self, st, width, height, resize):
+        for name, layer in list(st.layers.items()):
+            if not isinstance(layer.image, pygame.Surface):
+                continue
+            if layer.image.get_size() == (width, height):
+                continue
+            layer.image = self._resize_surface(layer.image, width, height, resize)
+
+    def size_canvas(self, width, height, resize):
+        # Resize every layer of every frame in this project.
+        for st in self.layer_stacks():
+            self._resize_stack_layers(st, width, height, resize)
+        for frame in self.anim.frame:
+            if frame.layers is not None and frame.layers.has_key("canvas"):
+                frame.image = frame.layers.get("canvas").image
+
+        # Resize the spare project's layers too.
+        for i, proj in enumerate(self.proj):
+            if i == self.proj_index:
+                continue
+            stacks = []
+            if proj.layers is not None:
+                stacks.append(proj.layers)
+            if proj.anim is not None:
+                for frame in proj.anim.frame:
+                    if frame.layers is not None:
+                        stacks.append(frame.layers)
+            seen = set()
+            for st in stacks:
+                if id(st) in seen:
                     continue
-                if resize:
-                    pygame.transform.scale(config.proj[i].pixel_canvas, (width, height), new_pixel_canvas)
-                else:
-                    new_pixel_canvas.blit(config.proj[i].pixel_canvas, (0,0))
-                config.proj[i].pixel_canvas = new_pixel_canvas
+                seen.add(id(st))
+                self._resize_stack_layers(st, width, height, resize)
+            if proj.anim is not None:
+                for frame in proj.anim.frame:
+                    if frame.layers is not None and frame.layers.has_key("canvas"):
+                        frame.image = frame.layers.get("canvas").image
+            if proj.layers is not None and proj.layers.has_key("canvas"):
+                proj.pixel_canvas = proj.layers.get("canvas").image
+
+        self.pixel_width = width
+        self.pixel_height = height
+        self.symm_center = (width // 2, height // 2)
+
+        name = self.layers.current_layer_name
+        if not self.select_layer(name):
+            self.select_layer("canvas")
+        self.proj[self.proj_index].pixel_canvas = self.pixel_canvas
+        self.proj[self.proj_index].layers = self.layers
+
+        self.stencil.clear()
+        self.stencil.free()
 
         config.clear_undo()
         config.save_undo()
@@ -1827,6 +2417,7 @@ class pydpainter:
                         close_progress_req(progress_req)
                         config.truepal = list(config.pal)
                         config.pal = config.unique_palette(config.pal)
+                        config.layers_loaded = True
                         config.initialize_surfaces()
                         config.filepath = os.path.dirname(filename)
                         config.filename = filename
@@ -2182,7 +2773,7 @@ class pydpainter:
                     config.pick_canvas = None
                 else:
                     cx,cy = self.get_mouse_pixel_pos(e)
-                    color = config.pixel_canvas.get_at_mapped((cx,cy))
+                    color = config.layers.get_at_index((cx,cy))
                     if buttons[0]:
                         config.color = color
                     elif buttons[2]:
