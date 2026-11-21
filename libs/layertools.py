@@ -59,13 +59,25 @@ def refresh_layer_gadgets(minitoolbar=None):
         is_current = layer_name is not None and layer_name == current_name
 
         if layer is None:
-            layer_select = 5 if is_current else 4
+            layer_select = 3 if is_current else 2
             layer_visible = 5 if is_current else 4
+        elif i == 10: #stencil
+            # The stencil's own enable flag is authoritative.
+            layer.visible = config.stencil.enable
+
+            if config.stencil.mask is None:
+                layer_select = 2
+            else:
+                layer_select = 0
+            if config.stencil.enable:
+                layer_visible = 0
+            else:
+                if config.stencil.mask is None:
+                    layer_visible = 4
+                else:
+                    layer_visible = 2
         else:
             layer_select = 1 if is_current else 0
-            if i == 10:
-                # The stencil's own enable flag is authoritative.
-                layer.visible = config.stencil.enable
             if layer.visible:
                 layer_visible = 1 if is_current else 0
             else:
@@ -335,14 +347,18 @@ def init_layertoolbar(config_in):
     minitoolbar.tool_id("dellayer").has_subtool = False
     minitoolbar.tool_id("movelayer").has_subtool = False
     for i in range(0,11):
-        minitoolbar.tool_id(f"layer{i}").has_subtool = False
-        minitoolbar.tool_id(f"layer{i}").state = 2
-        minitoolbar.tool_id(f"visible{i}").has_subtool = False
-        minitoolbar.tool_id(f"visible{i}").state = 4
+        #readjust size of tools to not overlap
+        lrect = list(minitoolbar.tool_id(f"layer{i}").rect)
+        lrect[3] -= scaleY
+        minitoolbar.tool_id(f"layer{i}").rect = list(lrect)
+        lrect = list(minitoolbar.tool_id(f"visible{i}").rect)
+        lrect[3] -= scaleY
+        minitoolbar.tool_id(f"visible{i}").rect = list(lrect)
 
     #Add frame slider to toolbar
     gx,gy,gw,gh = minitoolbar.tools[0].rect
     gx = scaleX
+    gy = scaleY
     gw = scaleX*8
     gh = scaleY * (5) * 11
     sliderg = Gadget(Gadget.TYPE_PROP_VERT, "-", (gx,gy,gw,gh), maxvalue=16, id="opacityslider")
@@ -360,7 +376,6 @@ def draw_layertoolbar(screen_rgb, rect):
     if config.layertoolbar.visible:
         refresh_layer_gadgets()
         pygame.draw.rect(screen_rgb, (160,160,160), rect)
-        pygame.draw.rect(screen_rgb, (80,80,80), (rect[2]-scaleX*2,rect[1],scaleX,rect[3]))
         pygame.draw.rect(screen_rgb, (0,0,0), (rect[2]-scaleX,rect[1],scaleX,rect[3]))
         config.layertoolbar.tool_id("opacityslider").need_redraw = True
         for i in range(0,11):
