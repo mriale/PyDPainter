@@ -1196,7 +1196,7 @@ Alpha:   ----------
                 elif ge.gadget == visualg and not req.has_error():
                     grid_values = get_grid_values()
                     if grid_values != None:
-                        (offsetX, offsetY), (sizeX, sizeY) = grid_values
+                        (sizeX, sizeY), (offsetX, offsetY) = grid_values
                         gcoords = place_grid((offsetX % sizeX, offsetY % sizeY, sizeX, sizeY))
                         offsetXg.value = str(gcoords[0])
                         offsetXg.need_redraw = True
