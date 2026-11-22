@@ -6,6 +6,7 @@ gadget.py
 Library for clickable buttons and sliders on the screen
 
 Boolean (or button) gadgets
+Toggle gadgets
 Proportional gadgets (slider)
 String gadgets
 Custom gadgets
@@ -139,8 +140,8 @@ class GadgetEvent(object):
         return "type={} gadgetid={} gadgettype={} event={}".format(self.typearray[self.type], self.gadget.id, self.gadget.typearray[self.gadget.type], self.event)
 
 class Gadget(object):
-    TYPE_BOOL, TYPE_IMAGE, TYPE_PROP, TYPE_PROP_VERT, TYPE_STRING, TYPE_SPINNER, TYPE_CUSTOM, TYPE_LABEL = range(8)
-    typearray = ['TYPE_BOOL', 'TYPE_IMAGE', 'TYPE_PROP', 'TYPE_PROP_VERT', 'TYPE_STRING', 'TYPE_SPINNER', 'TYPE_CUSTOM', 'TYPE_LABEL']
+    TYPE_BOOL, TYPE_IMAGE, TYPE_PROP, TYPE_PROP_VERT, TYPE_STRING, TYPE_SPINNER, TYPE_CUSTOM, TYPE_LABEL, TYPE_TOGGLE = range(9)
+    typearray = ['TYPE_BOOL', 'TYPE_IMAGE', 'TYPE_PROP', 'TYPE_PROP_VERT', 'TYPE_STRING', 'TYPE_SPINNER', 'TYPE_CUSTOM', 'TYPE_LABEL', 'TYPE_TOGGLE']
 
     spinner_arrowup_coords = np.array([[0,16], [16,0], [32,16]])
     spinner_arrowdown_coords = np.array([[0,24], [32,24], [16,40]])
@@ -175,6 +176,8 @@ class Gadget(object):
                 self.value = 0
             elif type == self.TYPE_STRING:
                 self.value = ""
+            elif type == self.TYPE_TOGGLE:
+                self.value = 0
         if maxvalue == None:
             if type == self.TYPE_PROP or type == self.TYPE_PROP_VERT:
                 self.maxvalue = 100
@@ -260,11 +263,12 @@ class Gadget(object):
         px = self.fontx//8
         py = self.fonth//8
 
-        if self.type == Gadget.TYPE_BOOL:
+        if self.type == Gadget.TYPE_BOOL or self.type == Gadget.TYPE_TOGGLE:
             strw = font.calcwidth(self.label)
             strxo = (w - strw) // 2
             srx,sry,srw,srh = self.screenrect
-            if self.state == 1:
+            selected = self.state == 1 if self.type == Gadget.TYPE_BOOL else self.value == 1
+            if selected:
                 pygame.draw.rect(screen, hcolor, self.screenrect, 0)
                 pygame.draw.rect(screen, bgcolor, (srx+px,sry+py,srw-px-px,srh-py-py), 0)
                 font.blitstring(screen, (x+xo+(strxo)+px,y+yo+py+py), self.label, fgcolor, bgcolor)
@@ -412,6 +416,26 @@ class Gadget(object):
 
         #disabled gadget
         if not g.enabled:
+            return ge
+
+        #toggle uses `value` for its latched state, so it never needs the
+        #state 1/2 hover tracking that bool buttons use
+        if g.type == Gadget.TYPE_TOGGLE:
+            inside = g.pointin((x,y), g.screenrect)
+            if event.type == MOUSEBUTTONDOWN and event.button == 1 and inside:
+                g.state = 1
+                g.need_redraw = True
+            elif event.type == MOUSEBUTTONUP and event.button == 1:
+                if g.state == 1:
+                    g.state = 0
+                    g.need_redraw = True
+                    if inside:
+                        g.value = 1 - g.value
+                        ge.append(GadgetEvent(GadgetEvent.TYPE_GADGETUP, event, g))
+            elif event.type == MOUSEMOTION and g.state == 1 and not inside:
+                #drag off before release: cancel the press without toggling
+                g.state = 0
+                g.need_redraw = True
             return ge
 
         #not selected

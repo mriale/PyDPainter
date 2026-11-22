@@ -414,6 +414,9 @@ Show a visual grid on the screen which you can resize and position with the mous
 ### From Brush
 This takes the current brush size and copies it to the grid size. It's very convenient to test the placement of your tiles (grabbed with [Brush](#brush-tool)) side by side effortlessly. Maybe use `Handle Corner` multiple times to handle the brush by the most convenient corner.
 
+### Iso
+Turn on **Iso** for an isometric grid. Every second row is shifted by half the **Size X** value, and the visible grid is drawn as diamond-shaped cells. Use a 2:1 X/Y size for classic 2:1 isometric pixel art. Snapping follows the staggered rows as well.
+
 ### Examples
 
 The grid can help you quickly draw geometric shapes, spritesheets templates, regular shapes and dot grids. Experiment with different tools, in conjunction with the `SHIFT` and `CTRL` keys!

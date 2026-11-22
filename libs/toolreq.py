@@ -461,14 +461,18 @@ def place_grid(gcoords):
         config.clear_pixel_draw_canvas()
 
         pcx,pcy = p0
-        for x in range(0,nx+1):
-            drawline(config.pixel_canvas, 1,
-                (pcx+(x*w),pcy), (pcx+(x*w),pcy+(ny*h)),
-                xormode=True)
-        for y in range(0,ny+1):
-            drawline(config.pixel_canvas, 1,
-                (pcx+(nx*w),pcy+(y*h)), (pcx,pcy+(y*h)),
-                xormode=True)
+        if config.grid_iso:
+            for p0iso, p1iso in grid_iso_segments((pcx,pcy), (w,h), nx, ny):
+                drawline(config.pixel_canvas, 1, p0iso, p1iso, xormode=True)
+        else:
+            for x in range(0,nx+1):
+                drawline(config.pixel_canvas, 1,
+                    (pcx+(x*w),pcy), (pcx+(x*w),pcy+(ny*h)),
+                    xormode=True)
+            for y in range(0,ny+1):
+                drawline(config.pixel_canvas, 1,
+                    (pcx+(nx*w),pcy+(y*h)), (pcx,pcy+(y*h)),
+                    xormode=True)
 
         config.menubar.title_right = str(pcx%w) + "," + str(pcy%h) + " " + str(w) + "x" + str(h)
         config.recompose()
@@ -1104,7 +1108,7 @@ def grid_req(screen):
           X     Y
 Size:   ____~ ____~
 Offset: ____~ ____~
-[Visual][From Brush]
+[Visual][From Brush][Iso]
 
 Visible: [Off~On]
 Style:   [Dotted~Solid]
@@ -1115,17 +1119,24 @@ Alpha:   ----------
     req.center(screen)
     config.pixel_req_rect = req.get_screen_rect()
 
-    sizeXg = req.gadget_id("8_1")
-    sizeYg = req.gadget_id("14_1")
-    offsetXg = req.gadget_id("8_2")
-    offsetYg = req.gadget_id("14_2")
-    visualg = req.gadget_id("0_3")
-    offg = req.gadget_id("9_5")
-    ong = req.gadget_id("13_5")
-    dottedg = req.gadget_id("9_6")
-    solidg = req.gadget_id("16_6")
-    colorg = req.gadget_id("9_7")
-    alphag = req.gadget_id("9_8")
+    sizeXg = req.find_gadget("Size:", 1)
+    sizeYg = req.find_gadget("Size:", 3)
+    offsetXg = req.find_gadget("Offset:", 1)
+    offsetYg = req.find_gadget("Offset:", 3)
+    visualg = req.find_gadget("Visual")
+    isog = req.find_gadget("Iso")
+    #retag the existing button as a toggle so its selected state is latched
+    #in value instead of the bool hover/press states
+    isog.type = Gadget.TYPE_TOGGLE
+    isog.value = 1 if config.grid_iso else 0
+    isog.state = 0
+    isog.need_redraw = True
+    offg = req.find_gadget("Off")
+    ong = req.find_gadget("On")
+    dottedg = req.find_gadget("Dotted")
+    solidg = req.find_gadget("Solid")
+    colorg = req.find_gadget("#")
+    alphag = req.find_gadget("Alpha:", 1)
 
     sizeXg.value = str(config.grid_size[0])
     sizeXg.spinnerg.minvalue = 1
@@ -1139,7 +1150,7 @@ Alpha:   ----------
     alphag.scrolldelta = 8
     alphag.value = config.grid_alpha
 
-    #set initial radio button states
+    #set initial button states
     ong.state = 1 if config.grid_visible else 0
     offg.state = 0 if config.grid_visible else 1
     dottedg.state = 1 if config.grid_style == GRID_DOTTED else 0
@@ -1148,7 +1159,7 @@ Alpha:   ----------
     #save grid settings to restore if the requestor is cancelled
     grid_backup = (config.grid_size, config.grid_offset, config.grid_visible,
                    config.grid_style, config.grid_color, config.grid_alpha,
-                   config.grid_on)
+                   config.grid_on, config.grid_iso)
 
     def get_grid_values():
         """Read size and offset from the requestor, or None if invalid"""
@@ -1175,7 +1186,7 @@ Alpha:   ----------
             cancelled = True
 
         for ge in gevents:
-            if ge.gadget.type == Gadget.TYPE_BOOL:
+            if ge.gadget.type in (Gadget.TYPE_BOOL, Gadget.TYPE_TOGGLE):
                 if ge.gadget.label == "OK" and not req.has_error():
                     grid_values = get_grid_values()
                     if grid_values != None:
@@ -1188,6 +1199,8 @@ Alpha:   ----------
                     config.grid_visible = (ge.gadget == ong)
                 elif ge.gadget in [dottedg, solidg]:
                     config.grid_style = GRID_DOTTED if ge.gadget == dottedg else GRID_SOLID
+                elif ge.gadget == isog:
+                    config.grid_iso = isog.value == 1
                 elif ge.gadget.label == "From Brush":
                     sizeXg.value = str(config.brush.rect[2])
                     sizeXg.need_redraw = True
@@ -1237,7 +1250,7 @@ Alpha:   ----------
         #restore the grid settings from before the requestor was opened
         (config.grid_size, config.grid_offset, config.grid_visible,
          config.grid_style, config.grid_color, config.grid_alpha,
-         config.grid_on) = grid_backup
+         config.grid_on, config.grid_iso) = grid_backup
 
     config.recompose()
 

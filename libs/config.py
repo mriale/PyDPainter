@@ -1189,6 +1189,7 @@ class pydpainter:
         self.grid_offset = (0,0)
         self.grid_visible = False
         self.grid_style = GRID_DOTTED
+        self.grid_iso = False
         self.grid_color = (255,255,255)
         self.grid_alpha = 128
         self.grid = Grid()
@@ -1661,10 +1662,7 @@ class pydpainter:
             mouseY = self.constrain_y
 
         if self.grid_on and self.pixel_req_rect == None and not ignore_grid:
-            go = self.grid_offset
-            gs = self.grid_size
-            mouseX = (mouseX - go[0] + (gs[0]//2)) // gs[0] * gs[0] + go[0]
-            mouseY = (mouseY - go[1] + (gs[1]//2)) // gs[1] * gs[1] + go[1]
+            mouseX, mouseY = grid_snap_point(mouseX, mouseY)
 
         return((mouseX, mouseY))
 
