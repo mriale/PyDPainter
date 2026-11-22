@@ -26,7 +26,7 @@ class ScreenMode:
         self.platform = platform
 
     def get_pixel_mode(self):
-        if self.display == "VGA" and self.aspect > .999 and self.aspect < 1.001:
+        if self.aspect > .999 and self.aspect < 1.001:
             return "square"
         elif self.display == "VGA":
             return "NTSC"
@@ -53,6 +53,10 @@ class DisplayInfo:
             ScreenMode(0x00039004,"VGA",640,480,640,480,1,1,1,2,2,2,"VGA","PC"),
             ScreenMode(0x00039005,"SVGA",800,600,800,600,1,1,1,2,2,2,"VGA","PC"),
             ScreenMode(0x00039006,"XGA",1024,768,1024,768,1,1,1,4,4,1,"VGA","PC"),
+            ScreenMode(0x00041000,"Square",270,270,270,270,1,1,1,1,1,4,"Web","Web"),
+            ScreenMode(0x00041001,"720p/4",320,180,320,180,1,1,1,1,1,4,"Web","Web"),
+            ScreenMode(0x00041002,"1080p/4",480,270,480,270,1,1,1,1,1,4,"Web","Web"),
+            ScreenMode(0x00041003,"1080p/4 V",270,336,270,336,1,1,1,1,1,4,"Web","Web"),
         ]
 
     def __str__(self):

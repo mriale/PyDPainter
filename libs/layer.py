@@ -165,11 +165,15 @@ class LayerStack:
         return len(self.user_layer_names()) > 0
 
     def get_page_size(self):
-        if config is not None:
-            w = getattr(config, "pixel_width", 0)
-            h = getattr(config, "pixel_height", 0)
-            if w > 0 and h > 0:
-                return (w, h)
+        # Prefer the stack's own config.  Scaled animation exports use a
+        # detached config with larger page dimensions; the module-level
+        # config still describes the live, unscaled document.
+        for cfg in (getattr(self, "config", None), config):
+            if cfg is not None:
+                w = getattr(cfg, "pixel_width", 0)
+                h = getattr(cfg, "pixel_height", 0)
+                if w > 0 and h > 0:
+                    return (w, h)
         for layer in self.layers.values():
             if isinstance(layer.image, pygame.Surface):
                 return layer.image.get_size()

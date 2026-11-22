@@ -209,11 +209,36 @@ Dir Name: ______________________
 
     return retval
 
-def file_req(screen, title, action_label, filepath, filename, filetype_list=None):
+SCALE_FACTORS = [1, 2, 4, 6]
+SCALED_FILE_EXTENSIONS = (".png", ".gif", ".jpg", ".jpeg")
+
+def has_scalable_extension(filename, extensions=SCALED_FILE_EXTENSIONS):
+    return os.path.splitext(filename)[1].lower() in extensions
+
+def scale_req(screen):
+    #Used when the system file dialog can't host the in-app scale buttons
+    choice = question_req(screen,
+                          "Scale Factor",
+                          "Scale this file:",
+                          ["1x","2x","4x","6x","Cancel"],
+                          [K_1, K_2, K_4, K_6, K_ESCAPE])
+    if choice < 0 or choice >= len(SCALE_FACTORS):
+        return 1
+    return SCALE_FACTORS[choice]
+
+def file_req(screen, title, action_label, filepath, filename, filetype_list=None, scale=False, scale_extensions=None):
+    scale_factor = 1
     if config.sys_file_dialog and not config.fullscreen:
         selected_file = file_req_system(screen, title, action_label, filepath, filename, filetype_list)
+        extensions = SCALED_FILE_EXTENSIONS if scale_extensions is None else scale_extensions
+        if scale and len(selected_file) > 0 and has_scalable_extension(selected_file, extensions):
+            scale_factor = scale_req(screen)
     else:
-        selected_file = file_req_custom(screen, title, action_label, filepath, filename, filetype_list)
+        result = file_req_custom(screen, title, action_label, filepath, filename, filetype_list, show_scale=scale)
+        if scale:
+            selected_file, scale_factor = result
+        else:
+            selected_file = result
 
     if len(selected_file) > 0 and action_label != "Open":
         #Check for file extension
@@ -223,6 +248,8 @@ def file_req(screen, title, action_label, filepath, filename, filetype_list=None
             else:
                 selected_file = selected_file.rstrip(".") + ".iff"
 
+    if scale:
+        return selected_file, scale_factor
     return selected_file
 
 def file_req_system(screen, title, action_label, filepath, filename, filetype_list=None):
@@ -284,11 +311,12 @@ def ask_overwrite(screen, filename):
             retval = False
     return retval
 
-def file_req_custom(screen, title, action_label, filepath, filename, filetype_list=None):
+def file_req_custom(screen, title, action_label, filepath, filename, filetype_list=None, show_scale=False):
     if filetype_list is None:
         has_type = False
     else:
         has_type = True
+    scale_row = "\nScale: [1x~2x~4x~6x]" if show_scale else ""
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -299,11 +327,10 @@ Path:_________________________
 ############################@@
 ############################@@
 ############################@@
-############################@@
 ############################^^
 File:___________________%s
-[%s][Cancel]  [Make Dir]
-"""%("[type\x98]" if has_type else "______", action_label), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
+[%s][Cancel]  [Make Dir]%s
+"""%("[type\x98]" if has_type else "______", action_label, scale_row), "#^@", mouse_pixel_mapper=config.get_mouse_pixel_pos, custom_gadget_type=ListGadget, font=config.font)
     oldcursor = config.cursor.shape
     config.cursor.shape = config.cursor.NORMAL
 
@@ -322,7 +349,7 @@ File:___________________%s
     #list up/down arrows
     list_upg = req.gadget_id("28_1")
     list_upg.value = -1
-    list_downg = req.gadget_id("28_10")
+    list_downg = req.gadget_id("28_9")
     list_downg.value = 1
 
     #list slider
@@ -343,13 +370,13 @@ File:___________________%s
 
     #File name
     filename = os.path.basename(filename)
-    file_nameg = req.gadget_id("5_11")
+    file_nameg = req.gadget_id("5_10")
     file_nameg.value = filename
     file_nameg.maxvalue = 255
 
     #File type
     if has_type:
-        file_typeg = req.gadget_id("24_11")
+        file_typeg = req.gadget_id("24_10")
     else:
         # Create dummy gadget
         file_typeg = Gadget(Gadget.TYPE_BOOL, "", (0,0,0,0))
@@ -357,6 +384,18 @@ File:___________________%s
     #Initialize file type
     ext, file_typeg.label = get_type(filename, filetype_list)
     file_typeg.need_redraw = True
+
+    #Scale factor buttons use TYPE_TOGGLE so the latched value keeps the
+    #chosen button pressed even when the mouse moves off it.
+    gScale = []
+    scale_index = 0
+    if show_scale:
+        for i, column in enumerate([7, 10, 13, 16]):
+            g = req.gadget_id("%d_12" % column)
+            g.type = Gadget.TYPE_TOGGLE
+            g.value = 1 if i == scale_index else 0
+            g.need_redraw = True
+            gScale.append(g)
 
     #take care of non-square pixels
     fontmult = 1
@@ -380,6 +419,12 @@ File:___________________%s
             running = 0
 
         for ge in gevents:
+            if ge.gadget in gScale:
+                scale_index = gScale.index(ge.gadget)
+                for i, g in enumerate(gScale):
+                    g.value = 1 if i == scale_index else 0
+                    g.need_redraw = True
+                continue
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == action_label:
                     if file_nameg.value != "":
@@ -498,6 +543,8 @@ File:___________________%s
     config.cursor.shape = oldcursor
     config.recompose()
 
+    if show_scale:
+        return retval, SCALE_FACTORS[scale_index]
     return retval
 
 
@@ -510,21 +557,23 @@ def screen_format_req(screen, new_clicked=False):
 [Interlace  000x000] [  8][128]
 [Hi-Res     000x000] [ 16][256]
                       Out of:
-[NTSC~PAL~VGA]       [4096~16M]
+[NTSC~PAL~VGA~Web]   [4096~16M]
 
 Resize Page: [Yes~No]
 
 [Cancel][OK][Make Default]
 """, "", mouse_pixel_mapper=config.get_mouse_pixel_pos, font=config.font)
 
-    display_names = ["VGA","NTSC","PAL"]
+    display_names = ["VGA","NTSC","PAL","Web"]
 
-    #Get PAL/NTSC from current display mode
+    #Get PAL/NTSC/VGA/Web from current display mode
     global aspect
     if config.display_mode & config.MONITOR_ID_MASK == config.PAL_MONITOR_ID:
         aspect = 2
     elif config.display_mode & config.MONITOR_ID_MASK == config.NTSC_MONITOR_ID:
         aspect = 1
+    elif config.display_mode & config.MONITOR_ID_MASK == config.WEB_MONITOR_ID:
+        aspect = 3
     else:
         aspect = 0
 
@@ -535,6 +584,9 @@ Resize Page: [Yes~No]
     #Get bitplane depth from current number of colors
     global bdepth
     bdepth = int(math.log(config.NUM_COLORS,2))
+    #Web formats default to all 256 colors for a new picture
+    if new_clicked and aspect == 3:
+        bdepth = 8
 
     #Gather bitplane depth gadgets and sort in numeric order
     gDepth = []
@@ -543,10 +595,11 @@ Resize Page: [Yes~No]
             gDepth.append(g)
     gDepth.sort(key=lambda g: g.label)
 
-    #Gather NTSC/PAL gadgets
+    #Gather NTSC/PAL/VGA/Web gadgets
     gNTSC = req.gadget_id("0_7")
     gPAL = req.gadget_id("5_7")
     gVGA = req.gadget_id("9_7")
+    gWeb = req.gadget_id("13_7")
 
     #Gather (OCS)ECS/AGA gadgets
     g12bit = req.gadget_id("21_7")
@@ -555,7 +608,7 @@ Resize Page: [Yes~No]
     #Get resolution from current screen mode
     modes = config.display_info.get_display(display_names[aspect])
     res = 0
-    while modes[res].mode_id != config.display_mode & ~config.MODE_EXTRA_HALFBRIGHT:
+    while res < len(modes)-1 and modes[res].mode_id != config.display_mode & ~config.MODE_EXTRA_HALFBRIGHT:
         res += 1
 
     #Gather screen mode gadgets
@@ -614,18 +667,24 @@ Resize Page: [Yes~No]
             gNTSC.state = 1
             g12bit.enabled = True
             g12bit.need_redraw = True
-        else:
+        elif aspect == 2:
             gPAL.state = 1
             g12bit.enabled = True
             g12bit.need_redraw = True
-
+        else:
+            #Web formats have square pixels and use a modern 16M-color palette
+            gWeb.state = 1
+            g12bit.enabled = False
+            g12bit.need_redraw = True
+            if cdepth == 16:
+                cdepth = 256
+                apply_cdepth()
 
         modes = config.display_info.get_display(display_names[aspect])
-        i=0
-        for g in gres:
-            g.label = "%-10s%4dx%d" % (modes[i].name, modes[i].x, modes[i].y)
-            g.need_redraw = True
-            i += 1
+        for i, g in enumerate(gres):
+            if i < len(modes):
+                g.label = "%-10s%4dx%d" % (modes[i].name, modes[i].x, modes[i].y)
+                g.need_redraw = True
 
     apply_aspect()
     apply_cdepth()
@@ -637,7 +696,7 @@ Resize Page: [Yes~No]
     def apply_mode():
         global bdepth
         #Apply limits to screen mode/bitplane depth
-        if cdepth == 16 and res in [1,3]:
+        if cdepth == 16 and aspect != 3 and res in [1,3]:
             if bdepth > 4:
                 bdepth = 4
                 apply_bdepth()
@@ -645,7 +704,7 @@ Resize Page: [Yes~No]
             gDepth[4].need_redraw = True
             gDepth[5].enabled = False
             gDepth[5].need_redraw = True
-        elif cdepth == 16 and res in [0,2]:
+        elif cdepth == 16 and aspect != 3 and res in [0,2]:
             if bdepth > 6:
                 bdepth = 6
                 apply_bdepth()
@@ -736,6 +795,10 @@ Resize Page: [Yes~No]
             elif ge.gadget == gVGA:
                 aspect = 0
                 apply_aspect()
+            elif ge.gadget == gWeb:
+                aspect = 3
+                apply_aspect()
+                bdepth = 8  #Web defaults to 256 colors; lower counts remain selectable
             elif ge.gadget in gres:
                 for i in range(len(gres)):
                     if ge.gadget == gres[i]:
@@ -863,8 +926,10 @@ Resize Page: [Yes~No]
             gVGA.state = 1
         elif aspect == 1:
             gNTSC.state = 1
-        else:
+        elif aspect == 2:
             gPAL.state = 1
+        else:
+            gWeb.state = 1
 
         gres[res].state = 1
 

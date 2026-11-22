@@ -126,11 +126,17 @@ class DoOpen(MenuAction):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
         config.pick_canvas = None
-        filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                if scale > 1:
+                    config.pixel_canvas = downscale_pic(config.pixel_canvas, scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -152,8 +158,9 @@ class DoSave(MenuAction):
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
         filename = config.filename
+        scale = 1
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+            filename, scale = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             try:
                 if filename.lower().endswith(".ora"):
@@ -161,6 +168,14 @@ class DoSave(MenuAction):
                 else:
                     merge_config = copy.copy(config)
                     merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = merge_config.pixel_canvas.get_size()
+                        merge_config.pixel_canvas = merge_config._resize_surface(
+                            merge_config.pixel_canvas, w*scale, h*scale, True)
+                        merge_config.pixel_width = w*scale
+                        merge_config.pixel_height = h*scale
+                        merge_config.screen_width = w*scale
+                        merge_config.screen_height = h*scale
                     save_pic(filename, merge_config)
                 config.filename = filename
                 config.modified_count = 0
@@ -173,7 +188,7 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             try:
                 if filename.lower().endswith(".ora"):
@@ -181,6 +196,14 @@ class DoSaveAs(MenuAction):
                 else:
                     merge_config = copy.copy(config)
                     merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = merge_config.pixel_canvas.get_size()
+                        merge_config.pixel_canvas = merge_config._resize_surface(
+                            merge_config.pixel_canvas, w*scale, h*scale, True)
+                        merge_config.pixel_width = w*scale
+                        merge_config.pixel_height = h*scale
+                        merge_config.screen_width = w*scale
+                        merge_config.screen_height = h*scale
                     save_pic(filename, merge_config, overwrite=True)
             except Exception as ex:
                 io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))

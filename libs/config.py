@@ -719,6 +719,11 @@ class pydpainter:
             self.screen_width = sm.x
             self.screen_height = sm.y
 
+        #Keep enough room for menus and requestors.  Small pages are centered
+        #on this workspace rather than cropping the interface.
+        self.screen_width = max(self.screen_width, self.screen_width_min)
+        self.screen_height = max(self.screen_height, self.screen_height_min)
+
         if config.force_1_to_1_pixels:
             self.pixel_aspect = sm.aspect_y / sm.aspect_x
             self.pixel_mode = "square"
@@ -733,7 +738,9 @@ class pydpainter:
             config.anim = libs.animation.Animation()
             config.truepal = config.get_default_palette(config.NUM_COLORS)
             config.pal = list(config.truepal)
-            config.pixel_canvas = pygame.Surface((self.screen_width, self.screen_height),0,8)
+            #The page keeps the screen format's size; the workspace may be
+            #larger so that menus and requestors are not clipped.
+            config.pixel_canvas = pygame.Surface((sm.x, sm.y),0,8)
 
         self.pixel_width, self.pixel_height = self.pixel_canvas.get_size()
 
@@ -1091,7 +1098,8 @@ class pydpainter:
         self.NTSC_MONITOR_ID         = 0x00011000
         self.PAL_MONITOR_ID          = 0x00021000
         self.VGA_MONITOR_ID          = 0x00031000
-        self.MONITOR_ID_MASK         = 0x00031000
+        self.WEB_MONITOR_ID          = 0x00041000
+        self.MONITOR_ID_MASK         = 0x00071000
         self.MODE_VGA_MCGA_KEY       = 0x00031000
         self.MODE_VGA_VGA_KEY        = 0x00039004
         self.MODE_VGA_SVGA_KEY       = 0x00039005
@@ -1145,7 +1153,6 @@ class pydpainter:
         self.display_mode = config.getPalNtscDefault()
         if self.display_mode & self.PAL_MONITOR_ID == self.PAL_MONITOR_ID:
             self.pixel_height = 256
-            self.screen_height_min = 256
             self.pixel_mode = "PAL"
             self.pixel_aspect = 59.0/54.0 #PAL
 

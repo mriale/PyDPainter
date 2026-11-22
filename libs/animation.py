@@ -23,6 +23,9 @@ anim_filetype_list = np.array([
 ["GIF", "Animated GIF"],
 ])
 
+#Anim files can be scaled too when the system file dialog is used.
+ANIM_SCALE_EXTENSIONS = (".gif")
+
 def animation_set_config(config_in):
     global config
     config = config_in
@@ -416,14 +419,83 @@ class Animation:
     def ask_apply_multi(self, name):
         return self.ask_apply_multi_req(config.pixel_req_canvas, name)
 
+    def downscale_frames(self, factor):
+        """Shrink every loaded frame (and its layers) for a scaled import."""
+        if factor <= 1 or not self.frame:
+            return
+        for frame in self.frame:
+            if frame.image is not None:
+                frame.image = libs.picio.downscale_pic(frame.image, factor)
+            if frame.layers is not None:
+                for layer in list(frame.layers.layers.values()):
+                    if isinstance(layer.image, pygame.Surface):
+                        layer.image = libs.picio.downscale_pic(layer.image, factor)
+                canvas = frame.layers.get("canvas")
+                if canvas is not None and isinstance(canvas.image, pygame.Surface):
+                    frame.image = canvas.image
+        config.pixel_canvas = self.frame[0].image
+
+    def scaled_save_config(self, factor):
+        """Return a detached config whose frames are scaled for export."""
+        save_config = copy.copy(config)
+        save_config.anim = Animation()
+        frames = []
+        for frame in self.frame:
+            if frame.layers is not None:
+                src = frame.layers.get_flattened(exclude=["R"])
+            else:
+                src = frame.image
+            if src is None:
+                continue
+            w, h = src.get_size()
+            scaled = save_config._resize_surface(src, w*factor, h*factor, True)
+            layers = save_config.new_layer_stack(scaled)
+            # Flattening this stack must use the scaled page size, not the
+            # live document's config (see LayerStack.get_page_size).
+            layers.config = save_config
+            newframe = Frame(scaled, delay=frame.delay, pal=frame.pal,
+                             truepal=frame.truepal, is_pal_key=frame.is_pal_key,
+                             layers=layers)
+            newframe.loadpal = list(frame.loadpal)
+            frames.append(newframe)
+        if not frames:
+            return save_config
+        save_config.anim.frame = frames
+        save_config.anim.num_frames = len(frames)
+        save_config.anim.curr_frame = min(self.curr_frame, len(frames))
+        save_config.anim.frame_rate = self.frame_rate
+        save_config.anim.global_palette = self.global_palette
+        save_config.pixel_canvas = frames[0].image
+        save_config.layers = frames[0].layers
+        save_config.pixel_width, save_config.pixel_height = frames[0].image.get_size()
+        save_config.screen_width = save_config.pixel_width
+        save_config.screen_height = save_config.pixel_height
+        save_config.symm_center = (save_config.pixel_width // 2,
+                                   save_config.pixel_height // 2)
+        sm = copy.copy(config.sm)
+        sm.x = save_config.pixel_width
+        sm.y = save_config.pixel_height
+        sm.max_x = save_config.pixel_width
+        sm.max_y = save_config.pixel_height
+        save_config.sm = sm
+        return save_config
+
     def open_file(self):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, is_anim=True)
+                if scale > 1:
+                    # load_pic() replaces config.anim when another animation
+                    # is already open, so scale the animation it just loaded.
+                    config.anim.downscale_frames(scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -500,11 +572,12 @@ class Animation:
         config.stop_cycling()
         config.stencil.enable = False
         self.save_curr_frame()
-        filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             try:
-                libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=True)
+                save_config = self.scaled_save_config(scale) if scale > 1 else config
+                libs.picio.save_anim(filename, save_config, status_func=load_progress_anim, overwrite=True)
 
                 close_progress_req(progress_req)
                 config.filepath = os.path.dirname(filename)

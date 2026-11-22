@@ -7,6 +7,7 @@ _Note : PyDPainter aims to implement all the animation features from the Amiga v
 - [**General principles**](#general-principles)
 - [Open...](#open)
 - [Save...](#save)
+  - [Scale factor](#scale-factor)
 - [Move...](#move)
 - [Frames](#frames)
   - [Import...](#import)
@@ -68,6 +69,13 @@ PyDPainter allows you to save your animations in the following formats:
 - _coming soon:_ ANIM8 (Amiga), from 2 to 256 colors
 
 _There's no such thing as a "work project", this saving only includes frames. So don't forget to save your draft page (j) as an image and the brushes you've used. in the_ `Brush / Save as` _Menu._
+
+### Scale factor
+The built-in file requestor's `Scale: [1x~2x~4x~6x]` row is available on **Anim / Open...** and **Anim / Save...**:
+
+- On **Open...**, every imported frame is shrunk by the chosen factor with nearest-neighbor sampling before the animation becomes the page. For example, `4x` turns 1920x1080 frames into 480x270 frames.
+- On **Save...**, a scaled copy of every frame is exported and the open animation keeps its original size. Frame delays, palette keys, and global/local palette settings are preserved.
+- When **Sys File Dialog** is enabled in Prefs, a small chooser asks for the factor after a `.gif`, `.anim`, `.anbr`, or `.anmb` file is picked. Other formats use 1x.
 
 ## Move...
 
