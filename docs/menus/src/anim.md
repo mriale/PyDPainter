@@ -71,11 +71,11 @@ PyDPainter allows you to save your animations in the following formats:
 _There's no such thing as a "work project", this saving only includes frames. So don't forget to save your draft page (j) as an image and the brushes you've used. in the_ `Brush / Save as` _Menu._
 
 ### Scale factor
-The built-in file requestor's `Scale: [1x~2x~4x~6x]` row is available on **Anim / Open...** and **Anim / Save...**:
+The built-in file requestor's `Scale: [1x~2x~4x~6x]` row is available on **Anim / Open...**, **Anim / Save...**, **Frames / Import...**, **Frames / Export...**, **Anim Brush / Open...**, and **Anim Brush / Save...**:
 
-- On **Open...**, every imported frame is shrunk by the chosen factor with nearest-neighbor sampling before the animation becomes the page. For example, `4x` turns 1920x1080 frames into 480x270 frames.
-- On **Save...**, a scaled copy of every frame is exported and the open animation keeps its original size. Frame delays, palette keys, and global/local palette settings are preserved.
-- When **Sys File Dialog** is enabled in Prefs, a small chooser asks for the factor after a `.gif`, `.anim`, `.anbr`, or `.anmb` file is picked. Other formats use 1x.
+- On the Open and Import requestors, every imported frame is shrunk by the chosen factor with nearest-neighbor sampling. For example, `4x` turns 1920x1080 frames into 480x270 frames.
+- On the Save and Export requestors, a scaled copy of every frame is exported and the open animation or brush keeps its original size. Frame delays, palette keys, and global/local palette settings are preserved.
+- When **Sys File Dialog** is enabled in Prefs, a small chooser asks for the factor after a `.png`, `.gif`, `.jpg`, or `.jpeg` file is picked. For animation requestors, only `.gif` triggers the chooser; `.anim`, `.anbr`, `.anmb`, and other formats use 1x.
 
 ## Move...
 
@@ -94,6 +94,8 @@ You can, for example, load frame-by-frame renderings from other software, such a
 
 PyDPainter can handle up to 9999 frames, but it can become very slow with that many frames.
 
+The [scale factor](#scale-factor) row downscales all imported frames by the chosen factor.
+
 ### Export...
 
 Exports all frames of the animation as a numbered sequence of still images in the following formats:
@@ -105,6 +107,8 @@ Exports all frames of the animation as a numbered sequence of still images in th
 - PNG (popular modern format)
 
 It's best to export images into their own folder using the `Make Dir` button to avoid having hundreds of numbered files mixed in with others in a directory.
+
+The [scale factor](#scale-factor) row writes each exported image as a scaled copy without changing the open animation.
 
 ### Set #...
 Sets the number of frames.  
@@ -204,6 +208,8 @@ colors, you have some options:
 
 _Note that since the Amiga doesn't need the file extensions to recognize a file, you may come across ANIM or anim brush files with no extension._
 
+The [scale factor](#scale-factor) row downscales every loaded anim brush frame by the chosen factor.
+
 ### Anim Brush/Save...
 
 PyDPainter allows you to save your anim brushes in the following formats:
@@ -217,6 +223,8 @@ PyDPainter allows you to save your anim brushes in the following formats:
 - ANBR or ANIB (IFF anim brushes on Amiga)
   - 2 to 256 colors
   - transparency supported
+
+The [scale factor](#scale-factor) row exports a scaled copy of every anim brush frame; the open brush is unchanged.
 
 _Note: you must have a brush with more than one frame to save it as an anim brush.
 To save a brush with a single frame, use the [Brush menu Save](brush.md#save-as)._

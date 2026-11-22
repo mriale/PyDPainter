@@ -538,12 +538,14 @@ class DoQuit(MenuAction):
 class DoBrushOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
                 brush_config.anim = Animation()
                 newimage = load_pic(filename, brush_config, is_brush=True)
+                if scale > 1:
+                    newimage = downscale_pic(newimage, scale)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
@@ -562,12 +564,18 @@ class DoBrushSaveAs(MenuAction):
         if config.brush.type != config.brush.CUSTOM:
             return
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
             brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
+            if scale > 1:
+                w, h = brush_config.pixel_canvas.get_size()
+                brush_config.pixel_canvas = brush_config._resize_surface(
+                    brush_config.pixel_canvas, w*scale, h*scale, True)
+                brush_config.pixel_width, brush_config.pixel_height = w*scale, h*scale
+                brush_config.screen_width, brush_config.screen_height = w*scale, h*scale
             try:
                 save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except Exception as ex:
@@ -1423,7 +1431,7 @@ class DoAnimBrushOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
@@ -1434,6 +1442,8 @@ class DoAnimBrushOpen(MenuAction):
                 i=0
                 for brush_frame in brush_config.anim.frame:
                     reduced = brush_frame.image.copy()
+                    if scale > 1:
+                        reduced = downscale_pic(reduced, scale)
                     pal = config.pal
                     reduced.set_palette(pal)
                     surf_array = pygame.surfarray.pixels2d(reduced)
@@ -1457,7 +1467,7 @@ class DoAnimBrushSave(MenuAction):
         if not config.brush.animbrush:
             return
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
@@ -1465,6 +1475,8 @@ class DoAnimBrushSave(MenuAction):
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)
+            if scale > 1:
+                scale_detached_frames(brush_config.anim, brush_config, scale)
             try:
                 save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except Exception as ex:

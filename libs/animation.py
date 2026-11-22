@@ -23,8 +23,8 @@ anim_filetype_list = np.array([
 ["GIF", "Animated GIF"],
 ])
 
-#Anim files can be scaled too when the system file dialog is used.
-ANIM_SCALE_EXTENSIONS = (".gif")
+#Only GIF files trigger the scale chooser with the system file dialog.
+ANIM_SCALE_EXTENSIONS = (".gif",)
 
 def animation_set_config(config_in):
     global config
@@ -108,6 +108,37 @@ class PalKeyListGadget(ListGadget):
                             self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
                 screen.set_clip(None)
 
+
+
+def scale_detached_frames(anim, cfg, factor):
+    """Scale every frame of a detached animation config in place.
+
+    Anim brushes are built from brush images rather than from the live
+    animation, so they cannot use Animation.scaled_save_config().  Page
+    fields on cfg are updated as well so the GIF/IFF writers and layer
+    flattening both see the scaled dimensions.
+    """
+    if factor <= 1 or not anim.frame:
+        return
+    w, h = anim.frame[0].image.get_size()
+    sw, sh = w * factor, h * factor
+    cfg.pixel_width, cfg.pixel_height = sw, sh
+    cfg.screen_width, cfg.screen_height = sw, sh
+    cfg.symm_center = (sw // 2, sh // 2)
+    sm = copy.copy(cfg.sm)
+    sm.x, sm.y = sw, sh
+    sm.max_x, sm.max_y = sw, sh
+    cfg.sm = sm
+    for frame in anim.frame:
+        if frame.image is None:
+            continue
+        scaled = cfg._resize_surface(frame.image, sw, sh, True)
+        frame.image = scaled
+        if frame.layers is not None:
+            frame.layers.set("canvas", scaled, priority=1, kind="canvas")
+            frame.layers.config = cfg
+    cfg.pixel_canvas = anim.frame[0].image
+    cfg.layers = anim.frame[0].layers
 
 
 class Frame:
@@ -514,13 +545,19 @@ class Animation:
     def import_frames(self):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             config.stencil.clear()
             config.stencil.free()
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, import_frames=True)
+                if scale > 1:
+                    config.anim.downscale_frames(scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -540,7 +577,7 @@ class Animation:
         global progress_req
         config.stop_cycling()
         config.stencil.enable = False
-        filename = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, filetype_list=libs.menus.pic_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, filetype_list=libs.menus.pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             matches = re.fullmatch(r"^(.*?)([0-9]*)\.([^.]+)$", filename)
@@ -556,7 +593,15 @@ class Animation:
                     load_progress_anim(self.curr_frame / self.num_frames)
                     frame_filename = file_root + ("%04d"%i) + "." + file_ext
                     frame_config = copy.copy(config)
-                    frame_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = canvas.get_size()
+                        canvas = frame_config._resize_surface(canvas, w*scale, h*scale, True)
+                        frame_config.pixel_width = w*scale
+                        frame_config.pixel_height = h*scale
+                        frame_config.screen_width = w*scale
+                        frame_config.screen_height = h*scale
+                    frame_config.pixel_canvas = canvas
                     libs.picio.save_pic(frame_filename, frame_config)
                     self.next_frame()
                     self.show_curr_frame(doAction=False)

@@ -40,7 +40,9 @@ def downscale_pic(pic, factor):
     if factor <= 1:
         return pic
     w, h = pic.get_size()
-    nw, nh = w // factor, h // factor
+    # array2d slices below keep one sample per factor-sized step, including
+    # the last partial step, so round up to match that shape exactly.
+    nw, nh = (w + factor - 1)//factor, (h + factor - 1)//factor
     if nw < 1 or nh < 1:
         return pic
     if pic.get_bytesize() == 1:
