@@ -71,8 +71,7 @@ def clipboard_get_text():
                     charset = "utf-8"
                 clipboard_text = pygame.scrap.get(t).decode(charset, "ignore")
                 break
-        if clipboard_text.endswith('\x00'):
-            clipboard_text = clipboard_text[:-1]
+        clipboard_text = clipboard_text.replace('\x00', '')
 
     return clipboard_text
 
