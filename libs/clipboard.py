@@ -3,6 +3,7 @@
 
 import sys
 import contextlib
+from email.message import EmailMessage
 with contextlib.redirect_stdout(None):
     import pygame
     from pygame.locals import *
@@ -12,7 +13,6 @@ try:
 except ImportError:
     xerox = None
 
-is_win = sys.platform.startswith('win')
 is_android = "getandroidapilevel" in dir(sys)
 is_pygamece = getattr(pygame, "IS_CE", False)
 
@@ -24,6 +24,25 @@ def clipboard_init():
         pygame.scrap.init()
         pygame.scrap.set_mode(pygame.SCRAP_CLIPBOARD)
 
+def parse_content_type(header_value: str) -> dict[str, object]:
+    """Parse a MIME / Content-Type string like 'text/plain;charset=utf-8'."""
+    msg = EmailMessage()
+    msg["Content-Type"] = header_value.strip()
+
+    content_type = msg.get_content_type()  # e.g. 'text/plain' (lowercased)
+    maintype, _, subtype = content_type.partition("/")
+    params = {
+        key.lower(): value
+        for key, value in msg.get_params(header="Content-Type", unquote=True)
+        if key.lower() != content_type
+    }
+
+    return {
+        "mime_type": content_type,
+        "maintype": maintype,
+        "subtype": subtype,
+        "params": params,
+    }
 
 def clipboard_set_text(text):
     if xerox:
@@ -32,7 +51,7 @@ def clipboard_set_text(text):
         pygame.scrap.put_text(text)
     else:
         if "scrap" in dir(pygame) and "put" in dir(pygame.scrap):
-            pygame.scrap.put(pygame.SCRAP_TEXT, text.encode("utf-8"))
+            pygame.scrap.put("text/plain;charset=utf-8", text.encode("utf-8"))
 
 def clipboard_get_text():
     clipboard_text = ""
@@ -44,11 +63,13 @@ def clipboard_get_text():
     else:
         # pygame
         for t in pygame.scrap.get_types():
-            if "text/plain" in t and pygame.scrap.get(t) != None:  # probably; 'text/plain;charset=utf-8'
-                if is_win:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-16-le", "ignore")  # under windows its utf16-le! and null terminated
+            if "text/plain" in t and pygame.scrap.get(t) != None:
+                parsed_content = parse_content_type(t)
+                if "charset" in dict(parsed_content["params"]):
+                    charset = parsed_content["params"]["charset"]
                 else:
-                    clipboard_text = pygame.scrap.get(t).decode("utf-8", "ignore")
+                    charset = "utf-8"
+                clipboard_text = pygame.scrap.get(t).decode(charset, "ignore")
                 break
         if clipboard_text.endswith('\x00'):
             clipboard_text = clipboard_text[:-1]
