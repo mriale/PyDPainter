@@ -226,17 +226,34 @@ def scale_req(screen):
         return 1
     return SCALE_FACTORS[choice]
 
-def file_req(screen, title, action_label, filepath, filename, filetype_list=None, scale=False, scale_extensions=None):
+def cycle_gif_req(screen):
+    #Used when the system file dialog can't host the in-app Cycle GIF button
+    choice = question_req(screen,
+                          "Color Cycling GIF",
+                          "Save as an animated GIF with color cycling?",
+                          ["Yes", "No"],
+                          [K_y, K_n])
+    return choice == 0
+
+
+def file_req(screen, title, action_label, filepath, filename, filetype_list=None, scale=False, scale_extensions=None, cycle=False):
     scale_factor = 1
+    cycle_gif = False
     if config.sys_file_dialog and not config.fullscreen:
         selected_file = file_req_system(screen, title, action_label, filepath, filename, filetype_list)
         extensions = SCALED_FILE_EXTENSIONS if scale_extensions is None else scale_extensions
         if scale and len(selected_file) > 0 and has_scalable_extension(selected_file, extensions):
             scale_factor = scale_req(screen)
+        if cycle and len(selected_file) > 0 and selected_file.lower().endswith(".gif"):
+            cycle_gif = cycle_gif_req(screen)
     else:
-        result = file_req_custom(screen, title, action_label, filepath, filename, filetype_list, show_scale=scale)
-        if scale:
+        result = file_req_custom(screen, title, action_label, filepath, filename, filetype_list, show_scale=scale, show_cycle=cycle)
+        if scale and cycle:
+            selected_file, scale_factor, cycle_gif = result
+        elif scale:
             selected_file, scale_factor = result
+        elif cycle:
+            selected_file, cycle_gif = result
         else:
             selected_file = result
 
@@ -248,8 +265,12 @@ def file_req(screen, title, action_label, filepath, filename, filetype_list=None
             else:
                 selected_file = selected_file.rstrip(".") + ".iff"
 
+    if scale and cycle:
+        return selected_file, scale_factor, cycle_gif
     if scale:
         return selected_file, scale_factor
+    if cycle:
+        return selected_file, cycle_gif
     return selected_file
 
 def file_req_system(screen, title, action_label, filepath, filename, filetype_list=None):
@@ -311,12 +332,19 @@ def ask_overwrite(screen, filename):
             retval = False
     return retval
 
-def file_req_custom(screen, title, action_label, filepath, filename, filetype_list=None, show_scale=False):
+def file_req_custom(screen, title, action_label, filepath, filename, filetype_list=None, show_scale=False, show_cycle=False):
     if filetype_list is None:
         has_type = False
     else:
         has_type = True
-    scale_row = "\nScale: [1x~2x~4x~6x]" if show_scale else ""
+    if show_scale:
+        scale_row = "\nScale: [1x~2x~4x~6x]"
+        if show_cycle:
+            scale_row += " [Cycle GIF]"
+    elif show_cycle:
+        scale_row = "\n[Cycle GIF]"
+    else:
+        scale_row = ""
     req = str2req(title, """
 Path:_________________________
 ############################^^
@@ -397,6 +425,16 @@ File:___________________%s
             g.need_redraw = True
             gScale.append(g)
 
+    #Cycle GIF is also a latched toggle so it stays pressed after a click.
+    gCycle = None
+    cycle_gif = False
+    if show_cycle:
+        column = 21 if show_scale else 0
+        gCycle = req.gadget_id("%d_12" % column)
+        gCycle.type = Gadget.TYPE_TOGGLE
+        gCycle.value = 0
+        gCycle.need_redraw = True
+
     #take care of non-square pixels
     fontmult = 1
     if config.aspectX != config.aspectY:
@@ -424,6 +462,11 @@ File:___________________%s
                 for i, g in enumerate(gScale):
                     g.value = 1 if i == scale_index else 0
                     g.need_redraw = True
+                continue
+            if gCycle is not None and ge.gadget == gCycle:
+                cycle_gif = not cycle_gif
+                gCycle.value = 1 if cycle_gif else 0
+                gCycle.need_redraw = True
                 continue
             if ge.gadget.type == Gadget.TYPE_BOOL:
                 if ge.gadget.label == action_label:
@@ -543,8 +586,12 @@ File:___________________%s
     config.cursor.shape = oldcursor
     config.recompose()
 
+    if show_scale and show_cycle:
+        return retval, SCALE_FACTORS[scale_index], cycle_gif
     if show_scale:
         return retval, SCALE_FACTORS[scale_index]
+    if show_cycle:
+        return retval, cycle_gif
     return retval
 
 

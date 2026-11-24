@@ -159,11 +159,18 @@ class DoSave(MenuAction):
         config.clear_pixel_draw_canvas()
         filename = config.filename
         scale = 1
+        cycle_gif = False
         if filename == "":
-            filename, scale = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
+            filename, scale, cycle_gif = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True, cycle=True)
         if filename != (()) and filename != "":
             try:
-                if filename.lower().endswith(".ora"):
+                if cycle_gif:
+                    if not filename.lower().endswith(".gif"):
+                        filename = os.path.splitext(filename)[0] + ".gif"
+                    if save_cycle_gif(filename, scale):
+                        config.filename = filename
+                        config.modified_count = 0
+                elif filename.lower().endswith(".ora"):
                     save_pic(filename, config)
                 else:
                     merge_config = copy.copy(config)
@@ -188,10 +195,16 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
-        filename, scale = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
+        filename, scale, cycle_gif = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True, cycle=True)
         if filename != (()) and filename != "":
             try:
-                if filename.lower().endswith(".ora"):
+                if cycle_gif:
+                    if not filename.lower().endswith(".gif"):
+                        filename = os.path.splitext(filename)[0] + ".gif"
+                    if save_cycle_gif(filename, scale):
+                        config.filename = filename
+                        config.modified_count = 0
+                elif filename.lower().endswith(".ora"):
                     save_pic(filename, config, overwrite=True)
                 else:
                     merge_config = copy.copy(config)
@@ -1373,6 +1386,13 @@ class DoAnimFrameExport(MenuAction):
     def selected(self, attrs):
         config.anim.export_frames()
 
+class DoAnimFrameRenderCycle(MenuAction):
+    def selected(self, attrs):
+        try:
+            config.anim.render_cycle()
+        except ValueError as ex:
+            io_error_req("Render Cycle", "Unable to render cycle:\n%s", str(ex))
+
 class DoAnimFrameAdd(MenuAction):
     def selected(self, attrs):
         config.anim.add_frame()
@@ -1889,6 +1909,7 @@ def init_menubar(config_in):
             ["Frames", [
                 ["Import...", " ", DoAnimFrameImport],
                 ["Export...", " ", DoAnimFrameExport],
+                ["Render Cycle", " ", DoAnimFrameRenderCycle],
                 ["Set #...", " ", DoAnimFrameSetNumber],
                 ["Copy to All", " ", DoAnimFrameCopyAll],
                 ["Add Frames", " ", DoAnimFrameAdd],
