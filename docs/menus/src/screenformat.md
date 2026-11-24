@@ -8,6 +8,7 @@
   - [Systems](#systems)
     - [NTSC and PAL](#ntsc-and-pal)
     - [VGA](#vga)
+    - [Web](#web)
     - [Lo-Res](#lo-res)
     - [Med-Res](#med-res)
     - [Interlace](#interlace)
@@ -65,10 +66,10 @@ Another important legacy is that, at the time, screens and resolution were not l
 9. Hit Cancel.
 
 ## Format:
-The list is updated according to the **system** display selected by the 3 buttons at the bottom. A choice from this list may restrict the **Number of Colors** on the left.
+The list is updated according to the **system** display selected by the 4 buttons at the bottom. A choice from this list may restrict the **Number of Colors** on the left.
 
 ## Systems
-**PyDPainter** allows you to choose from the Amiga (OCS/ECS) modes from Deluxe Paint III plus Amiga AGA modes, and PC VGA modes.
+**PyDPainter** allows you to choose from the Amiga (OCS/ECS) modes from Deluxe Paint III plus Amiga AGA modes, PC VGA modes, and small square-pixel formats for web and social media.
 
 ![](screen-format.jpg)
 
@@ -121,6 +122,20 @@ MCGA | 320x200 | 2 to 256 colors
 VGA | 640x480 | 2 to 256 colors
 SVGA | 800x600 | 2 to 256 colors
 XGA | 1024x768 | 2 to 256 colors
+
+### Web
+**Web** holds small resolutions designed to be upscaled with **Resize Page: Yes** before sharing online. All Web modes use square pixels and 2 to 256 colors out of 16 million; new pictures default to 256 colors. Lower color counts can still be selected with the **Number of Colors** buttons.
+
+| Name | Resolution in pixels | 2x upscale | 4x upscale |
+| --- | --- | --- | --- |
+| Square | 270x270 | 540x540 | 1080x1080 |
+| 720p/4 | 320x180 | 640x360 | 1280x720 |
+| 1080p/4 | 480x270 | 960x540 | 1920x1080 |
+| 1080p/4 V | 270x336 | 540x672 | 1080x1344 |
+
+For example, draw at **1080p/4** (480x270), then use **Picture / Page Size...** to set the page to 1920x1080 for an exact 4x, nearest-neighbor upscale. **Square** and **1080p/4 V** are useful for square and vertical social media posts. The **Resize Page: Yes** option below can also be used when switching to another screen format whose size is the desired multiple.
+
+Pages smaller than 320x200 are centered on a workspace that is at least 320x200, so menus and requestors are never clipped. The page itself keeps the exact dimensions listed above.
 
 ## Resize Page
 Click **Yes** if you want to resize the current image to the new screen size. For example, if you start with a Lo-Res image and go to Hi-Res, this will double the height and width of the image. Each pixel will become 4 pixels. The sharpness of your drawing will not be automatically increased, but the image will be twice as large (ideal for publishing on a social network).

@@ -42,6 +42,23 @@ icon `> This PC > DATA (D:) > Test > PyDPainter > iff_pics` which then changes t
 > You can download sample images from the [Amiga picture archive here](https://amiga.lychesis.net/index.html).
 > In some cases, click on the little disk icon with the IFF arrow to download an image that you can view "in its original state" here and see how the colors have been used, cycled, etc.
 
+### Scale factor
+The built-in file requester has a `Scale: [1x~2x~4x~6x]` row below the file name. It is used by **Open...**, **Save** (when a filename is requested) and **Save as...**:
+
+- On **Open**, the image is shrunk by the chosen factor with nearest-neighbor sampling before it becomes the page. For example, `4x` turns a 1920x1080 image into a 480x270 editable page. `1x` loads at native size, and any pixels left over when dimensions are not divisible by the factor are dropped.
+- On **Save** / **Save as**, a scaled copy is exported and the open document keeps its original size. For example, `4x` turns a 480x270 page into a 1920x1080 file.
+- When **Sys File Dialog** is enabled in Prefs, a small chooser asks for the factor after the file has been picked, but only for `.png`, `.gif`, `.jpg` and `.jpeg` files. Other formats are always used at 1x with the system dialog.
+- OpenRaster (`.ora`) files always store layers at their original size; the scale factor applies to the other file formats.
+
+### Cycle GIF
+The built-in Save requestor also has a `Cycle GIF` toggle after the scale buttons. When enabled, saving writes an animated GIF whose frames step through the picture's active [color ranges](../palette.md). Each frame keeps the same pixels but uses a rotated palette, so the exported GIF reproduces the color cycling seen in the editor.
+
+- A requestor asks for the number of frames and the frame delay; defaults are computed from the active ranges so one full cycle is rendered at approximately its live speed.
+- The scale factor from the file requestor is applied to every exported frame; the open document is unchanged.
+- If the chosen filename has a different extension, `.gif` is used instead.
+- With **Sys File Dialog**, a small chooser asks whether to make a cycling GIF after a `.gif` file is picked.
+- The open picture must have at least one active color range; otherwise nothing is saved.
+
 ### Conversions
 **PyDPainter** is not designed as a high-performance conversion tool. If you need to convert an image to low-resolution, indexed color formats, you can use the following tools:  
 - [Online conversion tool](http://tool.anides.de/)
@@ -54,7 +71,7 @@ Saves the image in the same format as you loaded it, overwriting without prompti
 
 Key: `CTRL-s`
 ## Save as...
-Saves the image by requesting the desired format. You can choose from the same formats as with open. Use the small drop-down menu to the right of the file name.
+Saves the image by requesting the desired format. You can choose from the same formats as with open. Use the small drop-down menu to the right of the file name. The `Scale:` row can also export a 1x/2x/4x/6x copy; see [Scale factor](#scale-factor).
 
 Key: `SHIFT-CTRL-s`
 ## Revert

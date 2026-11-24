@@ -9,6 +9,8 @@ with contextlib.redirect_stdout(None):
 import libs.gadget
 from libs.gadget import *
 
+import libs.cyclerender as cyclerender
+
 from libs.prim import *
 from libs.menureq import *
 from libs.picio import *
@@ -22,6 +24,9 @@ anim_filetype_list = np.array([
 ["ANMB", "Amiga IFF animbrush"],
 ["GIF", "Animated GIF"],
 ])
+
+#Only GIF files trigger the scale chooser with the system file dialog.
+ANIM_SCALE_EXTENSIONS = (".gif",)
 
 def animation_set_config(config_in):
     global config
@@ -105,6 +110,151 @@ class PalKeyListGadget(ListGadget):
                             self.drawGhost(screen, bgcolor, [x+offset[0]+2*px, y+offset[1]+2*py+(i-topi)*font.ysize, w-4*px, font.ysize])
                 screen.set_clip(None)
 
+
+
+def scale_detached_frames(anim, cfg, factor):
+    """Scale every frame of a detached animation config in place.
+
+    Anim brushes are built from brush images rather than from the live
+    animation, so they cannot use Animation.scaled_save_config().  Page
+    fields on cfg are updated as well so the GIF/IFF writers and layer
+    flattening both see the scaled dimensions.
+    """
+    if factor <= 1 or not anim.frame:
+        return
+    w, h = anim.frame[0].image.get_size()
+    sw, sh = w * factor, h * factor
+    cfg.pixel_width, cfg.pixel_height = sw, sh
+    cfg.screen_width, cfg.screen_height = sw, sh
+    cfg.symm_center = (sw // 2, sh // 2)
+    sm = copy.copy(cfg.sm)
+    sm.x, sm.y = sw, sh
+    sm.max_x, sm.max_y = sw, sh
+    cfg.sm = sm
+    for frame in anim.frame:
+        if frame.image is None:
+            continue
+        scaled = cfg._resize_surface(frame.image, sw, sh, True)
+        frame.image = scaled
+        if frame.layers is not None:
+            frame.layers.set("canvas", scaled, priority=1, kind="canvas")
+            frame.layers.config = cfg
+    cfg.pixel_canvas = anim.frame[0].image
+    cfg.layers = anim.frame[0].layers
+
+
+def _build_cycle_frames(cfg, scale=1, num_frames=None, delay=None):
+    """Build Frame objects whose palettes step through the active color ranges.
+
+    Every frame is a full frame (``is_pal_key=True``) because GIF palette
+    changes are only visible when the whole image is redrawn with the new
+    local palette.  The pixel indices are identical in all frames; only the
+    palette attached to each frame changes.
+    """
+    plan = cyclerender.compute_cycle_plan(cfg)
+    if not plan["ranges"]:
+        raise ValueError("No active color ranges to render")
+
+    if num_frames is None:
+        num_frames = plan["frames"]
+    num_frames = max(1, min(int(num_frames), cyclerender.CYCLE_MAX_FRAMES))
+    if delay is None:
+        delay = plan["delay"]
+    delay = max(1, int(delay))
+
+    src = cfg.layers.get_flattened(exclude=["R"])
+    w, h = src.get_size()
+    sw, sh = w * scale, h * scale
+    base_pal = list(cfg.pal)
+    base_truepal = list(cfg.truepal)
+
+    frames = []
+    for i in range(num_frames):
+        pal, truepal = cyclerender.cycle_palette_at(cfg, plan, i, base_pal, base_truepal)
+        img = cfg._resize_surface(src, sw, sh, True) if scale > 1 else src.copy()
+        img.set_palette(pal)
+        layers = cfg.new_layer_stack(img)
+        frame = Frame(img, delay=delay, pal=pal, truepal=truepal,
+                      is_pal_key=True, layers=layers)
+        frame.loadpal = list(cfg.loadpal)
+        frames.append(frame)
+    return frames, sw, sh
+
+
+def build_cycle_animation(cfg, scale=1, num_frames=None, delay=None):
+    """Return a new Animation built from the current picture's color cycle."""
+    frames, sw, sh = _build_cycle_frames(cfg, scale, num_frames, delay)
+    anim = Animation()
+    anim.frame = frames
+    anim.num_frames = len(frames)
+    anim.curr_frame = 1
+    anim.frame_rate = max(1, 60 // frames[0].delay)
+    anim.global_palette = False
+    return anim
+
+
+def build_cycle_save_config(cfg, scale=1, num_frames=None, delay=None):
+    """Return a detached config whose anim is ready for save_gif_anim()."""
+    save_config = copy.copy(cfg)
+    frames, sw, sh = _build_cycle_frames(save_config, scale, num_frames, delay)
+    save_config.anim = Animation()
+    save_config.anim.frame = frames
+    save_config.anim.num_frames = len(frames)
+    save_config.anim.curr_frame = 1
+    save_config.anim.frame_rate = max(1, 60 // frames[0].delay)
+    save_config.anim.global_palette = False
+    save_config.pixel_canvas = frames[0].image
+    save_config.layers = frames[0].layers
+    save_config.pixel_width = sw
+    save_config.pixel_height = sh
+    save_config.screen_width = sw
+    save_config.screen_height = sh
+    save_config.symm_center = (sw // 2, sh // 2)
+    save_config.pal = list(frames[0].pal)
+    save_config.truepal = list(frames[0].truepal)
+    sm = copy.copy(cfg.sm)
+    sm.x = sw
+    sm.y = sh
+    sm.max_x = sw
+    sm.max_y = sh
+    save_config.sm = sm
+    return save_config
+
+
+def save_cycle_gif(filename, scale=1, status_func=None):
+    """Ask for cycle settings, render, and save an animated GIF.
+
+    Returns True when a file was written, False when the requestor was
+    canceled.  Raises ValueError when no color ranges are active.  A progress
+    requestor is shown for the save unless the caller supplies status_func.
+    """
+    global progress_req
+    plan = cyclerender.compute_cycle_plan(config)
+    if not plan["ranges"]:
+        raise ValueError("No active color ranges to render")
+    # The Picture Save requestor already supplied the scale factor, so don't
+    # ask for it a second time here.
+    result = cyclerender.cycle_settings_req(config.pixel_req_canvas, config, plan, show_scale=False)
+    if result is None:
+        return False
+    num_frames, delay = result
+
+    progress = None
+    if status_func is None:
+        progress = open_progress_req(config.pixel_req_canvas, "Saving...")
+        progress_req = progress
+        status_func = load_progress_anim
+
+    try:
+        status_func(0.0)
+        save_config = build_cycle_save_config(config, scale, num_frames, delay)
+        libs.picio.save_gif_anim(filename, save_config, status_func=status_func)
+    finally:
+        if progress is not None:
+            close_progress_req(progress)
+            progress_req = None
+
+    return True
 
 
 class Frame:
@@ -416,14 +566,126 @@ class Animation:
     def ask_apply_multi(self, name):
         return self.ask_apply_multi_req(config.pixel_req_canvas, name)
 
+    def downscale_frames(self, factor):
+        """Shrink every loaded frame (and its layers) for a scaled import."""
+        if factor <= 1 or not self.frame:
+            return
+        for frame in self.frame:
+            if frame.image is not None:
+                frame.image = libs.picio.downscale_pic(frame.image, factor)
+            if frame.layers is not None:
+                for layer in list(frame.layers.layers.values()):
+                    if isinstance(layer.image, pygame.Surface):
+                        layer.image = libs.picio.downscale_pic(layer.image, factor)
+                canvas = frame.layers.get("canvas")
+                if canvas is not None and isinstance(canvas.image, pygame.Surface):
+                    frame.image = canvas.image
+        config.pixel_canvas = self.frame[0].image
+
+    def scaled_save_config(self, factor):
+        """Return a detached config whose frames are scaled for export."""
+        save_config = copy.copy(config)
+        save_config.anim = Animation()
+        frames = []
+        for frame in self.frame:
+            if frame.layers is not None:
+                src = frame.layers.get_flattened(exclude=["R"])
+            else:
+                src = frame.image
+            if src is None:
+                continue
+            w, h = src.get_size()
+            scaled = save_config._resize_surface(src, w*factor, h*factor, True)
+            layers = save_config.new_layer_stack(scaled)
+            # Flattening this stack must use the scaled page size, not the
+            # live document's config (see LayerStack.get_page_size).
+            layers.config = save_config
+            newframe = Frame(scaled, delay=frame.delay, pal=frame.pal,
+                             truepal=frame.truepal, is_pal_key=frame.is_pal_key,
+                             layers=layers)
+            newframe.loadpal = list(frame.loadpal)
+            frames.append(newframe)
+        if not frames:
+            return save_config
+        save_config.anim.frame = frames
+        save_config.anim.num_frames = len(frames)
+        save_config.anim.curr_frame = min(self.curr_frame, len(frames))
+        save_config.anim.frame_rate = self.frame_rate
+        save_config.anim.global_palette = self.global_palette
+        save_config.pixel_canvas = frames[0].image
+        save_config.layers = frames[0].layers
+        save_config.pixel_width, save_config.pixel_height = frames[0].image.get_size()
+        save_config.screen_width = save_config.pixel_width
+        save_config.screen_height = save_config.pixel_height
+        save_config.symm_center = (save_config.pixel_width // 2,
+                                   save_config.pixel_height // 2)
+        sm = copy.copy(config.sm)
+        sm.x = save_config.pixel_width
+        sm.y = save_config.pixel_height
+        sm.max_x = save_config.pixel_width
+        sm.max_y = save_config.pixel_height
+        save_config.sm = sm
+        return save_config
+
+    def render_cycle(self, scale=1, num_frames=None, delay=None, ask=True):
+        """Replace the current animation with one rendered from color cycling.
+
+        The picture's pixel data is reused for every frame; only the palette
+        changes.  ``ask`` shows the frame/delay requestor first.
+        """
+        # Start from the original palette and stop the live cycling timers so
+        # they can't rotate config.pal underneath the rendered frames.
+        config.stop_cycling()
+        plan = cyclerender.compute_cycle_plan(config)
+        if not plan["ranges"]:
+            raise ValueError("No active color ranges to render")
+        if ask:
+            result = cyclerender.cycle_settings_req(config.pixel_req_canvas, config, plan)
+            if result is None:
+                return False
+            num_frames, delay, scale = result
+
+        new_anim = build_cycle_animation(config, scale, num_frames, delay)
+        self.frame = new_anim.frame
+        self.num_frames = new_anim.num_frames
+        self.curr_frame = 1
+        self.curr_frame_bak = 1
+        self.frame_rate = new_anim.frame_rate
+        self.global_palette = False
+        self.playing = False
+        self.play_loop = False
+        self.play_ping_pong = False
+        self.play_reverse = False
+        self.currdir = 0
+        self.repeat = False
+        self.frame_bookmark = -1
+        self.iter_frames = []
+
+        w, h = self.frame[0].image.get_size()
+        config.pixel_width, config.pixel_height = w, h
+        config.screen_width, config.screen_height = w, h
+        config.pixel_canvas = self.frame[0].image
+        config.layers = self.frame[0].layers
+        config.initialize_surfaces()
+        self.show_curr_frame()
+        return True
+
     def open_file(self):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Animation", "Open", config.filepath, config.filename, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, is_anim=True)
+                if scale > 1:
+                    # load_pic() replaces config.anim when another animation
+                    # is already open, so scale the animation it just loaded.
+                    config.anim.downscale_frames(scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -442,13 +704,19 @@ class Animation:
     def import_frames(self):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Import Frames", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             config.stencil.clear()
             config.stencil.free()
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = libs.picio.load_pic(filename, config, status_func=load_progress_anim, import_frames=True)
+                if scale > 1:
+                    config.anim.downscale_frames(scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -468,7 +736,7 @@ class Animation:
         global progress_req
         config.stop_cycling()
         config.stencil.enable = False
-        filename = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, filetype_list=libs.menus.pic_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Export Frames", "Save", config.filepath, config.filename, filetype_list=libs.menus.pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             matches = re.fullmatch(r"^(.*?)([0-9]*)\.([^.]+)$", filename)
@@ -484,7 +752,15 @@ class Animation:
                     load_progress_anim(self.curr_frame / self.num_frames)
                     frame_filename = file_root + ("%04d"%i) + "." + file_ext
                     frame_config = copy.copy(config)
-                    frame_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = canvas.get_size()
+                        canvas = frame_config._resize_surface(canvas, w*scale, h*scale, True)
+                        frame_config.pixel_width = w*scale
+                        frame_config.pixel_height = h*scale
+                        frame_config.screen_width = w*scale
+                        frame_config.screen_height = h*scale
+                    frame_config.pixel_canvas = canvas
                     libs.picio.save_pic(frame_filename, frame_config)
                     self.next_frame()
                     self.show_curr_frame(doAction=False)
@@ -500,11 +776,12 @@ class Animation:
         config.stop_cycling()
         config.stencil.enable = False
         self.save_curr_frame()
-        filename = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Animation", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Saving...")
             try:
-                libs.picio.save_anim(filename, config, status_func=load_progress_anim, overwrite=True)
+                save_config = self.scaled_save_config(scale) if scale > 1 else config
+                libs.picio.save_anim(filename, save_config, status_func=load_progress_anim, overwrite=True)
 
                 close_progress_req(progress_req)
                 config.filepath = os.path.dirname(filename)

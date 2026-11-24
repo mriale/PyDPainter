@@ -7,6 +7,7 @@ _Note : PyDPainter aims to implement all the animation features from the Amiga v
 - [**General principles**](#general-principles)
 - [Open...](#open)
 - [Save...](#save)
+  - [Scale factor](#scale-factor)
 - [Move...](#move)
 - [Frames](#frames)
   - [Import...](#import)
@@ -69,6 +70,13 @@ PyDPainter allows you to save your animations in the following formats:
 
 _There's no such thing as a "work project", this saving only includes frames. So don't forget to save your draft page (j) as an image and the brushes you've used. in the_ `Brush / Save as` _Menu._
 
+### Scale factor
+The built-in file requestor's `Scale: [1x~2x~4x~6x]` row is available on **Anim / Open...**, **Anim / Save...**, **Frames / Import...**, **Frames / Export...**, **Anim Brush / Open...**, and **Anim Brush / Save...**:
+
+- On the Open and Import requestors, every imported frame is shrunk by the chosen factor with nearest-neighbor sampling. For example, `4x` turns 1920x1080 frames into 480x270 frames.
+- On the Save and Export requestors, a scaled copy of every frame is exported and the open animation or brush keeps its original size. Frame delays, palette keys, and global/local palette settings are preserved.
+- When **Sys File Dialog** is enabled in Prefs, a small chooser asks for the factor after a `.png`, `.gif`, `.jpg`, or `.jpeg` file is picked. For animation requestors, only `.gif` triggers the chooser; `.anim`, `.anbr`, `.anmb`, and other formats use 1x.
+
 ## Move...
 
 The "move requester" is a powerful function that lets you move a brush throughout the animation, on the x, y and even z axes (perpective and rotation).
@@ -86,6 +94,8 @@ You can, for example, load frame-by-frame renderings from other software, such a
 
 PyDPainter can handle up to 9999 frames, but it can become very slow with that many frames.
 
+The [scale factor](#scale-factor) row downscales all imported frames by the chosen factor.
+
 ### Export...
 
 Exports all frames of the animation as a numbered sequence of still images in the following formats:
@@ -97,6 +107,16 @@ Exports all frames of the animation as a numbered sequence of still images in th
 - PNG (popular modern format)
 
 It's best to export images into their own folder using the `Make Dir` button to avoid having hundreds of numbered files mixed in with others in a directory.
+
+The [scale factor](#scale-factor) row writes each exported image as a scaled copy without changing the open animation.
+
+### Render Cycle
+
+Converts the current picture into an animation by stepping its active [color ranges](../palette.md). Every frame reuses the same pixel data with a progressively rotated palette, producing a color-cycling animation that can be saved and played like any other.
+
+A requestor asks for the number of frames, the frame delay and a 1x/2x/4x/6x scale factor. Defaults are computed from the active ranges so one full cycle is rendered at approximately its live speed. If the picture has no active color ranges, nothing is changed.
+
+Note that the generated animation uses a local palette for every frame, and the page size matches the current picture. Use [Picture / Save as...](picture.md#save-as) with the `Cycle GIF` toggle to write a cycling GIF directly without replacing the open picture.
 
 ### Set #...
 Sets the number of frames.  
@@ -196,6 +216,8 @@ colors, you have some options:
 
 _Note that since the Amiga doesn't need the file extensions to recognize a file, you may come across ANIM or anim brush files with no extension._
 
+The [scale factor](#scale-factor) row downscales every loaded anim brush frame by the chosen factor.
+
 ### Anim Brush/Save...
 
 PyDPainter allows you to save your anim brushes in the following formats:
@@ -209,6 +231,8 @@ PyDPainter allows you to save your anim brushes in the following formats:
 - ANBR or ANIB (IFF anim brushes on Amiga)
   - 2 to 256 colors
   - transparency supported
+
+The [scale factor](#scale-factor) row exports a scaled copy of every anim brush frame; the open brush is unchanged.
 
 _Note: you must have a brush with more than one frame to save it as an anim brush.
 To save a brush with a single frame, use the [Brush menu Save](brush.md#save-as)._

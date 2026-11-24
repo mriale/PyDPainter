@@ -22,7 +22,8 @@ transparent color.
 ## Open...
 
 Shows a file requestor to allow you to choose a file to
-load as a brush.
+load as a brush. The `Scale: [1x~2x~4x~6x]` row downscales the loaded brush by
+the chosen factor with nearest-neighbor sampling.
 
 _You can load these examples in `docs/menus/src directory`. Starting Earth
 brush is `original.png`_
@@ -30,7 +31,8 @@ brush is `original.png`_
 ## Save as...
 
 Shows a file requestor to allow you to save current brush to a file as a brush.
-This is mostly used with iff/ilbm file types.
+This is mostly used with iff/ilbm file types. The `Scale: [1x~2x~4x~6x]` row
+writes a scaled copy of the brush; the open brush is unchanged.
 
 ## Restore
 

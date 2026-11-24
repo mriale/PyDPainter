@@ -126,11 +126,17 @@ class DoOpen(MenuAction):
         config.stop_cycling()
         config.clear_pixel_draw_canvas()
         config.pick_canvas = None
-        filename = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Picture", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
                 config.pixel_canvas = load_pic(filename, config, status_func=load_progress)
+                if scale > 1:
+                    config.pixel_canvas = downscale_pic(config.pixel_canvas, scale)
+                    w, h = config.pixel_canvas.get_size()
+                    sm = config.display_info.match_resolution(w, h)
+                    if sm is not None:
+                        config.display_mode = sm.mode_id
                 config.bgcolor = 0
                 config.color = 1
                 close_progress_req(progress_req)
@@ -152,15 +158,31 @@ class DoSave(MenuAction):
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
         filename = config.filename
+        scale = 1
+        cycle_gif = False
         if filename == "":
-            filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+            filename, scale, cycle_gif = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True, cycle=True)
         if filename != (()) and filename != "":
             try:
-                if filename.lower().endswith(".ora"):
+                if cycle_gif:
+                    if not filename.lower().endswith(".gif"):
+                        filename = os.path.splitext(filename)[0] + ".gif"
+                    if save_cycle_gif(filename, scale):
+                        config.filename = filename
+                        config.modified_count = 0
+                elif filename.lower().endswith(".ora"):
                     save_pic(filename, config)
                 else:
                     merge_config = copy.copy(config)
                     merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = merge_config.pixel_canvas.get_size()
+                        merge_config.pixel_canvas = merge_config._resize_surface(
+                            merge_config.pixel_canvas, w*scale, h*scale, True)
+                        merge_config.pixel_width = w*scale
+                        merge_config.pixel_height = h*scale
+                        merge_config.screen_width = w*scale
+                        merge_config.screen_height = h*scale
                     save_pic(filename, merge_config)
                 config.filename = filename
                 config.modified_count = 0
@@ -173,14 +195,28 @@ class DoSaveAs(MenuAction):
         config.stop_cycling()
         config.pick_canvas = None
         config.clear_pixel_draw_canvas()
-        filename = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+        filename, scale, cycle_gif = file_req(config.pixel_req_canvas, "Save Picture", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True, cycle=True)
         if filename != (()) and filename != "":
             try:
-                if filename.lower().endswith(".ora"):
+                if cycle_gif:
+                    if not filename.lower().endswith(".gif"):
+                        filename = os.path.splitext(filename)[0] + ".gif"
+                    if save_cycle_gif(filename, scale):
+                        config.filename = filename
+                        config.modified_count = 0
+                elif filename.lower().endswith(".ora"):
                     save_pic(filename, config, overwrite=True)
                 else:
                     merge_config = copy.copy(config)
                     merge_config.pixel_canvas = config.layers.get_flattened(exclude=["R"])
+                    if scale > 1:
+                        w, h = merge_config.pixel_canvas.get_size()
+                        merge_config.pixel_canvas = merge_config._resize_surface(
+                            merge_config.pixel_canvas, w*scale, h*scale, True)
+                        merge_config.pixel_width = w*scale
+                        merge_config.pixel_height = h*scale
+                        merge_config.screen_width = w*scale
+                        merge_config.screen_height = h*scale
                     save_pic(filename, merge_config, overwrite=True)
             except Exception as ex:
                 io_error_req("Save Error", "Unable to save image:\n%s\n%s", filename, str(ex))
@@ -515,12 +551,14 @@ class DoQuit(MenuAction):
 class DoBrushOpen(MenuAction):
     def selected(self, attrs):
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Brush", "Open", config.filepath, config.filename, scale=True)
         if filename != (()) and filename != "":
             try:
                 brush_config = copy.copy(config)
                 brush_config.anim = Animation()
                 newimage = load_pic(filename, brush_config, is_brush=True)
+                if scale > 1:
+                    newimage = downscale_pic(newimage, scale)
                 newimage.set_palette(config.pal)
                 config.brush = Brush(type=Brush.CUSTOM, screen=newimage, bgcolor=brush_config.bgcolor, pal=brush_config.pal)
                 reduced = newimage.copy()
@@ -539,12 +577,18 @@ class DoBrushSaveAs(MenuAction):
         if config.brush.type != config.brush.CUSTOM:
             return
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Brush", "Save", config.filepath, config.filename, filetype_list=pic_filetype_list, scale=True)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
             brush_config.pixel_canvas.set_colorkey(None)
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
+            if scale > 1:
+                w, h = brush_config.pixel_canvas.get_size()
+                brush_config.pixel_canvas = brush_config._resize_surface(
+                    brush_config.pixel_canvas, w*scale, h*scale, True)
+                brush_config.pixel_width, brush_config.pixel_height = w*scale, h*scale
+                brush_config.screen_width, brush_config.screen_height = w*scale, h*scale
             try:
                 save_pic(filename, brush_config, overwrite=True, bgcolor=config.brush.bgcolor)
             except Exception as ex:
@@ -1342,6 +1386,13 @@ class DoAnimFrameExport(MenuAction):
     def selected(self, attrs):
         config.anim.export_frames()
 
+class DoAnimFrameRenderCycle(MenuAction):
+    def selected(self, attrs):
+        try:
+            config.anim.render_cycle()
+        except ValueError as ex:
+            io_error_req("Render Cycle", "Unable to render cycle:\n%s", str(ex))
+
 class DoAnimFrameAdd(MenuAction):
     def selected(self, attrs):
         config.anim.add_frame()
@@ -1400,7 +1451,7 @@ class DoAnimBrushOpen(MenuAction):
     def selected(self, attrs):
         global progress_req
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename)
+        filename, scale = file_req(config.pixel_req_canvas, "Open Anim Brush", "Open", config.filepath, config.filename, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             progress_req = open_progress_req(config.pixel_req_canvas, "Loading...")
             try:
@@ -1411,6 +1462,8 @@ class DoAnimBrushOpen(MenuAction):
                 i=0
                 for brush_frame in brush_config.anim.frame:
                     reduced = brush_frame.image.copy()
+                    if scale > 1:
+                        reduced = downscale_pic(reduced, scale)
                     pal = config.pal
                     reduced.set_palette(pal)
                     surf_array = pygame.surfarray.pixels2d(reduced)
@@ -1434,7 +1487,7 @@ class DoAnimBrushSave(MenuAction):
         if not config.brush.animbrush:
             return
         config.stop_cycling()
-        filename = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list)
+        filename, scale = file_req(config.pixel_req_canvas, "Save Anim Brush", "Save", config.filepath, config.filename, filetype_list=anim_filetype_list, scale=True, scale_extensions=ANIM_SCALE_EXTENSIONS)
         if filename != (()) and filename != "":
             brush_config = copy.copy(config)
             brush_config.pixel_canvas = config.brush.image.copy()
@@ -1442,6 +1495,8 @@ class DoAnimBrushSave(MenuAction):
             brush_config.pixel_width, brush_config.pixel_height = config.brush.image.get_size()
             brush_config.anim = Animation()
             brush_config.anim.convert_animbrush(brush_config)
+            if scale > 1:
+                scale_detached_frames(brush_config.anim, brush_config, scale)
             try:
                 save_anim(filename, brush_config, overwrite=True, transparent_color=config.brush.bgcolor)
             except Exception as ex:
@@ -1854,6 +1909,7 @@ def init_menubar(config_in):
             ["Frames", [
                 ["Import...", " ", DoAnimFrameImport],
                 ["Export...", " ", DoAnimFrameExport],
+                ["Render Cycle", " ", DoAnimFrameRenderCycle],
                 ["Set #...", " ", DoAnimFrameSetNumber],
                 ["Copy to All", " ", DoAnimFrameCopyAll],
                 ["Add Frames", " ", DoAnimFrameAdd],

@@ -35,6 +35,25 @@ def picio_set_config(config_in):
 def w2b(w):
     return (w+15)//16*2
 
+#shrink a loaded picture by an integer factor using nearest-neighbor sampling
+def downscale_pic(pic, factor):
+    if factor <= 1:
+        return pic
+    w, h = pic.get_size()
+    # array2d slices below keep one sample per factor-sized step, including
+    # the last partial step, so round up to match that shape exactly.
+    nw, nh = (w + factor - 1)//factor, (h + factor - 1)//factor
+    if nw < 1 or nh < 1:
+        return pic
+    if pic.get_bytesize() == 1:
+        arr = np.ascontiguousarray(pygame.surfarray.array2d(pic)[0::factor, 0::factor])
+        newpic = pygame.Surface((nw, nh), 0, 8)
+        newpic.set_palette(pic.get_palette())
+        pygame.surfarray.blit_array(newpic, arr)
+    else:
+        newpic = pygame.transform.scale(pic, (nw, nh))
+    return newpic
+
 #check to see if a file is an IFF file
 def pic_type(filename):
     retval = ""
