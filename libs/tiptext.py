@@ -106,7 +106,8 @@ tiptext["text"] = [
 tiptext["grid"] = [
 "Grid Toggle [g]",
 "Modifies tools to snap brush to grid.",
-"Right-click tool to adjust grid."]
+"Right-click tool to adjust grid.",
+"[CTRL-g] to toggle visibility."]
 
 tiptext["symm"] = [
 "Symmetry Toggle [/]",

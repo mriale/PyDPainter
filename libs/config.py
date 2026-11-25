@@ -2661,6 +2661,9 @@ class pydpainter:
                         config.minitoolbar.tool_id("expand").state = 0
                     else:
                         config.minitoolbar.tool_id("expand").state = 1
+                elif e.key == K_g and e.mod & KMOD_CTRL:
+                    gotkey = True
+                    config.grid_visible = not config.grid_visible
                 elif e.mod & KMOD_META:
                     ticks = pygame.time.get_ticks()
                     if ticks - config.last_mouse_nudge_time < 100:
