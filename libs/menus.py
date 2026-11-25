@@ -1904,7 +1904,7 @@ def init_menubar(config_in):
     menubar.add_menu(
         ["Anim", [
             ["Open...", " ", DoAnimOpen],
-            ["Save...", " ", DoAnimSave],
+            ["!Save...", " ", DoAnimSave],
             ["Move..."],
             ["Frames", [
                 ["Import...", " ", DoAnimFrameImport],

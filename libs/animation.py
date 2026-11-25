@@ -309,6 +309,7 @@ class Animation:
         self.iter_progress_req = None
         self.iter_len = 0
         self.iter_prev_time = 0
+        self.update_menu_state()
 
     def iter_progress_anim(self, percent):
         curr_time = pygame.time.get_ticks()
@@ -386,10 +387,20 @@ class Animation:
         config.animtoolbar.tool_id("frameslider").maxvalue = self.num_frames
         config.animtoolbar.tool_id("frameslider").value = self.curr_frame-1
 
+        self.update_menu_state()
+
         config.clear_undo()
         config.save_undo()
         if doAction:
             config.doKeyAction()
+
+    def update_menu_state(self):
+        if config is not None and hasattr(config, "menubar") and config.menubar is not None:
+            anim_menu = config.menubar.menu_id("anim")
+            if anim_menu is not None:
+                save_item = anim_menu.menu_id("save")
+                if save_item is not None:
+                    save_item.enabled = self.num_frames > 1
 
     def convert_animbrush(self, config):
         self.frame = list()
