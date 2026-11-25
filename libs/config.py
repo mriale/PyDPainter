@@ -735,9 +735,14 @@ class pydpainter:
         self.sm = sm
 
         if reinit:
-            config.anim = libs.animation.Animation()
             config.truepal = config.get_default_palette(config.NUM_COLORS)
             config.pal = list(config.truepal)
+            config.loadpal = list(config.pal)
+            config.backuppal = list(config.pal)
+            #Create the new animation only after all palette snapshots have
+            #been reset; Frame copies pal/truepal/loadpal on construction and
+            #would otherwise keep the previously opened picture's palette.
+            config.anim = libs.animation.Animation()
             #The page keeps the screen format's size; the workspace may be
             #larger so that menus and requestors are not clipped.
             config.pixel_canvas = pygame.Surface((sm.x, sm.y),0,8)
