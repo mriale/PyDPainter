@@ -456,13 +456,15 @@ def place_grid(gcoords):
             point_placed = True
             wnew = int(abs(w))
             hnew = int(abs(h))
-            ret_coords = list([p0[0]%wnew, p0[1]%hnew, wnew, hnew, nx, ny])
+            wsnap = wnew * 2 if config.grid_iso else wnew
+            ret_coords = list([p0[0]%wsnap, p0[1]%hnew, wnew, hnew, nx, ny])
 
         config.clear_pixel_draw_canvas()
 
         pcx,pcy = p0
         if config.grid_iso:
-            for p0iso, p1iso in grid_iso_segments((pcx,pcy), (w,h), nx, ny):
+            weff = w * 2
+            for p0iso, p1iso in grid_iso_segments((pcx,pcy), (weff,h), nx, ny):
                 drawline(config.pixel_canvas, 1, p0iso, p1iso, xormode=True)
         else:
             for x in range(0,nx+1):

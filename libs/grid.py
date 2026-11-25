@@ -23,13 +23,24 @@ def grid_set_config(config_in):
 GRID_DOTTED = 0
 GRID_SOLID = 1
 
+def grid_effective_size():
+    """Return the X/Y spacing used for snapping and drawing.
+
+    Iso cells are twice as wide as the entered Size X, which makes the
+    stagger half of the effective cell width and the diamonds square-ish.
+    """
+    gsx, gsy = config.grid_size
+    if config.grid_iso:
+        gsx *= 2
+    return gsx, gsy
+
 def grid_row_offset(row, size_x):
     """X offset of a row in an isometric grid."""
     return (row % 2) * (size_x // 2)
 
 def grid_snap_point(x, y):
     """Snap a canvas coordinate to the nearest grid point."""
-    gsx, gsy = config.grid_size
+    gsx, gsy = grid_effective_size()
     gox, goy = config.grid_offset
     if gsx <= 0 or gsy <= 0:
         return (x, y)
@@ -40,11 +51,12 @@ def grid_snap_point(x, y):
     return (sx, row * gsy + goy)
 
 def grid_iso_segments(origin, size, cols, rows, start_row=0):
-    """Yield the diagonal segments of an isometric diamond grid.
+    """Yield the segments of an isometric diamond grid.
 
     origin is the x coordinate of column 0 and the y coordinate of
     start_row. Each row is staggered by half a cell in alternating
-    directions, and its points are joined to the next row.
+    directions. Points are joined diagonally to the next row, and
+    vertically to the matching point two rows down.
     """
     ox, oy = origin
     gsx, gsy = size
@@ -60,6 +72,16 @@ def grid_iso_segments(origin, size, cols, rows, start_row=0):
             x = ox + off0 + col * gsx
             yield ((x, y0), (x + delta, y1))
             yield ((x, y0), (x + delta_other, y1))
+
+    #vertical diagonal of each diamond: same x, two rows down.  Go
+    #two rows past the requested range so the bottom edge is covered.
+    for row in range(start_row, start_row + rows + 2):
+        y0 = oy + (row - start_row) * gsy
+        y1 = y0 + 2 * gsy
+        off = grid_row_offset(row, gsx)
+        for col in range(cols):
+            x = ox + off + col * gsx
+            yield ((x, y0), (x, y1))
 
 def draw_grid_segment(surface, color, p0, p1, dotted):
     """Draw one grid segment, optionally as alternating pixels."""
@@ -112,7 +134,7 @@ class Grid:
         """Generate a canvas-sized surface with the grid pixels drawn
         using the current grid settings"""
         pw, ph = config.pixel_canvas.get_size()
-        gsx, gsy = config.grid_size
+        gsx, gsy = grid_effective_size()
         gox, goy = config.grid_offset
         gcolor = (config.grid_color[0], config.grid_color[1], config.grid_color[2], config.grid_alpha)
 
@@ -122,9 +144,10 @@ class Grid:
             dotted = config.grid_style == GRID_DOTTED
 
             if config.grid_iso:
-                #diamond grid - join each staggered grid point to the
-                #two points below it. Extend past the canvas edges so
-                #the diagonals reaching into view are drawn as well.
+                #diamond grid - join each staggered grid point to the two
+                #points below it and to the matching point two rows down.
+                #Extend past the canvas edges so lines reaching into view
+                #are drawn as well.
                 row0 = (0 - goy) // gsy - 1
                 row1 = (ph - goy) // gsy + 1
                 col0 = -2
