@@ -1740,6 +1740,10 @@ class pydpainter:
             self.scanline_canvas = pygame.Surface((self.screen_width, self.screen_height*2), SRCALPHA)
             for i in range(0, self.screen_height*2, 2):
                 pygame.draw.line(self.scanline_canvas, Color(0,0,0,100), (0,i), (self.screen_width,i), 1)
+            new_req_canvas = pygame.Surface((self.screen_width, self.screen_height))
+            if hasattr(self, "pixel_req_canvas") and self.pixel_req_canvas is not None:
+                new_req_canvas.blit(self.pixel_req_canvas, (0,0))
+            self.pixel_req_canvas = new_req_canvas
 
         # Keep the stencil pseudo-layer in sync.  The active drawing layer is
         # never rebound here: config.pixel_canvas already *is* that layer.
