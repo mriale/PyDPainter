@@ -20,6 +20,7 @@ from libs.animation import *
 from libs.gifparser import *
 from libs.gifwriter import *
 from libs.pngwriter import surface_png_bytes, save_indexed_png
+from libs.pngreader import decode_indexed_png
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -642,7 +643,24 @@ def _png_bytes(surface, palette=None, transparent_index=None):
     return surface_png_bytes(surface, palette=palette,
                              transparent_index=transparent_index)
 
-def _surface_from_png(data, pal):
+def _surface_from_png(data, pal, index_aligned=False):
+    # Read simple indexed PNGs directly: pygame's 8-bit blit maps colors
+    # through the palette, which collapses duplicate palette entries (used by
+    # color-cycled "animations") into the first matching index.
+    decoded = decode_indexed_png(data)
+    if decoded is not None:
+        if pal is None or index_aligned:
+            out_pal = pal if pal is not None else decoded.palette
+        elif decoded.palette == pal:
+            out_pal = decoded.palette
+        else:
+            out_pal = None  # let pygame remap foreign palettes by color
+        if out_pal is not None:
+            img = pygame.image.frombytes(decoded.indices,
+                                         (decoded.width, decoded.height), "P")
+            img.set_palette(out_pal)
+            return img
+
     img = pygame.image.load(io.BytesIO(data), "layer.png")
     if img.get_bytesize() == 1:
         if pal is not None:
@@ -819,7 +837,10 @@ def load_ora(filename, config):
             src = node.get("src")
             if not src or src not in names:
                 continue
-            img = _surface_from_png(z.read(src), pal)
+            # Our iffinfo CMAP and the PNG indices share the same ordering,
+            # even when the PNG's own PLTE has padded/nudged colors.
+            index_aligned = iffinfo is not None and iffinfo["cmap"] is not None
+            img = _surface_from_png(z.read(src), pal, index_aligned=index_aligned)
             if pal is None and img.get_bytesize() == 1:
                 p = img.get_palette()
                 if p is not None:

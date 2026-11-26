@@ -244,6 +244,71 @@ class SurfaceIntegrationTest(unittest.TestCase):
             self.assertEqual(cfg.cranges[0].rate, 7)
             self.assertTrue(cfg.ora_iffinfo_loaded)
 
+    def test_ora_roundtrip_preserves_duplicate_palette_indices(self):
+        # Color-cycled pictures rely on distinct indices sharing the same RGB
+        # color. Pygame's 8-bit blit remaps by color and would collapse 6 to 5.
+        pal = [(0, 0, 0)] * 256
+        pal[5] = (255, 0, 0)
+        pal[6] = (255, 0, 0)  # duplicate of index 5
+        pal[7] = (0, 255, 0)
+        indices = bytes([5, 6, 7, 6])
+        surface = pygame.image.frombytes(indices, (4, 1), "P")
+        surface.set_palette(pal)
+        full_pal = pal
+        pal8 = pal[:8]
+
+        class Layer:
+            image = surface
+            visible = True
+            opacity = 255
+            kind = "canvas"
+            indicator = ""
+            transparent_index = 0
+
+        class Layers:
+            def names(self):
+                return ["canvas"]
+
+            def get(self, name):
+                return Layer()
+
+            def get_flattened(self, exclude=None):
+                return surface
+
+        class Config:
+            pixel_width, pixel_height = surface.get_size()
+            screen_width, screen_height = surface.get_size()
+            layers = Layers()
+            pal = pal8
+            truepal = pal8
+            color_depth = 256
+            NUM_COLORS = 8
+            display_mode = 0
+            cranges = []
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filename = os.path.join(tmpdir, "cycle.ora")
+            picio.save_ora(filename, Config())
+
+            class LoadConfig:
+                pixel_width, pixel_height = surface.get_size()
+                pal = full_pal
+                truepal = full_pal
+
+                def unique_palette(self, pal):
+                    return list(pal)
+
+                def guess_color_depth(self, pal):
+                    return 256
+
+            cfg = LoadConfig()
+            merged = picio.load_ora(filename, cfg)
+            self.assertEqual(pygame.image.tobytes(merged, "P"), indices)
+            self.assertEqual(
+                pygame.image.tobytes(cfg.pending_ora_layers[0]["image"], "P"),
+                indices)
+            self.assertEqual(cfg.truepal[:8], pal[:8])
+
 
 if __name__ == "__main__":
     unittest.main()
