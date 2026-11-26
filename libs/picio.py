@@ -11,7 +11,7 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
-from struct import pack, unpack
+from struct import pack, unpack, error as StructError
 from operator import attrgetter
 
 from libs.colorrange import *
@@ -19,6 +19,7 @@ from libs.prim import *
 from libs.animation import *
 from libs.gifparser import *
 from libs.gifwriter import *
+from libs.pngwriter import surface_png_bytes, save_indexed_png
 
 import contextlib
 with contextlib.redirect_stdout(None):
@@ -636,10 +637,10 @@ def load_pygame_pic(filename, config, status_func=None, force_pal=None):
     return pic
 
 
-def _png_bytes(surface):
-    buf = io.BytesIO()
-    pygame.image.save(surface, buf, "layer.png")
-    return buf.getvalue()
+def _png_bytes(surface, palette=None, transparent_index=None):
+    """Encode a Surface as an 8-bit indexed PNG (used by ORA archives)."""
+    return surface_png_bytes(surface, palette=palette,
+                             transparent_index=transparent_index)
 
 def _surface_from_png(data, pal):
     img = pygame.image.load(io.BytesIO(data), "layer.png")
@@ -650,6 +651,7 @@ def _surface_from_png(data, pal):
             if current != pal:
                 tmp = pygame.Surface(img.get_size(), 0, 8)
                 tmp.set_palette(pal)
+                tmp.fill(0)  # index 0 is transparent; skipped colorkey pixels
                 tmp.blit(img, (0, 0))
                 img = tmp
         return img
@@ -696,8 +698,22 @@ def save_ora(filename, config):
         z.writestr(zi, b"image/openraster")
 
         for i, (name, layer) in enumerate(layers):
-            z.writestr(f"data/layer{i}.png", _png_bytes(layer.image))
+            # Index 0 is transparent on every PyDPainter layer.  Without a
+            # tRNS chunk, PNG readers such as GIMP treat the layers as fully
+            # opaque and only the topmost one is visible.
+            z.writestr(f"data/layer{i}.png",
+                       _png_bytes(layer.image,
+                                  transparent_index=getattr(layer, "transparent_index", 0)))
         z.writestr("mergedimage.png", _png_bytes(merged))
+
+        # Keep the IFF-style per-picture settings (palette size/color depth,
+        # Amiga display mode, page size and color cycles) in a standard ILBM
+        # "iffinfo" entry so an ORA round trip doesn't promote a 32-color
+        # picture to 256 colors.
+        info = io.BytesIO()
+        _write_iffinfo(info, config, include_palette=True)
+        finish_iff(info, close=False)
+        z.writestr("iffinfo", info.getvalue())
 
         root = ET.Element("image", {
             "w": str(w), "h": str(h), "version": "0.0.1",
@@ -729,20 +745,69 @@ def _merge_keyed(dst, src):
     finally:
         del dst_array
 
+def _parse_iffinfo(data):
+    """Read the metadata chunks written by _write_iffinfo()."""
+    info = {
+        "nplanes": None, "page": None, "display_mode": None,
+        "cmap": None, "cranges": [], "color_depth": None,
+        "num_colors": None,
+    }
+    f = io.BytesIO(data)
+    f.seek(12)
+    try:
+        chunk = Chunk(f)
+        while chunk:
+            name = chunk.getname()
+            payload = chunk.read()
+            if name == b'BMHD':
+                bmhd = unpack(">HHhhBBBBHBBhh", payload)
+                info["nplanes"] = bmhd[4]
+                info["page"] = (bmhd[11], bmhd[12])
+            elif name == b'CMAP':
+                info["cmap"] = [tuple(payload[i:i+3])
+                                for i in range(0, len(payload) - 2, 3)]
+            elif name == b'CAMG':
+                info["display_mode"] = unpack(">I", payload)[0]
+            elif name == b'CRNG':
+                (pad, rate, flags, low, high) = unpack(">HHHBB", payload)
+                if len(info["cranges"]) < 6:
+                    info["cranges"].append(colorrange(rate, flags, low, high))
+            elif name == b'PDPD' and payload[:4] == PDPD_MAGIC and len(payload) >= 10:
+                (version, depth, num_colors) = unpack(">HHH", payload[4:10])
+                info["color_depth"] = depth
+                info["num_colors"] = num_colors
+            chunk = Chunk(f)
+    except (EOFError, StructError):
+        # iffinfo is optional metadata; ignore a malformed or foreign entry.
+        pass
+    return info
+
 def load_ora(filename, config):
     pydns = "https://github.com/mriale/pydpainter"
     merged = None
     pal = None
     entries = []
+    iffinfo = None
+    num_colors = None
     with zipfile.ZipFile(filename) as z:
         names = set(z.namelist())
         if "stack.xml" not in names:
             raise Exception("Not an OpenRaster file")
+        if "iffinfo" in names:
+            iffinfo = _parse_iffinfo(z.read("iffinfo"))
+            num_colors = iffinfo["num_colors"]
+            if num_colors is None and iffinfo["nplanes"] is not None:
+                num_colors = 1 << iffinfo["nplanes"]
+            if iffinfo["cmap"] is not None:
+                cmap = list(iffinfo["cmap"])
+                if num_colors is not None:
+                    cmap = (cmap + [(0,0,0)] * num_colors)[:num_colors]
+                pal = cmap
         if "mergedimage.png" in names:
             merged = pygame.image.load(io.BytesIO(z.read("mergedimage.png")), "mergedimage.png")
             if merged.get_bytesize() == 1:
                 p = merged.get_palette()
-                if p is not None:
+                if p is not None and pal is None:
                     pal = [tuple(c) for c in p]
 
         root = ET.fromstring(z.read("stack.xml"))
@@ -772,9 +837,15 @@ def load_ora(filename, config):
         raise Exception("OpenRaster file contains no layers")
     if pal is None:
         pal = [tuple(c) for c in config.pal]
+    if num_colors is not None:
+        pal = (list(pal) + [(0,0,0)] * num_colors)[:num_colors]
+    if hasattr(config, "unique_palette"):
+        upal = config.unique_palette(pal)
+    else:
+        upal = list(pal)
     for entry in entries:
         if entry["image"].get_bytesize() == 1:
-            entry["image"].set_palette(pal)
+            entry["image"].set_palette(upal)
 
     bottom_up = list(reversed(entries))
     has_kinds = any(entry["kind"] for entry in entries)
@@ -806,7 +877,7 @@ def load_ora(filename, config):
 
     if canvas_entry is None:
         blank = pygame.Surface((w, h), 0, 8)
-        blank.set_palette(pal)
+        blank.set_palette(upal)
         blank.fill(0)
         canvas_entry = {"name": "canvas", "image": blank, "visible": True,
                         "opacity": 255, "kind": "canvas", "indicator": ""}
@@ -844,18 +915,42 @@ def load_ora(filename, config):
 
     if merged is None:
         merged = pygame.Surface((w, h), 0, 8)
-        merged.set_palette(pal)
+        merged.set_palette(upal)
         for entry in bottom_up:
             _merge_keyed(merged, entry["image"])
+    else:
+        merged.set_palette(upal)
 
-    config.pal = list(pal)
+    config.pal = list(upal)
     config.truepal = list(pal)
+    config.loadpal = list(upal)
+    config.backuppal = list(upal)
     config.pending_ora_layers = pending
+
+    if iffinfo is not None:
+        if iffinfo["color_depth"] is not None:
+            config.color_depth = iffinfo["color_depth"]
+        elif hasattr(config, "guess_color_depth"):
+            config.color_depth = config.guess_color_depth(pal)
+        if num_colors is not None:
+            config.NUM_COLORS = num_colors
+        if iffinfo["display_mode"] is not None:
+            config.display_mode = iffinfo["display_mode"]
+        if iffinfo["page"] is not None:
+            config.screen_width, config.screen_height = iffinfo["page"]
+        cranges = list(iffinfo["cranges"])
+        while len(cranges) < 6:
+            cranges.append(colorrange(0,1,0,0))
+        config.cranges = cranges
+        config.ora_iffinfo_loaded = True
+    else:
+        config.ora_iffinfo_loaded = False
     return merged
 
 def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=False, import_frames=False, is_brush=False):
     filename = filename_in
     pic = config.pixel_canvas
+    config.ora_iffinfo_loaded = False
 
     if config.anim.num_frames > 1:
         #Get rid of animation
@@ -1079,9 +1174,12 @@ def load_pic(filename_in, config, status_func=None, is_anim=False, cmd_load=Fals
             config.anim.frame[i].layers.set("canvas", config.anim.frame[i].image,
                                             priority=1, kind="canvas")
 
-    config.color_depth = config.guess_color_depth(config.truepal)
-    config.truepal = config.quantize_palette(config.truepal, config.color_depth)
-    config.pal = config.quantize_palette(config.pal, config.color_depth)
+    # An ORA iffinfo entry already carries the exact color depth and palette;
+    # re-guessing here would promote a 32-color picture back to 256 colors.
+    if not getattr(config, "ora_iffinfo_loaded", False):
+        config.color_depth = config.guess_color_depth(config.truepal)
+        config.truepal = config.quantize_palette(config.truepal, config.color_depth)
+        config.pal = config.quantize_palette(config.pal, config.color_depth)
 
     #Guess display mode
     if config.display_mode < 0 or config.display_info.get_id(config.display_mode) == None:
@@ -1106,36 +1204,74 @@ def write_chunk(f,name,data):
     if len(data) & 1 == 1:
         f.write(b'\0')
 
-#close IFF file and update length
-def close_iff(f):
+#update the FORM length; caller owns the stream unless close=True
+def finish_iff(f, close=True):
     f.seek(0,2) # seek to end
     fsize = f.tell() - 8
     f.seek(4) # seek until after FORM
     f.write(pack(">I", fsize)) # write length into FORM
-    f.close()
+    if close:
+        f.close()
 
-#save color ranges to a file
-def save_iffinfo(filename):
-    crngfile = re.sub(r"\.[^.]+$", ".iffinfo", filename)
-    newfile = open(crngfile, 'wb')
-    newfile.write(b'FORM\0\0\0\0ILBM')
-    
-    write_chunk(newfile, b'BMHD', pack(">HHhhBBBBHBBhh", \
-        config.pixel_width, config.pixel_height, \
+#close IFF file and update length
+def close_iff(f):
+    finish_iff(f, close=True)
+
+#PyDPainter-specific settings that aren't covered by BMHD/CAMG/CRNG
+PDPD_MAGIC = b'PYDP'
+PDPD_VERSION = 1
+
+def _write_iffinfo(f, cfg, include_palette=False):
+    """Write IFF metadata chunks used by .iffinfo sidecars and ORA files."""
+    pal = list(getattr(cfg, "pal", None) or [])
+    ncolors = len(pal)
+    if ncolors < 2:
+        ncolors = 256
+    nplanes = max(1, min(8, int(round(math.log2(ncolors)))))
+    ncolors = 1 << nplanes
+    pixel_width = getattr(cfg, "pixel_width", 0)
+    pixel_height = getattr(cfg, "pixel_height", 0)
+    screen_width = getattr(cfg, "screen_width", pixel_width)
+    screen_height = getattr(cfg, "screen_height", pixel_height)
+
+    f.write(b'FORM\0\0\0\0ILBM')
+    write_chunk(f, b'BMHD', pack(">HHhhBBBBHBBhh", \
+        pixel_width, pixel_height, \
         0,0, \
-        int(math.log(len(config.pal),2)), \
+        nplanes, \
         0, \
         0, \
         0, \
         0, \
         10, 11, \
-        config.screen_width, config.screen_height
+        screen_width, screen_height
         ))
 
-    write_chunk(newfile, b'CAMG', pack(">I", config.display_mode))
+    if include_palette:
+        # IFF stores the real colors, not the nudged copies in pal.
+        pal_out = list(getattr(cfg, "truepal", None) or pal)[:ncolors]
+        while len(pal_out) < ncolors:
+            pal_out.append((0,0,0))
+        cmap = b''.join(pack(">BBB", c[0], c[1], c[2]) for c in pal_out)
+        write_chunk(f, b'CMAP', cmap)
 
-    for crange in config.cranges:
-        write_chunk(newfile, b'CRNG', pack(">HHHBB", 0, crange.rate, crange.get_flags(), crange.low, crange.high))
+    write_chunk(f, b'CAMG',
+                pack(">I", getattr(cfg, "display_mode", -1) & 0xFFFFFFFF))
+
+    for crange in getattr(cfg, "cranges", []):
+        write_chunk(f, b'CRNG', pack(">HHHBB", 0, crange.rate,
+                                    crange.get_flags(), crange.low, crange.high))
+
+    if include_palette:
+        write_chunk(f, b'PDPD', pack(">4sHHH", PDPD_MAGIC, PDPD_VERSION,
+                   getattr(cfg, "color_depth", 256),
+                   getattr(cfg, "NUM_COLORS", ncolors)))
+
+#save color ranges to a sidecar
+def save_iffinfo(filename):
+    crngfile = re.sub(r"\.[^.]+$", ".iffinfo", filename)
+    newfile = open(crngfile, 'wb')
+    _write_iffinfo(newfile, config)
     close_iff(newfile)
 
 #encode byterun1 ILBM encoding
@@ -1302,6 +1438,8 @@ def save_pic(filename, config, overwrite=True, bgcolor=-1):
         save_iff(filename, config, "PBM", bgcolor=bgcolor)
     elif len(filename) > 4 and filename[-4:].lower() == ".gif":
         save_gif(filename, config, bgcolor=bgcolor)
+    elif len(filename) > 4 and filename[-4:].lower() == ".png":
+        save_indexed_png(filename, config.pixel_canvas)
     else:
         pygame.image.save(config.pixel_canvas, filename)
 
