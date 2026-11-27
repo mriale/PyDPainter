@@ -112,11 +112,11 @@ The [scale factor](#scale-factor) row writes each exported image as a scaled cop
 
 ### Render Cycle
 
-Converts the current picture into an animation by stepping its active [color ranges](../palette.md). Every frame reuses the same pixel data with a progressively rotated palette, producing a color-cycling animation that can be saved and played like any other.
+Converts the current picture into an animation by stepping its active [color ranges](../palette.md). Every frame keeps the picture's global palette; the cycling is rendered by changing the pixel indices in each frame, producing a color-cycling animation that can be saved and played like any other.
 
 A requestor asks for the number of frames, the frame delay and a 1x/2x/4x/6x scale factor. Defaults are computed from the active ranges so one full cycle is rendered at approximately its live speed. If the picture has no active color ranges, nothing is changed.
 
-Note that the generated animation uses a local palette for every frame, and the page size matches the current picture. Use [Picture / Save as...](picture.md#save-as) with the `Cycle GIF` toggle to write a cycling GIF directly without replacing the open picture.
+Because all frames share one palette, exported GIFs and IFF ANIMs use frame differencing instead of a local palette per frame, which keeps files smaller. The page size matches the current picture. Use [Picture / Save as...](picture.md#save-as) with the `Cycle GIF` toggle to write a cycling GIF directly without replacing the open picture.
 
 ### Set #...
 Sets the number of frames.  

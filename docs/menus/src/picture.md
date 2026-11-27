@@ -51,7 +51,7 @@ The built-in file requester has a `Scale: [1x~2x~4x~6x]` row below the file name
 - OpenRaster (`.ora`) files always store layers at their original size; the scale factor applies to the other file formats.
 
 ### Cycle GIF
-The built-in Save requestor also has a `Cycle GIF` toggle after the scale buttons. When enabled, saving writes an animated GIF whose frames step through the picture's active [color ranges](../palette.md). Each frame keeps the same pixels but uses a rotated palette, so the exported GIF reproduces the color cycling seen in the editor.
+The built-in Save requestor also has a `Cycle GIF` toggle after the scale buttons. When enabled, saving writes an animated GIF whose frames step through the picture's active [color ranges](../palette.md). All frames share the picture's global palette and each frame changes its pixel indices instead, so the exported GIF reproduces the color cycling seen in the editor while staying smaller than one with a palette per frame.
 
 - A requestor asks for the number of frames and the frame delay; defaults are computed from the active ranges so one full cycle is rendered at approximately its live speed.
 - The scale factor from the file requestor is applied to every exported frame; the open document is unchanged.

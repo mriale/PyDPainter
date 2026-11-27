@@ -144,12 +144,12 @@ def scale_detached_frames(anim, cfg, factor):
 
 
 def _build_cycle_frames(cfg, scale=1, num_frames=None, delay=None):
-    """Build Frame objects whose palettes step through the active color ranges.
+    """Build Frame objects that render the active color ranges.
 
-    Every frame is a full frame (``is_pal_key=True``) because GIF palette
-    changes are only visible when the whole image is redrawn with the new
-    local palette.  The pixel indices are identical in all frames; only the
-    palette attached to each frame changes.
+    The cycles are baked into each frame's pixel indices instead of rotating
+    a per-frame palette.  All frames share the picture's original palette, so
+    the resulting animation has a global palette and GIF/IFF writers can use
+    frame differencing instead of writing a palette for every frame.
     """
     plan = cyclerender.compute_cycle_plan(cfg)
     if not plan["ranges"]:
@@ -170,12 +170,20 @@ def _build_cycle_frames(cfg, scale=1, num_frames=None, delay=None):
 
     frames = []
     for i in range(num_frames):
-        pal, truepal = cyclerender.cycle_palette_at(cfg, plan, i, base_pal, base_truepal)
         img = cfg._resize_surface(src, sw, sh, True) if scale > 1 else src.copy()
-        img.set_palette(pal)
+        if i > 0:
+            lut = cyclerender.cycle_index_lut(cfg, plan, i)
+            pixels = pygame.surfarray.pixels2d(img)
+            try:
+                pixels[:] = lut[pixels]
+            finally:
+                del pixels
+        img.set_palette(base_pal)
         layers = cfg.new_layer_stack(img)
-        frame = Frame(img, delay=delay, pal=pal, truepal=truepal,
-                      is_pal_key=True, layers=layers)
+        # Only the first frame needs a full rewrite when saving; later frames
+        # differ only in the cycled indices and can use frame compression.
+        frame = Frame(img, delay=delay, pal=base_pal, truepal=base_truepal,
+                      is_pal_key=(i == 0), layers=layers)
         frame.loadpal = list(cfg.loadpal)
         frames.append(frame)
     return frames, sw, sh
@@ -189,7 +197,7 @@ def build_cycle_animation(cfg, scale=1, num_frames=None, delay=None):
     anim.num_frames = len(frames)
     anim.curr_frame = 1
     anim.frame_rate = max(1, 60 // frames[0].delay)
-    anim.global_palette = False
+    anim.global_palette = True
     return anim
 
 
@@ -202,7 +210,7 @@ def build_cycle_save_config(cfg, scale=1, num_frames=None, delay=None):
     save_config.anim.num_frames = len(frames)
     save_config.anim.curr_frame = 1
     save_config.anim.frame_rate = max(1, 60 // frames[0].delay)
-    save_config.anim.global_palette = False
+    save_config.anim.global_palette = True
     save_config.pixel_canvas = frames[0].image
     save_config.layers = frames[0].layers
     save_config.pixel_width = sw
@@ -641,8 +649,9 @@ class Animation:
     def render_cycle(self, scale=1, num_frames=None, delay=None, ask=True):
         """Replace the current animation with one rendered from color cycling.
 
-        The picture's pixel data is reused for every frame; only the palette
-        changes.  ``ask`` shows the frame/delay requestor first.
+        Every frame keeps the picture's global palette; the cycling is baked
+        into the frame's pixel indices instead.  ``ask`` shows the frame/delay
+        requestor first.
         """
         # Start from the original palette and stop the live cycling timers so
         # they can't rotate config.pal underneath the rendered frames.
@@ -662,7 +671,7 @@ class Animation:
         self.curr_frame = 1
         self.curr_frame_bak = 1
         self.frame_rate = new_anim.frame_rate
-        self.global_palette = False
+        self.global_palette = new_anim.global_palette
         self.playing = False
         self.play_loop = False
         self.play_ping_pong = False

@@ -1,17 +1,25 @@
 #!/usr/bin/python3
 # vim: tabstop=8 expandtab shiftwidth=4 softtabstop=4
 
-"""Render a color-cycling picture into a sequence of palettes.
+"""Render a color-cycling picture into deterministic animation frames.
 
 Color cycling in the editor is driven by pygame timers and wall-clock time,
 which makes it unsuitable for generating reproducible frames.  This module
 reimplements the exact same palette rotation as ``colorrange.apply_to_pal``
 but with an explicit step count, so a picture can be turned into an animation
 or an animated GIF deterministically.
+
+Rotating a palette is visually identical to moving every pixel index through
+the same permutation while leaving the palette fixed.  The rendered frames
+use that index remapping so they can all share one global palette, which lets
+the GIF/IFF writers compress frames as differences instead of writing a new
+local palette for every frame.
 """
 
 import contextlib
 import math
+
+import numpy as np
 
 with contextlib.redirect_stdout(None):
     import pygame
@@ -103,6 +111,25 @@ def cycle_palette_at(cfg, plan, frame_index, base_pal=None, base_truepal=None):
         step_palette(pal, crange, steps, halfbright)
         step_palette(truepal, crange, steps, halfbright)
     return pal, truepal
+
+
+def cycle_index_lut(cfg, plan, frame_index, num_colors=256):
+    """Return a lookup table remapping base palette indices for one frame.
+
+    ``lut[old_index]`` is the index whose color in the fixed base palette is
+    the same as the color at ``old_index`` after the cycles have rotated the
+    palette at ``frame_index``.  Applying the table to a frame's pixels
+    therefore renders the same colors as ``cycle_palette_at`` without changing
+    the palette.
+    """
+    perm = list(range(num_colors))
+    halfbright = bool(cfg.display_mode & cfg.MODE_EXTRA_HALFBRIGHT)
+    for crange, f in zip(plan["ranges"], plan["fps"]):
+        step_palette(perm, crange, frame_index // f, halfbright)
+
+    # step_palette() moves each entry from its old index to its new index,
+    # which is exactly the pixel remapping needed once the palette is fixed.
+    return np.array(perm, dtype=np.uint8)
 
 
 def cycle_settings_req(screen, cfg, plan, show_scale=True):
